@@ -1,0 +1,8 @@
+{
+  "name": "tw-stock-target-v2",
+  "version": "2.5.2",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  }
+}
