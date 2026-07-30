@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>台股目標價提醒</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>台股目標價提醒</h1>
+      <p>股價來源：Yahoo Finance｜目標價來源：公開財經新聞</p>
+    </header>
+
+    <nav class="page-tabs" aria-label="功能分頁">
+      <button class="page-tab active" data-page="search">搜尋</button>
+      <button class="page-tab" data-page="holdings">持股清單</button>
+      <button class="page-tab" data-page="watchlist">觀察清單</button>
+    </nav>
+
+    <div id="pageTrack" class="page-track">
+      <section class="page" data-page-panel="search">
+        <div class="panel">
+          <label for="stockCode">股票名稱或代碼</label>
+          <div class="search-row">
+            <input id="stockCode" placeholder="例如 聯發科、2454" autocomplete="off">
+            <button id="searchButton">搜尋</button>
+          </div>
+          <div class="search-history-wrap">
+            <div class="search-history-title">搜尋紀錄</div>
+            <div id="searchHistory" class="search-history"></div>
+          </div>
+          <p id="statusText" class="status">尚未查詢</p>
+        </div>
+        <section id="searchResult" class="panel hidden"></section>
+      </section>
+
+      <section class="page" data-page-panel="holdings">
+        <div class="panel list-panel">
+          <div class="section-title"><h2>持股清單</h2></div>
+          <div class="sort-row">
+            <label for="holdingsSort">排序</label>
+            <select id="holdingsSort" data-sort-list="holdings">
+              <option value="custom">自訂排序</option>
+              <option value="targetDistance">依目標價距離（近到遠）</option>
+            </select>
+          </div>
+          <div id="holdingsList"></div>
+        </div>
+      </section>
+
+      <section class="page" data-page-panel="watchlist">
+        <div class="panel list-panel">
+          <div class="section-title"><h2>觀察清單</h2></div>
+          <div class="sort-row">
+            <label for="watchlistSort">排序</label>
+            <select id="watchlistSort" data-sort-list="watchlist">
+              <option value="custom">自訂排序</option>
+              <option value="targetDistance">依目標價距離（近到遠）</option>
+            </select>
+          </div>
+          <div id="watchlistList"></div>
+        </div>
+      </section>
+    </div>
+
+    <footer><p>自訂排序時，可長按股票卡片後上下拖曳。</p></footer>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
