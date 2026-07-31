@@ -11,8 +11,8 @@ function tag(block,name){const m=block.match(new RegExp(`<${name}[^>]*>([\\s\\S]
 function iso(value){const d=new Date(value);return Number.isNaN(d.getTime())?null:d.toISOString()}
 function brokerMatches(text){const out=[];for(const [name,type] of BROKERS){let p=0;while((p=text.indexOf(name,p))!==-1){out.push({name:CANONICAL[name]||name,type,index:p});p+=name.length}}return out.sort((a,b)=>a.index-b.index)}
 function targetMatches(text){const out=[];const patterns=[
-/目標價(?:由|從)?\s*(?:新台幣|台幣)?\s*([\d,]+(?:\.\d+)?)\s*元?/gi,
-/目標價\s*(?:上看|調升至|調高至|下修至|維持在|維持|喊到|看至|達到|為)?\s*(?:新台幣|台幣)?\s*([\d,]+(?:\.\d+)?)\s*元?/gi,
+/目標價(?:由|從)?\s*(?:最高|上看|調升至|調高至|下修至|維持在|維持|喊到|看至|達到|為)?\s*(?:新台幣|台幣)?\s*([\d,]+(?:\.\d+)?)\s*元?/gi,
+/目標價\s*(?:最高|上看|調升至|調高至|下修至|維持在|維持|喊到|看至|達到|為|由\s*[\d,]+(?:\.\d+)?\s*元?\s*(?:調高|調升|上修|提高)至)?\s*(?:新台幣|台幣)?\s*([\d,]+(?:\.\d+)?)\s*元?/gi,
 /(?:上看|調升至|調高至|下修至|喊到|看至)\s*(?:新台幣|台幣)?\s*([\d,]+(?:\.\d+)?)\s*元/gi
 ];
 for(const p of patterns){let m;while((m=p.exec(text))){const n=Number(m[1].replace(/,/g,""));if(Number.isFinite(n)&&n>=10&&n<=100000)out.push({target:n,index:m.index,text:m[0]})}}
@@ -26,8 +26,8 @@ async function pooled(items,limit,fn){const out=[];let i=0;async function worker
 module.exports=async function handler(req,res){res.setHeader("Cache-Control","no-store");const code=String(req.query.code||"").trim(),name=String(req.query.name||"").trim();if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:"股票代碼格式錯誤"});try{
 const base=name||code;const queries=[`${base} ${code} 目標價`,`${base} ${code} 外資 目標價`,`${base} ${code} 券商 調升 上看`,...SOURCE_DOMAINS.map(d=>`${base} ${code} 目標價 site:${d}`)];
 const rssResults=(await Promise.all(queries.map(fetchRss))).flat();const seen=new Set(),items=[];for(const x of rssResults){const k=`${x.title}|${x.date}`;if(!seen.has(k)){seen.add(k);items.push(x)}}items.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-const selected=items.slice(0,18);const articles=await pooled(selected,6,async item=>{const article=await fetchArticle(item.sourceUrl);return{...item,articleUrl:article.url,fullText:`${item.title} ${item.description} ${article.text}`}});
-const rows=[];for(const a of articles){const text=a.fullText;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl}))rows.push(row)}
+const selected=items.slice(0,60);const articles=await pooled(selected,8,async item=>{const article=await fetchArticle(item.sourceUrl);return{...item,articleUrl:article.url,fullText:`${item.title} ${item.description} ${article.text}`}});
+const rows=[];for(const item of items){const text=`${item.title} ${item.description}`;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:item.date,title:item.title,sourceUrl:item.sourceUrl}))rows.push(row)}for(const a of articles){const text=a.fullText;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl}))rows.push(row)}
 rows.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const groups={};for(const row of rows){const key=row.brokerKey||row.broker;groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
 const brokers=Object.values(groups).map(history=>{const latest=history[0],fullHistory=history.slice(0,5);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 return res.status(200).json({ok:true,brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length});
