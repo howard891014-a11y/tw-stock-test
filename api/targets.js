@@ -88,7 +88,7 @@ function pairRows(text,base,code,name){
       // 上下文不得跨越下一檔股票段落。
       const context=text.slice(Math.max(seg.start,t.index-320),Math.min(seg.end,t.index+320));
       const broker=b?{broker:b.name,brokerType:b.type}:{broker:"未知券商",brokerType:"未知"};
-      rows.push({...base,...broker,brokerKey:b?b.name:`未知券商:${base.date||""}:${t.target}:${base.title||""}`,...periodInfo(context),...reasonInfo(context),target:t.target});
+      rows.push({...base,...broker,brokerKey:b?b.name:"未知券商",...periodInfo(context),...reasonInfo(context),target:t.target});
     }
   }
   return rows;
@@ -99,9 +99,21 @@ async function pooled(items,limit,fn){const out=[];let i=0;async function worker
 module.exports=async function handler(req,res){res.setHeader("Cache-Control","no-store");const code=String(req.query.code||"").trim(),name=String(req.query.name||"").trim();if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:"股票代碼格式錯誤"});try{
 const base=name||code;const queries=[`${base} ${code} 目標價`,`${base} ${code} 外資 目標價`,`${base} ${code} 券商 調升 上看`,...SOURCE_DOMAINS.map(d=>`${base} ${code} 目標價 site:${d}`)];
 const rssResults=(await Promise.all(queries.map(fetchRss))).flat();const seen=new Set(),items=[];for(const x of rssResults){const k=`${x.title}|${x.date}`;if(!seen.has(k)){seen.add(k);items.push(x)}}items.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-async function collect(windowDays){const scoped=items.filter(x=>dayAge(x.date)<=windowDays);const selected=scoped.slice(0,60);const articles=await pooled(selected,8,async item=>{const article=await fetchArticle(item.sourceUrl);return{...item,articleUrl:article.url,fullText:`${item.title} ${item.description} ${article.text}`}});const rows=[];for(const item of scoped){const text=`${item.title} ${item.description}`;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:item.date,title:item.title,sourceUrl:item.sourceUrl},code,name))rows.push(row)}for(const a of articles){const text=a.fullText;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl},code,name))rows.push(row)}return{rows,articles}}
-let collected=await collect(180);if(!collected.rows.length)collected=await collect(360);const rows=collected.rows,articles=collected.articles;
-rows.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const groups={};for(const row of rows){const key=row.brokerKey||row.broker;groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
-const brokers=Object.values(groups).map(history=>{const latest=history[0],fullHistory=history.slice(0,5);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-return res.status(200).json({ok:true,brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length});
+const scoped360=items.filter(x=>dayAge(x.date)<=360),selected=scoped360.slice(0,100);
+const articles=await pooled(selected,8,async item=>{const article=await fetchArticle(item.sourceUrl);return{...item,articleUrl:article.url,fullText:`${item.title} ${item.description} ${article.text}`}});
+const rows=[];
+for(const item of scoped360){const text=`${item.title} ${item.description}`;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:item.date,title:item.title,sourceUrl:item.sourceUrl},code,name))rows.push(row)}
+for(const a of articles){const text=a.fullText;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl},code,name))rows.push(row)}
+rows.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+// 未知券商採逐級搜尋窗：60 → 90 → 180 → 360 天；第一個有資料的範圍即停止擴張。
+const windows=[60,90,180,360];let unknownWindow=360;for(const days of windows){if(rows.some(x=>x.brokerType==="未知"&&dayAge(x.date)<=days)){unknownWindow=days;break}}
+const known=rows.filter(x=>x.brokerType!=="未知");
+const unknown=rows.filter(x=>x.brokerType==="未知"&&dayAge(x.date)<=unknownWindow);
+// 未知券商：相同目標價且日期前後相差一天視為同一筆，只保留較新的資料。
+const mergedUnknown=[];
+for(const row of unknown){const hit=mergedUnknown.find(x=>x.target===row.target&&Math.abs(new Date(x.date||0)-new Date(row.date||0))<=86400000);if(!hit)mergedUnknown.push(row)}
+const groups={};
+for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知"?`未知券商:${row.target}`:(row.brokerKey||row.broker);groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
+const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,5);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+return res.status(200).json({ok:true,brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
