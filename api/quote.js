@@ -35,6 +35,16 @@ async function resolveStock(query){
   if(FALLBACK_CODES[q])return{code:FALLBACK_CODES[q],name:q,market:""};
   return null;
 }
+async function fetchOfficialPrevious(stock){
+  try{
+    const prefix=stock?.market==="上櫃"?"otc":"tse";
+    const channel=`${prefix}_${stock.code}.tw`;
+    const url=`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${encodeURIComponent(channel)}&json=1&delay=0`;
+    const data=await fetchJson(url),row=data?.msgArray?.[0];
+    const previous=toNumber(String(row?.y||"").replace(/,/g,""));
+    return previous&&previous>0?previous:null;
+  }catch{return null}
+}
 async function fetchYahoo(symbol,official){
   const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1m&range=5d&includePrePost=false&events=div%2Csplits`;
   const response=await fetch(url,{headers:HEADERS});if(!response.ok)return null;
@@ -43,7 +53,10 @@ async function fetchYahoo(symbol,official){
   let last=toNumber(meta.regularMarketPrice),lastTime=toNumber(meta.regularMarketTime);
   if(last===null){for(let i=closes.length-1;i>=0;i--){const close=toNumber(closes[i]);if(close!==null){last=close;lastTime=timestamps[i]||lastTime;break}}}
   if(last===null)return null;
-  const previousClose=toNumber(meta.chartPreviousClose??meta.previousClose),change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null,code=symbol.split(".")[0];
+  const code=symbol.split(".")[0];
+  const officialPrevious=await fetchOfficialPrevious(official||{code,market:symbol.endsWith(".TWO")?"上櫃":"上市"});
+  const previousClose=officialPrevious??toNumber(meta.regularMarketPreviousClose??meta.chartPreviousClose??meta.previousClose);
+  const change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null;
   return{source:"Yahoo Finance",symbol,code,name:official?.name||FALLBACK_NAMES[code]||meta.longName||meta.shortName||code,market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString()};
 }
 module.exports=async function handler(req,res){
@@ -59,3 +72,4 @@ module.exports=async function handler(req,res){
     return res.status(200).json({ok:true,...result,fetchedAt:new Date().toISOString()});
   }catch(error){return res.status(502).json({ok:false,error:"股票名稱或行情暫時無法取得",detail:error.message})}
 };
+    
