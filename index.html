@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>台股目標價提醒</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>台股目標價提醒</h1>
+      <p>股價來源：Yahoo Finance｜目標價來源：公開財經新聞</p>
+    </header>
+
+    <nav class="page-tabs" aria-label="功能分頁">
+      <button class="page-tab active" data-page="search">搜尋</button>
+      <button class="page-tab" data-page="holdings">持股清單</button>
+      <button class="page-tab" data-page="watchlist">觀察清單</button>
+    </nav>
+
+    <div id="pageTrack" class="page-track">
+      <section class="page" data-page-panel="search">
+        <div class="panel">
+          <label for="stockCode">股票名稱或代碼</label>
+          <div class="search-row">
+            <input id="stockCode" placeholder="例如 聯發科、2454" autocomplete="off">
+            <button id="searchButton">搜尋</button>
+          </div>
+          <div class="search-history-wrap">
+            <div class="search-history-title">搜尋紀錄</div>
+            <div id="searchHistory" class="search-history"></div>
+          </div>
+          <p id="statusText" class="status">尚未查詢</p>
+        </div>
+        <section id="searchResult" class="panel hidden"></section>
+      </section>
+
+      <section class="page" data-page-panel="holdings">
+        <div class="panel list-panel">
+          <div class="section-title list-title-row"><h2>持股清單</h2><div class="list-title-actions"><div class="sort-buttons" aria-label="持股清單排序"><button type="button" data-sort-button="holdings" data-sort-mode="custom">自訂</button><button type="button" data-sort-button="holdings" data-sort-mode="targetDistance">目標價(近到遠)</button></div><div class="refresh-menu"><button type="button" class="list-refresh-trigger" data-refresh-menu="holdings" aria-label="更新持股清單" aria-expanded="false"><span class="refresh-glyph" aria-hidden="true">↻</span><span class="refresh-caret" aria-hidden="true">▾</span></button><div class="refresh-menu-popover" data-refresh-popover="holdings" hidden><button type="button" data-refresh-all="quote" data-list="holdings">更新股價</button><button type="button" data-refresh-all="targets" data-list="holdings">更新目標價</button></div></div></div></div>
+          <div id="holdingsList"></div>
+        </div>
+      </section>
+
+      <section class="page" data-page-panel="watchlist">
+        <div class="panel list-panel">
+          <div class="section-title list-title-row"><h2>觀察清單</h2><div class="list-title-actions"><div class="sort-buttons" aria-label="觀察清單排序"><button type="button" data-sort-button="watchlist" data-sort-mode="custom">自訂</button><button type="button" data-sort-button="watchlist" data-sort-mode="targetDistance">目標價(近到遠)</button></div><div class="refresh-menu"><button type="button" class="list-refresh-trigger" data-refresh-menu="watchlist" aria-label="更新觀察清單" aria-expanded="false"><span class="refresh-glyph" aria-hidden="true">↻</span><span class="refresh-caret" aria-hidden="true">▾</span></button><div class="refresh-menu-popover" data-refresh-popover="watchlist" hidden><button type="button" data-refresh-all="quote" data-list="watchlist">更新股價</button><button type="button" data-refresh-all="targets" data-list="watchlist">更新目標價</button></div></div></div></div>
+          <div id="watchlistList"></div>
+        </div>
+      </section>
+    </div>
+
+    <footer><p>自訂排序時，可長按股票卡片後上下拖曳。</p></footer>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
