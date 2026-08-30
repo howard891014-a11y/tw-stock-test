@@ -66,7 +66,7 @@ async function fetchYahoo(symbol,official){
   const change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null;
   return{source:"Yahoo Finance",symbol,code,name:shortName(official?.name||FALLBACK_NAMES[code]||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString()};
 }
-module.exports=async function handler(req,res){
+async function handler(req,res){
   res.setHeader("Cache-Control","no-store");res.setHeader("Access-Control-Allow-Origin","*");
   const query=String(req.query.q||req.query.code||"").trim();if(!query)return res.status(400).json({ok:false,error:"請輸入股票名稱或代碼"});
   try{
@@ -78,4 +78,6 @@ module.exports=async function handler(req,res){
     if(!result)return res.status(404).json({ok:false,error:"Yahoo 查無此股票"});
     return res.status(200).json({ok:true,...result,fetchedAt:new Date().toISOString()});
   }catch(error){return res.status(502).json({ok:false,error:"股票名稱或行情暫時無法取得",detail:error.message})}
-};
+}
+function createPagesResponse(){let statusCode=200;const headers=new Headers();return{setHeader(name,value){headers.set(name,String(value));},status(code){statusCode=Number(code)||200;return this;},json(data){if(!headers.has("Content-Type"))headers.set("Content-Type","application/json; charset=utf-8");return new Response(JSON.stringify(data),{status:statusCode,headers});}}}
+export async function onRequest(context){const request=context.request,url=new URL(request.url),req={method:request.method,query:Object.fromEntries(url.searchParams.entries()),headers:Object.fromEntries(request.headers.entries()),body:null};return handler(req,createPagesResponse())}
