@@ -199,7 +199,7 @@ function articlePairRows(text,base,code,name){
 async function fetchRss(query){const url=`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;const r=await fetch(url,{headers:RSS_HEADERS});if(!r.ok)return[];const xml=await r.text();return(xml.match(/<item>[\s\S]*?<\/item>/gi)||[]).map(item=>({title:tag(item,"title"),description:tag(item,"description"),date:iso(tag(item,"pubDate")),sourceUrl:tag(item,"link")}))}
 async function fetchArticle(url){if(!url)return{url,text:""};try{const c=new AbortController(),timer=setTimeout(()=>c.abort(),2600);const r=await fetch(url,{headers:PAGE_HEADERS,redirect:"follow",signal:c.signal});clearTimeout(timer);if(!r.ok)return{url:r.url||url,text:""};const html=await r.text();const canonical=html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)?.[1]||html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)/i)?.[1]||r.url||url;const title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"";const desc=html.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)/i)?.[1]||"";return{url:canonical,text:cleanArticleHtml(`${title}\n${desc}\n${html}`)}}catch{return{url,text:""}}}
 async function pooled(items,limit,fn){const out=[];let i=0;async function worker(){while(i<items.length){const idx=i++;out[idx]=await fn(items[idx],idx)}}await Promise.all(Array.from({length:Math.min(limit,items.length)},worker));return out}
-async function handler(req,res){res.setHeader("Cache-Control","no-store");const rawCode=String(req.query.code||req.query.symbol||"").trim().toUpperCase();
+module.exports=async function handler(req,res){res.setHeader("Cache-Control","no-store");const rawCode=String(req.query.code||req.query.symbol||"").trim().toUpperCase();
 const code=rawCode.replace(/\.(?:TW|TWO)$/i,"").trim();
 const name=String(req.query.name||"").trim();
 if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:"股票代碼格式錯誤"});try{
@@ -250,33 +250,3 @@ for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知
 const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,broker:x.broker,brokerType:x.brokerType,brokerKey:x.brokerKey,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel,evidence:x.evidence||"",aiParsed:!!x.aiParsed,confidence:x.confidence||""}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 return res.status(200).json({ok:true,brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
-
-
-function createPagesResponse(){
-  let statusCode=200;
-  const headers=new Headers();
-  return {
-    setHeader(name,value){headers.set(name,String(value));},
-    status(code){statusCode=Number(code)||200;return this;},
-    json(data){
-      if(!headers.has("Content-Type"))headers.set("Content-Type","application/json; charset=utf-8");
-      return new Response(JSON.stringify(data),{status:statusCode,headers});
-    }
-  };
-}
-
-export async function onRequest(context){
-  const request=context.request;
-  const url=new URL(request.url);
-  const req={
-    method:request.method,
-    query:Object.fromEntries(url.searchParams.entries()),
-    headers:Object.fromEntries(request.headers.entries()),
-    body:null
-  };
-  if(!["GET","HEAD"].includes(request.method)){
-    const raw=await request.text();
-    if(raw){try{req.body=JSON.parse(raw)}catch{req.body=raw}}else req.body={};
-  }
-  return handler(req,createPagesResponse());
-}
