@@ -139,6 +139,44 @@ function pairRows(text,base,code,name){
   }
   return rows;
 }
+
+function isComplexArticle(text){
+  const targets=targetMatches(text);
+  if(targets.length<2)return false;
+  const brokerNames=new Set(brokerMatches(text).map(x=>x.name));
+  const companyMentions=(text.match(/[\u4e00-\u9fffA-Za-z][\u4e00-\u9fffA-Za-z0-9\-]{1,24}\s*[（(]\s*\d{4,6}/g)||[]).length;
+  return targets.length>=2&&(brokerNames.size>=1||companyMentions>=2);
+}
+function responseText(j){
+  if(typeof j?.output_text==="string")return j.output_text;
+  for(const item of j?.output||[])for(const c of item?.content||[])if(typeof c?.text==="string")return c.text;
+  return "";
+}
+async function aiPairRows(text,base,code,name){
+  const apiKey=process.env.OPENAI_API_KEY;
+  if(!apiKey)return null;
+  const clipped=String(text||"").slice(0,30000);
+  const prompt=`你是台灣股票研究新聞資料整理器。請完整閱讀文章，不可用「最近距離」猜測。\n\n正在查詢：${name||code}（${code}）\n\n任務：找出文章中「明確屬於這一檔股票」的券商目標價。文章可能同時包含多家公司、多家券商、多個目標價。必須依語意逐筆配對公司→券商→目標價。\n\n規則：\n1. 只輸出 ${name||code} 的資料，其他公司的目標價絕對不可輸出。\n2. 券商必須有文章文字依據；不要把其他段落券商硬套過來。\n3. 若公司、券商、目標價三者無法明確配對，寧可略過。\n4. evidence 必須摘錄能證明配對的短句（最多80字）。\n5. target 只能是目標價，不可把 EPS、營收、股價、年份當目標價。\n6. confidence 只可 high/medium；不確定就不要輸出。\n7. 僅回傳 JSON，不要 markdown。格式：{"rows":[{"company":"公司名","code":"代碼或空字串","broker":"券商名","target":1234,"evidence":"證據短句","confidence":"high"}]}\n\n文章：\n${clipped}`;
+  try{
+    const r=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_TARGET_MODEL||"gpt-5.6-luna",input:prompt,reasoning:{effort:"low"},text:{format:{type:"json_object"}}})});
+    if(!r.ok)return null;
+    const j=await r.json(),raw=responseText(j).trim();
+    if(!raw)return null;
+    const parsed=JSON.parse(raw),out=[];
+    for(const x of parsed.rows||[]){
+      const target=Number(x.target),company=String(x.company||""),xcode=String(x.code||"");
+      const requested=xcode===code||(name&&company.includes(name));
+      if(!requested||!Number.isFinite(target)||target<10||target>100000)continue;
+      const bmatch=brokerMatches(String(x.broker||""))[0];
+      const broker=bmatch?bmatch.name:String(x.broker||"").trim();
+      if(!broker||broker==="未知券商")continue;
+      const brokerType=bmatch?.type||(/外資/.test(String(x.broker||""))?"外資":"未知");
+      out.push({...base,broker,brokerType,brokerKey:broker,target,evidence:String(x.evidence||"").slice(0,120),aiParsed:true,confidence:x.confidence||"high",...periodInfo(String(x.evidence||"")),...reasonInfo(String(x.evidence||""))});
+    }
+    return out;
+  }catch{return null}
+}
+
 async function fetchRss(query){const url=`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;const r=await fetch(url,{headers:RSS_HEADERS});if(!r.ok)return[];const xml=await r.text();return(xml.match(/<item>[\s\S]*?<\/item>/gi)||[]).map(item=>({title:tag(item,"title"),description:tag(item,"description"),date:iso(tag(item,"pubDate")),sourceUrl:tag(item,"link")}))}
 async function fetchArticle(url){if(!url)return{url,text:""};try{const c=new AbortController(),timer=setTimeout(()=>c.abort(),2600);const r=await fetch(url,{headers:PAGE_HEADERS,redirect:"follow",signal:c.signal});clearTimeout(timer);if(!r.ok)return{url:r.url||url,text:""};const html=await r.text();const canonical=html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)?.[1]||html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)/i)?.[1]||r.url||url;const title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"";const desc=html.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)/i)?.[1]||"";return{url:canonical,text:clean(`${title} ${desc} ${html}`)}}catch{return{url,text:""}}}
 async function pooled(items,limit,fn){const out=[];let i=0;async function worker(){while(i<items.length){const idx=i++;out[idx]=await fn(items[idx],idx)}}await Promise.all(Array.from({length:Math.min(limit,items.length)},worker));return out}
@@ -151,8 +189,23 @@ const rssResults=(await Promise.all(queries.map(fetchRss))).flat();const seen=ne
 const scoped360=items.filter(x=>dayAge(x.date)<=360),selected=scoped360.slice(0,100);
 const articles=await pooled(selected,8,async item=>{const article=await fetchArticle(item.sourceUrl);return{...item,articleUrl:article.url,fullText:`${item.title} ${item.description} ${article.text}`}});
 const rows=[];
-for(const item of scoped360){const text=`${item.title} ${item.description}`;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:item.date,title:item.title,sourceUrl:item.sourceUrl},code,name))rows.push(row)}
-for(const a of articles){const text=a.fullText;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl},code,name))rows.push(row)}
+// v1.1.3：有完整內文時以文章為單位解析。複雜多股/多目標價文章優先交給 AI 做語意配對；
+// 沒設定 OPENAI_API_KEY 或 AI 失敗時才退回保守規則。避免同一篇文章又用 RSS 摘要重複製造錯配。
+const articleKeys=new Set();
+for(const a of articles){
+  const text=a.fullText;if(!(text.includes(code)||(name&&text.includes(name))))continue;
+  const baseRow={date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl};
+  let parsed=null;
+  if(isComplexArticle(text))parsed=await aiPairRows(text,baseRow,code,name);
+  const useRows=parsed!==null?parsed:pairRows(text,baseRow,code,name);
+  for(const row of useRows)rows.push(row);
+  articleKeys.add(`${a.title}|${a.date}`);
+}
+for(const item of scoped360){
+  if(articleKeys.has(`${item.title}|${item.date}`))continue;
+  const text=`${item.title} ${item.description}`;if(!(text.includes(code)||(name&&text.includes(name))))continue;
+  for(const row of pairRows(text,{date:item.date,title:item.title,sourceUrl:item.sourceUrl},code,name))rows.push(row)
+}
 rows.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 // 已知券商：熱門股採自動縮窗，但保留被選中券商的完整歷史，避免 previousTarget 因縮窗消失。
 // 規則：30 → 60 → 90 → 180 → 360 天；當某個時間窗已有至少 4 家近期券商，就不再把更舊券商塞進畫面。
@@ -178,6 +231,6 @@ mergedUnknown.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 if(known.length)mergedUnknown=mergedUnknown.slice(0,3);
 const groups={};
 for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知"?`未知券商:${row.target}`:(row.brokerKey||row.broker);groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
-const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,broker:x.broker,brokerType:x.brokerType,brokerKey:x.brokerKey,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,broker:x.broker,brokerType:x.brokerType,brokerKey:x.brokerKey,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel,evidence:x.evidence||"",aiParsed:!!x.aiParsed,confidence:x.confidence||""}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 return res.status(200).json({ok:true,brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
