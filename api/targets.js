@@ -90,35 +90,48 @@ function clauseBounds(text,index){
   while(end<text.length&&!stops.test(text[end]))end++;
   return{start,end};
 }
+function hasDifferentStockBetween(markers,a,b,code){
+  const lo=Math.min(a,b),hi=Math.max(a,b);
+  return markers.some(m=>m.index>lo&&m.index<hi&&m.code&&m.code!==code&&!m.requested&&!m.implicit);
+}
 function targetBelongsToRequested(text,t,code,name,markers){
   const clause=clauseBounds(text,t.index),local=markers.filter(m=>m.index>=clause.start&&m.index<clause.end);
-  const explicitLocal=local.filter(m=>!m.implicit);
-  if(local.length){
-    const precedingLocal=[...local].filter(m=>m.index<=t.index).sort((a,b)=>b.index-a.index)[0];
-    if(precedingLocal)return !!precedingLocal.requested;
-    const first=[...local].sort((a,b)=>a.index-b.index)[0];
-    return !!first.requested;
+  const requestedLocal=local.filter(m=>m.requested),differentExplicit=local.filter(m=>!m.requested&&!m.implicit);
+  if(requestedLocal.length){
+    const nearest=[...local].sort((a,b)=>Math.abs(a.index-t.index)-Math.abs(b.index-t.index))[0];
+    return !!nearest?.requested;
   }
+  if(differentExplicit.length)return false;
   const preceding=[...markers].filter(m=>m.index<=t.index).sort((a,b)=>b.index-a.index)[0];
-  if(preceding)return !!preceding.requested;
-  const before=text.slice(Math.max(0,t.index-180),t.index);
-  return before.includes(code)||!!(name&&before.includes(name));
+  if(preceding&&t.index-preceding.index<=420)return !!preceding.requested;
+  const around=text.slice(Math.max(0,t.index-220),Math.min(text.length,t.index+t.text.length+120));
+  return around.includes(code)||!!(name&&around.includes(name));
+}
+function brokerForTarget(text,t,code,markers,brokers){
+  const clause=clauseBounds(text,t.index);
+  const sameClause=brokers.filter(b=>b.index>=clause.start&&b.index<clause.end);
+  const choose=list=>[...list].sort((a,b)=>{
+    const ap=a.index<=t.index?0:1,bp=b.index<=t.index?0:1;
+    return ap-bp||Math.abs(a.index-t.index)-Math.abs(b.index-t.index);
+  })[0]||null;
+  const local=choose(sameClause);
+  if(local&&!hasDifferentStockBetween(markers,local.index,t.index,code))return local;
+  const nearby=brokers.filter(b=>Math.abs(b.index-t.index)<=240&&!markers.some(m=>!m.implicit&&m.index>Math.min(b.index,t.index)&&m.index<Math.max(b.index,t.index)));
+  const near=choose(nearby);
+  if(near)return near;
+  const unique=[...new Map(brokers.map(x=>[x.name,x])).values()];
+  const explicitStocks=new Set(markers.filter(m=>!m.implicit&&m.code).map(m=>m.code));
+  return unique.length===1&&explicitStocks.size<=1?unique[0]:null;
 }
 function pairRows(text,base,code,name){
-  const allTargets=targetMatches(text),rows=[],markers=stockMarkers(text,code,name);
-  const globalBrokers=brokerMatches(text);
-  const singleGlobalBroker=[...new Map(globalBrokers.map(x=>[x.name,x])).values()];
+  const allTargets=targetMatches(text),rows=[],markers=stockMarkers(text,code,name),globalBrokers=brokerMatches(text);
   for(const seg of requestedSegments(text,code,name)){
-    const segmentText=text.slice(seg.start,seg.end);
-    const brokers=brokerMatches(segmentText).map(x=>({...x,index:x.index+seg.start}));
     const targets=allTargets.filter(x=>x.index>=seg.start&&x.index<seg.end);
     for(const t of targets){
       if(!targetBelongsToRequested(text,t,code,name,markers))continue;
       const epsContext=text.slice(Math.max(seg.start,t.index-45),Math.min(seg.end,t.index+t.text.length+12));
       if(/(?:EPS|每股盈餘|每股稅後盈餘)\s*(?:上看|估|達|為)?\s*[\d,.]+/i.test(epsContext)&&!/^目標價/i.test(t.text))continue;
-      const preceding=brokers.filter(x=>x.index<=t.index).sort((a,b)=>b.index-a.index)[0];
-      const following=brokers.filter(x=>x.index>t.index&&x.index-t.index<=180).sort((a,b)=>a.index-b.index)[0];
-      const b=preceding||following||(singleGlobalBroker.length===1?singleGlobalBroker[0]:null);
+      const b=brokerForTarget(text,t,code,markers,globalBrokers);
       const context=text.slice(Math.max(seg.start,t.index-360),Math.min(seg.end,t.index+360));
       const broker=b?{broker:b.name,brokerType:b.type}:{broker:"未知券商",brokerType:"未知"};
       rows.push({...base,...broker,brokerKey:b?b.name:"未知券商",...periodInfo(context),...reasonInfo(context),target:t.target});
@@ -165,6 +178,6 @@ mergedUnknown.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 if(known.length)mergedUnknown=mergedUnknown.slice(0,3);
 const groups={};
 for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知"?`未知券商:${row.target}`:(row.brokerKey||row.broker);groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
-const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,broker:x.broker,brokerType:x.brokerType,brokerKey:x.brokerKey,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 return res.status(200).json({ok:true,brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
