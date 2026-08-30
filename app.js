@@ -1,0 +1,370 @@
+const $=id=>document.getElementById(id),KEY="twStockBrokerV40",HISTORY_KEY="twStockSearchHistoryV1",CORR_KEY="twStockTargetCorrectionsV1";
+const oldState=JSON.parse(localStorage.getItem("twStockBrokerV23")||localStorage.getItem("twStockBrokerV22")||"null");
+let state=JSON.parse(localStorage.getItem(KEY)||JSON.stringify(oldState||{holdings:[],watchlist:[],sortModes:{holdings:"custom",watchlist:"custom"}}));
+state.holdings??=[];state.watchlist??=[];state.sortModes??={holdings:"custom",watchlist:"custom"};
+for(const list of [state.holdings,state.watchlist])for(const stock of list)stock.primaryBrokerKey??="";
+let searchHistory=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"),corrections=JSON.parse(localStorage.getItem(CORR_KEY)||"{}"),searched=null,currentPage="search";
+const expanded={holdings:new Set(),watchlist:new Set()},busy=new Set();
+const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
+const saveHistory=()=>localStorage.setItem(HISTORY_KEY,JSON.stringify(searchHistory));
+const saveCorrections=()=>localStorage.setItem(CORR_KEY,JSON.stringify(corrections));
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>n==null||Number.isNaN(Number(n))?"—":Number(n).toLocaleString("zh-TW",{maximumFractionDigits:2});
+const displayName=v=>String(v||"").replace(/股份有限公司$/g,"").replace(/有限公司$/g,"").replace(/科技股份$/g,"").replace(/科技$/g,"").trim();
+const quoteTime=v=>{if(!v)return"尚未更新";return new Date(v).toLocaleString("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).replace(/\//g,"/").replace(",","");};
+const date=v=>v?new Date(v).toLocaleDateString("zh-TW",{timeZone:"Asia/Taipei"}):"日期不明";
+const ageDays=v=>v?Math.max(0,Math.floor((Date.now()-new Date(v))/86400000)):Infinity;
+const age=v=>{if(!v)return"日期不明";const d=ageDays(v);return d?`${d}天前`:"今天"};
+const within360=v=>ageDays(v)<=360;
+function status(t,e=false){
+  const el=$("statusText");el.className=e?"status error":"status";
+  const loading=!e&&/(?:\.{3}|…+)$/.test(String(t));
+  if(loading){
+    const base=String(t).replace(/(?:\.{3}|…+)$/,""),dots='<span class="loading-dots" aria-label="載入中"><i>•</i><i>•</i><i>•</i></span>';
+    el.innerHTML=`${esc(base)}${dots}`;
+  }else el.textContent=t;
+}
+async function readJson(r,label){const text=await r.text();let j;try{j=JSON.parse(text)}catch{throw Error(`${label} API 未正常部署（HTTP ${r.status}）`)}if(!r.ok||!j.ok)throw Error(j.error||`${label}查詢失敗`);return j}
+async function quote(query){return readJson(await fetch(`/api/quote?q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股價")}
+async function targets(code,name){const j=await readJson(await fetch(`/api/targets?code=${code}&name=${encodeURIComponent(name||"")}`,{cache:"no-store"}),"目標價");return j.brokers||[]}
+async function load(query){const q=await quote(query);let brokers=[],targetError="";try{brokers=await targets(q.code,q.name)}catch(e){targetError=e.message}return{...q,brokers,targetError,lastRefresh:new Date().toISOString()}}
+function normalizeHistoryItem(x){return{target:x?.target,date:x?.date||null,title:x?.title||"",sourceUrl:x?.sourceUrl||"",periodType:x?.periodType||"unknown",periodLabel:x?.periodLabel||"",revisionReason:x?.revisionReason||"unknown",revisionReasonLabel:x?.revisionReasonLabel||"",broker:x?.broker||"",brokerType:x?.brokerType||"",manualTarget:!!x?.manualTarget,manualBroker:!!x?.manualBroker,_rawTarget:x?._rawTarget??x?.target,_rawBroker:x?._rawBroker??x?.broker,_correctionKey:x?._correctionKey||""}}
+function rowKey(x){return x.brokerKey||`${x.broker||"未知券商"}:${x.title||""}:${x.target||""}`}
+function correctionKey(code,row){
+  const rawTarget=row?._rawTarget??row?.target??"";
+  const rawBroker=row?._rawBroker??row?.broker??"";
+  return `${code}|${row?.sourceUrl||""}|${String(row?.date||"").slice(0,10)}|${rawTarget}|${rawBroker}`;
+}
+function correctionTitle(v){return String(v||"").toLowerCase().replace(/\s+/g," ").replace(/\s*[-–—|｜]\s*(?:yahoo[^|｜-]*|聯合新聞網|經濟日報|自由財經|工商時報|moneydj|鉅亨網|anue).*$/i,"").trim()}
+function correctionSignature(code,row){return{code:String(code||""),date:String(row?.date||"").slice(0,10),target:String(row?._rawTarget??row?.target??""),broker:String(row?._rawBroker??row?.broker??""),title:correctionTitle(row?.title)}}
+function findCorrection(code,row){
+  const exactKey=row?._correctionKey||correctionKey(code,row);
+  if(corrections[exactKey])return{key:exactKey,value:corrections[exactKey]};
+  const sig=correctionSignature(code,row);
+  let legacy=null;
+  for(const [key,c] of Object.entries(corrections)){
+    if(c?._code&&String(c._code)!==sig.code)continue;
+    if(c?._date&&c._target!=null){
+      if(String(c._date)!==sig.date||String(c._target)!==sig.target)continue;
+      if(c._title&&sig.title&&c._title===sig.title)return{key,value:c};
+      if(c._sourceUrl&&row?.sourceUrl&&c._sourceUrl===row.sourceUrl)return{key,value:c};
+      if(!legacy)legacy={key,value:c};
+      continue;
+    }
+    const parts=String(key).split("|");
+    if(parts.length<5||parts[0]!==sig.code)continue;
+    const oldBroker=parts.pop(),oldTarget=parts.pop(),oldDate=parts.pop();parts.shift();const oldUrl=parts.join("|");
+    if(oldDate===sig.date&&oldTarget===sig.target&&(oldBroker===sig.broker||(oldUrl&&oldUrl===row?.sourceUrl)))legacy??={key,value:c};
+  }
+  return legacy;
+}
+function correctedHistoryItem(code,parent,h){
+  const base={...normalizeHistoryItem(h),broker:h?.broker||parent?._rawBroker||parent?.broker||"未知券商",brokerType:h?.brokerType||parent?.brokerType||"未知"};
+  const found=findCorrection(code,base),key=found?.key||base._correctionKey||correctionKey(code,base),c=found?.value;
+  if(c?.hidden)return null;
+  const out={...base,_correctionKey:key,_rawTarget:base._rawTarget??base.target,_rawBroker:base._rawBroker??base.broker};
+  if(c?.target!=null){out.target=Number(c.target);out.manualTarget=!!c.manualTarget}
+  if(c?.broker){out.broker=c.broker;out.brokerType=c.brokerType||brokerTypeByName(c.broker);out.manualBroker=!!c.manualBroker}
+  return out;
+}
+function correctedRow(code,row){
+  if(!row)return row;
+  const rawHistory=(row.targetHistory?.length?row.targetHistory:[normalizeHistoryItem(row)]).slice(0,3);
+  const history=rawHistory.map(h=>correctedHistoryItem(code,row,h)).filter(Boolean).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  if(!history.length)return null;
+  const latest=history[0],out={...row,...latest,targetHistory:history};
+  out.broker=latest.broker||row.broker||"未知券商";
+  out.brokerType=latest.brokerType||row.brokerType||"未知";
+  out.brokerKey=latest.manualBroker?`manual:${out.broker}`:(row.brokerKey||out.broker);
+  out.target=Number(latest.target);out.date=latest.date;out.sourceUrl=latest.sourceUrl;out.title=latest.title;
+  out.previousTarget=history[1]?.target??null;out.previousDate=history[1]?.date??null;
+  out.manualTarget=!!latest.manualTarget;out.manualBroker=!!latest.manualBroker;out._correctionKey=latest._correctionKey;out._rawTarget=latest._rawTarget;out._rawBroker=latest._rawBroker;
+  return out;
+}
+function correctedRows(code,rows=[]){
+  const corrected=rows.map(r=>correctedRow(code,r)).filter(Boolean),groups=new Map();
+  for(const row of corrected){
+    const key=row.brokerType==="未知"?`unknown:${row.broker}:${row.target}`:`${row.brokerType}:${row.broker}`;
+    if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);
+  }
+  const out=[];
+  for(const group of groups.values()){
+    group.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+    const latest=group[0],history=[];
+    for(const r of group)for(const h of (r.targetHistory?.length?r.targetHistory:[r])){
+      const x={...normalizeHistoryItem(h),broker:r.broker,brokerType:r.brokerType,manualBroker:r.manualBroker||h.manualBroker};
+      if(!history.some(y=>Number(y.target)===Number(x.target)&&String(y.date||"").slice(0,10)===String(x.date||"").slice(0,10)))history.push(x);
+    }
+    history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+    out.push({...latest,brokerKey:latest.manualBroker?`manual:${latest.broker}`:(latest.brokerKey||latest.broker),targetHistory:history.slice(0,3),previousTarget:history[1]?.target??null,previousDate:history[1]?.date??null});
+  }
+  return out.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+}
+function findStoredStock(type,index){return type&&state[type]?.[index]?state[type][index]:null}
+function updateCorrection(code,row,patch){
+  const found=findCorrection(code,row),key=found?.key||row._correctionKey||correctionKey(code,row),sig=correctionSignature(code,row);
+  corrections[key]={...(found?.value||corrections[key]||{}),...patch,_code:sig.code,_date:sig.date,_target:sig.target,_broker:sig.broker,_title:sig.title,_sourceUrl:row?.sourceUrl||"",updatedAt:new Date().toISOString()};
+  saveCorrections();
+}
+async function reparseSource(stock,row,mode){
+  if(!row.sourceUrl)throw Error("這筆資料沒有可重新解析的來源");
+  const r=await fetch("/api/corrections",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:row.sourceUrl,code:stock.code,name:stock.name,mode,currentTarget:row.target,currentBroker:row.broker})});
+  return readJson(r,"來源重新解析");
+}
+function brokerTypeByName(name){
+  if(/高盛|摩根|花旗|美銀|瑞銀|瑞信|野村|麥格理|匯豐|滙豐|里昂|巴克萊|德意志|外資/.test(name))return"外資";
+  if(/元大|群益|凱基|富邦|國泰|永豐|統一|兆豐|第一金|華南|玉山|台新|康和|宏遠|國票|新光|中信|中國信託/.test(name))return"本土";
+  return"未知";
+}
+async function repairRow(type,index,row,kind){
+  const stock=findStoredStock(type,index)||searched;
+  if(!stock)return;
+  if(kind==="old"){
+    if(!confirm("確定刪除這筆過舊目標價？之後重新整理也不會再顯示。"))return;
+    updateCorrection(stock.code,row,{hidden:true});
+  }else if(kind==="target"){
+    const value=prompt("請輸入正確目標價：",String(row.target??""));
+    if(value==null)return;
+    const n=Number(value);
+    if(!Number.isFinite(n)||n<=0)return alert("目標價格式錯誤");
+    updateCorrection(stock.code,row,{target:n,manualTarget:true,hidden:false});
+  }else if(kind==="broker"){
+    const initial=row.broker==="未知券商"?"":(row.broker||"");
+    const value=prompt("請輸入正確券商名稱：",initial);
+    if(value==null)return;
+    const broker=value.trim();
+    if(!broker)return alert("券商名稱不可空白");
+    updateCorrection(stock.code,row,{broker,brokerType:brokerTypeByName(broker),manualBroker:true,hidden:false});
+  }
+  renderAll();
+  if(!type)show(searched);
+}
+function chooseRepairType(){
+  return new Promise(resolve=>{
+    const overlay=document.createElement("div");
+    overlay.className="repair-modal-overlay";
+    overlay.innerHTML=`<div class="repair-modal" role="dialog" aria-modal="true" aria-labelledby="repairModalTitle">
+      <h3 id="repairModalTitle">修正目標價資料</h3>
+      <label>修正方式
+        <select class="repair-type-select">
+          <option value="target">修正目標價</option>
+          <option value="broker">修正券商</option>
+          <option value="old">刪除過舊目標價</option>
+        </select>
+      </label>
+      <div class="repair-modal-actions"><button type="button" class="secondary repair-cancel">取消</button><button type="button" class="repair-confirm">確定</button></div>
+    </div>`;
+    const close=value=>{overlay.remove();resolve(value)};
+    overlay.querySelector(".repair-cancel").onclick=()=>close(null);
+    overlay.querySelector(".repair-confirm").onclick=()=>close(overlay.querySelector(".repair-type-select").value);
+    overlay.onclick=e=>{if(e.target===overlay)close(null)};
+    document.body.appendChild(overlay);
+    overlay.querySelector("select").focus();
+  });
+}
+
+function editManualCorrection(type,index,row,field){
+  const stock=findStoredStock(type,index)||searched;if(!stock)return;
+  const key=row._correctionKey||correctionKey(stock.code,row),c=corrections[key]||{};
+  if(!confirm("按「確定」修改手動修正；按「取消」可選擇刪除修正。")){
+    if(confirm("刪除此手動修正並恢復官方資料？")){
+      if(field==="target"){delete c.target;delete c.manualTarget}else{delete c.broker;delete c.brokerType;delete c.manualBroker}
+      if(!c.target&&!c.broker&&!c.hidden)delete corrections[key];else corrections[key]=c;
+      saveCorrections();renderAll();if(!type)show(searched);
+    }
+    return;
+  }
+  if(field==="target"){
+    const v=prompt("修改目標價：",String(row.target??""));if(v==null)return;
+    const n=Number(v);if(!Number.isFinite(n)||n<=0)return alert("目標價格式錯誤");
+    updateCorrection(stock.code,row,{target:n,manualTarget:true});
+  }else{
+    const v=prompt("修改券商名稱：",row.broker||"");if(v==null||!v.trim())return;
+    updateCorrection(stock.code,row,{broker:v.trim(),brokerType:brokerTypeByName(v.trim()),manualBroker:true});
+  }
+  renderAll();if(!type)show(searched);
+}
+
+function merge(oldRows=[],newRows=[]){const old=new Map(oldRows.filter(x=>within360(x.date)).map(x=>[rowKey(x),x])),fresh=new Map(newRows.filter(x=>within360(x.date)).map(x=>[rowKey(x),x])),out=[];for(const[k,x]of fresh){const o=old.get(k),changed=o&&(`${o.target}|${o.date}`!==`${x.target}|${x.date}`);const history=[...(x.targetHistory||[]),...(o?.targetHistory||[]),...(o?[o]:[])].map(normalizeHistoryItem).filter(x=>Number(x.target)>0&&within360(x.date)).filter((x,i,a)=>a.findIndex(y=>y.target===x.target&&String(y.date||"").slice(0,10)===String(x.date||"").slice(0,10))===i).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0)).slice(0,3);out.push({...x,broker:x.broker||"未知券商",brokerKey:k,targetHistory:history,previousTarget:history[1]?.target??null,previousDate:history[1]?.date??null,hasNewTarget:!!changed,isNewBroker:!o})}return out.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0))}
+function basis(x){const latest=Number(x.target),previous=Number(x.previousTarget);if(Number.isFinite(previous)&&previous>0&&latest>previous)return{value:previous,label:"目標價上調，採前一次目標價"};return{value:latest,label:Number.isFinite(previous)&&previous>0&&latest<previous?"目標價下調，採最新目標價":"採最新目標價"}}
+function stageForBroker(row,last){const b=basis(row),target=Number(b.value),p=Number(last);if(!Number.isFinite(target)||target<=0||!Number.isFinite(p))return null;const levels=[.8,.85,.88].map(rate=>({rate,price:target*rate}));if(p>=levels[2].price)return{rank:0,distance:0,label:"已達88%",broker:row.broker||"未知券商",price:levels[2].price,activeRate:.88,basis:target};const next=levels.find(x=>p<x.price);const distance=(next.price-p)/p*100;return{rank:1,distance,label:`距${Math.round(next.rate*100)}%還差 ${distance.toFixed(1)}%`,broker:row.broker||"未知券商",price:next.price,activeRate:next.rate,basis:target}}
+function primaryRow(stock){const valid=correctedRows(stock.code,stock.brokers||[]).filter(x=>Number(x.target)>0&&within360(x.date));if(!valid.length)return null;if(stock.primaryBrokerKey){const selected=valid.find(x=>(x.brokerKey||x.broker)===stock.primaryBrokerKey);if(selected)return selected}return valid.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0))[0]}
+function bestStage(stock){const row=primaryRow(stock);return row?stageForBroker(row,stock.last):null}
+function sortedItems(type){const a=state[type].map((x,index)=>({x,index}));if(state.sortModes[type]!=="targetDistance")return a;return a.sort((u,v)=>{const a=bestStage(u.x),b=bestStage(v.x);if(!a&&!b)return u.index-v.index;if(!a)return 1;if(!b)return-1;return a.rank-b.rank||a.distance-b.distance||u.index-v.index})}
+function historyRows(h,start=0,stockCode="",type="",index=-1,parentBroker=""){
+  return h.map((y,i)=>{
+    const payload=encodeURIComponent(JSON.stringify({sourceUrl:y.sourceUrl||"",date:y.date||"",target:y._rawTarget??y.target,broker:y._rawBroker??y.broker??parentBroker,brokerKey:y.brokerKey||"",_correctionKey:y._correctionKey||""}));
+    const targetEdit=y.manualTarget?` <button class="manual-edit compact" data-manual-field="target" data-row="${payload}" data-type="${type}" data-i="${index}" title="修改或刪除手動修正">✎</button>`:"";
+    return`<div class="history-item"><span>${start+i===0?"最新":start+i===1?"前次":`第${start+i+1}筆`}</span><strong>${fmt(y.target)}${targetEdit}</strong><span>${date(y.date)}</span><span class="history-actions">${y.sourceUrl?`<a href="${esc(y.sourceUrl)}" target="_blank" rel="noopener">來源</a>`:""}<button class="repair-button compact" data-repair data-row="${payload}" data-type="${type}" data-i="${index}">修正</button></span></div>`;
+  }).join("");
+}
+function historyHtml(x,stockCode="",type="",index=-1){const h=(x.targetHistory?.length?x.targetHistory:[normalizeHistoryItem(x)]).slice(0,3);return h.length?`<details class="target-history"><summary>目標價歷史（${h.length}）</summary>${historyRows(h,0,stockCode,type,index,x.broker||"")}</details>`:""}
+const PERIODS=[{key:"quarter",title:"季度目標價"},{key:"annual",title:"年度目標價"},{key:"12m",title:"12個月目標價"},{key:"unknown",title:""}];
+function brokerRow(x,last,primaryKey="",stockCode="",type="",index=-1){
+  const b=basis(x),info=[],stage=stageForBroker(x,last),isPrimary=(x.brokerKey||x.broker)===primaryKey;
+  if(x.periodType&&x.periodType!=="unknown"&&x.periodLabel)info.push(`<span class="badge">${esc(x.periodLabel)}</span>`);
+  if(x.revisionReason&&x.revisionReason!=="unknown"&&x.revisionReasonLabel)info.push(`<span class="badge">${esc(x.revisionReasonLabel)}</span>`);
+  const rates=[.8,.85,.88],payload=encodeURIComponent(JSON.stringify({sourceUrl:x.sourceUrl||"",date:x.date||"",target:x._rawTarget??x.target,broker:x._rawBroker??x.broker,brokerKey:x.brokerKey||""}));
+  return`<div class="broker-row ${isPrimary?"primary-broker":""}" data-broker-key="${esc(x.brokerKey||x.broker||"")}">
+    <div class="broker-head"><div><strong>${esc(x.broker||"未知券商")}</strong>${x.manualBroker?` <button class="manual-edit" data-manual-field="broker" data-row="${payload}" data-type="${type}" data-i="${index}" title="修改或刪除手動修正">✎</button>`:""} ${isPrimary?'<span class="badge primary-badge">主要</span>':''}${x.hasNewTarget?'<span class="badge new-badge">已更新</span>':''}${x.isNewBroker?'<span class="badge new-badge">新增</span>':''}</div><strong>${fmt(x.target)}${x.manualTarget?` <button class="manual-edit" data-manual-field="target" data-row="${payload}" data-type="${type}" data-i="${index}" title="修改或刪除手動修正">✎</button>`:""}</strong></div>
+    <div class="small">${date(x.date)}（${age(x.date)}）</div>
+    ${info.length?`<div class="info-line">${info.join("")}</div>`:""}
+    ${stage?`<div class="stage-line">${stage.label}</div>`:""}
+    <div class="small">倍率基準：${fmt(b.value)}（${b.label}）</div>
+    <div class="multiplier">${rates.map(rate=>`<div class="${stage&&stage.activeRate===rate?"active-target":""}">${Math.round(rate*100)}%<br><strong>${fmt(b.value*rate)}</strong></div>`).join("")}</div>
+    ${historyHtml(x,stockCode,type,index)}
+  </div>`}
+function periodGroups(list,typeName,last,primaryKey="",stockCode="",listType="",index=-1){const eligible=(list||[]).filter(x=>x.brokerType===typeName&&Number(x.target)>0&&within360(x.date));if(!eligible.length)return'<div class="small">近期無目標價</div>';return PERIODS.map(p=>{const a=eligible.filter(x=>(x.periodType||"unknown")===p.key);return a.length?`<div class="period-group">${p.title?`<h4>${p.title}</h4>`:""}${a.map(x=>brokerRow(x,last,primaryKey,stockCode,listType,index)).join("")}</div>`:""}).join("")}
+function brokerSelect(list,selected,type,index){if(!type)return"";const opts=(list||[]).filter(x=>Number(x.target)>0&&within360(x.date)).map(x=>({key:x.brokerKey||x.broker,label:x.broker||"未知券商"})).filter((x,i,a)=>a.findIndex(y=>y.key===x.key)===i);if(!opts.length)return"";return`<label class="primary-broker-select">主要券商<select data-primary-broker data-type="${type}" data-i="${index}"><option value="">自動選擇</option>${opts.map(o=>`<option value="${o.key}" ${o.key===selected?"selected":""}>${o.label}</option>`).join("")}</select></label>`}
+function targetSections(list,last,refreshButton="",stock=null,type="",index=-1){const code=stock?.code||searched?.code||"",rows=correctedRows(code,list),primaryKey=stock?.primaryBrokerKey||"",hasUnknown=rows.some(x=>x.brokerType==="未知"&&Number(x.target)>0&&within360(x.date));return`<div class="target-title"><h3>目標價</h3></div>${brokerSelect(rows,primaryKey,type,index)}<div class="broker-section"><h3>外資券商</h3>${periodGroups(rows,"外資",last,primaryKey,code,type,index)}</div><div class="broker-section"><h3>本土券商</h3>${periodGroups(rows,"本土",last,primaryKey,code,type,index)}</div>${hasUnknown?`<div class="broker-section"><h3>未知券商</h3>${periodGroups(rows,"未知",last,primaryKey,code,type,index)}</div>`:""}`}
+const icon=(kind,type,index,label)=>`<button class="icon-button ${kind}" data-type="${type}" data-i="${index}" aria-label="${label}" title="${label}"><span aria-hidden="true">${kind==="remove-one"?"×":"↻"}</span></button>`;
+function changeHtml(x){const s=x.change>0?"+":"",c=x.change>0?"positive":x.change<0?"negative":"";return`<div class="price-change ${c}">${x.change==null?"—":`${s}${fmt(x.change)}（${s}${fmt(x.changePct)}%）`}</div>`}
+function card(x,index,type){const key=`${type}:${x.code}`,open=expanded[type].has(key),stage=bestStage(x),custom=state.sortModes[type]==="custom",hasNew=Array.isArray(x.newTargetBrokerKeys)&&x.newTargetBrokerKeys.length>0;return`<article class="stock-card ${open?"expanded":""}" data-key="${key}" data-stock-code="${x.code}" data-index="${index}" data-type="${type}" ${custom?'data-draggable="true"':''}><div class="stock-summary"><div class="stock-summary-main"><div class="stock-name">${displayName(x.name)||"—"} <span class="code">${x.code}</span>${hasNew?` <button class="new-target-button" data-new-target data-type="${type}" data-i="${index}">NEW</button>`:""}</div><div class="meta">${x.market||""}｜${quoteTime(x.quoteTime)}</div>${stage?`<div class="summary-stage" title="${esc(`${stage.broker}：${stage.label}`)}">${stage.broker}：${stage.label}</div>`:""}</div><div class="stock-price"><div class="price-line"><div class="price">${fmt(x.last)}</div></div>${changeHtml(x)}</div><div class="summary-controls">${icon("remove-one",type,index,"刪除股票")}<button class="summary-toggle chevron-button" data-toggle="${key}" aria-expanded="${open}" aria-label="${open?"收合":"展開"}"><span class="chevron">⌄</span></button></div></div><div class="stock-detail">${targetSections(x.brokers,x.last,"",x,type,index)}</div></article>`}
+function renderList(type){const el=$(type+"List"),a=sortedItems(type);el.innerHTML=a.length?a.map(({x,index})=>card(x,index,type)).join(""):'<div class="empty">清單是空的</div>'}
+function renderHistory(){const el=$("searchHistory");if(!el)return;el.innerHTML=searchHistory.length?searchHistory.map((x,i)=>`<span class="history-chip"><button class="history-search" data-history-i="${i}">${displayName(x.name)||x.code}</button><button class="history-delete" data-history-delete="${i}" aria-label="刪除 ${displayName(x.name)||x.code}">×</button></span>`).join(""):'<span class="small">尚無搜尋紀錄</span>';document.querySelectorAll("[data-history-i]").forEach(b=>b.onclick=()=>{$("stockCode").value=searchHistory[+b.dataset.historyI].code;search()});document.querySelectorAll("[data-history-delete]").forEach(b=>b.onclick=()=>{searchHistory.splice(+b.dataset.historyDelete,1);saveHistory();renderHistory()})}
+function remember(x){searchHistory=searchHistory.filter(y=>y.code!==x.code);searchHistory.unshift({code:x.code,name:displayName(x.name)});searchHistory=searchHistory.slice(0,12);saveHistory();renderHistory()}
+function renderAll(){renderList("holdings");renderList("watchlist");bindLists();renderHistory();document.querySelectorAll("[data-sort-button]").forEach(b=>b.classList.toggle("active",(state.sortModes[b.dataset.sortButton]||"custom")===b.dataset.sortMode))}
+function replaceStock(type,i,patch){state[type][i]={...state[type][i],...patch};save();renderAll()}
+async function refreshQuoteOne(type,i,button){const old=state[type][i],key=`q:${type}:${i}`;if(busy.has(key))return;busy.add(key);button?.classList.add("spinning");try{const q=await quote(old.code);replaceStock(type,i,{...q,brokers:old.brokers,lastRefresh:new Date().toISOString()});status(`${old.name||old.code} 股價已刷新`)}catch(e){status(e.message,true)}finally{busy.delete(key)}}
+async function refreshTargetsOne(type,i,button){const old=state[type][i],key=`t:${type}:${i}`;if(busy.has(key))return;busy.add(key);button?.classList.add("spinning");try{const rows=await targets(old.code,old.name);replaceStock(type,i,{brokers:merge(old.brokers,rows),targetError:"",lastTargetRefresh:new Date().toISOString()});status(`${old.name||old.code} 目標價已刷新`)}catch(e){status(e.message,true)}finally{busy.delete(key)}}
+async function refreshListAll(type,kind,trigger){
+  const key=`all:${type}:${kind}`,items=state[type];
+  if(busy.has(key)||!items.length)return;
+  busy.add(key);trigger?.classList.add("spinning");closeRefreshMenus();
+  let failed=0;
+  try{
+    for(let i=0;i<items.length;i++){
+      const old=state[type][i];
+      try{
+        if(kind==="quote"){
+          const q=await quote(old.code);
+          state[type][i]={...old,...q,brokers:old.brokers,lastRefresh:new Date().toISOString()};
+        }else{
+          const rows=await targets(old.code,old.name),merged=merge(old.brokers,rows);
+          const newKeys=merged.filter(r=>r.hasNewTarget||r.isNewBroker).map(r=>r.brokerKey||r.broker).filter(Boolean);
+          const pending=[...(old.newTargetBrokerKeys||[]),...newKeys].filter((x,j,a)=>a.indexOf(x)===j);
+          state[type][i]={...old,brokers:merged,newTargetBrokerKeys:pending,targetError:"",lastTargetRefresh:new Date().toISOString()};
+        }
+      }catch(e){failed++}
+      save();renderAll();
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    status(`${type==="holdings"?"持股":"觀察"}清單${kind==="quote"?"股價":"目標價"}更新完成${failed?`（${failed}檔失敗）`:""}`,!!failed);
+  }finally{busy.delete(key);trigger?.classList.remove("spinning")}
+}
+function closeRefreshMenus(){
+  document.querySelectorAll(".refresh-menu-popover").forEach(p=>p.hidden=true);
+  document.querySelectorAll("[data-refresh-menu]").forEach(b=>b.setAttribute("aria-expanded","false"));
+}
+function openNewTarget(type,index){
+  const stock=state[type]?.[index],brokerKey=stock?.newTargetBrokerKeys?.[0];if(!stock||!brokerKey)return;
+  stock.newTargetBrokerKeys=[];stock.brokers=(stock.brokers||[]).map(r=>({...r,hasNewTarget:false,isNewBroker:false}));save();expanded[type].add(`${type}:${stock.code}`);renderAll();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const card=[...document.querySelectorAll(`.stock-card[data-type="${type}"]`)].find(el=>el.dataset.stockCode===stock.code);
+    const target=[...(card?.querySelectorAll(".broker-row")||[])].find(el=>el.dataset.brokerKey===String(brokerKey));
+    if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.remove("new-target-flash");void target.offsetWidth;target.classList.add("new-target-flash");setTimeout(()=>target.classList.remove("new-target-flash"),1800)}
+  }));
+}
+function bindRefreshMenus(){
+  document.querySelectorAll("[data-refresh-menu]").forEach(btn=>btn.onclick=e=>{e.stopPropagation();const type=btn.dataset.refreshMenu,p=document.querySelector(`[data-refresh-popover="${type}"]`),willOpen=p.hidden;closeRefreshMenus();p.hidden=!willOpen;btn.setAttribute("aria-expanded",String(willOpen))});
+  document.querySelectorAll("[data-refresh-all]").forEach(btn=>btn.onclick=e=>{e.stopPropagation();const type=btn.dataset.list,kind=btn.dataset.refreshAll,trigger=document.querySelector(`[data-refresh-menu="${type}"]`);refreshListAll(type,kind,trigger)});
+  document.addEventListener("click",e=>{if(!e.target.closest(".refresh-menu"))closeRefreshMenus()});
+}
+
+function bindLists(){document.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=e=>{if(e.target.closest(".icon-button,.new-target-button"))return;const[type]=b.dataset.toggle.split(":");expanded[type].has(b.dataset.toggle)?expanded[type].delete(b.dataset.toggle):expanded[type].add(b.dataset.toggle);renderAll()});document.querySelectorAll(".remove-one").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const type=b.dataset.type,i=+b.dataset.i;if(confirm(`確定刪除 ${state[type][i]?.name||state[type][i]?.code}？`)){state[type].splice(i,1);save();renderAll()}});document.querySelectorAll("[data-new-target]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();openNewTarget(b.dataset.type,+b.dataset.i)});document.querySelectorAll("[data-primary-broker]").forEach(sel=>sel.onchange=()=>{const type=sel.dataset.type,i=+sel.dataset.i;state[type][i].primaryBrokerKey=sel.value;save();renderAll()});
+document.querySelectorAll("[data-repair]").forEach(b=>b.onclick=async e=>{
+  e.preventDefault();e.stopPropagation();
+  const row=JSON.parse(decodeURIComponent(b.dataset.row)),type=b.dataset.type||"",i=Number(b.dataset.i);
+  const choice=await chooseRepairType();
+  if(choice)await repairRow(type,i,row,choice);
+});
+document.querySelectorAll("[data-manual-field]").forEach(b=>b.onclick=e=>{
+  e.preventDefault();e.stopPropagation();
+  const row=JSON.parse(decodeURIComponent(b.dataset.row));
+  editManualCorrection(b.dataset.type||"",Number(b.dataset.i),row,b.dataset.manualField);
+});
+bindDrag()}
+function show(x){searched=x;remember(x);$("searchResult").classList.remove("hidden");$("searchResult").innerHTML=`<div class="search-result-head"><div><div class="stock-name">${displayName(x.name)} <span class="code">${x.code}</span></div><div class="meta">${x.market}｜${quoteTime(x.quoteTime)}</div></div><div class="stock-price"><div class="price-line"><div class="price">${fmt(x.last)}</div></div>${changeHtml(x)}</div></div>${targetSections(x.brokers,x.last,"",x)}<div class="actions"><button id="addH">加入持股</button><button id="addW" class="secondary">加入觀察</button></div>`;$("addH").onclick=()=>add("holdings");$("addW").onclick=()=>add("watchlist")}
+function add(type){if(state[type].some(x=>x.code===searched.code))return status("清單中已存在");state[type].push({...searched});save();renderAll();goPage(type);status("已加入清單")}
+async function search(){const q=$("stockCode").value.trim();if(!q)return status("請輸入股票名稱或代碼",true);$("searchButton").disabled=true;status("正在更新股價與各券商目標價…");try{const x=await load(q);show(x);status(`更新成功：${x.name}`)}catch(e){status(e.message,true)}finally{$("searchButton").disabled=false}}
+function bindDrag(){
+  document.querySelectorAll('[data-draggable="true"]').forEach(card=>{
+    let timer=null,dragging=false,pointerId=null,startY=0,grabOffset=0,placeholder=null;
+    const type=card.dataset.type,container=$(type+"List"),handle=card.querySelector(".stock-summary-main");
+    if(!handle||!container)return;
+    const resetCard=()=>{
+      card.style.position="";card.style.left="";card.style.top="";card.style.width="";card.style.height="";
+      card.style.margin="";card.style.transform="";card.style.pointerEvents="";
+      card.classList.remove("dragging","drag-ready");
+    };
+    const cleanup=()=>{
+      clearTimeout(timer);timer=null;
+      document.removeEventListener("pointermove",move,{passive:false});
+      document.removeEventListener("pointerup",end);
+      document.removeEventListener("pointercancel",end);
+      document.body.classList.remove("sorting-active");
+      if(pointerId!=null){try{card.releasePointerCapture(pointerId)}catch{}}
+      pointerId=null;
+    };
+    const beginDrag=e=>{
+      const r=card.getBoundingClientRect();
+      dragging=true;grabOffset=e.clientY-r.top;
+      placeholder=document.createElement("div");
+      placeholder.className="stock-card-placeholder";
+      placeholder.style.height=`${r.height}px`;
+      container.insertBefore(placeholder,card);
+      card.classList.remove("drag-ready");card.classList.add("dragging");
+      Object.assign(card.style,{position:"fixed",left:`${r.left}px`,top:`${r.top}px`,width:`${r.width}px`,height:`${r.height}px`,margin:"0",transform:"none",pointerEvents:"none"});
+      document.body.classList.add("sorting-active");
+      navigator.vibrate?.(25);
+    };
+    const start=e=>{
+      if(e.button!=null&&e.button!==0)return;
+      if(e.target.closest(".icon-button,a,details,summary,select,input,button"))return;
+      pointerId=e.pointerId;startY=e.clientY;
+      try{card.setPointerCapture(pointerId)}catch{}
+      document.addEventListener("pointermove",move,{passive:false});
+      document.addEventListener("pointerup",end);
+      document.addEventListener("pointercancel",end);
+      card.classList.add("drag-ready");
+      timer=setTimeout(()=>beginDrag(e),360);
+    };
+    const move=e=>{
+      if(e.pointerId!==pointerId)return;
+      if(!dragging){
+        if(Math.abs(e.clientY-startY)>18){clearTimeout(timer);card.classList.remove("drag-ready");}
+        return;
+      }
+      e.preventDefault();
+      card.style.top=`${e.clientY-grabOffset}px`;
+      const items=[...container.querySelectorAll(".stock-card:not(.dragging)")];
+      const before=items.find(el=>e.clientY<el.getBoundingClientRect().top+el.getBoundingClientRect().height/2);
+      if(before)container.insertBefore(placeholder,before);else container.appendChild(placeholder);
+      const edge=64;
+      if(e.clientY<edge)window.scrollBy({top:-10,behavior:"auto"});
+      else if(e.clientY>window.innerHeight-edge)window.scrollBy({top:10,behavior:"auto"});
+    };
+    const end=e=>{
+      if(e.pointerId!==pointerId)return;
+      clearTimeout(timer);
+      if(dragging){
+        dragging=false;
+        if(placeholder){container.insertBefore(card,placeholder);placeholder.remove();placeholder=null;}
+        resetCard();
+        const codes=[...container.querySelectorAll(".stock-card")].map(el=>el.dataset.key.split(":").slice(1).join(":"));
+        state[type].sort((a,b)=>codes.indexOf(a.code)-codes.indexOf(b.code));
+        save();renderAll();
+      }else card.classList.remove("drag-ready");
+      cleanup();
+    };
+    handle.addEventListener("pointerdown",start);
+  });
+}
+const pages=["search","holdings","watchlist"];
+function updatePageTabs(page){currentPage=page;document.querySelectorAll(".page-tab").forEach(b=>b.classList.toggle("active",b.dataset.page===page))}
+function goPage(page){const i=pages.indexOf(page);if(i<0)return;$("pageTrack").scrollTo({left:$("pageTrack").clientWidth*i,behavior:"smooth"});updatePageTabs(page)}
+let scrollTimer;$("pageTrack").addEventListener("scroll",()=>{clearTimeout(scrollTimer);scrollTimer=setTimeout(()=>{const i=Math.round($("pageTrack").scrollLeft/$("pageTrack").clientWidth);updatePageTabs(pages[Math.max(0,Math.min(2,i))])},80)});
+document.querySelectorAll(".page-tab").forEach(b=>b.onclick=()=>goPage(b.dataset.page));
+$("searchButton").onclick=search;$("stockCode").onkeydown=e=>{if(e.key==="Enter")search()};document.querySelectorAll("[data-sort-button]").forEach(b=>b.onclick=()=>{state.sortModes[b.dataset.sortButton]=b.dataset.sortMode;save();renderAll()});
+bindRefreshMenus();
+renderAll();
