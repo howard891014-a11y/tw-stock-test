@@ -141,9 +141,22 @@ const rows=[];
 for(const item of scoped360){const text=`${item.title} ${item.description}`;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:item.date,title:item.title,sourceUrl:item.sourceUrl},code,name))rows.push(row)}
 for(const a of articles){const text=a.fullText;if(!(text.includes(code)||(name&&text.includes(name))))continue;for(const row of pairRows(text,{date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl},code,name))rows.push(row)}
 rows.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-// 未知券商採逐級搜尋窗：60 → 90 → 180 → 360 天；第一個有資料的範圍即停止擴張。
+// 已知券商：熱門股採自動縮窗，但保留被選中券商的完整歷史，避免 previousTarget 因縮窗消失。
+// 規則：30 → 60 → 90 → 180 → 360 天；當某個時間窗已有至少 4 家近期券商，就不再把更舊券商塞進畫面。
+// 若同一時間窗仍超過 8 家，只保留「最新報告日期」前 8 家。冷門股不足 4 家時會一路放寬到 360 天。
+const knownAll=rows.filter(x=>x.brokerType!=="未知");
+const knownWindows=[30,60,90,180,360],minRecentBrokers=4,maxVisibleBrokers=8;
+const latestKnownByBroker=new Map();
+for(const row of knownAll){const key=row.brokerKey||row.broker,prev=latestKnownByBroker.get(key);if(!prev||new Date(row.date||0)>new Date(prev.date||0))latestKnownByBroker.set(key,row)}
+let knownWindow=360;
+for(const days of knownWindows){const count=[...latestKnownByBroker.values()].filter(x=>dayAge(x.date)<=days).length;if(count>=minRecentBrokers){knownWindow=days;break}}
+let activeKnown=[...latestKnownByBroker.entries()].filter(([,x])=>dayAge(x.date)<=knownWindow).sort((a,b)=>new Date(b[1].date||0)-new Date(a[1].date||0));
+if(activeKnown.length>maxVisibleBrokers)activeKnown=activeKnown.slice(0,maxVisibleBrokers);
+const activeKnownKeys=new Set(activeKnown.map(([key])=>key));
+const known=knownAll.filter(x=>activeKnownKeys.has(x.brokerKey||x.broker));
+
+// 未知券商沿用原本逐級搜尋窗：60 → 90 → 180 → 360 天。
 const windows=[60,90,180,360];let unknownWindow=360;for(const days of windows){if(rows.some(x=>x.brokerType==="未知"&&dayAge(x.date)<=days)){unknownWindow=days;break}}
-const known=rows.filter(x=>x.brokerType!=="未知");
 const unknown=rows.filter(x=>x.brokerType==="未知"&&dayAge(x.date)<=unknownWindow);
 // 未知券商：相同目標價且日期前後相差一天視為同一筆，只保留較新的資料。
 let mergedUnknown=[];
@@ -152,6 +165,6 @@ mergedUnknown.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 if(known.length)mergedUnknown=mergedUnknown.slice(0,3);
 const groups={};
 for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知"?`未知券商:${row.target}`:(row.brokerKey||row.broker);groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
-const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,5);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-return res.status(200).json({ok:true,brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,unknownSearchWindow:unknownWindow});
+const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+return res.status(200).json({ok:true,brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
