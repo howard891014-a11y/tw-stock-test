@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07111f">
+  <title>股域 StockZone</title>
+  
+<style id="stockzone-inline-style">
+
+:root{--bg:#07101b;--side:#081421;--card:#0e1b2a;--line:#213248;--text:#f4f7fb;--muted:#8999ad;--blue:#49a2ff;--green:#35d58a;--red:#ff6269;--orange:#ffad32;--purple:#b879ff}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Arial,"Microsoft JhengHei",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.app-shell{min-height:100vh}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;padding:20px 14px;background:var(--side);border-right:1px solid var(--line);z-index:50;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:700;padding:4px 10px 20px}
+.brand-mark{color:var(--blue)}
+.side-nav{display:flex;flex-direction:column;gap:8px}
+.side-item,.side-group button{display:block;width:100%;border:0;border-radius:8px;background:transparent;color:#aeb9c8;text-align:left;padding:10px 13px}
+.side-item.active{background:#11243a;color:#fff}
+.side-title{padding:10px 12px;border-radius:8px;background:#0d1d30;color:#75b8ff;font-weight:700}
+.side-group button{padding-left:35px;font-size:13px}
+.sidebar-foot{margin-top:auto;border-top:1px solid var(--line);padding:16px 10px 0;color:#94a3b5;display:flex;justify-content:space-between}
+.main-shell{margin-left:230px;min-height:100vh}
+.topbar{height:68px;position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;padding:0 24px;background:#07101bf2;border-bottom:1px solid var(--line)}
+.menu-btn,.mobile-brand{display:none}
+.searchbox{width:min(560px,60vw);display:flex;border:1px solid #2a3c52;border-radius:10px;overflow:hidden;background:#0c1826}
+.searchbox input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:#fff;padding:12px 14px}
+.searchbox button{border:0;border-left:1px solid #2a3c52;background:#122840;color:#6eb4ff;padding:0 20px;font-weight:700}
+.star{margin-left:auto;border:0;background:transparent;color:#fff;font-size:27px}
+.content{max-width:1280px;margin:0 auto;padding:24px}
+.stock-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding:5px 4px 20px}
+.eyebrow{color:var(--blue);font-size:12px;font-weight:700;letter-spacing:.1em}
+.stock-head h1{margin:7px 0 5px;font-size:30px}
+.stock-head h1 small{font-size:17px;color:#aeb9c8}
+.muted{color:var(--muted);font-size:13px}
+.price-block{text-align:right;display:flex;flex-direction:column}
+.price-block strong{font-size:34px}
+.price-block span{margin-top:3px}
+.price-block small{margin-top:6px;color:var(--muted)}
+.up{color:var(--red)!important}.down{color:var(--green)!important}
+.section-tabs{display:flex;height:48px;margin-bottom:13px;border:1px solid var(--line);border-radius:10px;background:#0c1825;overflow-x:auto}
+.section-tabs button{min-width:105px;flex:1;border:0;border-bottom:3px solid transparent;background:transparent;color:#9dacbe}
+.section-tabs button.active{color:#fff;border-bottom-color:var(--blue)}
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.card{padding:18px;border:1px solid var(--line);border-radius:13px;background:linear-gradient(145deg,#101f30,#0b1724)}
+.metric{min-height:125px;display:flex;flex-direction:column}
+.metric span{color:#bac5d2}
+.metric strong{font-size:25px;margin-top:14px}
+.metric small{margin-top:auto;color:var(--muted);font-size:12px}
+.orange{color:var(--orange)}.purple{color:var(--purple)}.blue{color:var(--blue)}
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card-title{font-size:17px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.badge{font-size:10px;font-weight:400;color:#6eb4ff;border:1px solid #27517c;border-radius:20px;padding:4px 8px}
+.data-list>div{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}
+.data-list>div:last-child{border-bottom:0}
+.data-list span{color:#aab7c6}
+.hero-value{min-height:170px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.hero-value span,.hero-value small{color:var(--muted)}
+.hero-value strong{font-size:30px;margin:18px 0}
+.stage-card{grid-column:1/3}
+.stages{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.stages div{text-align:center;color:#94a3b5}
+.stages i{width:35px;height:35px;margin:0 auto 9px;display:grid;place-items:center;border:1px solid #53657b;border-radius:50%;font-style:normal;color:#fff}
+.stages div:nth-child(3){color:var(--orange)}
+.stages div:nth-child(3) i{background:var(--orange);border-color:var(--orange);color:#101010}
+.decision-card{grid-column:3;grid-row:2/4}
+.decision-grid{display:grid;gap:9px}
+.decision-grid>div{padding:14px;text-align:center;border:1px solid var(--line);border-radius:9px;display:flex;flex-direction:column;gap:7px}
+.buy{color:var(--green);border-color:#1d704e!important}.trim{color:var(--orange);border-color:#765b20!important}.sell{color:var(--red);border-color:#743039!important}
+.targets-card{grid-column:1/3}
+.target-tabs{display:flex;border-bottom:1px solid var(--line)}
+.target-tabs button{padding:10px 16px;border:0;background:transparent;color:#94a3b5}
+.target-tabs button.active{color:var(--blue);border-bottom:2px solid var(--blue)}
+.broker-placeholder>div{display:grid;grid-template-columns:repeat(3,1fr);padding:13px 0;border-bottom:1px solid var(--line);color:#8494a8}
+.broker-placeholder p{color:#74859a}
+.legacy-pages{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.hidden{display:none!important}
+.status-toast{position:fixed;right:22px;bottom:22px;z-index:70;margin:0;padding:10px 15px;border:1px solid var(--line);border-radius:10px;background:#0d1c2e;color:#aeb9c8;box-shadow:0 10px 30px #0008}
+.status-toast.error{color:#ff8f94;border-color:#71343a}
+.bottom-nav{display:none}
+.overlay{display:none}
+
+@media(max-width:1000px){
+.summary-grid{grid-template-columns:repeat(2,1fr)}
+.dashboard-grid{grid-template-columns:1fr 1fr}
+.stage-card,.targets-card,.decision-card{grid-column:1/3;grid-row:auto}
+.decision-grid{grid-template-columns:repeat(4,1fr)}
+}
+@media(max-width:720px){
+body{padding-bottom:68px}
+.sidebar{width:250px;transform:translateX(-102%);transition:transform .2s}
+.sidebar.open{transform:translateX(0)}
+.overlay.show{display:block;position:fixed;inset:0;background:#0009;z-index:45}
+.main-shell{margin-left:0}
+.topbar{height:auto;min-height:62px;padding:9px 11px;flex-wrap:wrap}
+.menu-btn{display:block;border:0;background:transparent;color:#fff;font-size:22px}
+.mobile-brand{display:block;font-size:18px}
+.star{font-size:24px}
+.searchbox{order:4;width:100%;display:none}
+.searchbox.mobile-open,.topbar:focus-within .searchbox{display:flex}
+.content{padding:13px 10px}
+.stock-head{padding:6px 3px 16px;align-items:flex-start}
+.stock-head h1{font-size:23px}
+.stock-head h1 small{font-size:14px}
+.price-block strong{font-size:25px}
+.price-block span{font-size:12px}
+.section-tabs{height:43px}
+.section-tabs button{min-width:82px;font-size:12px}
+.summary-grid{gap:8px}
+.card{padding:14px;border-radius:10px}
+.metric{min-height:108px}
+.metric strong{font-size:20px}
+.dashboard-grid{display:block}
+.dashboard-grid>.card{margin-bottom:8px}
+.stage-card{overflow-x:auto}
+.stages{min-width:510px}
+.decision-grid{grid-template-columns:1fr 1fr}
+.targets-card{margin-bottom:75px}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:40;height:64px;display:grid;grid-template-columns:repeat(5,1fr);background:#081421f7;border-top:1px solid var(--line)}
+.bottom-nav button{border:0;background:transparent;color:#8c9bad;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:18px}
+.bottom-nav button span{font-size:10px}
+.bottom-nav button.active{color:var(--blue)}
+.status-toast{left:10px;right:10px;bottom:74px;text-align:center}
+}
+
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">〽</span><strong>StockZone</strong></div>
+    <nav class="side-nav">
+      <button class="side-item active" data-scroll="overview">⌂ <span>總覽</span></button>
+      <div class="side-group">
+        <div class="side-title">▣ <span>個股分析</span></div>
+        <button data-scroll="overview">總覽</button>
+        <button data-scroll="technical">技術分析</button>
+        <button data-scroll="valuation">估值分析</button>
+        <button data-scroll="swing">波段分析</button>
+        <button data-scroll="targets">券商目標價</button>
+      </div>
+      <div class="side-group">
+        <div class="side-title">◇ <span>買賣決策</span></div>
+        <button data-scroll="decision">建議玩法</button>
+        <button data-scroll="decision">建議買進區</button>
+        <button data-scroll="decision">建議減碼／賣出區</button>
+        <button data-scroll="decision">預期上漲空間</button>
+      </div>
+      <div class="side-group">
+        <div class="side-title">▤ <span>股票管理</span></div>
+        <button data-page-jump="holdings">持股清單</button>
+        <button data-page-jump="watchlist">觀察清單</button>
+        <button data-page-jump="search">股票搜尋</button>
+      </div>
+    </nav>
+    <div class="sidebar-foot">⚙ 設定 <span>v2.1.5</span></div>
+  </aside>
+
+  <div class="main-shell">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="選單">☰</button>
+      <div class="mobile-brand">〽 <strong>StockZone</strong></div>
+      <div class="searchbox">
+        <input id="stockCode" placeholder="搜尋股票名稱或代碼，例如 聯發科、2454" autocomplete="off">
+        <button id="searchButton">搜尋</button>
+      </div>
+      <button class="star" id="favoriteBtn" title="加入觀察">☆</button>
+    </header>
+
+    <main class="content">
+      <section class="stock-head" id="overview">
+        <div>
+          <div class="eyebrow">個股分析</div>
+          <h1><span id="stockName">選擇股票</span> <small id="stockCodeLabel">----</small></h1>
+          <div class="muted" id="marketLabel">搜尋後載入即時資料</div>
+        </div>
+        <div class="price-block">
+          <strong id="currentPrice">--</strong>
+          <span id="priceChange">-- (--%)</span>
+          <small id="updateTime">尚未更新</small>
+        </div>
+      </section>
+
+      <nav class="section-tabs">
+        <button class="active" data-scroll="overview">總覽</button>
+        <button data-scroll="technical">技術分析</button>
+        <button data-scroll="valuation">估值分析</button>
+        <button data-scroll="swing">波段分析</button>
+        <button data-scroll="targets">券商目標價</button>
+      </nav>
+
+      <section class="summary-grid">
+        <article class="card metric"><span>目前股價</span><strong id="metricPrice">--</strong><small id="metricChange">等待資料</small></article>
+        <article class="card metric"><span>五階段位置</span><strong class="orange">--</strong><small>功能待接入</small></article>
+        <article class="card metric"><span>建議玩法</span><strong class="purple">--</strong><small>可手動調整</small></article>
+        <article class="card metric"><span>預期上漲空間</span><strong class="blue">--%</strong><small>功能待接入</small></article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="card" id="technical">
+          <div class="card-title">技術分析 <span class="badge">待接功能</span></div>
+          <div class="data-list">
+            <div><span>均線位置</span><b>--</b></div>
+            <div><span>均線方向</span><b>--</b></div>
+            <div><span>乖離率（20MA）</span><b>--%</b></div>
+            <div><span>五階段位置</span><b>--</b></div>
+          </div>
+        </article>
+
+        <article class="card" id="valuation">
+          <div class="card-title">估值分析 <span class="badge">待接功能</span></div>
+          <div class="hero-value"><span>EPS 合理價</span><strong>-- 元</strong><small>依近四季 EPS 計算</small></div>
+        </article>
+
+        <article class="card" id="swing">
+          <div class="card-title">波段分析 <span class="badge">待接功能</span></div>
+          <div class="data-list">
+            <div><span>1.5X 延伸</span><b>-- 元</b></div>
+            <div><span>2X 延伸</span><b>-- 元</b></div>
+            <div><span>2.5X 延伸</span><b>-- 元</b></div>
+          </div>
+        </article>
+
+        <article class="card stage-card">
+          <div class="card-title">五階段位置</div>
+          <div class="stages">
+            <div><i>1</i><span>線下整理</span></div><div><i>2</i><span>剛站回</span></div>
+            <div><i>3</i><span>爬坡中</span></div><div><i>4</i><span>噴出中</span></div><div><i>5</i><span>噴太遠</span></div>
+          </div>
+        </article>
+
+        <article class="card decision-card" id="decision">
+          <div class="card-title">買賣決策 <span class="badge">待接功能</span></div>
+          <div class="decision-grid">
+            <div class="buy"><span>建議買進區</span><strong>-- ～ --</strong></div>
+            <div class="hold"><span>目前股價</span><strong id="decisionPrice">--</strong></div>
+            <div class="trim"><span>建議減碼區</span><strong>-- ～ --</strong></div>
+            <div class="sell"><span>建議賣出區</span><strong>-- ～ --</strong></div>
+          </div>
+        </article>
+
+        <article class="card targets-card" id="targets">
+          <div class="card-title">券商目標價 <span class="badge">沿用既有功能</span></div>
+          <div class="target-tabs"><button class="active">外資券商</button><button>本土券商</button></div>
+          <div id="brokerRows" class="broker-placeholder">
+            <div><span>券商名稱</span><span>目標價</span><span>發布時間</span></div>
+            <p>搜尋股票後，既有目標價資料會顯示於此區。</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="legacy-pages">
+        <div id="pageTrack" class="page-track">
+          <section class="page" data-page-panel="search"><div id="searchResult" class="hidden"></div></section>
+          <section class="page" data-page-panel="holdings"><div id="holdingsList"></div></section>
+          <section class="page" data-page-panel="watchlist"><div id="watchlistList"></div></section>
+        </div>
+        
+      </section>
+    <p id="statusText" class="status status-toast">尚未查詢</p></main>
+
+    <nav class="bottom-nav">
+      <button class="active" data-scroll="overview">⌂<span>總覽</span></button>
+      <button data-page-jump="watchlist">☆<span>自選</span></button>
+      <button id="mobileSearch">⌕<span>搜尋</span></button>
+      <button data-page-jump="holdings">▥<span>持股</span></button>
+      <button>⚙<span>設定</span></button>
+    </nav>
+  </div>
+</div>
+<div class="overlay" id="overlay"></div>
+<script src="./app.js?v=2.1.5"></script>
+</body>
+</html>
