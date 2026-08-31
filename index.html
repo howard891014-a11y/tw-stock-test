@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07111f">
+  <title>股域 StockZone</title>
+  
+<style id="stockzone-inline-style">
+html,body{margin:0;padding:0;background:#050b13;color:#f5f7fb;font-family:Arial,"Microsoft JhengHei",sans-serif}button{cursor:pointer}.app-shell{min-height:100vh}.hidden{display:none!important}
+:root{color-scheme:light dark;--background:#f4f6f8;--panel:#fff;--text:#17191d;--muted:#6d7480;--border:#d9dee5;--accent:#2563eb;--positive:#c62828;--negative:#087f5b}
+@media(prefers-color-scheme:dark){:root{--background:#111418;--panel:#1a1f24;--text:#f3f4f6;--muted:#a8b0ba;--border:#343b43;--accent:#6ea8fe;--positive:#ff7676;--negative:#5ee0b1}}
+*{box-sizing:border-box}html,body{overflow-x:hidden}body{margin:0;background:var(--background);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}.container{width:min(760px,100%);margin:0 auto;padding:18px 0 42px}.header,.page-tabs,footer{margin-inline:13px}.header h1{margin:0 0 6px;font-size:25px}.header p,footer p{margin:0 0 14px;color:var(--muted);line-height:1.55}
+.page-tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(3,1fr);padding:8px 0;background:var(--background);border-bottom:1px solid var(--border)}button{border:0;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}button:disabled{opacity:.55}.page-tab{position:relative;padding:12px 4px;background:transparent;color:var(--muted);border-radius:0}.page-tab.active{color:var(--text)}.page-tab.active::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:4px;border-radius:4px 4px 0 0;background:var(--accent)}
+.page-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;touch-action:pan-x pan-y}.page-track::-webkit-scrollbar{display:none}.page{flex:0 0 100%;width:100%;padding:5px 13px;scroll-snap-align:start;scroll-snap-stop:always}.panel{margin-bottom:13px;padding:15px;background:var(--panel);border:1px solid var(--border);border-radius:16px}.search-row{display:flex;gap:8px;margin-top:7px}input,select{min-width:0;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text);font-size:16px}.search-row input{flex:1}.search-row button,.actions button{padding:11px 14px;border-radius:12px}.quick-list,.actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}.quick-list button,.secondary{padding:9px 11px;border:1px solid var(--border);border-radius:11px;background:transparent;color:var(--text)}.status{margin:10px 0 0;color:var(--muted)}.error{color:var(--positive)}.hidden{display:none}.section-title,.broker-head,.target-title,.search-result-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.section-title{margin-bottom:8px}.section-title h2,.target-title h3{margin:0}.sort-row{display:flex;align-items:center;gap:9px;margin:0 0 8px;color:var(--muted);font-size:13px}.sort-row select{flex:1;padding:9px 10px;font-size:14px}
+.stock-card{position:relative;border-top:1px solid var(--border);transition:opacity .15s,transform .15s}.stock-card:first-of-type{border-top:0}.stock-card.dragging{opacity:.75;transform:scale(.985);z-index:4;background:var(--panel);box-shadow:0 8px 22px rgba(0,0,0,.16)}.stock-summary{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;width:100%;padding:15px 42px 15px 0;border:0;border-radius:0;background:transparent;color:var(--text);text-align:left}.stock-summary-main{min-width:0}.stock-name{font-size:18px;font-weight:800}.code,.meta,.small{color:var(--muted);font-size:13px}.stock-price{text-align:right;white-space:nowrap}.price-line{display:flex;align-items:center;justify-content:flex-end;gap:2px}.price{font-size:25px;font-weight:800}.positive{color:var(--positive)}.negative{color:var(--negative)}.chevron{display:inline-block;margin-left:7px;color:var(--muted);transition:transform .2s}.stock-card.expanded .chevron{transform:rotate(180deg)}.stock-detail{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .22s ease,opacity .18s;padding:0}.stock-detail>*{overflow:hidden}.stock-card.expanded .stock-detail{grid-template-rows:1fr;opacity:1;padding-bottom:15px}.summary-stage,.stage-line{margin-top:6px;font-size:13px;font-weight:700;color:var(--accent)}
+.icon-button{display:inline-grid;place-items:center;width:40px;height:40px;min-width:40px;padding:0;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--text);font-size:21px;line-height:1;touch-action:manipulation}.icon-button:hover,.icon-button:active{background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:var(--border)}.remove-one{position:absolute;right:0;top:5px;z-index:3;font-size:24px;color:var(--muted)}.spinning span{display:inline-block;animation:spin .75s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.target-title{margin-top:4px;padding-top:8px;border-top:1px solid var(--border)}.target-title h3{font-size:16px}.broker-section{margin-top:12px}.broker-section h3{margin:0 0 8px;font-size:15px}.period-group{margin:10px 0 14px}.period-group h4{margin:0 0 7px;padding-bottom:5px;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted)}.broker-row{margin-bottom:9px;padding:10px;border:1px solid var(--border);border-radius:12px}.badge{display:inline-block;margin-right:5px;padding:2px 7px;border:1px solid var(--border);border-radius:999px;font-size:12px}.new-badge{border-color:var(--positive);color:var(--positive)}.info-line{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0}.multiplier{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}.multiplier div{padding:7px;border:1px solid var(--border);border-radius:9px;text-align:center}.target-history{margin-top:8px;padding:8px 9px;border:1px dashed var(--border);border-radius:10px}.target-history summary{cursor:pointer;font-size:13px;font-weight:700}.history-item{display:grid;grid-template-columns:48px 1fr 92px 40px;gap:7px;align-items:center;padding:5px 0;border-top:1px solid var(--border);font-size:13px}.history-item:first-child{border-top:0}.empty{padding:24px 4px;text-align:center;color:var(--muted)}a{color:var(--accent);text-decoration:none}footer{font-size:12px}.list-panel{min-height:240px}
+@media(max-width:430px){.container{padding-top:14px}.panel{padding:13px}.page{padding-inline:10px}.header,.page-tabs,footer{margin-inline:10px}.stock-name{font-size:17px}.price{font-size:23px}.history-item{grid-template-columns:45px 1fr 82px 36px;font-size:12px}}
+
+
+/* v2.1.2 */
+.status-toast{position:fixed;right:22px;bottom:22px;z-index:40;margin:0;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#0d1a2a;color:#aeb9c8;box-shadow:0 10px 30px #0008;font-size:13px}
+.status-toast.error{border-color:#7e2d35;color:#ff8c92}
+.up{color:var(--red)!important}.down{color:var(--green)!important}
+@media(max-width:720px){.status-toast{right:10px;left:10px;bottom:76px;text-align:center}}
+
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">〽</span><strong>StockZone</strong></div>
+    <nav class="side-nav">
+      <button class="side-item active" data-scroll="overview">⌂ <span>總覽</span></button>
+      <div class="side-group">
+        <div class="side-title">▣ <span>個股分析</span></div>
+        <button data-scroll="overview">總覽</button>
+        <button data-scroll="technical">技術分析</button>
+        <button data-scroll="valuation">估值分析</button>
+        <button data-scroll="swing">波段分析</button>
+        <button data-scroll="targets">券商目標價</button>
+      </div>
+      <div class="side-group">
+        <div class="side-title">◇ <span>買賣決策</span></div>
+        <button data-scroll="decision">建議玩法</button>
+        <button data-scroll="decision">建議買進區</button>
+        <button data-scroll="decision">建議減碼／賣出區</button>
+        <button data-scroll="decision">預期上漲空間</button>
+      </div>
+      <div class="side-group">
+        <div class="side-title">▤ <span>股票管理</span></div>
+        <button data-page-jump="holdings">持股清單</button>
+        <button data-page-jump="watchlist">觀察清單</button>
+        <button data-page-jump="search">股票搜尋</button>
+      </div>
+    </nav>
+    <div class="sidebar-foot">⚙ 設定 <span>v2.1.4</span></div>
+  </aside>
+
+  <div class="main-shell">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="選單">☰</button>
+      <div class="mobile-brand">〽 <strong>StockZone</strong></div>
+      <div class="searchbox">
+        <input id="stockCode" placeholder="搜尋股票名稱或代碼，例如 聯發科、2454" autocomplete="off">
+        <button id="searchButton">搜尋</button>
+      </div>
+      <button class="star" id="favoriteBtn" title="加入觀察">☆</button>
+    </header>
+
+    <main class="content">
+      <section class="stock-head" id="overview">
+        <div>
+          <div class="eyebrow">個股分析</div>
+          <h1><span id="stockName">選擇股票</span> <small id="stockCodeLabel">----</small></h1>
+          <div class="muted" id="marketLabel">搜尋後載入即時資料</div>
+        </div>
+        <div class="price-block">
+          <strong id="currentPrice">--</strong>
+          <span id="priceChange">-- (--%)</span>
+          <small id="updateTime">尚未更新</small>
+        </div>
+      </section>
+
+      <nav class="section-tabs">
+        <button class="active" data-scroll="overview">總覽</button>
+        <button data-scroll="technical">技術分析</button>
+        <button data-scroll="valuation">估值分析</button>
+        <button data-scroll="swing">波段分析</button>
+        <button data-scroll="targets">券商目標價</button>
+      </nav>
+
+      <section class="summary-grid">
+        <article class="card metric"><span>目前股價</span><strong id="metricPrice">--</strong><small id="metricChange">等待資料</small></article>
+        <article class="card metric"><span>五階段位置</span><strong class="orange">--</strong><small>功能待接入</small></article>
+        <article class="card metric"><span>建議玩法</span><strong class="purple">--</strong><small>可手動調整</small></article>
+        <article class="card metric"><span>預期上漲空間</span><strong class="blue">--%</strong><small>功能待接入</small></article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="card" id="technical">
+          <div class="card-title">技術分析 <span class="badge">待接功能</span></div>
+          <div class="data-list">
+            <div><span>均線位置</span><b>--</b></div>
+            <div><span>均線方向</span><b>--</b></div>
+            <div><span>乖離率（20MA）</span><b>--%</b></div>
+            <div><span>五階段位置</span><b>--</b></div>
+          </div>
+        </article>
+
+        <article class="card" id="valuation">
+          <div class="card-title">估值分析 <span class="badge">待接功能</span></div>
+          <div class="hero-value"><span>EPS 合理價</span><strong>-- 元</strong><small>依近四季 EPS 計算</small></div>
+        </article>
+
+        <article class="card" id="swing">
+          <div class="card-title">波段分析 <span class="badge">待接功能</span></div>
+          <div class="data-list">
+            <div><span>1.5X 延伸</span><b>-- 元</b></div>
+            <div><span>2X 延伸</span><b>-- 元</b></div>
+            <div><span>2.5X 延伸</span><b>-- 元</b></div>
+          </div>
+        </article>
+
+        <article class="card stage-card">
+          <div class="card-title">五階段位置</div>
+          <div class="stages">
+            <div><i>1</i><span>線下整理</span></div><div><i>2</i><span>剛站回</span></div>
+            <div><i>3</i><span>爬坡中</span></div><div><i>4</i><span>噴出中</span></div><div><i>5</i><span>噴太遠</span></div>
+          </div>
+        </article>
+
+        <article class="card decision-card" id="decision">
+          <div class="card-title">買賣決策 <span class="badge">待接功能</span></div>
+          <div class="decision-grid">
+            <div class="buy"><span>建議買進區</span><strong>-- ～ --</strong></div>
+            <div class="hold"><span>目前股價</span><strong id="decisionPrice">--</strong></div>
+            <div class="trim"><span>建議減碼區</span><strong>-- ～ --</strong></div>
+            <div class="sell"><span>建議賣出區</span><strong>-- ～ --</strong></div>
+          </div>
+        </article>
+
+        <article class="card targets-card" id="targets">
+          <div class="card-title">券商目標價 <span class="badge">沿用既有功能</span></div>
+          <div class="target-tabs"><button class="active">外資券商</button><button>本土券商</button></div>
+          <div id="brokerRows" class="broker-placeholder">
+            <div><span>券商名稱</span><span>目標價</span><span>發布時間</span></div>
+            <p>搜尋股票後，既有目標價資料會顯示於此區。</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="legacy-pages">
+        <div id="pageTrack" class="page-track">
+          <section class="page" data-page-panel="search"><div id="searchResult" class="hidden"></div></section>
+          <section class="page" data-page-panel="holdings"><div id="holdingsList"></div></section>
+          <section class="page" data-page-panel="watchlist"><div id="watchlistList"></div></section>
+        </div>
+        
+      </section>
+    <p id="statusText" class="status status-toast">尚未查詢</p></main>
+
+    <nav class="bottom-nav">
+      <button class="active" data-scroll="overview">⌂<span>總覽</span></button>
+      <button data-page-jump="watchlist">☆<span>自選</span></button>
+      <button id="mobileSearch">⌕<span>搜尋</span></button>
+      <button data-page-jump="holdings">▥<span>持股</span></button>
+      <button>⚙<span>設定</span></button>
+    </nav>
+  </div>
+</div>
+<div class="overlay" id="overlay"></div>
+<script src="./app.js?v=2.1.4"></script>
+</body>
+</html>
