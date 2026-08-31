@@ -4,13 +4,6 @@ const FALLBACK_CODES=Object.fromEntries(Object.entries(FALLBACK_NAMES).map(([cod
 let stockCache=null,stockCacheAt=0;
 function toNumber(v){const n=Number(v);return Number.isFinite(n)?n:null}
 function cleanName(v){return String(v||"").trim().replace(/\s+/g," ")}
-function shortName(v){
-  return cleanName(v)
-    .replace(/股份有限公司$/g,"")
-    .replace(/有限公司$/g,"")
-    .replace(/科技$/g,"")
-    .trim();
-}
 async function fetchJson(url){const r=await fetch(url,{headers:HEADERS});if(!r.ok)throw Error(`HTTP ${r.status}`);return r.json()}
 async function officialStocks(){
   if(stockCache&&Date.now()-stockCacheAt<6*60*60*1000)return stockCache;
@@ -24,7 +17,7 @@ async function officialStocks(){
       const data=await fetchJson(url);
       for(const x of Array.isArray(data)?data:[]){
         const code=String(x["公司代號"]||x.SecuritiesCompanyCode||x.Code||"").trim();
-        const name=shortName(x["公司簡稱"]||x.CompanyName||x.Name||"");
+        const name=cleanName(x["公司簡稱"]||x.CompanyName||x.Name||"");
         if(/^\d{4,6}$/.test(code)&&name)rows.push({code,name,market});
       }
     }catch{}
@@ -64,9 +57,9 @@ async function fetchYahoo(symbol,official){
   const officialPrevious=await fetchOfficialPrevious(official||{code,market:symbol.endsWith(".TWO")?"上櫃":"上市"});
   const previousClose=officialPrevious??toNumber(meta.regularMarketPreviousClose??meta.chartPreviousClose??meta.previousClose);
   const change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null;
-  return{source:"Yahoo Finance",symbol,code,name:shortName(official?.name||FALLBACK_NAMES[code]||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString()};
+  return{source:"Yahoo Finance",symbol,code,name:official?.name||FALLBACK_NAMES[code]||meta.longName||meta.shortName||code,market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString()};
 }
-async function handler(req,res){
+module.exports=async function handler(req,res){
   res.setHeader("Cache-Control","no-store");res.setHeader("Access-Control-Allow-Origin","*");
   const query=String(req.query.q||req.query.code||"").trim();if(!query)return res.status(400).json({ok:false,error:"請輸入股票名稱或代碼"});
   try{
@@ -78,6 +71,4 @@ async function handler(req,res){
     if(!result)return res.status(404).json({ok:false,error:"Yahoo 查無此股票"});
     return res.status(200).json({ok:true,...result,fetchedAt:new Date().toISOString()});
   }catch(error){return res.status(502).json({ok:false,error:"股票名稱或行情暫時無法取得",detail:error.message})}
-}
-function createPagesResponse(){let statusCode=200;const headers=new Headers();return{setHeader(name,value){headers.set(name,String(value));},status(code){statusCode=Number(code)||200;return this;},json(data){if(!headers.has("Content-Type"))headers.set("Content-Type","application/json; charset=utf-8");return new Response(JSON.stringify(data),{status:statusCode,headers});}}}
-export async function onRequest(context){const request=context.request,url=new URL(request.url),req={method:request.method,query:Object.fromEntries(url.searchParams.entries()),headers:Object.fromEntries(request.headers.entries()),body:null};return handler(req,createPagesResponse())}
+};
