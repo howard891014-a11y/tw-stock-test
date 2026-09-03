@@ -384,7 +384,7 @@ body.view-overview .overview-only{display:block}
   .target-history3 .history3-row{grid-template-columns:38px 82px 94px!important;column-gap:14px!important}
 }
 
-/* v2.4.2 mobile target actions: source / edit same size */
+/* v2.4.3 mobile target actions: source / edit same size */
 @media(max-width:720px){
   .broker-row{grid-template-columns:minmax(76px,1fr) 58px 76px 40px 40px!important}
   .broker-actions a,.broker-actions button{width:40px!important;min-width:40px!important;height:30px!important;padding:0!important}
