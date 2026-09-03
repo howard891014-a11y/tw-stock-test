@@ -152,98 +152,99 @@ function pairRows(text,base,code,name){
 }
 
 
-// v2.4.1：標題優先＋多公司雙重驗證。
-// 單公司、單一目標價、且標題沒有問號：標題本身即視為高可信證據；
-// 其餘（問號、多公司、主詞不清）必須進文章內文做股票↔目標價配對。
+// v2.4.2：全文優先 → RSS 摘要 → 標題。
+// 券商辨識不再依賴「必須先存在名單」：已知券商直接分類；未知但明確以「證券／投顧」結尾者也視為券商。
 const LEARNED_BROKERS=new Map();
 function rememberBroker(name,type){
   const n=String(name||"").trim();if(!n||n==="未知券商")return;
   const old=LEARNED_BROKERS.get(n);
   if(!old||old==="未知"||(type&&type!=="未知"))LEARNED_BROKERS.set(n,type||old||"未知");
 }
-function titleCompanyMarkers(title){
-  const out=[];let m;
-  const explicit=/([\u4e00-\u9fffA-Za-z][\u4e00-\u9fffA-Za-z0-9\-]{1,24})\s*[（(]?\s*(\d{4,6})(?:\.TW|\.TWO)?\s*[）)]?/g;
-  while((m=explicit.exec(String(title||"")))){
-    const code=m[2];
-    // 排除日期、年份等常見非股票數字。
-    const companyName=m[1].trim();
-    if(/^20\d{2}$/.test(code))continue;
-    if(/^(?:目標價|股價|收盤價|EPS|營收|獲利|每股盈餘|本益比|殖利率)$/i.test(companyName))continue;
-    out.push({name:companyName,code,index:m.index});
-  }
-  return out;
+function normalizeDynamicBroker(raw){
+  let n=String(raw||"").trim();
+  n=n.replace(/(?:股份有限公司|股份|綜合)$/g,"");
+  // 去掉新聞句型中常黏在券商前面的語助／主詞字樣，避免把「今日僅美林」整串當券商。
+  n=n.replace(/^.*?(?:今日僅|今日由|僅由|由|據|其中|另有|以及|而|與|及|，|、|：|:|；|;)/,"" ).trim();
+  return n;
 }
-function titleDecision(title,code,name){
-  const text=String(title||"");
-  const targets=targetMatches(text);
-  const companies=titleCompanyMarkers(text);
-  const requested=companies.filter(x=>x.code===code||(name&&x.name.includes(name)));
-  const hasQuestion=/[？?]/.test(text);
-  const distinctCodes=new Set(companies.map(x=>x.code));
-  const requestedMentioned=requested.length>0||requestedMention(text,code,name);
-  const singleCompany=(distinctCodes.size===1&&requested.length>0)||(distinctCodes.size===0&&requestedMentioned);
-  return{direct:singleCompany&&targets.length===1&&!hasQuestion,needsArticle:hasQuestion||distinctCodes.size>1||!singleCompany||targets.length!==1,targets};
-}
-function titleDirectRows(title,base,code,name){
-  const d=titleDecision(title,code,name);if(!d.direct)return[];
-  const t=d.targets[0];
-  const brokers=dynamicBrokerMatches(title);
-  const b=brokerFromScope(title,[...new Map(brokers.map(x=>[x.name,x])).values()]);
-  if(b)rememberBroker(b.name,b.type);
-  const broker=b?{broker:b.name,brokerType:b.type}:{broker:"未知券商",brokerType:"未知"};
-  return[{...base,...broker,brokerKey:b?b.name:"未知券商",...periodInfo(title),...reasonInfo(title),target:t.target,evidence:title,titleDirect:true}];
-}
-
 function paragraphList(text){return String(text||"").split(/\n+/).map(x=>x.replace(/\s+/g," ").trim()).filter(Boolean)}
 function sentenceList(text){return String(text||"").split(/(?<=[。！？!?；;])/).map(x=>x.trim()).filter(Boolean)}
 function dynamicBrokerMatches(text){
-  const out=[...brokerMatches(text)],seen=new Set(out.map(x=>`${x.index}|${x.name}`));
+  const source=String(text||"");
+  const out=[...brokerMatches(source)],seen=new Set(out.map(x=>`${x.index}|${x.name}`));
   for(const x of out)rememberBroker(x.name,x.type);
-  const re=/([\u4e00-\u9fffA-Za-z]{2,16})(證券|投顧)/g;let m;
-  while((m=re.exec(text))){
-    const raw=`${m[1]}${m[2]}`,known=brokerMatches(raw)[0];
-    const name=known?.name||(m[1].replace(/(?:股份有限公司|股份|綜合)$/g,"")||raw);
-    // 未收錄券商不再武斷當成本土；先記住名稱，日後同名可持續辨識。
+  const re=/([\u4e00-\u9fffA-Za-z]{2,20})(證券|投顧)/g;let m;
+  while((m=re.exec(source))){
+    const raw=`${m[1]}${m[2]}`,known=brokerMatches(raw).sort((a,b)=>b.name.length-a.name.length)[0];
+    let name=known?.name||normalizeDynamicBroker(m[1]);
+    if(!name||name.length>12)continue;
     const type=known?.type||LEARNED_BROKERS.get(name)||"未知";
     rememberBroker(name,type);
-    const key=`${m.index}|${name}`;if(!seen.has(key)){seen.add(key);out.push({name,type,index:m.index})}
+    const key=`${m.index}|${name}`;if(!seen.has(key)){seen.add(key);out.push({name,type,index:m.index,raw})}
   }
   return out.sort((a,b)=>a.index-b.index);
 }
+function titleCompanyMarkers(title){
+  const out=[];let m;
+  const explicit=/([\u4e00-\u9fffA-Za-z][\u4e00-\u9fffA-Za-z0-9\-]{1,24})\s*[（(]\s*(\d{4,6})(?:\.TW|\.TWO)?\s*[）)]/g;
+  while((m=explicit.exec(String(title||"")))){if(!/^20\d{2}$/.test(m[2]))out.push({name:m[1].trim(),code:m[2],index:m.index})}
+  return out;
+}
+function titleSafeRows(title,base,code,name){
+  const text=String(title||"");
+  if(/[？?]/.test(text)||!requestedMention(text,code,name))return[];
+  const companies=titleCompanyMarkers(text),different=companies.some(x=>x.code!==code&&!(name&&x.name.includes(name)));
+  if(different)return[];
+  const targets=targetMatches(text);if(targets.length!==1)return[];
+  return rowsFromVerifiedScope(text,base,code,name,"title");
+}
 function requestedMention(text,code,name){return !!((name&&text.includes(name))||text.includes(code))}
-function brokerFromScope(scope,articleBrokerNames){
+function brokerFromScope(scope,articleBrokerNames,targetIndex=null){
   const hits=dynamicBrokerMatches(scope);
-  if(hits.length){const last=hits[hits.length-1];return last}
+  if(hits.length){
+    if(targetIndex==null)return hits[hits.length-1];
+    return [...hits].sort((a,b)=>Math.abs(a.index-targetIndex)-Math.abs(b.index-targetIndex))[0];
+  }
   if(articleBrokerNames.length===1)return articleBrokerNames[0];
   return null;
 }
-function articlePairRows(text,base,code,name){
+function rowsFromVerifiedScope(text,base,code,name,confidence="body"){
   const paragraphs=paragraphList(text),rows=[];
   const allBrokers=dynamicBrokerMatches(text),articleBrokerNames=[...new Map(allBrokers.map(x=>[x.name,x])).values()];
   for(const para of paragraphs){
     const targets=targetMatches(para);if(!targets.length)continue;
-    // 文章解析的第一道門：此段必須真的提到正在查詢的股票。這可直接阻止「信驊 22,000」被塞進台積電。
-    if(!requestedMention(para,code,name))continue;
     const sentences=sentenceList(para);
     for(const t of targets){
-      let offset=0,ownerSentence="";
-      for(const sentence of sentences){const at=para.indexOf(sentence,offset);const st=at<0?offset:at,en=st+sentence.length;if(t.index>=st&&t.index<=en){ownerSentence=sentence;break}offset=en}
-      ownerSentence=ownerSentence||para;
-      // 同一段如果談多家公司，目標價所在句有其他主詞而沒有查詢股票時，不硬配；僅允許前一句明確承接同一股票。
-      if(!requestedMention(ownerSentence,code,name)){
-        const idx=sentences.indexOf(ownerSentence),prev=idx>0?sentences[idx-1]:"";
-        if(!requestedMention(prev,code,name))continue;
+      let offset=0,ownerSentence="",ownerIndex=-1;
+      for(let i=0;i<sentences.length;i++){
+        const sentence=sentences[i],at=para.indexOf(sentence,offset),st=at<0?offset:at,en=st+sentence.length;
+        if(t.index>=st&&t.index<=en){ownerSentence=sentence;ownerIndex=i;break}offset=en;
       }
-      const b=brokerFromScope(ownerSentence,articleBrokerNames)||brokerFromScope(para,articleBrokerNames);
+      ownerSentence=ownerSentence||para;
+      const prev=ownerIndex>0?sentences[ownerIndex-1]:"";
+      const next=ownerIndex>=0&&ownerIndex<sentences.length-1?sentences[ownerIndex+1]:"";
+      // 公司歸屬：目標價句本身優先；否則允許前一句明確承接；再否則只接受整段唯一明確談查詢股票。
+      let stockOk=requestedMention(ownerSentence,code,name)||requestedMention(prev,code,name);
+      if(!stockOk&&requestedMention(para,code,name)){
+        const markers=stockMarkers(para,code,name);
+        const explicitOthers=markers.filter(m=>!m.requested&&!m.implicit&&m.code!==code);
+        stockOk=explicitOthers.length===0;
+      }
+      if(!stockOk)continue;
+      // 券商配對：同一句 > 前一句+本句 > 同段。已知「美系外資」等不得掉成未知。
+      let b=brokerFromScope(ownerSentence,articleBrokerNames,t.index);
+      if(!b&&prev)b=brokerFromScope(`${prev} ${ownerSentence}`,articleBrokerNames);
+      if(!b)b=brokerFromScope(para,articleBrokerNames,t.index);
+      if(!b&&next&&requestedMention(next,code,name))b=brokerFromScope(`${ownerSentence} ${next}`,articleBrokerNames);
+      if(b)rememberBroker(b.name,b.type);
       const broker=b?{broker:b.name,brokerType:b.type}:{broker:"未知券商",brokerType:"未知"};
-      const evidence=para.slice(Math.max(0,t.index-180),Math.min(para.length,t.index+t.text.length+180));
-      rows.push({...base,...broker,brokerKey:b?b.name:"未知券商",...periodInfo(para),...reasonInfo(para),target:t.target,evidence});
+      const evidence=[prev,ownerSentence,next].filter(Boolean).join(" ").slice(0,600);
+      rows.push({...base,...broker,brokerKey:b?b.name:"未知券商",...periodInfo(para),...reasonInfo(para),target:t.target,evidence,confidence});
     }
   }
-  // 全文無法明確配對時直接不收；寧可漏掉，也不退回跨段距離猜測造成誤植。
   return rows;
 }
+function articlePairRows(text,base,code,name){return rowsFromVerifiedScope(text,base,code,name,"body")}
 
 async function fetchRss(query){const url=`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;const r=await fetch(url,{headers:RSS_HEADERS});if(!r.ok)return[];const xml=await r.text();return(xml.match(/<item>[\s\S]*?<\/item>/gi)||[]).map(item=>({title:tag(item,"title"),description:tag(item,"description"),date:iso(tag(item,"pubDate")),sourceUrl:tag(item,"link")}))}
 async function fetchArticle(url){if(!url)return{url,text:""};try{const c=new AbortController(),timer=setTimeout(()=>c.abort(),2600);const r=await fetch(url,{headers:PAGE_HEADERS,redirect:"follow",signal:c.signal});clearTimeout(timer);if(!r.ok)return{url:r.url||url,text:""};const html=await r.text();const canonical=html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)?.[1]||html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)/i)?.[1]||r.url||url;const title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"";const desc=html.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)/i)?.[1]||"";return{url:canonical,text:cleanArticleHtml(`${title}\n${desc}\n${html}`)}}catch{return{url,text:""}}}
@@ -255,31 +256,29 @@ if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:"股票�
 const base=name||code;const queries=[`${base} ${code} 目標價`,`${base} ${code} 外資 目標價`,`${base} ${code} 券商 調升 上看`,...SOURCE_DOMAINS.map(d=>`${base} ${code} 目標價 site:${d}`)];
 const rssResults=(await Promise.all(queries.map(fetchRss))).flat();const seen=new Set(),items=[];for(const x of rssResults){const k=`${x.title}|${x.date}`;if(!seen.has(k)){seen.add(k);items.push(x)}}items.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 const scoped360=items.filter(x=>dayAge(x.date)<=360),selected=scoped360.slice(0,100);
-const articles=await pooled(selected,8,async item=>{const article=await fetchArticle(item.sourceUrl);return{...item,articleUrl:article.url,fullText:`${item.title}\n${item.description}\n${article.text}`}});
+const articles=await pooled(selected,8,async item=>{
+  const article=await fetchArticle(item.sourceUrl);
+  return{...item,articleUrl:article.url,articleText:article.text||""};
+});
 const rows=[];
-// v2.4.1 搜尋核心：標題能唯一確認時直接採用；有問號／多公司／不明確時才要求內文雙重驗證。
-const articleKeys=new Set(),directKeys=new Set();
-for(const item of scoped360){
-  if(!(item.title.includes(code)||(name&&item.title.includes(name))))continue;
-  const baseRow={date:item.date,title:item.title,sourceUrl:item.sourceUrl};
-  const direct=titleDirectRows(item.title,baseRow,code,name);
-  if(direct.length){for(const row of direct)rows.push(row);directKeys.add(`${item.title}|${item.date}`)}
-}
+// v2.4.2：同一篇新聞嚴格採「全文 > RSS 摘要 > 標題」。前一層已成功配對就不再用下一層，避免重複與標題誤導。
 for(const a of articles){
-  const key=`${a.title}|${a.date}`;if(directKeys.has(key))continue;
-  const text=a.fullText;if(!(text.includes(code)||(name&&text.includes(name))))continue;
   const baseRow={date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl};
-  for(const row of articlePairRows(text,baseRow,code,name))rows.push(row);
-  articleKeys.add(key);
+  let parsed=[];
+  if(a.articleText&&requestedMention(a.articleText,code,name))parsed=rowsFromVerifiedScope(a.articleText,baseRow,code,name,"body");
+  if(!parsed.length&&a.description&&requestedMention(a.description,code,name))parsed=rowsFromVerifiedScope(a.description,baseRow,code,name,"summary");
+  if(!parsed.length)parsed=titleSafeRows(a.title,baseRow,code,name);
+  for(const row of parsed)rows.push(row);
 }
-// 抓不到文章正文時，只有「非多公司且可在 RSS 摘要完成股票↔目標價配對」才允許備援；
-// 多公司與問號標題不再用跨段距離猜測。
+// 若正文抓取清單沒有涵蓋某筆 RSS，仍依「摘要 > 標題」備援；多公司／問號標題不硬猜。
+const articleKeys=new Set(articles.map(a=>`${a.title}|${a.date}`));
 for(const item of scoped360){
-  const key=`${item.title}|${item.date}`;if(directKeys.has(key)||articleKeys.has(key))continue;
-  const decision=titleDecision(item.title,code,name);
-  if(/[？?]/.test(item.title)||titleCompanyMarkers(item.title).length>1)continue;
-  const text=`${item.title} ${item.description}`;if(!(text.includes(code)||(name&&text.includes(name))))continue;
-  for(const row of pairRows(text,{date:item.date,title:item.title,sourceUrl:item.sourceUrl},code,name))rows.push(row)
+  if(articleKeys.has(`${item.title}|${item.date}`))continue;
+  const baseRow={date:item.date,title:item.title,sourceUrl:item.sourceUrl};
+  let parsed=[];
+  if(item.description&&requestedMention(item.description,code,name))parsed=rowsFromVerifiedScope(item.description,baseRow,code,name,"summary");
+  if(!parsed.length)parsed=titleSafeRows(item.title,baseRow,code,name);
+  for(const row of parsed)rows.push(row);
 }
 rows.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 // 已知券商：熱門股採自動縮窗，但保留被選中券商的完整歷史，避免 previousTarget 因縮窗消失。
@@ -307,5 +306,5 @@ if(known.length)mergedUnknown=mergedUnknown.slice(0,3);
 const groups={};
 for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知"?`未知券商:${row.target}`:(row.brokerKey||row.broker);groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
 const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,broker:x.broker,brokerType:x.brokerType,brokerKey:x.brokerKey,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel,evidence:x.evidence||"",aiParsed:!!x.aiParsed,confidence:x.confidence||""}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-return res.status(200).json({ok:true,parserVersion:"2.4.1",brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
+return res.status(200).json({ok:true,parserVersion:"2.4.2",brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
