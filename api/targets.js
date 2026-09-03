@@ -1,10 +1,10 @@
 const RSS_HEADERS={"User-Agent":"Mozilla/5.0","Accept":"application/rss+xml,application/xml,text/xml,*/*"};
 const PAGE_HEADERS={"User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36","Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8","Accept-Language":"zh-TW,zh;q=0.9,en;q=0.7"};
 const BROKERS=[
-["摩根士丹利","外資"],["大摩","外資"],["摩根大通","外資"],["小摩","外資"],["高盛證券","外資"],["高盛","外資"],["花旗","外資"],["美銀","外資"],["瑞銀","外資"],["瑞信","外資"],["野村","外資"],["麥格理","外資"],["匯豐","外資"],["滙豐","外資"],["里昂","外資"],["巴克萊","外資"],["德意志","外資"],["亞系外資","外資"],["美系外資","外資"],["歐系外資","外資"],["日系外資","外資"],
+["摩根士丹利","外資"],["大摩","外資"],["摩根大通","外資"],["小摩","外資"],["高盛證券","外資"],["高盛","外資"],["花旗","外資"],["美銀","外資"],["美林證券","外資"],["美林","外資"],["瑞銀","外資"],["瑞信","外資"],["野村","外資"],["麥格理","外資"],["匯豐","外資"],["滙豐","外資"],["里昂","外資"],["巴克萊","外資"],["德意志","外資"],["亞系外資","外資"],["美系外資","外資"],["歐系外資","外資"],["日系外資","外資"],
 ["元大","本土"],["群益","本土"],["凱基","本土"],["富邦","本土"],["國泰","本土"],["永豐","本土"],["統一","本土"],["兆豐","本土"],["第一金","本土"],["華南永昌","本土"],["玉山","本土"],["台新","本土"],["康和","本土"],["宏遠","本土"],["國票","本土"],["新光","本土"],["中國信託綜合證券","本土"],["中國信託證券","本土"],["中信投顧","本土"],["中信","本土"],["本土投顧","本土"]
 ];
-const CANONICAL={"高盛證券":"高盛","大摩":"摩根士丹利","小摩":"摩根大通","滙豐":"匯豐","中國信託綜合證券":"中信","中國信託證券":"中信","中信投顧":"中信"};
+const CANONICAL={"高盛證券":"高盛","美林證券":"美林","大摩":"摩根士丹利","小摩":"摩根大通","滙豐":"匯豐","中國信託綜合證券":"中信","中國信託證券":"中信","中信投顧":"中信"};
 const SOURCE_DOMAINS=["tw.stock.yahoo.com","money.udn.com","udn.com","ec.ltn.com.tw","ctee.com.tw","moneydj.com","anue.com","sinotrade.com.tw"];
 const clean=s=>String(s||"").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&nbsp;|&#160;/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/<script[\s\S]*?<\/script>/gi," ").replace(/<style[\s\S]*?<\/style>/gi," ").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
 const decodeEntities=s=>String(s||"").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'");
@@ -151,13 +151,62 @@ function pairRows(text,base,code,name){
   return rows;
 }
 
+
+// v2.4.1：標題優先＋多公司雙重驗證。
+// 單公司、單一目標價、且標題沒有問號：標題本身即視為高可信證據；
+// 其餘（問號、多公司、主詞不清）必須進文章內文做股票↔目標價配對。
+const LEARNED_BROKERS=new Map();
+function rememberBroker(name,type){
+  const n=String(name||"").trim();if(!n||n==="未知券商")return;
+  const old=LEARNED_BROKERS.get(n);
+  if(!old||old==="未知"||(type&&type!=="未知"))LEARNED_BROKERS.set(n,type||old||"未知");
+}
+function titleCompanyMarkers(title){
+  const out=[];let m;
+  const explicit=/([\u4e00-\u9fffA-Za-z][\u4e00-\u9fffA-Za-z0-9\-]{1,24})\s*[（(]?\s*(\d{4,6})(?:\.TW|\.TWO)?\s*[）)]?/g;
+  while((m=explicit.exec(String(title||"")))){
+    const code=m[2];
+    // 排除日期、年份等常見非股票數字。
+    const companyName=m[1].trim();
+    if(/^20\d{2}$/.test(code))continue;
+    if(/^(?:目標價|股價|收盤價|EPS|營收|獲利|每股盈餘|本益比|殖利率)$/i.test(companyName))continue;
+    out.push({name:companyName,code,index:m.index});
+  }
+  return out;
+}
+function titleDecision(title,code,name){
+  const text=String(title||"");
+  const targets=targetMatches(text);
+  const companies=titleCompanyMarkers(text);
+  const requested=companies.filter(x=>x.code===code||(name&&x.name.includes(name)));
+  const hasQuestion=/[？?]/.test(text);
+  const distinctCodes=new Set(companies.map(x=>x.code));
+  const requestedMentioned=requested.length>0||requestedMention(text,code,name);
+  const singleCompany=(distinctCodes.size===1&&requested.length>0)||(distinctCodes.size===0&&requestedMentioned);
+  return{direct:singleCompany&&targets.length===1&&!hasQuestion,needsArticle:hasQuestion||distinctCodes.size>1||!singleCompany||targets.length!==1,targets};
+}
+function titleDirectRows(title,base,code,name){
+  const d=titleDecision(title,code,name);if(!d.direct)return[];
+  const t=d.targets[0];
+  const brokers=dynamicBrokerMatches(title);
+  const b=brokerFromScope(title,[...new Map(brokers.map(x=>[x.name,x])).values()]);
+  if(b)rememberBroker(b.name,b.type);
+  const broker=b?{broker:b.name,brokerType:b.type}:{broker:"未知券商",brokerType:"未知"};
+  return[{...base,...broker,brokerKey:b?b.name:"未知券商",...periodInfo(title),...reasonInfo(title),target:t.target,evidence:title,titleDirect:true}];
+}
+
 function paragraphList(text){return String(text||"").split(/\n+/).map(x=>x.replace(/\s+/g," ").trim()).filter(Boolean)}
 function sentenceList(text){return String(text||"").split(/(?<=[。！？!?；;])/).map(x=>x.trim()).filter(Boolean)}
 function dynamicBrokerMatches(text){
   const out=[...brokerMatches(text)],seen=new Set(out.map(x=>`${x.index}|${x.name}`));
-  const re=/([\u4e00-\u9fffA-Za-z]{2,12})(證券|投顧)/g;let m;
+  for(const x of out)rememberBroker(x.name,x.type);
+  const re=/([\u4e00-\u9fffA-Za-z]{2,16})(證券|投顧)/g;let m;
   while((m=re.exec(text))){
-    const raw=`${m[1]}${m[2]}`,known=brokerMatches(raw)[0],name=known?.name||(m[1].replace(/(?:股份有限公司|股份|綜合)$/g,"")||raw),type=known?.type||"本土";
+    const raw=`${m[1]}${m[2]}`,known=brokerMatches(raw)[0];
+    const name=known?.name||(m[1].replace(/(?:股份有限公司|股份|綜合)$/g,"")||raw);
+    // 未收錄券商不再武斷當成本土；先記住名稱，日後同名可持續辨識。
+    const type=known?.type||LEARNED_BROKERS.get(name)||"未知";
+    rememberBroker(name,type);
     const key=`${m.index}|${name}`;if(!seen.has(key)){seen.add(key);out.push({name,type,index:m.index})}
   }
   return out.sort((a,b)=>a.index-b.index);
@@ -208,17 +257,27 @@ const rssResults=(await Promise.all(queries.map(fetchRss))).flat();const seen=ne
 const scoped360=items.filter(x=>dayAge(x.date)<=360),selected=scoped360.slice(0,100);
 const articles=await pooled(selected,8,async item=>{const article=await fetchArticle(item.sourceUrl);return{...item,articleUrl:article.url,fullText:`${item.title}\n${item.description}\n${article.text}`}});
 const rows=[];
-// v1.1.4：完全不使用 AI API。先保留新聞原始段落，再要求「查詢股票必須出現在目標價所屬段落／承接句」後才收錄。
-// 券商優先取同句、同段；只有全文確定僅出現一家券商時才允許文章層級承接，避免多券商文章互相串錯。
-const articleKeys=new Set();
+// v2.4.1 搜尋核心：標題能唯一確認時直接採用；有問號／多公司／不明確時才要求內文雙重驗證。
+const articleKeys=new Set(),directKeys=new Set();
+for(const item of scoped360){
+  if(!(item.title.includes(code)||(name&&item.title.includes(name))))continue;
+  const baseRow={date:item.date,title:item.title,sourceUrl:item.sourceUrl};
+  const direct=titleDirectRows(item.title,baseRow,code,name);
+  if(direct.length){for(const row of direct)rows.push(row);directKeys.add(`${item.title}|${item.date}`)}
+}
 for(const a of articles){
+  const key=`${a.title}|${a.date}`;if(directKeys.has(key))continue;
   const text=a.fullText;if(!(text.includes(code)||(name&&text.includes(name))))continue;
   const baseRow={date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl};
   for(const row of articlePairRows(text,baseRow,code,name))rows.push(row);
-  articleKeys.add(`${a.title}|${a.date}`);
+  articleKeys.add(key);
 }
+// 抓不到文章正文時，只有「非多公司且可在 RSS 摘要完成股票↔目標價配對」才允許備援；
+// 多公司與問號標題不再用跨段距離猜測。
 for(const item of scoped360){
-  if(articleKeys.has(`${item.title}|${item.date}`))continue;
+  const key=`${item.title}|${item.date}`;if(directKeys.has(key)||articleKeys.has(key))continue;
+  const decision=titleDecision(item.title,code,name);
+  if(/[？?]/.test(item.title)||titleCompanyMarkers(item.title).length>1)continue;
   const text=`${item.title} ${item.description}`;if(!(text.includes(code)||(name&&text.includes(name))))continue;
   for(const row of pairRows(text,{date:item.date,title:item.title,sourceUrl:item.sourceUrl},code,name))rows.push(row)
 }
@@ -248,5 +307,5 @@ if(known.length)mergedUnknown=mergedUnknown.slice(0,3);
 const groups={};
 for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知"?`未知券商:${row.target}`:(row.brokerKey||row.broker);groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
 const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,broker:x.broker,brokerType:x.brokerType,brokerKey:x.brokerKey,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel,evidence:x.evidence||"",aiParsed:!!x.aiParsed,confidence:x.confidence||""}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-return res.status(200).json({ok:true,brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
+return res.status(200).json({ok:true,parserVersion:"2.4.1",brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
