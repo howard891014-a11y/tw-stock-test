@@ -5,10 +5,20 @@ const BROKERS=[
 ["元大","本土"],["群益","本土"],["凱基","本土"],["富邦","本土"],["國泰","本土"],["永豐","本土"],["統一","本土"],["兆豐","本土"],["第一金","本土"],["華南永昌","本土"],["玉山","本土"],["台新","本土"],["康和","本土"],["宏遠","本土"],["國票","本土"],["新光","本土"],["中國信託綜合證券","本土"],["中國信託證券","本土"],["中國信託綜合","本土"],["中國信託","本土"],["中信證券","本土"],["中信投顧","本土"],["中信","本土"],["本土投顧","本土"]
 ];
 const CANONICAL={"高盛證券":"高盛","美林證券":"美林","大摩":"摩根士丹利","小摩":"摩根大通","滙豐":"匯豐","中國信託綜合證券":"中信","中國信託證券":"中信","中國信託綜合":"中信","中國信託":"中信","中信證券":"中信","中信投顧":"中信"};
-const BLOCKED_SOURCE_URLS=[/https?:\/\/(?:www\.)?cmoney\.tw\/forum\//i];
+const BLOCKED_SOURCE_URLS=[
+/https?:\/\/(?:www\.)?cmoney\.tw\/forum\//i,
+/https?:\/\/social\.cmoney\.tw\/forum\//i,
+/https?:\/\/api\.cmoney\.tw\/forum\//i,
+/https?:\/\/readmo\.cmoney\.tw\//i
+];
 const BLOCKED_PUBLISHERS=["股市爆料同學會"];
 function blockedSource(url,publisher=""){return BLOCKED_SOURCE_URLS.some(re=>re.test(String(url||"")))||BLOCKED_PUBLISHERS.some(x=>String(publisher||"").includes(x))}
-const SOURCE_DOMAINS=["tw.stock.yahoo.com","money.udn.com","udn.com","ec.ltn.com.tw","ctee.com.tw","moneydj.com","anue.com","sinotrade.com.tw","cmoney.tw","cmnews.com.tw","nstock.tw"];
+function absoluteHttpUrl(raw,base=""){
+  const value=decodeEntities(String(raw||"").trim());if(!value)return "";
+  try{const u=new URL(value,base||undefined);return /^https?:$/i.test(u.protocol)?u.href:""}catch{return ""}
+}
+function usableSourceUrl(url){return /^https?:\/\//i.test(String(url||""))&&!/^https?:\/\/news\.google\.com\//i.test(String(url||""))&&!blockedSource(url)}
+const SOURCE_DOMAINS=["tw.stock.yahoo.com","money.udn.com","udn.com","ec.ltn.com.tw","ctee.com.tw","moneydj.com","anue.com","sinotrade.com.tw","cmoney.tw","cmnews.com.tw","nstock.tw","uanalyze.com.tw","money-link.com.tw"];
 const clean=s=>String(s||"").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&nbsp;|&#160;/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/<script[\s\S]*?<\/script>/gi," ").replace(/<style[\s\S]*?<\/style>/gi," ").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
 const decodeEntities=s=>String(s||"").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'");
 function cleanArticleHtml(html){
@@ -24,7 +34,7 @@ function tag(block,name){const m=block.match(new RegExp(`<${name}[^>]*>([\\s\\S]
 function iso(value){const d=new Date(value);return Number.isNaN(d.getTime())?null:d.toISOString()}
 function brokerMatches(text){const out=[];for(const [name,type] of BROKERS){let p=0;while((p=text.indexOf(name,p))!==-1){out.push({name:CANONICAL[name]||name,type,index:p});p+=name.length}}return out.sort((a,b)=>a.index-b.index)}
 function targetMatches(text){const out=[];const revisions=[];
-const revisionRe=/目標價(?:由|從)\s*([\d,]+(?:\.\d+)?)\s*元?\s*(?:大幅)?(?:上修|調高|調升|提高|下修|下調|調降|上調)?\s*(?:至|到)\s*([\d,]+(?:\.\d+)?)\s*元?/gi;let rm;
+const revisionRe=/目標價(?:由|從)\s*(?:新台幣|台幣)?\s*([\d,]+(?:\.\d+)?)\s*元?\s*(?:大幅)?(?:上修|調高|調升|提高|下修|下調|調降|上調)?\s*(?:至|到)\s*([\d,]+(?:\.\d+)?)\s*元?/gi;let rm;
 while((rm=revisionRe.exec(text))){const old=Number(rm[1].replace(/,/g,"")),target=Number(rm[2].replace(/,/g,""));if(Number.isFinite(target)&&target>=10&&target<=100000){const secondAt=rm[0].lastIndexOf(rm[2]);revisions.push({start:rm.index,end:revisionRe.lastIndex,old,target});out.push({target,index:rm.index+Math.max(0,secondAt),text:rm[0],revisionFinal:true})}}
 const patterns=[
 /目標價(?:由|從)?\s*(?:最高|上看|調升至|調高至|下修至|維持在|維持|喊到|看至|達到|為)?\s*(?:新台幣|台幣)?\s*([\d,]+(?:\.\d+)?)\s*元?/gi,
@@ -158,7 +168,7 @@ function pairRows(text,base,code,name){
 }
 
 
-// v2.4.5：先解開 Google News RSS 包裝網址，實際抓發布者正文；再做跨層、跨來源券商補全。
+// v2.4.5.1：先解開 Google News RSS 包裝網址，實際抓發布者正文；再做跨層、跨來源券商補全。
 // 券商辨識不再依賴「必須先存在名單」：已知券商直接分類；未知但明確以「證券／投顧」結尾者也視為券商。
 const LEARNED_BROKERS=new Map();
 function rememberBroker(name,type){
@@ -354,22 +364,25 @@ async function decodeGoogleNewsUrl(url){
   }catch{return url}
 }
 async function fetchArticle(url){
-  if(!url)return{url,text:"",resolved:false};
+  if(!url)return{url:"",text:"",resolved:false,verified:false,status:0};
   let resolved=url;
   try{resolved=await decodeGoogleNewsUrl(url)}catch{}
-  if(blockedSource(resolved))return{url:resolved,text:"",resolved:resolved!==url,blocked:true};
+  if(blockedSource(resolved))return{url:resolved,text:"",resolved:resolved!==url,verified:false,blocked:true,status:0};
   try{
-    const r=await fetchText(resolved,{headers:PAGE_HEADERS,redirect:"follow"},2600);
-    if(!r.ok)return{url:r.url||resolved,text:"",resolved:resolved!==url};
+    const r=await fetchText(resolved,{headers:PAGE_HEADERS,redirect:"follow"},3200);
+    const finalUrl=absoluteHttpUrl(r.url||resolved,resolved)||resolved;
+    if(!r.ok)return{url:finalUrl,text:"",resolved:finalUrl!==url,verified:false,status:r.status};
     const html=await r.text();
-    // Google News 的 JS 中繼頁不是新聞正文；不要把它誤當全文。
-    if(/^https?:\/\/news\.google\.com\//i.test(r.url||resolved)&&/<c-wiz|DotsSplashUi|data-n-a-/i.test(html))return{url:resolved,text:"",resolved:false};
-    const canonical=html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)?.[1]||html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)/i)?.[1]||r.url||resolved;
-    if(blockedSource(canonical))return{url:canonical,text:"",resolved:true,blocked:true};
+    if(/^https?:\/\/news\.google\.com\//i.test(finalUrl)&&/<c-wiz|DotsSplashUi|data-n-a-/i.test(html))return{url:finalUrl,text:"",resolved:false,verified:false,status:r.status};
+    const canonicalRaw=html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)?.[1]||html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)/i)?.[1]||finalUrl;
+    // canonical 常是 /article/xxx；必須相對新聞站本身轉絕對網址，否則前端會誤開成 Vercel 自己的路徑。
+    const canonical=absoluteHttpUrl(canonicalRaw,finalUrl)||finalUrl;
+    if(blockedSource(canonical))return{url:canonical,text:"",resolved:true,verified:false,blocked:true,status:r.status};
     const title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"";
     const desc=html.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)/i)?.[1]||"";
-    return{url:canonical,text:cleanArticleHtml(`${title}\n${desc}\n${html}`),resolved:!/^https?:\/\/news\.google\.com\//i.test(canonical)};
-  }catch{return{url:resolved,text:"",resolved:resolved!==url}}
+    const text=cleanArticleHtml(`${title}\n${desc}\n${html}`);
+    return{url:canonical,text,resolved:usableSourceUrl(canonical),verified:usableSourceUrl(canonical)&&!!text,status:r.status};
+  }catch{return{url:usableSourceUrl(resolved)?resolved:"",text:"",resolved:usableSourceUrl(resolved),verified:false,status:0}}
 }
 async function pooled(items,limit,fn){const out=[];let i=0;async function worker(){while(i<items.length){const idx=i++;out[idx]=await fn(items[idx],idx)}}await Promise.all(Array.from({length:Math.min(limit,items.length)},worker));return out}
 function articleRelevance(x,code,name){
@@ -387,6 +400,30 @@ function reconcileUnknownRows(rows){
     return !known.some(k=>k.target===r.target&&Math.abs(new Date(k.date||0).getTime()-rd)<=2*86400000);
   });
 }
+function rssBrokerHints(items,code,name){
+  const hints=[];
+  for(const item of items){
+    const base={date:item.date,title:item.title,sourceUrl:""};
+    for(const text of [item.description,item.title]){
+      if(!text||!requestedMention(text,code,name))continue;
+      for(const row of rowsFromVerifiedScope(text,base,code,name,"rss-hint")){
+        if(row.brokerType!=="未知")hints.push(row);
+      }
+    }
+  }
+  return hints;
+}
+function enrichUnknownFromHints(rows,hints){
+  return rows.map(row=>{
+    if(row.brokerType!=="未知")return row;
+    const rd=new Date(row.date||0).getTime();
+    const matches=hints.filter(h=>h.target===row.target&&Math.abs(new Date(h.date||0).getTime()-rd)<=2*86400000);
+    const uniq=[...new Map(matches.map(h=>[`${h.broker}|${h.brokerType}`,h])).values()];
+    // 只有唯一券商結論才補，避免同一天同目標價多家券商時硬猜。
+    if(uniq.length!==1)return row;
+    const h=uniq[0];return{...row,broker:h.broker,brokerType:h.brokerType,brokerKey:h.brokerKey||h.broker,brokerSource:"rss-cross-article"};
+  });
+}
 module.exports=async function handler(req,res){res.setHeader("Cache-Control","no-store");const rawCode=String(req.query.code||req.query.symbol||"").trim().toUpperCase();
 const code=rawCode.replace(/\.(?:TW|TWO)$/i,"").trim();
 const name=String(req.query.name||"").trim();
@@ -399,30 +436,25 @@ const strong=ranked.filter(x=>articleRelevance(x,code,name)>=7);
 const selected=(strong.length?strong:ranked).slice(0,36);
 const articles=await pooled(selected,8,async item=>{
   const article=await fetchArticle(item.sourceUrl);
-  return{...item,articleUrl:article.url,articleText:article.text||"",articleResolved:!!article.resolved,articleBlocked:!!article.blocked};
+  return{...item,articleUrl:article.url,articleText:article.text||"",articleResolved:!!article.resolved,articleVerified:!!article.verified,articleStatus:article.status||0,articleBlocked:!!article.blocked};
 });
 const rows=[];
-// v2.4.5：不是「某層有結果就停止」，而是逐欄補全，並優先使用已解碼的發布者正文。
+// v2.4.5.1：不是「某層有結果就停止」，而是逐欄補全，並優先使用已解碼的發布者正文。
 // 全文負責最高優先的公司＋目標價；若券商缺失，摘要、標題仍會繼續補券商。
 for(const a of articles){
-  if(a.articleBlocked||blockedSource(a.articleUrl||a.sourceUrl,a.publisher))continue;
-  const baseRow={date:a.date,title:a.title,sourceUrl:a.articleUrl||a.sourceUrl};
+  if(a.articleBlocked||!a.articleVerified||!usableSourceUrl(a.articleUrl)||blockedSource(a.articleUrl,a.publisher))continue;
+  const baseRow={date:a.date,title:a.title,sourceUrl:a.articleUrl};
   const bodyRows=a.articleText&&requestedMention(a.articleText,code,name)?rowsFromVerifiedScope(a.articleText,baseRow,code,name,"body"):[];
   const summaryRows=a.description&&requestedMention(a.description,code,name)?rowsFromVerifiedScope(a.description,baseRow,code,name,"summary"):[];
   const titleRows=titleSafeRows(a.title,baseRow,code,name);
   const parsed=mergeLayerRows(bodyRows,summaryRows,titleRows,[a.description,a.title,a.articleText]);
   for(const row of parsed)rows.push(row);
 }
-// 未進正文抓取清單的 RSS：摘要先建立目標價，標題補欄位；仍維持多公司／問號標題不硬猜。
-const articleKeys=new Set(articles.map(a=>`${a.title}|${a.date}`));
-for(const item of scoped360){
-  if(blockedSource(item.publisherUrl||item.sourceUrl,item.publisher))continue;
-  if(articleKeys.has(`${item.title}|${item.date}`))continue;
-  const baseRow={date:item.date,title:item.title,sourceUrl:item.sourceUrl};
-  const summaryRows=item.description&&requestedMention(item.description,code,name)?rowsFromVerifiedScope(item.description,baseRow,code,name,"summary"):[];
-  const titleRows=titleSafeRows(item.title,baseRow,code,name);
-  for(const row of mergeLayerRows([],summaryRows,titleRows,[item.description,item.title]))rows.push(row);
-}
+// 不再把「未解碼／未成功開啟」的 RSS 連結直接交給前端。
+// 搜尋摘要只作券商交叉佐證，來源列本身必須是已成功抓取的真實新聞網址。
+const hints=rssBrokerHints(scoped360,code,name);
+const hintedRows=enrichUnknownFromHints(rows,hints);
+rows.length=0;rows.push(...hintedRows);
 const reconciledRows=reconcileUnknownRows(rows.filter(r=>!blockedSource(r.sourceUrl)));
 rows.length=0;rows.push(...reconciledRows);
 rows.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
@@ -451,5 +483,5 @@ if(known.length)mergedUnknown=mergedUnknown.slice(0,3);
 const groups={};
 for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知"?`未知券商:${row.target}`:(row.brokerKey||row.broker);groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
 const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,broker:x.broker,brokerType:x.brokerType,brokerKey:x.brokerKey,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel,evidence:x.evidence||"",aiParsed:!!x.aiParsed,confidence:x.confidence||""}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-return res.status(200).json({ok:true,parserVersion:"2.4.5",brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,resolvedArticles:articles.filter(a=>a.articleResolved).length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
+return res.status(200).json({ok:true,parserVersion:"2.4.5.1",brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,resolvedArticles:articles.filter(a=>a.articleResolved).length,verifiedArticles:articles.filter(a=>a.articleVerified).length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
