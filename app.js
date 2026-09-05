@@ -7,7 +7,7 @@ let statusTimer=null;
 function setStatus(msg,error=false){
   const el=$("statusText"); if(!el)return;
   clearTimeout(statusTimer); el.textContent=msg; el.classList.toggle("error",error); el.classList.add("show");
-  if(!/正在|載入|搜尋中/.test(msg)) statusTimer=setTimeout(()=>el.classList.remove("show"),error?4200:1800);
+  if(!/正在|載入|搜尋中|搜尋股票|搜尋目標價/.test(msg)) statusTimer=setTimeout(()=>el.classList.remove("show"),error?4200:1800);
 }
 function fmt(n){
   const x=Number(n);
@@ -91,12 +91,14 @@ async function search(){
   if(!q){setStatus("請輸入股票名稱或代碼",true);return}
 
   btn.disabled=true;
-  setStatus("正在搜尋股票…");
+  setStatus("搜尋股票…");
   try{
     const data=await quote(q);
     renderStock(data);
+    beginTargetSearch();
+    setStatus("搜尋目標價…");
+    await loadTargetPlay(data.code||data.symbol||q,data.name||data.shortName||"");
     setStatus(`搜尋成功：${shortStockName(data.name)||data.code||q}`);
-    loadTargetPlay(data.code||data.symbol||q,data.name||data.shortName||"");
   }catch(e){
     console.error(e);
     setStatus(`搜尋失敗：${e.message}`,true);
@@ -315,6 +317,12 @@ function filterBadKnownTarget(rows){
   return rows.filter(row=>!(targetBrokerName(row).includes("高盛") && Number(targetPriceValue(row))===22000));
 }
 
+function beginTargetSearch(){
+  targetRowsCache=[];
+  renderMainTarget(null);
+  const host=$("brokerRows");if(host)host.innerHTML="<p>搜尋目標價…</p>";
+  $("targetPlay")?.classList.add("hidden");
+}
 function renderTargetPlay(payload){
   targetRowsCache=filterBadKnownTarget(applyCorr(normalizeTargetRows(payload)));
   renderBrokerRows();
@@ -322,16 +330,18 @@ function renderTargetPlay(payload){
   renderMainTarget(preferredMainTarget());
 }
 async function loadTargetPlay(code,name){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),28000);
   try{
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
     const res=await fetch(`/api/targets?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}`,{cache:"no-store",signal:controller.signal});
-    clearTimeout(timer);
     renderTargetPlay(await readJson(res,"目標價"));
+    return true;
   }catch(e){
     console.warn("目標價載入失敗",e);
     if($("brokerRows"))$("brokerRows").innerHTML="<p>目標價暫時無法載入。</p>";
     $("targetPlay")?.classList.add("hidden");
-  }
+    if(e?.name==="AbortError")throw new Error("目標價查詢逾時");
+    throw e;
+  }finally{clearTimeout(timer)}
 }
 
 // target tabs: 外資 / 本土 / 未知
