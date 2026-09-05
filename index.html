@@ -292,11 +292,17 @@ body{padding-bottom:68px}
   .target-history3 .history3-row{grid-template-columns:38px 82px 94px!important;column-gap:14px!important}
 }
 
-/* v2.4.5.2 mobile target actions */
+/* v2.4.6.1 mobile target actions */
 @media(max-width:720px){
   .broker-row{grid-template-columns:minmax(76px,1fr) 58px 76px 40px 40px!important}
   .broker-actions a,.broker-actions button{width:40px!important;min-width:40px!important;height:30px!important;padding:0!important}
 }
+
+/* v2.4.6.1 target UX */
+.target-new{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:8px;background:#ff4d67;color:white;font-size:9px;vertical-align:middle}
+.broker-row{position:relative}.broker-expand,.broker-menu-btn{border:1px solid #2c4d70;background:#0c1d30;color:#84bfff;border-radius:7px;width:32px;height:28px;padding:0}
+.broker-actions{position:relative}.broker-menu{position:absolute;right:0;top:32px;z-index:20;min-width:92px;padding:5px;background:#0b1928;border:1px solid #294866;border-radius:8px;box-shadow:0 8px 22px #0008}.broker-menu.hidden{display:none}.broker-menu a,.broker-menu button{display:block!important;width:100%!important;text-align:left!important;border:0!important;background:transparent!important;padding:7px 9px!important;color:#d8e8f8!important;text-decoration:none;font-size:12px}.broker-history{grid-column:1/-1;padding:7px 8px 2px 38px;border-top:1px dashed #263d55}.broker-history.hidden{display:none}.broker-history div{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:5px 0;font-size:11px;color:#a9b7c8}.broker-history strong{font-size:11px}.target-only-panel{margin-top:8px}
+@media(max-width:720px){.target-tabs{overflow-x:auto}.target-tabs button{white-space:nowrap;padding:9px 11px}.broker-row{grid-template-columns:minmax(70px,1fr) 56px 72px 32px 32px!important}.broker-actions{display:block!important}.broker-menu-btn,.broker-expand{width:32px!important;min-width:32px!important}.broker-history{padding-left:8px}.broker-menu{right:0}.target-new{font-size:8px;padding:1px 4px}}
 </style>
 </head>
 <body>
@@ -323,7 +329,7 @@ body{padding-bottom:68px}
       </div>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.4.5.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.4.6.1</span></button>
   </aside>
 
   <div class="main-shell">
@@ -417,7 +423,7 @@ body{padding-bottom:68px}
 
         <article class="card targets-card detail-panel" id="targets" data-view-panel="targets">
           <div class="card-title">券商目標價 <span class="badge">沿用既有功能</span></div>
-          <div class="target-tabs"><button class="active" data-target-type="外資">外資券商</button><button data-target-type="本土">本土券商</button><button data-target-type="未知">未知券商</button></div>
+          <div class="target-tabs"><button class="active" data-target-type="外資">外資券商</button><button data-target-type="本土">本土券商</button><button data-target-type="未知">未知券商</button><button data-target-type="目標">目標券商</button></div>
           <div id="brokerRows" class="broker-placeholder">
             <div><span>券商名稱</span><span>目標價</span><span>發布時間</span></div>
             <p>搜尋股票後載入目標價。</p>

@@ -284,33 +284,38 @@ $("saveTargetEdit")?.addEventListener("click",()=>{
  closeEdit();renderBrokerRows();fillMainBrokerSelect();renderMainTarget(preferredMainTarget());setStatus("已修改");
 });
 
-function renderBrokerRows(){
-  const host=$("brokerRows");
-  if(!host)return;
-  const rows=targetRowsCache.map(targetCandidate).filter(Boolean)
-    .filter(x=>targetBrokerType(x.row)===targetTypeFilter)
-    .sort((a,b)=>b.time-a.time);
-  if(!rows.length){
-    host.innerHTML=`<p>目前沒有${targetTypeFilter}目標價。</p>`;
-    return;
-  }
-  host.innerHTML=rows.map((x,i)=>{
-    const d=x.latest.date||x.latest.publishedAt||x.latest.published||"—";
-    const src=x.latest?.sourceUrl||x.row?.sourceUrl||"";
-    return `<div class="broker-row" data-broker="${targetBrokerName(x.row).replace(/"/g,"&quot;")}" data-index="${i}">
-      <span><b>${targetBrokerName(x.row)}</b><small class="broker-type">${targetBrokerType(x.row)}</small></span>
-      <strong>${targetFmt(targetPriceValue(x.latest))}</strong><time>${String(d).slice(0,10)}</time>
-      <span class="broker-actions">${src?`<a href="${src}" target="_blank" rel="noopener" onclick="event.stopPropagation()">來源</a>`:""}<button type="button" data-edit-target="${i}" onclick="event.stopPropagation()">修改</button></span>
-    </div>`;
-  }).join("");
-  host.querySelectorAll(".broker-row").forEach((el,i)=>el.addEventListener("click",()=>{
-    setBrokerPref(targetBrokerName(rows[i].row));
-    fillMainBrokerSelect();
-    renderMainTarget(rows[i]);
-  }));
-  host.querySelectorAll("[data-edit-target]").forEach(btn=>btn.addEventListener("click",()=>openEdit(rows[Number(btn.dataset.editTarget)].row)));
+const TARGET_CACHE_KEY="stockzone_target_cache_v2461";
+const TARGET_SEEN_KEY="stockzone_target_seen_v2461";
+let targetNewKeys=new Set(),expandedBrokerRows=new Set();
+function readTargetCache(){try{return JSON.parse(localStorage.getItem(TARGET_CACHE_KEY)||"{}")||{}}catch{return{}}}
+function writeTargetCache(x){localStorage.setItem(TARGET_CACHE_KEY,JSON.stringify(x))}
+function targetSig(row){const c=targetCandidate(row);if(!c)return"";return `${targetBrokerName(row)}|${targetPriceValue(c.latest)}|${String(c.latest.date||c.latest.publishedAt||"").slice(0,10)}`}
+function mergeTargetRows(oldRows,newRows){
+ const all=[...(newRows||[]),...(oldRows||[])],groups=new Map();
+ for(const row of all){const name=targetBrokerName(row),key=`${targetBrokerType(row)}|${name}`;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(...targetHistoryOf(row))}
+ return [...groups.entries()].map(([key,h])=>{h=h.filter(x=>Number.isFinite(targetPriceValue(x))).sort((a,b)=>targetDateValue(b)-targetDateValue(a));const uniq=[];for(const x of h){if(!uniq.some(y=>targetPriceValue(y)===targetPriceValue(x)&&String(y.date||y.publishedAt||"").slice(0,10)===String(x.date||x.publishedAt||"").slice(0,10)))uniq.push(x)}const latest=uniq[0];return latest?{...latest,broker:targetBrokerName(latest),brokerType:targetBrokerType(latest),targetHistory:uniq.slice(0,3)}:null}).filter(Boolean)
 }
-
+function cacheTargetsForStock(code,rows){const all=readTargetCache(),prev=all[code]?.rows||[];const prevSigs=new Set(prev.map(targetSig));targetNewKeys=new Set(rows.map(targetSig).filter(x=>x&&!prevSigs.has(x)&&prev.length));all[code]={rows,updatedAt:new Date().toISOString()};writeTargetCache(all)}
+function isNewTarget(row){return targetNewKeys.has(targetSig(row))}
+function renderBrokerRows(){
+  const host=$("brokerRows"); if(!host)return;
+  const play=$("targetPlay");
+  if(targetTypeFilter==="目標"){
+    host.innerHTML=""; play?.classList.remove("hidden"); renderMainTarget(preferredMainTarget()); return;
+  }
+  play?.classList.add("hidden");
+  const rows=targetRowsCache.map(targetCandidate).filter(Boolean).filter(x=>targetBrokerType(x.row)===targetTypeFilter).sort((a,b)=>b.time-a.time);
+  if(!rows.length){host.innerHTML=`<p>目前沒有${targetTypeFilter}目標價。</p>`;return}
+  host.innerHTML=rows.map((x,i)=>{
+    const d=x.latest.date||x.latest.publishedAt||x.latest.published||"—",src=x.latest?.sourceUrl||x.row?.sourceUrl||"",name=targetBrokerName(x.row),open=expandedBrokerRows.has(name);
+    const history=x.history.map((h,j)=>`<div><span>${j===0?"最新":`歷史 ${j}`}</span><strong>${targetFmt(targetPriceValue(h))} 元</strong><time>${String(h.date||h.publishedAt||"—").slice(0,10)}</time></div>`).join("");
+    return `<div class="broker-row" data-index="${i}"><span><b>${name}</b>${isNewTarget(x.row)?'<em class="target-new">NEW</em>':''}</span><strong>${targetFmt(targetPriceValue(x.latest))}</strong><time>${String(d).slice(0,10)}</time><button class="broker-expand" data-expand="${i}" type="button">${open?"⌃":"⌄"}</button><span class="broker-actions"><button class="broker-menu-btn" data-menu="${i}" type="button">⁝</button><span class="broker-menu hidden" data-menu-box="${i}">${src?`<a href="${src}" target="_blank" rel="noopener">來源</a>`:""}<button type="button" data-edit-target="${i}">修改</button><button type="button" data-set-target="${i}">目標</button></span></span><div class="broker-history ${open?"":"hidden"}" data-history="${i}">${history}</div></div>`;
+  }).join("");
+  host.querySelectorAll("[data-expand]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const i=Number(btn.dataset.expand),name=targetBrokerName(rows[i].row);expandedBrokerRows.has(name)?expandedBrokerRows.delete(name):expandedBrokerRows.add(name);renderBrokerRows()}));
+  host.querySelectorAll("[data-menu]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const box=host.querySelector(`[data-menu-box="${btn.dataset.menu}"]`);host.querySelectorAll(".broker-menu").forEach(x=>{if(x!==box)x.classList.add("hidden")});box?.classList.toggle("hidden")}));
+  host.querySelectorAll("[data-edit-target]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();openEdit(rows[Number(btn.dataset.editTarget)].row)}));
+  host.querySelectorAll("[data-set-target]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const x=rows[Number(btn.dataset.setTarget)];setBrokerPref(targetBrokerName(x.row));fillMainBrokerSelect();document.querySelector('[data-target-type="目標"]')?.click()}));
+}
 function filterBadKnownTarget(rows){
   const code=String(currentStock?.code||currentStock?.symbol||"");
   if(code!=="2330")return rows;
@@ -324,26 +329,22 @@ function beginTargetSearch(){
   $("targetPlay")?.classList.add("hidden");
 }
 function renderTargetPlay(payload){
-  targetRowsCache=filterBadKnownTarget(applyCorr(normalizeTargetRows(payload)));
-  renderBrokerRows();
-  fillMainBrokerSelect();
-  renderMainTarget(preferredMainTarget());
+  const code=String(currentStock?.code||currentStock?.symbol||"");
+  const fresh=filterBadKnownTarget(applyCorr(normalizeTargetRows(payload)));
+  const cached=readTargetCache()[code]?.rows||[];
+  targetRowsCache=mergeTargetRows(cached,fresh);
+  cacheTargetsForStock(code,targetRowsCache);
+  renderBrokerRows(); fillMainBrokerSelect(); if(targetTypeFilter==="目標")renderMainTarget(preferredMainTarget());
+}
+async function fetchTargetPayload(code,name){
+  const cached=readTargetCache()[String(code)]?.rows||[];
+  const recent=cached.length?"&recent=3":"";
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),28000);
+  try{const res=await fetch(`/api/targets?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}${recent}`,{cache:"no-store",signal:controller.signal});return await readJson(res,"目標價")}finally{clearTimeout(timer)}
 }
 async function loadTargetPlay(code,name){
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),28000);
-  try{
-    const res=await fetch(`/api/targets?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}`,{cache:"no-store",signal:controller.signal});
-    renderTargetPlay(await readJson(res,"目標價"));
-    return true;
-  }catch(e){
-    console.warn("目標價載入失敗",e);
-    if($("brokerRows"))$("brokerRows").innerHTML="<p>目標價暫時無法載入。</p>";
-    $("targetPlay")?.classList.add("hidden");
-    if(e?.name==="AbortError")throw new Error("目標價查詢逾時");
-    throw e;
-  }finally{clearTimeout(timer)}
+  try{renderTargetPlay(await fetchTargetPayload(code,name));return true}catch(e){console.warn("目標價載入失敗",e);if($("brokerRows"))$("brokerRows").innerHTML="<p>目標價暫時無法載入。</p>";$("targetPlay")?.classList.add("hidden");if(e?.name==="AbortError")throw new Error("目標價查詢逾時");throw e}
 }
-
 // target tabs: 外資 / 本土 / 未知
 document.querySelectorAll(".target-tabs button").forEach(btn=>{
   btn.addEventListener("click",()=>{
@@ -392,7 +393,7 @@ function renderOneList(type,hostId){
       <strong>${x.name||"—"} <small>${x.code}</small></strong>
       <small>${x.market||"台股"}</small>
     </div>
-    <strong class="list-price">${targetFmt(x.last)}</strong>
+    <span class="list-values"><strong class="list-price">${targetFmt(x.last)}</strong>${Number.isFinite(Number(x.target))?`<small>目標 ${targetFmt(x.target)}</small>`:""}</span>
     <button class="remove-list" type="button" data-remove-type="${type}" data-remove-code="${x.code}" aria-label="刪除">×</button>
   </div>`).join(""):`<div class="manage-empty">${type==="holdings"?"尚無持股":"尚無觀察股票"}</div>`;
   host.querySelectorAll("[data-search-stock]").forEach(el=>el.addEventListener("click",()=>{
@@ -426,6 +427,28 @@ document.querySelectorAll("[data-manage-jump]").forEach(btn=>btn.addEventListene
 document.querySelectorAll("[data-search-jump]").forEach(btn=>btn.addEventListener("click",()=>{
   $("stockCode")?.focus();window.scrollTo({top:0,behavior:"smooth"});
 }));
+
+const AUTO_QUOTE_MS=5*60*1000,AUTO_TARGET_MS=2*60*60*1000;
+let autoRefreshing=false;
+async function autoRefreshLists(force=false){
+ if(autoRefreshing)return; autoRefreshing=true;
+ try{
+  const types=["holdings","watchlist"],byCode=new Map();
+  for(const type of types)for(const x of readList(type))if(x.code)byCode.set(String(x.code),x);
+  for(const [code,base] of byCode){
+   let q=base;
+   const quoteDue=force||!base.quoteUpdatedAt||Date.now()-new Date(base.quoteUpdatedAt).getTime()>=AUTO_QUOTE_MS;
+   const targetDue=force||!base.targetUpdatedAt||Date.now()-new Date(base.targetUpdatedAt).getTime()>=AUTO_TARGET_MS;
+   if(quoteDue){try{const d=await quote(code);q={...q,last:Number(d.last??d.price??d.regularMarketPrice),name:shortStockName(d.name||d.shortName||q.name),quoteUpdatedAt:new Date().toISOString()}}catch(e){console.warn("清單股價更新失敗",code,e)}}
+   if(targetDue){try{const payload=await fetchTargetPayload(code,q.name||"");const fresh=normalizeTargetRows(payload),cache=readTargetCache(),old=cache[code]?.rows||[],merged=mergeTargetRows(old,fresh),main=pickMainTarget(merged);cache[code]={rows:merged,updatedAt:new Date().toISOString()};writeTargetCache(cache);q={...q,target:main?targetPriceValue(main.latest):q.target,targetBroker:main?targetBrokerName(main.row):q.targetBroker,targetUpdatedAt:new Date().toISOString()}}catch(e){console.warn("清單目標價更新失敗",code,e)}}
+   for(const type of types){const rows=readList(type),i=rows.findIndex(x=>String(x.code)===code);if(i>=0){rows[i]={...rows[i],...q};writeList(type,rows)}}
+   renderLists();
+  }
+ }finally{autoRefreshing=false}
+}
+setTimeout(()=>autoRefreshLists(true),800);
+setInterval(()=>autoRefreshLists(false),AUTO_QUOTE_MS);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")autoRefreshLists(false)});
 
 renderLists();
 
