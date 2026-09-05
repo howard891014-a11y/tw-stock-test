@@ -2,9 +2,9 @@ const RSS_HEADERS={"User-Agent":"Mozilla/5.0","Accept":"application/rss+xml,appl
 const PAGE_HEADERS={"User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36","Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8","Accept-Language":"zh-TW,zh;q=0.9,en;q=0.7"};
 const BROKERS=[
 ["摩根士丹利","外資"],["大摩","外資"],["摩根大通","外資"],["小摩","外資"],["高盛證券","外資"],["高盛","外資"],["花旗","外資"],["美銀","外資"],["美林證券","外資"],["美林","外資"],["瑞銀","外資"],["瑞信","外資"],["野村","外資"],["麥格理","外資"],["匯豐","外資"],["滙豐","外資"],["里昂","外資"],["巴克萊","外資"],["德意志","外資"],["亞系外資","外資"],["美系外資","外資"],["歐系外資","外資"],["日系外資","外資"],
-["元大","本土"],["群益","本土"],["凱基","本土"],["富邦","本土"],["國泰","本土"],["永豐","本土"],["統一","本土"],["兆豐","本土"],["第一金","本土"],["華南永昌","本土"],["玉山","本土"],["台新","本土"],["康和","本土"],["宏遠","本土"],["國票","本土"],["新光","本土"],["中國信託綜合證券","本土"],["中國信託證券","本土"],["中國信託綜合","本土"],["中國信託","本土"],["中信證券","本土"],["中信投顧","本土"],["中信","本土"],["本土投顧","本土"]
+["元大投顧","本土"],["元大","本土"],["群益投顧","本土"],["群益","本土"],["凱基投顧","本土"],["凱基","本土"],["富邦投顧","本土"],["富邦","本土"],["國泰投顧","本土"],["國泰","本土"],["永豐投顧","本土"],["永豐","本土"],["統一投顧","本土"],["統一","本土"],["兆豐投顧","本土"],["兆豐","本土"],["第一金投顧","本土"],["第一金","本土"],["華南投顧","本土"],["華南永昌","本土"],["玉山投顧","本土"],["玉山","本土"],["台新投顧","本土"],["台新","本土"],["康和投顧","本土"],["康和","本土"],["宏遠投顧","本土"],["宏遠","本土"],["國票投顧","本土"],["國票","本土"],["新光投顧","本土"],["新光","本土"],["中國信託綜合證券","本土"],["中國信託證券","本土"],["中國信託綜合","本土"],["中國信託","本土"],["中信證券","本土"],["中信投顧","本土"],["中信","本土"],["本土投顧","本土"]
 ];
-const CANONICAL={"高盛證券":"高盛","美林證券":"美林","大摩":"摩根士丹利","小摩":"摩根大通","滙豐":"匯豐","中國信託綜合證券":"中信","中國信託證券":"中信","中國信託綜合":"中信","中國信託":"中信","中信證券":"中信","中信投顧":"中信"};
+const CANONICAL={"高盛證券":"高盛","美林證券":"美林","大摩":"摩根士丹利","小摩":"摩根大通","滙豐":"匯豐","元大投顧":"元大","群益投顧":"群益","凱基投顧":"凱基","富邦投顧":"富邦","國泰投顧":"國泰","永豐投顧":"永豐","統一投顧":"統一","兆豐投顧":"兆豐","第一金投顧":"第一金","華南投顧":"華南","玉山投顧":"玉山","台新投顧":"台新","康和投顧":"康和","宏遠投顧":"宏遠","國票投顧":"國票","新光投顧":"新光","中國信託綜合證券":"中信","中國信託證券":"中信","中國信託綜合":"中信","中國信託":"中信","中信證券":"中信","中信投顧":"中信"};
 const BLOCKED_SOURCE_URLS=[
 /https?:\/\/(?:www\.)?cmoney\.tw\/forum\//i,
 /https?:\/\/social\.cmoney\.tw\/forum\//i,
@@ -168,7 +168,7 @@ function pairRows(text,base,code,name){
 }
 
 
-// v2.4.5.1：先解開 Google News RSS 包裝網址，實際抓發布者正文；再做跨層、跨來源券商補全。
+// v2.4.5.2：先解開 Google News RSS 包裝網址，實際抓發布者正文；再做跨層、跨來源券商補全。
 // 券商辨識不再依賴「必須先存在名單」：已知券商直接分類；未知但明確以「證券／投顧」結尾者也視為券商。
 const LEARNED_BROKERS=new Map();
 function rememberBroker(name,type){
@@ -363,6 +363,51 @@ async function decodeGoogleNewsUrl(url){
     return url;
   }catch{return url}
 }
+function jsonLdArticleBodies(html){
+  const out=[];
+  const blocks=String(html||"").match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi)||[];
+  for(const block of blocks){
+    const raw=block.replace(/^<script[^>]*>/i,"").replace(/<\/script>$/i,"").trim();
+    try{
+      const root=JSON.parse(raw);
+      const stack=Array.isArray(root)?[...root]:[root];
+      while(stack.length){
+        const x=stack.shift();if(!x||typeof x!=="object")continue;
+        if(Array.isArray(x)){stack.push(...x);continue}
+        if(typeof x.articleBody==="string"&&x.articleBody.trim().length>80)out.push(x.articleBody);
+        if(Array.isArray(x["@graph"]))stack.push(...x["@graph"]);
+      }
+    }catch{}
+  }
+  return out;
+}
+function extractArticleText(html,title="",desc=""){
+  const source=String(html||"");
+  const candidates=[];
+  for(const body of jsonLdArticleBodies(source))candidates.push(body);
+  const articleBlocks=source.match(/<article\b[^>]*>[\s\S]*?<\/article>/gi)||[];
+  for(const block of articleBlocks)candidates.push(cleanArticleHtml(block));
+  // 常見新聞正文容器；只作 article/json-ld 取不到時的備援，避免把側欄/推薦新聞一起吃進 parser。
+  const scopedPatterns=[
+    /<(?:div|section)[^>]+(?:id|class)=["'][^"']*(?:article[-_ ]?(?:body|content|detail)|story[-_ ]?(?:body|content)|news[-_ ]?(?:body|content)|post[-_ ]?content|entry[-_ ]?content|content[-_ ]?body)[^"']*["'][^>]*>[\s\S]{120,}?<\/(?:div|section)>/gi,
+    /<main\b[^>]*>[\s\S]*?<\/main>/gi
+  ];
+  for(const re of scopedPatterns){const hits=source.match(re)||[];for(const block of hits)candidates.push(cleanArticleHtml(block))}
+  const cleaned=candidates.map(x=>cleanArticleHtml(x)).filter(x=>x.length>=80);
+  // 優先選同時含 title/desc 關鍵字或最長正文；不再以整份 HTML 當正文。
+  let best=cleaned.sort((a,b)=>b.length-a.length)[0]||"";
+  const anchors=[...String(title||"").matchAll(/[\u4e00-\u9fffA-Za-z0-9]{4,}/g)].map(m=>m[0]).slice(0,5);
+  const anchored=cleaned.filter(x=>anchors.some(k=>x.includes(k))).sort((a,b)=>b.length-a.length)[0];
+  if(anchored)best=anchored;
+  return [title,desc,best].filter(Boolean).join("\n");
+}
+async function verifyFinalSourceUrl(url){
+  if(!usableSourceUrl(url))return false;
+  try{
+    const r=await fetchText(url,{headers:PAGE_HEADERS,redirect:"follow",method:"GET"},1800);
+    return !!r.ok;
+  }catch{return false}
+}
 async function fetchArticle(url){
   if(!url)return{url:"",text:"",resolved:false,verified:false,status:0};
   let resolved=url;
@@ -374,14 +419,12 @@ async function fetchArticle(url){
     if(!r.ok)return{url:finalUrl,text:"",resolved:finalUrl!==url,verified:false,status:r.status};
     const html=await r.text();
     if(/^https?:\/\/news\.google\.com\//i.test(finalUrl)&&/<c-wiz|DotsSplashUi|data-n-a-/i.test(html))return{url:finalUrl,text:"",resolved:false,verified:false,status:r.status};
-    const canonicalRaw=html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)?.[1]||html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)/i)?.[1]||finalUrl;
-    // canonical 常是 /article/xxx；必須相對新聞站本身轉絕對網址，否則前端會誤開成 Vercel 自己的路徑。
-    const canonical=absoluteHttpUrl(canonicalRaw,finalUrl)||finalUrl;
-    if(blockedSource(canonical))return{url:canonical,text:"",resolved:true,verified:false,blocked:true,status:r.status};
+    // 來源按鈕只回傳這次 fetch 已實際成功開啟的最終 URL；不再把未驗證 canonical 當來源，避免 404。
+    if(blockedSource(finalUrl))return{url:finalUrl,text:"",resolved:true,verified:false,blocked:true,status:r.status};
     const title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"";
     const desc=html.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)/i)?.[1]||"";
-    const text=cleanArticleHtml(`${title}\n${desc}\n${html}`);
-    return{url:canonical,text,resolved:usableSourceUrl(canonical),verified:usableSourceUrl(canonical)&&!!text,status:r.status};
+    const text=extractArticleText(html,title,desc);
+    return{url:finalUrl,text,resolved:usableSourceUrl(finalUrl),verified:usableSourceUrl(finalUrl)&&!!text,status:r.status};
   }catch{return{url:usableSourceUrl(resolved)?resolved:"",text:"",resolved:usableSourceUrl(resolved),verified:false,status:0}}
 }
 async function pooled(items,limit,fn){const out=[];let i=0;async function worker(){while(i<items.length){const idx=i++;out[idx]=await fn(items[idx],idx)}}await Promise.all(Array.from({length:Math.min(limit,items.length)},worker));return out}
@@ -428,18 +471,23 @@ module.exports=async function handler(req,res){res.setHeader("Cache-Control","no
 const code=rawCode.replace(/\.(?:TW|TWO)$/i,"").trim();
 const name=String(req.query.name||"").trim();
 if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:"股票代碼格式錯誤"});try{
-const base=name||code;const queries=[`${base} ${code} 目標價`,`${base} ${code} 外資 目標價`,`${base} ${code} 券商 調升 上看`,...SOURCE_DOMAINS.map(d=>`${base} ${code} 目標價 site:${d}`)];
+const base=name||code;const queries=[`${base} ${code} 目標價`,`${base} ${code} 外資 目標價`,`${base} ${code} 本土投顧 目標價`,`${base} ${code} 券商評等報告彙整`,`${base} ${code} 券商 調升 上看`,`${base} ${code} 元大投顧 凱基投顧 富邦投顧 華南投顧 目標價`,...SOURCE_DOMAINS.map(d=>`${base} ${code} 目標價 site:${d}`)];
 const rssResults=(await Promise.all(queries.map(fetchRss))).flat();const seen=new Set(),items=[];for(const x of rssResults){const k=`${x.title}|${x.date}`;if(!seen.has(k)){seen.add(k);items.push(x)}}items.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 const scoped360=items.filter(x=>dayAge(x.date)<=360);
 const ranked=[...scoped360].sort((a,b)=>articleRelevance(b,code,name)-articleRelevance(a,code,name)||new Date(b.date||0)-new Date(a.date||0));
 const strong=ranked.filter(x=>articleRelevance(x,code,name)>=7);
-const selected=(strong.length?strong:ranked).slice(0,36);
+// 不讓「外資熱門新聞」把本土投顧、近期券商彙整整批擠出抓取名額。
+const candidatePool=strong.length?strong:ranked;
+const localFirst=candidatePool.filter(x=>/(?:本土投顧|元大投顧|凱基投顧|富邦投顧|華南投顧|第一金|群益|永豐|統一|兆豐)/.test(`${x.title} ${x.description}`)).slice(0,14);
+const recentBrokerDigest=candidatePool.filter(x=>/(?:券商評等報告彙整|美林證券|美系外資)/.test(`${x.title} ${x.description}`)).slice(0,14);
+const selected=[];const selectedKeys=new Set();
+for(const x of [...localFirst,...recentBrokerDigest,...candidatePool]){const k=`${x.title}|${x.date}`;if(selectedKeys.has(k))continue;selectedKeys.add(k);selected.push(x);if(selected.length>=52)break}
 const articles=await pooled(selected,8,async item=>{
   const article=await fetchArticle(item.sourceUrl);
   return{...item,articleUrl:article.url,articleText:article.text||"",articleResolved:!!article.resolved,articleVerified:!!article.verified,articleStatus:article.status||0,articleBlocked:!!article.blocked};
 });
 const rows=[];
-// v2.4.5.1：不是「某層有結果就停止」，而是逐欄補全，並優先使用已解碼的發布者正文。
+// v2.4.5.2：不是「某層有結果就停止」，而是逐欄補全，並優先使用已解碼的發布者正文。
 // 全文負責最高優先的公司＋目標價；若券商缺失，摘要、標題仍會繼續補券商。
 for(const a of articles){
   if(a.articleBlocked||!a.articleVerified||!usableSourceUrl(a.articleUrl)||blockedSource(a.articleUrl,a.publisher))continue;
@@ -463,14 +511,19 @@ rows.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
 // 若同一時間窗仍超過 8 家，只保留「最新報告日期」前 8 家。冷門股不足 4 家時會一路放寬到 360 天。
 const knownAll=rows.filter(x=>x.brokerType!=="未知");
 const knownWindows=[30,60,90,180,360],minRecentBrokers=4,maxVisibleBrokers=8;
-const latestKnownByBroker=new Map();
-for(const row of knownAll){const key=row.brokerKey||row.broker,prev=latestKnownByBroker.get(key);if(!prev||new Date(row.date||0)>new Date(prev.date||0))latestKnownByBroker.set(key,row)}
-let knownWindow=360;
-for(const days of knownWindows){const count=[...latestKnownByBroker.values()].filter(x=>dayAge(x.date)<=days).length;if(count>=minRecentBrokers){knownWindow=days;break}}
-let activeKnown=[...latestKnownByBroker.entries()].filter(([,x])=>dayAge(x.date)<=knownWindow).sort((a,b)=>new Date(b[1].date||0)-new Date(a[1].date||0));
-if(activeKnown.length>maxVisibleBrokers)activeKnown=activeKnown.slice(0,maxVisibleBrokers);
-const activeKnownKeys=new Set(activeKnown.map(([key])=>key));
-const known=knownAll.filter(x=>activeKnownKeys.has(x.brokerKey||x.broker));
+// 外資與本土分開決定搜尋窗：不能因為近期外資很多，就把較早但仍有效的本土報告整批裁掉。
+function activeKnownForType(type){
+  const latest=new Map();
+  for(const row of knownAll.filter(x=>x.brokerType===type)){const key=row.brokerKey||row.broker,prev=latest.get(key);if(!prev||new Date(row.date||0)>new Date(prev.date||0))latest.set(key,row)}
+  let window=360;
+  for(const days of knownWindows){const count=[...latest.values()].filter(x=>dayAge(x.date)<=days).length;if(count>=minRecentBrokers){window=days;break}}
+  let active=[...latest.entries()].filter(([,x])=>dayAge(x.date)<=window).sort((a,b)=>new Date(b[1].date||0)-new Date(a[1].date||0));
+  if(active.length>maxVisibleBrokers)active=active.slice(0,maxVisibleBrokers);
+  return{window,keys:new Set(active.map(([key])=>key))};
+}
+const foreignActive=activeKnownForType("外資"),localActive=activeKnownForType("本土");
+const known=knownAll.filter(x=>(x.brokerType==="外資"?foreignActive.keys:localActive.keys).has(x.brokerKey||x.broker));
+const knownWindow={外資:foreignActive.window,本土:localActive.window};
 
 // 未知券商沿用原本逐級搜尋窗：60 → 90 → 180 → 360 天。
 const windows=[60,90,180,360];let unknownWindow=360;for(const days of windows){if(rows.some(x=>x.brokerType==="未知"&&dayAge(x.date)<=days)){unknownWindow=days;break}}
@@ -483,5 +536,5 @@ if(known.length)mergedUnknown=mergedUnknown.slice(0,3);
 const groups={};
 for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知"?`未知券商:${row.target}`:(row.brokerKey||row.broker);groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
 const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,broker:x.broker,brokerType:x.brokerType,brokerKey:x.brokerKey,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel,evidence:x.evidence||"",aiParsed:!!x.aiParsed,confidence:x.confidence||""}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-return res.status(200).json({ok:true,parserVersion:"2.4.5.1",brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,resolvedArticles:articles.filter(a=>a.articleResolved).length,verifiedArticles:articles.filter(a=>a.articleVerified).length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
+return res.status(200).json({ok:true,parserVersion:"2.4.5.2",brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,resolvedArticles:articles.filter(a=>a.articleResolved).length,verifiedArticles:articles.filter(a=>a.articleVerified).length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
