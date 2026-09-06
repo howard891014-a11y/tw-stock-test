@@ -445,3 +445,54 @@ body.view-overview .overview-only{display:block}
   .manage-stock>.list-price{grid-column:3!important;grid-row:1!important;text-align:right!important;white-space:nowrap!important;font-size:16px!important}
   .manage-stock>.remove-list{grid-column:4!important;grid-row:1!important;width:24px!important;min-width:24px!important;padding:0!important}
 }
+
+/* v2.4.6.4 — B layout ONLY for broker target-price panel */
+.targets-card .target-b-layout{display:grid;grid-template-columns:minmax(250px,320px) minmax(0,1fr);gap:16px;align-items:stretch;margin-top:10px}
+.targets-card .target-b-summary{display:block;margin:0!important;padding:14px 16px!important;border:1px solid var(--line);border-radius:10px;background:#0a1827}
+.targets-card .target-b-summary.hidden{display:none!important}
+.target-b-label{font-size:18px;font-weight:700;color:var(--blue);padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.targets-card .target-play-head{display:grid;grid-template-columns:80px 1fr!important;gap:8px;align-items:center;padding:6px 0}
+.targets-card .target-play-head select{max-width:none!important}
+.targets-card .target-levels{display:grid;grid-template-columns:1fr!important;gap:7px;margin:10px 0 12px}
+.targets-card .target-levels>div{display:grid;grid-template-columns:55px 1fr;align-items:center;padding:10px 12px;text-align:left}
+.targets-card .target-levels span{margin:0;font-size:13px}
+.targets-card .target-levels strong{text-align:right;font-size:20px;white-space:nowrap}
+.targets-card .target-play-base{display:grid!important;grid-template-columns:80px 1fr!important;gap:5px 10px!important;align-items:center!important;padding:10px 0!important;border-top:1px solid var(--line)}
+.targets-card .target-play-base small{grid-column:1/-1!important;margin:0!important;color:var(--muted);font-size:12px;line-height:1.45;white-space:normal!important}
+.target-b-reason{display:grid;grid-template-columns:80px 1fr;gap:10px;padding-top:9px;border-top:1px solid var(--line);font-size:12px}
+.target-b-reason span{color:var(--muted)}.target-b-reason strong{font-weight:500;line-height:1.45;color:#b7c4d3}
+.target-b-list{min-width:0}
+.targets-card .target-tabs{grid-template-columns:repeat(3,1fr)!important;margin:0 0 8px}
+.broker-columns{display:grid;grid-template-columns:minmax(110px,1fr) 90px 110px 28px 28px;column-gap:12px;align-items:center;padding:7px 8px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line)}
+.targets-card .broker-row{grid-template-columns:minmax(110px,1fr) 90px 110px 28px 28px!important;column-gap:12px!important;padding:10px 8px!important}
+.targets-card .broker-row>strong,.targets-card .broker-row>time{text-align:right!important}
+.targets-card .broker-expand,.targets-card .broker-menu-btn{border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important;padding:0!important;color:var(--blue)!important}
+.targets-card .broker-row:hover{border-color:transparent!important;border-bottom-color:var(--line)!important}
+
+/* v2.4.6.4 mobile: preserve the same information order; only repair previously broken mobile rows */
+@media(max-width:720px){
+  .targets-card .target-b-layout{grid-template-columns:minmax(126px,.82fr) minmax(0,1.55fr);gap:7px}
+  .targets-card .target-b-summary{padding:9px 7px!important}
+  .target-b-label{font-size:14px;padding-bottom:7px;margin-bottom:5px}
+  .targets-card .target-play-head{display:block!important;padding:3px 0 6px!important}
+  .targets-card .target-play-head span{display:block;font-size:10px;margin-bottom:4px}
+  .targets-card .target-play-head select{width:100%!important;padding:5px 4px!important;font-size:11px!important}
+  .targets-card .target-levels{gap:5px;margin:5px 0 8px}
+  .targets-card .target-levels>div{grid-template-columns:35px 1fr;padding:7px 5px}
+  .targets-card .target-levels span{font-size:10px}.targets-card .target-levels strong{font-size:13px}
+  .targets-card .target-play-base{display:block!important;padding:7px 0!important}
+  .targets-card .target-play-base span,.targets-card .target-play-base strong{display:block!important;font-size:10px!important;margin-bottom:3px!important}
+  .targets-card .target-play-base small{display:block!important;font-size:9px!important;line-height:1.35!important}
+  .target-b-reason{display:block;font-size:9px;padding-top:6px}.target-b-reason span,.target-b-reason strong{display:block}.target-b-reason strong{margin-top:3px}
+  .targets-card .target-tabs button{padding:8px 2px!important;font-size:12px!important}
+  .broker-columns{grid-template-columns:minmax(54px,1fr) 48px 66px 22px 22px;column-gap:2px;padding:5px 2px;font-size:9px}
+  .targets-card .broker-row{grid-template-columns:minmax(54px,1fr) 48px 66px 22px 22px!important;column-gap:2px!important;padding:9px 2px!important}
+  .targets-card .broker-row>span:first-child{font-size:10px!important}.targets-card .broker-row>strong{font-size:10px!important}.targets-card .broker-row>time{font-size:9px!important}
+  .targets-card .broker-row>.broker-expand,.targets-card .broker-row>.broker-actions,.targets-card .broker-menu-btn{width:22px!important;min-width:22px!important;height:24px!important}
+  .targets-card .broker-menu{right:0!important;left:auto!important;z-index:15!important}
+  .manage-stock{grid-template-columns:minmax(0,1fr) 52px 76px 24px!important}
+  .stock-head{grid-template-columns:minmax(82px,1fr) minmax(58px,.72fr) minmax(72px,.82fr) minmax(62px,.72fr)!important}
+  .stock-head h1{grid-column:1/4!important;grid-row:2!important}.price-block strong{grid-column:4!important;grid-row:2!important}
+  .price-block span{grid-column:1!important;grid-row:3!important}.price-block small{grid-column:2!important;grid-row:3!important}
+  .stock-list-actions #addHoldingBtn{grid-column:3!important;grid-row:3!important}.stock-list-actions #addWatchBtn{grid-column:4!important;grid-row:3!important}
+}

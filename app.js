@@ -232,7 +232,7 @@ function renderMainTarget(main){
  setText("overviewNearestPrice",`${targetFmt(nearest.price)} 元`);
  setText("overviewNearestRate",`（倍率${Math.round(nearest.rate*100)}%）`);
  setText("overviewMainBrokerLine",`${targetBrokerName(main.row)}：${targetFmt(targetPriceValue(main.latest))}元`);
- setText("targetBase",`${targetFmt(basis.base)} 元`); setText("targetRule",basis.rule);
+ setText("targetBase",`${targetFmt(basis.base)} 元`); setText("targetRule",basis.rule); setText("targetReason",basis.rule);
  setText("target80",`${targetFmt(basis.base*.80)} 元`); setText("target85",`${targetFmt(basis.base*.85)} 元`); setText("target88",`${targetFmt(basis.base*.88)} 元`);
  renderTargetHistory3(main); play?.classList.remove("hidden");
 }
@@ -300,10 +300,8 @@ function isNewTarget(row){return targetNewKeys.has(targetSig(row))}
 function renderBrokerRows(){
   const host=$("brokerRows"); if(!host)return;
   const play=$("targetPlay");
-  if(targetTypeFilter==="目標"){
-    host.innerHTML=""; play?.classList.remove("hidden"); renderMainTarget(preferredMainTarget()); return;
-  }
-  play?.classList.add("hidden");
+  play?.classList.remove("hidden");
+  renderMainTarget(preferredMainTarget());
   const rows=targetRowsCache.map(targetCandidate).filter(Boolean).filter(x=>targetBrokerType(x.row)===targetTypeFilter).sort((a,b)=>b.time-a.time);
   if(!rows.length){host.innerHTML=`<p>目前沒有${targetTypeFilter}目標價。</p>`;return}
   host.innerHTML=rows.map((x,i)=>{
@@ -314,7 +312,7 @@ function renderBrokerRows(){
   host.querySelectorAll("[data-expand]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const i=Number(btn.dataset.expand),name=targetBrokerName(rows[i].row);expandedBrokerRows.has(name)?expandedBrokerRows.delete(name):expandedBrokerRows.add(name);renderBrokerRows()}));
   host.querySelectorAll("[data-menu]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const box=host.querySelector(`[data-menu-box="${btn.dataset.menu}"]`);host.querySelectorAll(".broker-menu").forEach(x=>{if(x!==box)x.classList.add("hidden")});box?.classList.toggle("hidden")}));
   host.querySelectorAll("[data-edit-target]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();openEdit(rows[Number(btn.dataset.editTarget)].row)}));
-  host.querySelectorAll("[data-set-target]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const x=rows[Number(btn.dataset.setTarget)];setBrokerPref(targetBrokerName(x.row));fillMainBrokerSelect();document.querySelector('[data-target-type="目標"]')?.click()}));
+  host.querySelectorAll("[data-set-target]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const x=rows[Number(btn.dataset.setTarget)];setBrokerPref(targetBrokerName(x.row));fillMainBrokerSelect();renderMainTarget(preferredMainTarget())}));
 }
 function filterBadKnownTarget(rows){
   const code=String(currentStock?.code||currentStock?.symbol||"");
@@ -334,7 +332,7 @@ function renderTargetPlay(payload){
   const cached=readTargetCache()[code]?.rows||[];
   targetRowsCache=mergeTargetRows(cached,fresh);
   cacheTargetsForStock(code,targetRowsCache);
-  renderBrokerRows(); fillMainBrokerSelect(); if(targetTypeFilter==="目標")renderMainTarget(preferredMainTarget());
+  renderBrokerRows(); fillMainBrokerSelect(); renderMainTarget(preferredMainTarget());
 }
 async function fetchTargetPayload(code,name){
   const cached=readTargetCache()[String(code)]?.rows||[];

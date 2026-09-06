@@ -360,7 +360,7 @@ body{padding-bottom:68px}
       </div>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.4.6.3</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.4.6.4</span></button>
   </aside>
 
   <div class="main-shell">
@@ -453,20 +453,24 @@ body{padding-bottom:68px}
         </article>
 
         <article class="card targets-card detail-panel" id="targets" data-view-panel="targets">
-          <div class="card-title">券商目標價 <span class="badge">沿用既有功能</span></div>
-          <div class="target-tabs"><button class="active" data-target-type="外資">外資券商</button><button data-target-type="本土">本土券商</button><button data-target-type="未知">未知券商</button><button data-target-type="目標">目標券商</button></div>
-          <div id="brokerRows" class="broker-placeholder">
-            <div><span>券商名稱</span><span>目標價</span><span>發布時間</span></div>
-            <p>搜尋股票後載入目標價。</p>
-          </div>
-          <div id="targetPlay" class="target-play hidden">
-            <div class="target-play-head"><span>目標券商</span><select id="mainBrokerSelect"><option value="">自動選擇</option></select></div>
-            <div class="target-play-base"><span>倍率基準</span><strong id="targetBase">--</strong><small id="targetRule">--</small></div>
-            <div class="target-history3" id="targetHistory3"></div>
-            <div class="target-levels">
-              <div><span>80%</span><strong id="target80">--</strong></div>
-              <div><span>85%</span><strong id="target85">--</strong></div>
-              <div><span>88%</span><strong id="target88">--</strong></div>
+          <div class="card-title">券商目標價</div>
+          <div class="target-b-layout">
+            <div id="targetPlay" class="target-play target-b-summary hidden">
+              <div class="target-b-label">目標</div>
+              <div class="target-play-head"><span>目標券商</span><select id="mainBrokerSelect"><option value="">自動選擇</option></select></div>
+              <div class="target-levels">
+                <div><span>80%</span><strong id="target80">--</strong></div>
+                <div><span>85%</span><strong id="target85">--</strong></div>
+                <div><span>88%</span><strong id="target88">--</strong></div>
+              </div>
+              <div class="target-play-base"><span>倍率基準</span><strong id="targetBase">--</strong><small id="targetRule">--</small></div>
+              <div class="target-b-reason"><span>原因</span><strong id="targetReason">--</strong></div>
+              <div class="target-history3 hidden" id="targetHistory3"></div>
+            </div>
+            <div class="target-b-list">
+              <div class="target-tabs"><button class="active" data-target-type="外資">外資</button><button data-target-type="本土">本土</button><button data-target-type="未知">未知</button></div>
+              <div class="broker-columns"><span>券商</span><span>目標價</span><span>日期</span><span></span><span></span></div>
+              <div id="brokerRows" class="broker-placeholder"><p>搜尋股票後載入目標價。</p></div>
             </div>
           </div>
         </article>
