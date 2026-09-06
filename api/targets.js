@@ -263,6 +263,11 @@ function rowsFromVerifiedScope(text,base,code,name,confidence="body"){
       if(b)rememberBroker(b.name,b.type);
       const broker=b?{broker:b.name,brokerType:b.type}:{broker:"未知券商",brokerType:"未知"};
       const evidence=[prev,ownerSentence,next].filter(Boolean).join(" ").slice(0,600);
+      // 泛稱機構（例如「民營大型金控旗下」）不能只靠附近數字猜目標價；必須在局部證據中再次明確命中同一目標價。
+      if(b&&/^(?:民營|本土|大型|中小型|金控|旗下)/.test(String(b.name||""))){
+        const localTargets=targetMatches(evidence).map(x=>x.target);
+        if(!localTargets.includes(t.target))continue;
+      }
       rows.push({...base,...broker,brokerKey:b?b.name:"未知券商",...periodInfo(para),...reasonInfo(para),target:t.target,evidence,confidence});
     }
   }
@@ -536,5 +541,5 @@ if(known.length)mergedUnknown=mergedUnknown.slice(0,3);
 const groups={};
 for(const row of [...known,...mergedUnknown]){const key=row.brokerType==="未知"?`未知券商:${row.target}`:(row.brokerKey||row.broker);groups[key]??=[];if(!groups[key].some(x=>x.target===row.target&&String(x.date||"").slice(0,10)===String(row.date||"").slice(0,10)))groups[key].push(row)}
 const brokers=Object.values(groups).map(history=>{history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));const latest=history[0],fullHistory=history.slice(0,3);return{...latest,previousTarget:fullHistory[1]?.target??null,previousDate:fullHistory[1]?.date??null,targetHistory:fullHistory.map(x=>({target:x.target,date:x.date,title:x.title,sourceUrl:x.sourceUrl,broker:x.broker,brokerType:x.brokerType,brokerKey:x.brokerKey,periodType:x.periodType,periodLabel:x.periodLabel,revisionReason:x.revisionReason,revisionReasonLabel:x.revisionReasonLabel,evidence:x.evidence||"",aiParsed:!!x.aiParsed,confidence:x.confidence||""}))}}).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
-return res.status(200).json({ok:true,parserVersion:"2.4.6.1",brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,resolvedArticles:articles.filter(a=>a.articleResolved).length,verifiedArticles:articles.filter(a=>a.articleVerified).length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
+return res.status(200).json({ok:true,parserVersion:"2.4.6.2",brokers,fetchedAt:new Date().toISOString(),searchedArticles:articles.length,resolvedArticles:articles.filter(a=>a.articleResolved).length,verifiedArticles:articles.filter(a=>a.articleVerified).length,knownSearchWindow:knownWindow,unknownSearchWindow:unknownWindow});
 }catch(e){return res.status(502).json({ok:false,error:"目標價資料暫時無法取得",detail:e.message})}}
