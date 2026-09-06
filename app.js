@@ -6,7 +6,7 @@ function setText(id,value){
 let statusTimer=null;
 function setStatus(msg,error=false){
   const el=$("statusText"); if(!el)return;
-  clearTimeout(statusTimer); el.textContent=msg; el.classList.toggle("error",error); el.classList.add("show");
+  clearTimeout(statusTimer); el.innerHTML=/(搜尋股票|搜尋目標價)/.test(msg)?`${msg.replace(/…|\.\.\.$/,"")}<span class="search-wave" aria-hidden="true"><i>•</i><i>•</i><i>•</i></span>`:msg; el.classList.toggle("error",error); el.classList.add("show");
   if(!/正在|載入|搜尋中|搜尋股票|搜尋目標價/.test(msg)) statusTimer=setTimeout(()=>el.classList.remove("show"),error?4200:1800);
 }
 function fmt(n){
@@ -391,9 +391,9 @@ function renderOneList(type,hostId){
   host.innerHTML=rows.length?rows.map(x=>`<div class="manage-stock">
     <div class="manage-stock-main" data-search-stock="${x.code}">
       <strong>${x.name||"—"} <small>${x.code}</small></strong>
-      <small>${x.market||"台股"}</small>
     </div>
-    <span class="list-values"><strong class="list-price">${targetFmt(x.last)}</strong>${Number.isFinite(Number(x.target))?`<small>目標 ${targetFmt(x.target)}</small>`:""}</span>
+    <small class="list-market">${x.market||"台股"}</small>
+    <strong class="list-price">${targetFmt(x.last)}</strong>
     <button class="remove-list" type="button" data-remove-type="${type}" data-remove-code="${x.code}" aria-label="刪除">×</button>
   </div>`).join(""):`<div class="manage-empty">${type==="holdings"?"尚無持股":"尚無觀察股票"}</div>`;
   host.querySelectorAll("[data-search-stock]").forEach(el=>el.addEventListener("click",()=>{

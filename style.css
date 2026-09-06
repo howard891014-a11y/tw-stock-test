@@ -389,3 +389,26 @@ body.view-overview .overview-only{display:block}
   .broker-row{grid-template-columns:minmax(76px,1fr) 58px 76px 40px 40px!important}
   .broker-actions a,.broker-actions button{width:40px!important;min-width:40px!important;height:30px!important;padding:0!important}
 }
+
+/* v2.4.6.2 layout corrections */
+.broker-row{grid-template-columns:minmax(90px,1fr) 72px 94px 34px 34px!important;column-gap:7px!important;align-items:center!important}
+.broker-row>span:first-child,.broker-row>strong,.broker-row>time,.broker-expand,.broker-actions{grid-row:1!important;align-self:center!important}
+.broker-actions{display:block!important;position:relative!important}
+.broker-row>strong,.broker-row>time{white-space:nowrap!important}
+.manage-stock{display:grid!important;grid-template-columns:minmax(110px,1fr) 74px 90px 28px!important;gap:8px!important;align-items:center!important}
+.manage-stock-main strong{display:block!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}
+.manage-stock-main strong small{display:inline!important}.list-market{white-space:nowrap!important;color:var(--muted)}.manage-stock .list-price{text-align:right!important;white-space:nowrap!important}
+.search-wave{display:inline-flex;gap:1px;margin-left:2px}.search-wave i{font-style:normal;display:inline-block;animation:searchWave .75s ease-in-out infinite}.search-wave i:nth-child(2){animation-delay:.12s}.search-wave i:nth-child(3){animation-delay:.24s}@keyframes searchWave{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+@media(max-width:720px){
+ .broker-row{grid-template-columns:minmax(72px,1fr) 54px 72px 32px 32px!important;column-gap:3px!important;padding-left:4px!important;padding-right:4px!important}
+ .broker-row>span:first-child,.broker-row>strong,.broker-row>time{font-size:11px!important}.broker-expand,.broker-menu-btn{width:32px!important;min-width:32px!important;height:28px!important}
+ .manage-stock{grid-template-columns:minmax(92px,1fr) 55px 72px 24px!important;gap:5px!important;padding:11px 8px!important}.manage-stock-main strong{font-size:15px!important}.manage-stock-main strong small,.list-market{font-size:11px!important}.manage-stock .list-price{font-size:16px!important}
+ /* mobile only: title + market + price on one row */
+ .stock-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:6px 10px!important;align-items:center!important}
+ .stock-head>div:first-child{display:contents!important}.stock-head .eyebrow{grid-column:1/-1!important}.stock-head h1{grid-column:1!important;grid-row:2!important;margin:0!important;white-space:nowrap!important}.stock-head h1 small{font-size:12px!important}.stock-head #marketLabel{display:none!important}
+ .price-block{grid-column:2!important;grid-row:2!important;display:contents!important}.price-block strong{grid-column:2!important;grid-row:2!important;text-align:right!important;font-size:25px!important}
+ /* mobile only: change / updated / holding / watch share one row */
+ .price-block span{grid-column:1!important;grid-row:3!important;margin:0!important;font-size:11px!important;white-space:nowrap!important;text-align:left!important}.price-block small{grid-column:2!important;grid-row:3!important;margin:0!important;font-size:10px!important;white-space:nowrap!important;text-align:left!important}
+ .stock-list-actions{grid-column:3/5!important;grid-row:3!important;display:contents!important;margin:0!important}.stock-list-actions button{min-width:0!important;width:auto!important;padding:6px 5px!important;font-size:11px!important;line-height:1.1!important}.stock-list-actions #addHoldingBtn{grid-column:3!important;grid-row:3!important}.stock-list-actions #addWatchBtn{grid-column:4!important;grid-row:3!important}
+ .stock-head{grid-template-columns:minmax(78px,1fr) minmax(62px,.72fr) minmax(74px,.82fr) minmax(62px,.72fr)!important}.stock-head h1{grid-column:1/4!important}.price-block strong{grid-column:4!important}
+}
