@@ -292,18 +292,18 @@ body{padding-bottom:68px}
   .target-history3 .history3-row{grid-template-columns:38px 82px 94px!important;column-gap:14px!important}
 }
 
-/* v2.4.6.2 mobile target actions */
+/* v2.4.6.3 mobile target actions */
 @media(max-width:720px){
   .broker-row{grid-template-columns:minmax(76px,1fr) 58px 76px 40px 40px!important}
   .broker-actions a,.broker-actions button{width:40px!important;min-width:40px!important;height:30px!important;padding:0!important}
 }
 
-/* v2.4.6.2 target UX */
+/* v2.4.6.3 target UX */
 .target-new{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:8px;background:#ff4d67;color:white;font-size:9px;vertical-align:middle}
 .broker-row{position:relative}.broker-expand,.broker-menu-btn{border:1px solid #2c4d70;background:#0c1d30;color:#84bfff;border-radius:7px;width:32px;height:28px;padding:0}
 .broker-actions{position:relative}.broker-menu{position:absolute;right:0;top:32px;z-index:20;min-width:92px;padding:5px;background:#0b1928;border:1px solid #294866;border-radius:8px;box-shadow:0 8px 22px #0008}.broker-menu.hidden{display:none}.broker-menu a,.broker-menu button{display:block!important;width:100%!important;text-align:left!important;border:0!important;background:transparent!important;padding:7px 9px!important;color:#d8e8f8!important;text-decoration:none;font-size:12px}.broker-history{grid-column:1/-1;padding:7px 8px 2px 38px;border-top:1px dashed #263d55}.broker-history.hidden{display:none}.broker-history div{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:5px 0;font-size:11px;color:#a9b7c8}.broker-history strong{font-size:11px}.target-only-panel{margin-top:8px}
 @media(max-width:720px){.target-tabs{overflow-x:auto}.target-tabs button{white-space:nowrap;padding:9px 11px}.broker-row{grid-template-columns:minmax(70px,1fr) 56px 72px 32px 32px!important}.broker-actions{display:block!important}.broker-menu-btn,.broker-expand{width:32px!important;min-width:32px!important}.broker-history{padding-left:8px}.broker-menu{right:0}.target-new{font-size:8px;padding:1px 4px}}
-/* v2.4.6.2 layout corrections */
+/* v2.4.6.3 layout corrections */
 .broker-row{grid-template-columns:minmax(90px,1fr) 72px 94px 34px 34px!important;column-gap:7px!important;align-items:center!important}
 .broker-row>span:first-child,.broker-row>strong,.broker-row>time,.broker-expand,.broker-actions{grid-row:1!important;align-self:center!important}
 .broker-actions{display:block!important;position:relative!important}
@@ -324,6 +324,15 @@ body{padding-bottom:68px}
  .price-block span{grid-column:1!important;grid-row:3!important;margin:0!important;font-size:11px!important;white-space:nowrap!important;text-align:left!important}.price-block small{grid-column:2!important;grid-row:3!important;margin:0!important;font-size:10px!important;white-space:nowrap!important;text-align:left!important}
  .stock-list-actions{grid-column:3/5!important;grid-row:3!important;display:contents!important;margin:0!important}.stock-list-actions button{min-width:0!important;width:auto!important;padding:6px 5px!important;font-size:11px!important;line-height:1.1!important}.stock-list-actions #addHoldingBtn{grid-column:3!important;grid-row:3!important}.stock-list-actions #addWatchBtn{grid-column:4!important;grid-row:3!important}
  .stock-head{grid-template-columns:minmax(78px,1fr) minmax(62px,.72fr) minmax(74px,.82fr) minmax(62px,.72fr)!important}.stock-head h1{grid-column:1/4!important}.price-block strong{grid-column:4!important}
+}
+
+/* v2.4.6.3 mobile layout parity: same column order as desktop */
+@media(max-width:720px){
+  .broker-row{display:grid!important;grid-template-columns:minmax(100px,1fr) 58px 82px 30px 30px!important;column-gap:3px!important;align-items:center!important;padding:10px 4px!important}
+  .broker-row>span:first-child{grid-column:1!important;grid-row:1!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}.broker-row>span:first-child b{white-space:nowrap!important}
+  .broker-row>strong{grid-column:2!important;grid-row:1!important;text-align:right!important;white-space:nowrap!important;font-size:11px!important}.broker-row>time{grid-column:3!important;grid-row:1!important;text-align:right!important;white-space:nowrap!important;font-size:10px!important}
+  .broker-row>.broker-expand{grid-column:4!important;grid-row:1!important;width:30px!important;min-width:30px!important;height:28px!important}.broker-row>.broker-actions{grid-column:5!important;grid-row:1!important;display:block!important;position:relative!important;width:30px!important;min-width:30px!important}.broker-menu-btn{width:30px!important;min-width:30px!important;height:28px!important}.broker-history{grid-column:1/-1!important;grid-row:2!important}
+  .manage-stock{display:grid!important;grid-template-columns:minmax(0,1fr) 52px 76px 24px!important;column-gap:6px!important;align-items:center!important;padding:11px 8px!important}.manage-stock-main{grid-column:1!important;grid-row:1!important;min-width:0!important}.manage-stock-main strong{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:15px!important}.manage-stock-main strong small{display:inline!important;font-size:11px!important}.manage-stock>.list-market{grid-column:2!important;grid-row:1!important;text-align:center!important;white-space:nowrap!important;font-size:11px!important}.manage-stock>.list-price{grid-column:3!important;grid-row:1!important;text-align:right!important;white-space:nowrap!important;font-size:16px!important}.manage-stock>.remove-list{grid-column:4!important;grid-row:1!important;width:24px!important;min-width:24px!important;padding:0!important}
 }
 </style>
 </head>
@@ -351,7 +360,7 @@ body{padding-bottom:68px}
       </div>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.4.6.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.4.6.3</span></button>
   </aside>
 
   <div class="main-shell">

@@ -412,3 +412,36 @@ body.view-overview .overview-only{display:block}
  .stock-list-actions{grid-column:3/5!important;grid-row:3!important;display:contents!important;margin:0!important}.stock-list-actions button{min-width:0!important;width:auto!important;padding:6px 5px!important;font-size:11px!important;line-height:1.1!important}.stock-list-actions #addHoldingBtn{grid-column:3!important;grid-row:3!important}.stock-list-actions #addWatchBtn{grid-column:4!important;grid-row:3!important}
  .stock-head{grid-template-columns:minmax(78px,1fr) minmax(62px,.72fr) minmax(74px,.82fr) minmax(62px,.72fr)!important}.stock-head h1{grid-column:1/4!important}.price-block strong{grid-column:4!important}
 }
+
+/* v2.4.6.3 mobile layout parity: same column order as desktop */
+@media(max-width:720px){
+  .broker-row{
+    display:grid!important;
+    grid-template-columns:minmax(100px,1fr) 58px 82px 30px 30px!important;
+    column-gap:3px!important;
+    align-items:center!important;
+    padding:10px 4px!important;
+  }
+  .broker-row>span:first-child{grid-column:1!important;grid-row:1!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .broker-row>span:first-child b{white-space:nowrap!important}
+  .broker-row>strong{grid-column:2!important;grid-row:1!important;text-align:right!important;white-space:nowrap!important;font-size:11px!important}
+  .broker-row>time{grid-column:3!important;grid-row:1!important;text-align:right!important;white-space:nowrap!important;font-size:10px!important}
+  .broker-row>.broker-expand{grid-column:4!important;grid-row:1!important;width:30px!important;min-width:30px!important;height:28px!important}
+  .broker-row>.broker-actions{grid-column:5!important;grid-row:1!important;display:block!important;position:relative!important;width:30px!important;min-width:30px!important}
+  .broker-menu-btn{width:30px!important;min-width:30px!important;height:28px!important}
+  .broker-history{grid-column:1/-1!important;grid-row:2!important}
+
+  .manage-stock{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 52px 76px 24px!important;
+    column-gap:6px!important;
+    align-items:center!important;
+    padding:11px 8px!important;
+  }
+  .manage-stock-main{grid-column:1!important;grid-row:1!important;min-width:0!important}
+  .manage-stock-main strong{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:15px!important}
+  .manage-stock-main strong small{display:inline!important;font-size:11px!important}
+  .manage-stock>.list-market{grid-column:2!important;grid-row:1!important;text-align:center!important;white-space:nowrap!important;font-size:11px!important}
+  .manage-stock>.list-price{grid-column:3!important;grid-row:1!important;text-align:right!important;white-space:nowrap!important;font-size:16px!important}
+  .manage-stock>.remove-list{grid-column:4!important;grid-row:1!important;width:24px!important;min-width:24px!important;padding:0!important}
+}
