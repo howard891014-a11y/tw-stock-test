@@ -464,6 +464,7 @@ body{padding-bottom:68px}
         <button data-view="valuation">估值分析</button>
         <button data-view="swing">波段分析</button>
         <button data-view="targets">券商目標價</button>
+        <button data-view="news">新聞分析</button>
         <button data-view="play">建議玩法</button>
         <button data-view="decision">買賣決策</button>
         <button data-view="upside">預期上漲空間</button>
@@ -477,7 +478,7 @@ body{padding-bottom:68px}
       </div>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.4.6.5</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.0</span></button>
   </aside>
 
   <div class="main-shell">
@@ -507,6 +508,18 @@ body{padding-bottom:68px}
           <small id="updateTime">尚未更新</small>
         </div>
       </section>
+
+      <nav class="section-tabs analysis-tabs" aria-label="個股分析導覽">
+        <button class="active" data-view="overview" type="button">總覽</button>
+        <button data-view="technical" type="button">技術分析</button>
+        <button data-view="valuation" type="button">估值分析</button>
+        <button data-view="swing" type="button">波段分析</button>
+        <button data-view="targets" type="button">券商目標價</button>
+        <button data-view="news" type="button">新聞分析</button>
+        <button data-view="play" type="button">建議玩法</button>
+        <button data-view="decision" type="button">買賣決策</button>
+        <button data-view="upside" type="button">預期上漲空間</button>
+      </nav>
 
       <section class="overview-outline" data-view-panel="overview">
       <article class="card outline-card" data-view-open="stage"><span>五階段位置</span><strong class="orange">--</strong><small>查看目前位置</small></article>
@@ -566,6 +579,28 @@ body{padding-bottom:68px}
             <div class="hold"><span>目前股價</span><strong id="decisionPrice">--</strong></div>
             <div class="trim"><span>建議減碼區</span><strong>-- ～ --</strong></div>
             <div class="sell"><span>建議賣出區</span><strong>-- ～ --</strong></div>
+          </div>
+        </article>
+
+        <article class="card detail-panel news-analysis-card" id="news" data-view-panel="news">
+          <div class="news-analysis-head">
+            <div class="card-title">▤ 新聞分析</div>
+            <span class="news-stock-note">每檔股票獨立新聞</span>
+          </div>
+          <div class="news-summary-editor">
+            <label for="newsSummaryInput">自訂新聞摘要／關鍵字 <small>系統將特別偵測符合內容的新聞</small></label>
+            <div class="news-summary-row">
+              <textarea id="newsSummaryInput" maxlength="500" placeholder="例如：CoWoS、先進封裝、台積電擴產、設備訂單"></textarea>
+              <button id="saveNewsSummary" type="button">儲存</button>
+            </div>
+            <div class="news-summary-status" id="newsSummaryStatus">此摘要會依目前股票分開保存</div>
+          </div>
+          <div class="news-filter-row">
+            <button class="active" type="button">全部</button>
+            <button type="button">符合摘要</button>
+          </div>
+          <div class="news-list" id="newsList">
+            <div class="news-empty">搜尋股票後，這裡顯示該股票自己的新聞、新聞標題與重點整理。</div>
           </div>
         </article>
 
@@ -659,5 +694,41 @@ body{padding-bottom:68px}
   .broker-history .broker-history-row>strong{font-size:10px!important}
   .broker-history .broker-history-row>time{font-size:9px!important}
   .broker-history .broker-history-row>.history-actions{grid-column:5!important;justify-self:center!important;width:32px!important}
+}
+</style>
+
+<style id="stockzone-v2500-news-tabs">
+/* v2.5.0.0 — restored individual-stock navigation; isolated from target-price layout */
+.section-tabs.analysis-tabs{display:flex!important;height:48px!important;margin:0 0 13px!important;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;overflow-x:auto!important;scrollbar-width:none}
+.section-tabs.analysis-tabs::-webkit-scrollbar{display:none}
+.section-tabs.analysis-tabs button{min-width:max-content!important;flex:0 0 auto!important;padding:0 18px!important;border:0!important;border-bottom:3px solid transparent!important;background:transparent!important;color:#9dacbe!important;white-space:nowrap}
+.section-tabs.analysis-tabs button.active{color:#fff!important;border-bottom-color:var(--blue)!important}
+.overview-outline[data-view-panel="overview"]{display:none!important}
+.overview-outline[data-view-panel="overview"].active-view{display:grid!important}
+.news-analysis-card{border:2px solid #ff2b83!important;box-shadow:0 0 0 1px rgba(255,43,131,.08) inset}
+.news-analysis-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.news-analysis-head .card-title{margin:0;color:#f4f7fb}
+.news-stock-note{padding:7px 10px;border-radius:7px;background:#ff2b83;color:#fff;font-size:12px;font-weight:700;white-space:nowrap}
+.news-summary-editor{padding:14px;border:1px solid #28405b;border-radius:10px;background:#0a1725}
+.news-summary-editor label{display:block;color:#c5d0dc;font-weight:700;margin-bottom:8px}
+.news-summary-editor label small{margin-left:8px;color:var(--muted);font-weight:400}
+.news-summary-row{display:grid;grid-template-columns:1fr 90px;gap:10px}
+.news-summary-row textarea{min-height:76px;resize:vertical;padding:11px 12px;border:1px solid #35516f;border-radius:8px;background:#071420;color:#fff;font:inherit}
+.news-summary-row button{border:1px solid #2c7ed1;border-radius:8px;background:#1688f5;color:#fff;font-weight:700}
+.news-summary-status{margin-top:7px;color:var(--muted);font-size:11px;text-align:right}
+.news-filter-row{display:flex;gap:8px;margin:14px 0}
+.news-filter-row button{padding:8px 14px;border:1px solid #29445f;border-radius:18px;background:#0b1a29;color:#aebbd0}
+.news-filter-row button.active{border-color:#3199ff;background:#147ddd;color:#fff}
+.news-list{display:grid;gap:10px}
+.news-empty{padding:28px 16px;border:1px solid #223a52;border-radius:10px;color:var(--muted);text-align:center}
+@media(max-width:720px){
+ .section-tabs.analysis-tabs{height:43px!important;margin:0 -4px 12px!important}
+ .section-tabs.analysis-tabs button{padding:0 13px!important;font-size:12px!important}
+ .news-analysis-card{padding:14px 10px!important}
+ .news-analysis-head{align-items:flex-start}
+ .news-stock-note{font-size:10px;padding:6px 8px}
+ .news-summary-row{grid-template-columns:1fr}
+ .news-summary-row button{height:38px}
+ .news-summary-editor label small{display:block;margin:4px 0 0}
 }
 </style>
