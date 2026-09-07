@@ -460,14 +460,9 @@ body{padding-bottom:68px}
     <nav class="side-nav">
       <div class="side-group">
         <div class="side-title">▣ <span>個股分析</span></div>
-        <button data-view="technical">技術分析</button>
-        <button data-view="valuation">估值分析</button>
-        <button data-view="swing">波段分析</button>
-        <button data-view="targets">券商目標價</button>
-        <button data-view="news">新聞分析</button>
-        <button data-view="play">建議玩法</button>
-        <button data-view="decision">買賣決策</button>
-        <button data-view="upside">預期上漲空間</button>
+        <button data-view="analysis">分析</button>
+        <button data-view="targets">目標價</button>
+        <button data-view="news">新聞</button>
       </div>
       <div class="side-group smart-group">
         <div class="side-title side-title-link" data-view="screening">✦ <span>智慧選股</span></div>
@@ -478,13 +473,13 @@ body{padding-bottom:68px}
       </div>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.0</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.1</span></button>
   </aside>
 
   <div class="main-shell">
     <header class="topbar">
       <button class="menu-btn" id="menuBtn" aria-label="選單">☰</button>
-      <div class="mobile-brand">◇ <strong>股域StockZone</strong></div>
+      <div class="mobile-brand"><strong>股域StockZone</strong></div>
       <div class="searchbox">
         <input id="stockCode" placeholder="搜尋股票名稱或代碼，例如 聯發科、2454" autocomplete="off">
         <button id="searchButton">搜尋</button>
@@ -511,33 +506,28 @@ body{padding-bottom:68px}
 
       <nav class="section-tabs analysis-tabs" aria-label="個股分析導覽">
         <button class="active" data-view="overview" type="button">總覽</button>
-        <button data-view="technical" type="button">技術分析</button>
-        <button data-view="valuation" type="button">估值分析</button>
-        <button data-view="swing" type="button">波段分析</button>
-        <button data-view="targets" type="button">券商目標價</button>
-        <button data-view="news" type="button">新聞分析</button>
-        <button data-view="play" type="button">建議玩法</button>
-        <button data-view="decision" type="button">買賣決策</button>
-        <button data-view="upside" type="button">預期上漲空間</button>
+        <button data-view="analysis" type="button">分析</button>
+        <button data-view="targets" type="button">目標價</button>
+        <button data-view="news" type="button">新聞</button>
       </nav>
 
       <section class="overview-outline" data-view-panel="overview">
-      <article class="card outline-card" data-view-open="stage"><span>五階段位置</span><strong class="orange">--</strong><small>查看目前位置</small></article>
-      <article class="card outline-card" data-view-open="play"><span>建議玩法</span><strong class="purple">--</strong><small>查看建議策略</small></article>
-      <article class="card outline-card" data-view-open="upside"><span>預期上漲空間</span><strong class="blue">--%</strong><small>查看預期空間</small></article>
-      <article class="card outline-card" data-view-open="technical"><span>技術分析</span><strong>→</strong><small>均線／乖離率</small></article>
-      <article class="card outline-card" data-view-open="valuation"><span>估值分析</span><strong>→</strong><small>EPS 合理價</small></article>
-      <article class="card outline-card" data-view-open="swing"><span>波段分析</span><strong>→</strong><small>1.5X／2X／2.5X</small></article>
-      <article class="card outline-card" data-view-open="decision"><span>買賣決策</span><strong>→</strong><small>買進／減碼／賣出區</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>五階段位置</span><strong class="orange">--</strong><small>查看目前位置</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>建議玩法</span><strong class="purple">--</strong><small>查看建議策略</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>預期上漲空間</span><strong class="blue">--%</strong><small>查看預期空間</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>技術分析</span><strong>→</strong><small>均線／乖離率</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>估值分析</span><strong>→</strong><small>EPS 合理價</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>波段分析</span><strong>→</strong><small>1.5X／2X／2.5X</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>買賣決策</span><strong>→</strong><small>買進／減碼／賣出區</small></article>
       <article class="card outline-card target-outline-card" data-view-open="targets">
-      <span>券商目標價</span>
+      <span>目標價</span>
       <div class="overview-target-line"><strong id="overviewNearestPrice">--</strong><small id="overviewNearestRate">倍率--</small></div>
       <small id="overviewMainBrokerLine">目標券商：--</small>
     </article>
     </section>
 
       <section class="dashboard-grid">
-        <article class="card detail-panel" id="technical" data-view-panel="technical">
+        <article class="card detail-panel" id="technical" data-view-panel="analysis">
           <div class="card-title">技術分析 <span class="badge">待接功能</span></div>
           <div class="data-list">
             <div><span>均線位置</span><b>--</b></div>
@@ -547,12 +537,12 @@ body{padding-bottom:68px}
           </div>
         </article>
 
-        <article class="card detail-panel" id="valuation" data-view-panel="valuation">
+        <article class="card detail-panel" id="valuation" data-view-panel="analysis">
           <div class="card-title">估值分析 <span class="badge">待接功能</span></div>
           <div class="hero-value"><span>EPS 合理價</span><strong>-- 元</strong><small>依近四季 EPS 計算</small></div>
         </article>
 
-        <article class="card detail-panel" id="swing" data-view-panel="swing">
+        <article class="card detail-panel" id="swing" data-view-panel="analysis">
           <div class="card-title">波段分析 <span class="badge">待接功能</span></div>
           <div class="data-list">
             <div><span>1.5X 延伸</span><b>-- 元</b></div>
@@ -561,10 +551,10 @@ body{padding-bottom:68px}
           </div>
         </article>
 
-        <article class="card detail-panel simple-detail" data-view-panel="play"><div class="card-title">建議玩法 <span class="badge">待接功能</span></div><div class="hero-value"><span>目前建議</span><strong class="purple">--</strong><small>之後接入判定邏輯</small></div></article>
-    <article class="card detail-panel simple-detail" data-view-panel="upside"><div class="card-title">預期上漲空間 <span class="badge">待接功能</span></div><div class="hero-value"><span>預期空間</span><strong class="blue">--%</strong><small>之後接入計算邏輯</small></div></article>
+        <article class="card detail-panel simple-detail" data-view-panel="analysis"><div class="card-title">建議玩法 <span class="badge">待接功能</span></div><div class="hero-value"><span>目前建議</span><strong class="purple">--</strong><small>之後接入判定邏輯</small></div></article>
+    <article class="card detail-panel simple-detail" data-view-panel="analysis"><div class="card-title">預期上漲空間 <span class="badge">待接功能</span></div><div class="hero-value"><span>預期空間</span><strong class="blue">--%</strong><small>之後接入計算邏輯</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="screening"><div class="card-title">智慧選股 <span class="badge">待接功能</span></div><div class="hero-value"><span>全市場自動篩選</span><strong>✦</strong><small>之後加入低點／剛站回／接近買點篩選</small></div></article>
-    <article class="card stage-card detail-panel" data-view-panel="stage">
+    <article class="card stage-card detail-panel" data-view-panel="analysis">
           <div class="card-title">五階段位置</div>
           <div class="stages">
             <div><i>1</i><span>線下整理</span></div><div><i>2</i><span>剛站回</span></div>
@@ -572,7 +562,7 @@ body{padding-bottom:68px}
           </div>
         </article>
 
-        <article class="card decision-card detail-panel" id="decision" data-view-panel="decision">
+        <article class="card decision-card detail-panel" id="decision" data-view-panel="analysis">
           <div class="card-title">買賣決策 <span class="badge">待接功能</span></div>
           <div class="decision-grid">
             <div class="buy"><span>建議買進區</span><strong>-- ～ --</strong></div>
@@ -584,8 +574,7 @@ body{padding-bottom:68px}
 
         <article class="card detail-panel news-analysis-card" id="news" data-view-panel="news">
           <div class="news-analysis-head">
-            <div class="card-title">▤ 新聞分析</div>
-            <span class="news-stock-note">每檔股票獨立新聞</span>
+            <div class="card-title">▤ 新聞</div>
           </div>
           <div class="news-summary-editor">
             <label for="newsSummaryInput">自訂新聞摘要／關鍵字 <small>系統將特別偵測符合內容的新聞</small></label>
@@ -596,11 +585,11 @@ body{padding-bottom:68px}
             <div class="news-summary-status" id="newsSummaryStatus">此摘要會依目前股票分開保存</div>
           </div>
           <div class="news-filter-row">
-            <button class="active" type="button">全部</button>
-            <button type="button">符合摘要</button>
+            <button class="active" type="button" data-news-filter="all">全部</button>
+            <button type="button" data-news-filter="match">符合摘要</button>
           </div>
           <div class="news-list" id="newsList">
-            <div class="news-empty">搜尋股票後，這裡顯示該股票自己的新聞、新聞標題與重點整理。</div>
+            <div class="news-empty">搜尋股票後，這裡會自動載入該公司的近期新聞。</div>
           </div>
         </article>
 
@@ -672,7 +661,7 @@ body{padding-bottom:68px}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.4.6.4"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.0.1"></script>
 </body>
 </html>
 <style>
@@ -698,17 +687,16 @@ body{padding-bottom:68px}
 </style>
 
 <style id="stockzone-v2500-news-tabs">
-/* v2.5.0.0 — restored individual-stock navigation; isolated from target-price layout */
+/* v2.5.0.1 — restored individual-stock navigation; isolated from target-price layout */
 .section-tabs.analysis-tabs{display:flex!important;height:48px!important;margin:0 0 13px!important;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;overflow-x:auto!important;scrollbar-width:none}
 .section-tabs.analysis-tabs::-webkit-scrollbar{display:none}
 .section-tabs.analysis-tabs button{min-width:max-content!important;flex:0 0 auto!important;padding:0 18px!important;border:0!important;border-bottom:3px solid transparent!important;background:transparent!important;color:#9dacbe!important;white-space:nowrap}
 .section-tabs.analysis-tabs button.active{color:#fff!important;border-bottom-color:var(--blue)!important}
 .overview-outline[data-view-panel="overview"]{display:none!important}
 .overview-outline[data-view-panel="overview"].active-view{display:grid!important}
-.news-analysis-card{border:2px solid #ff2b83!important;box-shadow:0 0 0 1px rgba(255,43,131,.08) inset}
+.news-analysis-card{border:1px solid var(--line)!important;box-shadow:none!important}
 .news-analysis-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .news-analysis-head .card-title{margin:0;color:#f4f7fb}
-.news-stock-note{padding:7px 10px;border-radius:7px;background:#ff2b83;color:#fff;font-size:12px;font-weight:700;white-space:nowrap}
 .news-summary-editor{padding:14px;border:1px solid #28405b;border-radius:10px;background:#0a1725}
 .news-summary-editor label{display:block;color:#c5d0dc;font-weight:700;margin-bottom:8px}
 .news-summary-editor label small{margin-left:8px;color:var(--muted);font-weight:400}
@@ -726,9 +714,18 @@ body{padding-bottom:68px}
  .section-tabs.analysis-tabs button{padding:0 13px!important;font-size:12px!important}
  .news-analysis-card{padding:14px 10px!important}
  .news-analysis-head{align-items:flex-start}
- .news-stock-note{font-size:10px;padding:6px 8px}
  .news-summary-row{grid-template-columns:1fr}
  .news-summary-row button{height:38px}
  .news-summary-editor label small{display:block;margin:4px 0 0}
 }
+
+/* v2.5.0.1 — analysis/news only; target-price selectors intentionally untouched */
+.news-item{padding:14px;border:1px solid #223a52;border-radius:10px;background:#0a1725}
+.news-title{display:block;color:#eef5ff;font-size:15px;font-weight:800;line-height:1.45;text-decoration:none}
+.news-title:hover{color:var(--blue)}
+.news-meta{margin-top:5px;color:var(--muted);font-size:10px}
+.news-summary{margin-top:10px;padding-top:10px;border-top:1px solid #1d344b;color:#c9d5e2;font-size:12px;line-height:1.6}
+.news-summary b{color:#eef5ff}.news-summary p{margin:4px 0 0}
+.dashboard-grid>.detail-panel[data-view-panel="analysis"].active-view{display:block}
+@media(min-width:721px){.dashboard-grid:has(>.detail-panel[data-view-panel="analysis"].active-view){grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
