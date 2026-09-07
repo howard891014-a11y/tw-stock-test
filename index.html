@@ -446,7 +446,7 @@ body{padding-bottom:68px}
 }
 
 
-/* v2.4.6.6: history rows also have source/edit menu */
+/* v2.4.6.7: history rows also have source/edit menu */
 .broker-history .broker-history-row{display:grid!important;grid-template-columns:54px 1fr 86px 28px!important;gap:8px!important;align-items:center!important;padding:5px 0!important;font-size:11px;color:#a9b7c8}
 .broker-history .broker-history-row strong,.broker-history .broker-history-row time{text-align:right!important;white-space:nowrap}
 .broker-history .history-actions{display:block!important;position:relative!important;width:28px!important}.broker-history .history-actions .broker-menu-btn{width:28px!important;min-width:28px!important;height:26px!important;border:0!important;background:transparent!important;color:var(--blue)!important;padding:0!important}
@@ -640,3 +640,24 @@ body{padding-bottom:68px}
 <small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.4.6.4"></script>
 </body>
 </html>
+<style>
+/* v2.4.6.7 — history rows stay on the same broker table grid */
+.broker-history{grid-column:1/-1!important;padding:7px 0 2px 0!important}
+.broker-history .broker-history-row{
+  display:grid!important;
+  grid-template-columns:minmax(86px,1.2fr) minmax(70px,.8fr) 112px 32px 32px!important;
+  gap:8px!important;align-items:center!important;padding:6px 0!important;
+}
+.broker-history .broker-history-row>span:first-child{grid-column:1!important;padding-left:12px!important}
+.broker-history .broker-history-row>strong{grid-column:2!important;text-align:right!important}
+.broker-history .broker-history-row>time{grid-column:3!important;text-align:right!important;white-space:nowrap!important}
+.broker-history .broker-history-row>.history-actions{grid-column:4 / span 2!important;justify-self:end!important;width:32px!important;min-width:32px!important;position:relative!important}
+.broker-history .history-actions .broker-menu-btn{width:32px!important;min-width:32px!important;height:28px!important;border:0!important;background:transparent!important;padding:0!important}
+@media(max-width:720px){
+  .broker-history .broker-history-row{grid-template-columns:minmax(70px,1fr) 56px 72px 32px 32px!important;gap:0!important;font-size:10px!important;padding:6px 0!important}
+  .broker-history .broker-history-row>span:first-child{padding-left:8px!important}
+  .broker-history .broker-history-row>strong{font-size:10px!important}
+  .broker-history .broker-history-row>time{font-size:9px!important}
+  .broker-history .broker-history-row>.history-actions{grid-column:5!important;justify-self:center!important;width:32px!important}
+}
+</style>
