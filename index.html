@@ -392,7 +392,7 @@ body{padding-bottom:68px}
   .target-b-main .target-play-head select{height:31px;font-size:11px}
   .target-b-main .target-levels>div{grid-template-columns:38px 1fr;padding:7px 8px!important}.target-b-main .target-levels strong{font-size:14px!important}
   .target-b-main .target-play-base{grid-template-columns:58px 1fr!important;font-size:10px}.target-b-reason{grid-template-columns:32px 1fr;font-size:10px}
-  .target-b-main .target-history3{display:none!important}
+  .target-b-main .target-history3{display:block!important}
   .target-b-list{padding-left:10px!important}
   .target-b-list .target-tabs button{font-size:13px!important;padding:8px 5px!important}
   .target-b-columns,.target-b-list .broker-row{grid-template-columns:minmax(92px,1fr) 58px 78px 28px 28px!important;column-gap:3px!important}
@@ -445,6 +445,12 @@ body{padding-bottom:68px}
   }
 }
 
+
+/* v2.4.6.6: history rows also have source/edit menu */
+.broker-history .broker-history-row{display:grid!important;grid-template-columns:54px 1fr 86px 28px!important;gap:8px!important;align-items:center!important;padding:5px 0!important;font-size:11px;color:#a9b7c8}
+.broker-history .broker-history-row strong,.broker-history .broker-history-row time{text-align:right!important;white-space:nowrap}
+.broker-history .history-actions{display:block!important;position:relative!important;width:28px!important}.broker-history .history-actions .broker-menu-btn{width:28px!important;min-width:28px!important;height:26px!important;border:0!important;background:transparent!important;color:var(--blue)!important;padding:0!important}
+@media(max-width:720px){.target-b-main .target-history3 .history3-row{grid-template-columns:28px 1fr 72px!important;column-gap:4px!important;font-size:9px!important;padding:4px 0!important}.target-b-main .target-history3 .history3-row strong{font-size:9px!important}.target-b-main .target-history3 .history3-row time{font-size:8px!important}.broker-history .broker-history-row{grid-template-columns:44px 1fr 70px 28px!important;gap:3px!important;font-size:9px!important}}
 </style>
 </head>
 <body>

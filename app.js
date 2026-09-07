@@ -246,25 +246,42 @@ function corrStableId(row){
  const latest=targetHistoryOf(row).slice().sort((a,b)=>targetDateValue(b)-targetDateValue(a))[0]||row||{};
  return [currentStock?.code||"",row?.originalBroker||targetBrokerName(row),String(latest?.date||latest?.publishedAt||latest?.published||"").slice(0,10),String(targetPriceValue(latest)||"")].join("|");
 }
+function historyCorrId(row,item){
+ const broker=row?.originalBroker||targetBrokerName(row),d=String(item?.date||item?.publishedAt||item?.published||"").slice(0,10);
+ return `history|${currentStock?.code||""}|${broker}|${d}|${targetPriceValue(item)}`;
+}
 function applyCorr(rows){
  const c=readCorr();
  return rows.map(row=>{
   const id=corrStableId(row),fix=c[id],r={...row,_corrId:id};
-  if(!fix)return r; if(fix.deleted)return null;
-  if(fix.broker){r.broker=fix.broker;r.brokerType=fix.brokerType||inferredBrokerType(fix.broker,"未知");}
-  if(Number.isFinite(Number(fix.target))){
-   r.target=Number(fix.target);
-   const h=targetHistoryOf(r).slice().sort((a,b)=>targetDateValue(b)-targetDateValue(a));
-   r.targetHistory=h.map((x,i)=>i===0?{...x,target:Number(fix.target)}:{...x});
-  }
+  if(fix?.deleted)return null;
+  if(fix?.broker){r.broker=fix.broker;r.brokerType=fix.brokerType||inferredBrokerType(fix.broker,"未知");}
+  let h=targetHistoryOf(r).slice().sort((a,b)=>targetDateValue(b)-targetDateValue(a));
+  h=h.map((x,i)=>{
+    const hf=c[historyCorrId(row,x)];
+    if(hf?.deleted)return null;
+    let y={...x};
+    if(hf?.broker)y.broker=hf.broker;
+    if(Number.isFinite(Number(hf?.target)))y.target=Number(hf.target);
+    if(i===0&&Number.isFinite(Number(fix?.target)))y.target=Number(fix.target);
+    return y;
+  }).filter(Boolean);
+  if(!h.length)return null;
+  r.targetHistory=h; r.target=targetPriceValue(h[0]);
   return r;
  }).filter(Boolean);
 }
 function openEdit(row){
-  editingTarget=row;
+  editingTarget={row,item:null};
   const latest=targetHistoryOf(row).slice().sort((a,b)=>targetDateValue(b)-targetDateValue(a))[0]||row;
   $("editBrokerName").value=targetBrokerName(row);
   $("editTargetPrice").value=targetPriceValue(latest)||"";
+  $("targetEditModal").classList.remove("hidden");
+}
+function openHistoryEdit(row,item){
+  editingTarget={row,item};
+  $("editBrokerName").value=targetBrokerName(item)||targetBrokerName(row);
+  $("editTargetPrice").value=targetPriceValue(item)||"";
   $("targetEditModal").classList.remove("hidden");
 }
 function closeEdit(){editingTarget=null;$("targetEditModal")?.classList.add("hidden")}
@@ -272,7 +289,7 @@ $("closeTargetEdit")?.addEventListener("click",closeEdit);
 $("cancelTargetEdit")?.addEventListener("click",closeEdit);
 
 $("deleteTargetEdit")?.addEventListener("click",()=>{
- if(!editingTarget)return; const id=corrStableId(editingTarget),c=readCorr();
+ if(!editingTarget)return; const {row,item}=editingTarget,c=readCorr(),id=item?historyCorrId(row,item):corrStableId(row);
  c[id]={...(c[id]||{}),deleted:true};writeCorr(c);targetRowsCache=applyCorr(targetRowsCache);
  closeEdit();renderBrokerRows();fillMainBrokerSelect();renderMainTarget(preferredMainTarget());setStatus("已刪除");
 });
@@ -280,7 +297,7 @@ $("saveTargetEdit")?.addEventListener("click",()=>{
  if(!editingTarget)return;
  const broker=$("editBrokerName").value.trim(),target=Number($("editTargetPrice").value);
  if(!broker||!Number.isFinite(target)||target<=0)return setStatus("請輸入正確資料",true);
- const id=corrStableId(editingTarget),c=readCorr();
+ const {row,item}=editingTarget,c=readCorr(),id=item?historyCorrId(row,item):corrStableId(row);
  c[id]={broker,target,brokerType:inferredBrokerType(broker,"未知")};writeCorr(c);
  targetRowsCache=applyCorr(targetRowsCache);
  closeEdit();renderBrokerRows();fillMainBrokerSelect();renderMainTarget(preferredMainTarget());setStatus("已修改");
@@ -308,12 +325,14 @@ function renderBrokerRows(){
   if(!rows.length){host.innerHTML=`<p>目前沒有${targetTypeFilter}目標價。</p>`;return}
   host.innerHTML=rows.map((x,i)=>{
     const d=x.latest.date||x.latest.publishedAt||x.latest.published||"—",src=x.latest?.sourceUrl||x.row?.sourceUrl||"",name=targetBrokerName(x.row),open=expandedBrokerRows.has(name);
-    const history=x.history.map((h,j)=>`<div><span>${j===0?"最新":`歷史 ${j}`}</span><strong>${targetFmt(targetPriceValue(h))} 元</strong><time>${String(h.date||h.publishedAt||"—").slice(0,10)}</time></div>`).join("");
-    return `<div class="broker-row" data-index="${i}"><span><b>${name}</b>${isNewTarget(x.row)?'<em class="target-new">NEW</em>':''}</span><strong>${targetFmt(targetPriceValue(x.latest))}</strong><time>${String(d).slice(0,10)}</time><button class="broker-expand" data-expand="${i}" type="button">${open?"⌃":"⌵"}</button><span class="broker-actions"><button class="broker-menu-btn" data-menu="${i}" type="button">⁝</button><span class="broker-menu hidden" data-menu-box="${i}">${src?`<a href="${src}" target="_blank" rel="noopener">來源</a>`:""}<button type="button" data-edit-target="${i}">修改</button></span></span><div class="broker-history ${open?"":"hidden"}" data-history="${i}">${history}</div></div>`;
+    const history=x.history.map((h,j)=>{const hsrc=h?.sourceUrl||x.row?.sourceUrl||"";return `<div class="broker-history-row"><span>${j===0?"最新":`歷史 ${j}`}</span><strong>${targetFmt(targetPriceValue(h))} 元</strong><time>${String(h.date||h.publishedAt||"—").slice(0,10)}</time><span class="broker-actions history-actions"><button class="broker-menu-btn" data-history-menu="${i}-${j}" type="button">︙</button><span class="broker-menu hidden" data-history-menu-box="${i}-${j}">${hsrc?`<a href="${hsrc}" target="_blank" rel="noopener">來源</a>`:""}<button type="button" data-edit-history="${i}-${j}">修改</button></span></span></div>`}).join("");
+    return `<div class="broker-row" data-index="${i}"><span><b>${name}</b>${isNewTarget(x.row)?'<em class="target-new">NEW</em>':''}</span><strong>${targetFmt(targetPriceValue(x.latest))}</strong><time>${String(d).slice(0,10)}</time><button class="broker-expand" data-expand="${i}" type="button">${open?"︿":"⌵"}</button><span class="broker-actions"><button class="broker-menu-btn" data-menu="${i}" type="button">︙</button><span class="broker-menu hidden" data-menu-box="${i}">${src?`<a href="${src}" target="_blank" rel="noopener">來源</a>`:""}<button type="button" data-edit-target="${i}">修改</button></span></span><div class="broker-history ${open?"":"hidden"}" data-history="${i}">${history}</div></div>`;
   }).join("");
   host.querySelectorAll("[data-expand]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const i=Number(btn.dataset.expand),name=targetBrokerName(rows[i].row);expandedBrokerRows.has(name)?expandedBrokerRows.delete(name):expandedBrokerRows.add(name);renderBrokerRows()}));
   host.querySelectorAll("[data-menu]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const box=host.querySelector(`[data-menu-box="${btn.dataset.menu}"]`);host.querySelectorAll(".broker-menu").forEach(x=>{if(x!==box)x.classList.add("hidden")});box?.classList.toggle("hidden")}));
   host.querySelectorAll("[data-edit-target]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();openEdit(rows[Number(btn.dataset.editTarget)].row)}));
+  host.querySelectorAll("[data-history-menu]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const box=host.querySelector(`[data-history-menu-box="${btn.dataset.historyMenu}"]`);host.querySelectorAll(".broker-menu").forEach(x=>{if(x!==box)x.classList.add("hidden")});box?.classList.toggle("hidden")}));
+  host.querySelectorAll("[data-edit-history]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const [ri,hi]=btn.dataset.editHistory.split("-").map(Number);openHistoryEdit(rows[ri].row,rows[ri].history[hi])}));
 }
 function filterBadKnownTarget(rows){
   const code=String(currentStock?.code||currentStock?.symbol||"");
