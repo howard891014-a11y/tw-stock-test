@@ -135,6 +135,8 @@ let targetRowsCache=[];
 let targetTypeFilter="外資";
 const LIST_KEYS={holdings:"stockzone_holdings_v2",watchlist:"stockzone_watchlist_v2"};
 
+function syncMobileMarketLabel(){const el=$("marketLabel");if(!el)return;const raw=String(el.textContent||"").trim();el.dataset.shortMarket=/上櫃/.test(raw)?"上櫃":/上市/.test(raw)?"上市":"";}
+
 function targetFmt(n){
   const x=Number(n); return Number.isFinite(x)?x.toLocaleString("zh-TW",{maximumFractionDigits:2}):"--";
 }
@@ -232,7 +234,7 @@ function renderMainTarget(main){
  setText("overviewNearestPrice",`${targetFmt(nearest.price)} 元`);
  setText("overviewNearestRate",`（倍率${Math.round(nearest.rate*100)}%）`);
  setText("overviewMainBrokerLine",`${targetBrokerName(main.row)}：${targetFmt(targetPriceValue(main.latest))}元`);
- setText("targetBase",`${targetFmt(basis.base)} 元`); setText("targetRule",basis.rule); setText("targetReason",basis.rule);
+ setText("targetBase",`${targetFmt(basis.base)} 元`); setText("targetRule",basis.rule);
  setText("target80",`${targetFmt(basis.base*.80)} 元`); setText("target85",`${targetFmt(basis.base*.85)} 元`); setText("target88",`${targetFmt(basis.base*.88)} 元`);
  renderTargetHistory3(main); play?.classList.remove("hidden");
 }
@@ -332,7 +334,7 @@ function renderTargetPlay(payload){
   const cached=readTargetCache()[code]?.rows||[];
   targetRowsCache=mergeTargetRows(cached,fresh);
   cacheTargetsForStock(code,targetRowsCache);
-  renderBrokerRows(); fillMainBrokerSelect(); renderMainTarget(preferredMainTarget());
+  renderBrokerRows(); fillMainBrokerSelect(); if(targetTypeFilter==="目標")renderMainTarget(preferredMainTarget());
 }
 async function fetchTargetPayload(code,name){
   const cached=readTargetCache()[String(code)]?.rows||[];

@@ -334,6 +334,74 @@ body{padding-bottom:68px}
   .broker-row>.broker-expand{grid-column:4!important;grid-row:1!important;width:30px!important;min-width:30px!important;height:28px!important}.broker-row>.broker-actions{grid-column:5!important;grid-row:1!important;display:block!important;position:relative!important;width:30px!important;min-width:30px!important}.broker-menu-btn{width:30px!important;min-width:30px!important;height:28px!important}.broker-history{grid-column:1/-1!important;grid-row:2!important}
   .manage-stock{display:grid!important;grid-template-columns:minmax(0,1fr) 52px 76px 24px!important;column-gap:6px!important;align-items:center!important;padding:11px 8px!important}.manage-stock-main{grid-column:1!important;grid-row:1!important;min-width:0!important}.manage-stock-main strong{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:15px!important}.manage-stock-main strong small{display:inline!important;font-size:11px!important}.manage-stock>.list-market{grid-column:2!important;grid-row:1!important;text-align:center!important;white-space:nowrap!important;font-size:11px!important}.manage-stock>.list-price{grid-column:3!important;grid-row:1!important;text-align:right!important;white-space:nowrap!important;font-size:16px!important}.manage-stock>.remove-list{grid-column:4!important;grid-row:1!important;width:24px!important;min-width:24px!important;padding:0!important}
 }
+/* v2.4.6.4 — B target-price layout only + verified mobile header correction */
+.target-b-card{overflow:visible}
+.target-b-card>.card-title{margin-bottom:18px}
+.target-b-layout{display:grid;grid-template-columns:minmax(260px,31%) minmax(0,1fr);gap:16px;align-items:stretch}
+.target-b-main{margin:0!important;padding:16px!important;border:1px solid var(--line)!important;border-radius:10px;background:#0b1928;display:block}
+.target-b-kicker{font-size:18px;font-weight:800;color:var(--blue);padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.target-b-main .target-play-head{display:block!important;padding:4px 0 10px!important}
+.target-b-main .target-play-head span{display:block;margin-bottom:6px;font-size:12px}
+.target-b-main .target-play-head select{width:100%;max-width:none;height:36px;border:1px solid #294660;border-radius:7px;background:#0a1624;color:#fff;padding:0 9px}
+.target-b-main .target-levels{grid-template-columns:1fr!important;gap:7px!important;margin:0 0 12px!important}
+.target-b-main .target-levels>div{display:grid;grid-template-columns:48px 1fr;align-items:center;padding:9px 11px!important;text-align:left!important}
+.target-b-main .target-levels span{margin:0!important}
+.target-b-main .target-levels strong{text-align:right;font-size:18px!important;white-space:nowrap}
+.target-b-main .target-play-base{display:grid!important;grid-template-columns:74px 1fr!important;gap:8px!important;padding:10px 0!important;border-top:1px solid var(--line)}
+.target-b-main .target-play-base strong{text-align:right}
+.target-b-reason{display:grid;grid-template-columns:42px 1fr;gap:8px;padding:10px 0;border-top:1px solid var(--line);font-size:12px}
+.target-b-reason span{color:var(--muted)}.target-b-reason strong{font-weight:500;line-height:1.5}
+.target-b-main .target-history3{margin-top:0!important;padding-top:7px!important;border-top:1px solid var(--line)}
+.target-b-main .target-history3 .history3-row{grid-template-columns:34px 1fr 78px!important;column-gap:6px!important;font-size:10px!important;padding:5px 0!important}
+.target-b-main .target-history3 .history3-row strong{font-size:10px!important;text-align:right!important}.target-b-main .target-history3 .history3-row time{font-size:9px!important;text-align:right!important}
+.target-b-list{min-width:0;border-left:1px solid var(--line);padding-left:16px}
+.target-b-list .target-tabs{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:8px}
+.target-b-list .target-tabs button{padding:11px 8px;font-size:15px}
+.target-b-columns{display:grid;grid-template-columns:minmax(100px,1fr) 82px 102px 32px 32px;column-gap:8px;padding:7px 8px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11px}
+.target-b-columns span:nth-child(2),.target-b-columns span:nth-child(3){text-align:right}
+.target-b-list .broker-row{grid-template-columns:minmax(100px,1fr) 82px 102px 32px 32px!important;column-gap:8px!important;padding:11px 8px!important;border-radius:0!important}
+.target-b-list .broker-row:hover,.target-b-list .broker-row.selected{border-left-color:transparent!important;border-right-color:transparent!important;border-top-color:transparent!important}
+.target-b-list .broker-expand,.target-b-list .broker-menu-btn{border:0!important;background:transparent!important;border-radius:0!important;color:var(--blue)!important;padding:0!important;box-shadow:none!important}
+.target-b-list .broker-row>strong,.target-b-list .broker-row>time{text-align:right!important}
+
+@media(max-width:720px){
+  /* mobile stock header: row 1 = name/code/market + price; row 2 = change/update/holding/watch */
+  .stock-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-rows:auto auto auto!important;column-gap:8px!important;row-gap:7px!important;align-items:center!important;padding:6px 3px 16px!important}
+  .stock-head>div:first-child{display:contents!important}
+  .stock-head .eyebrow{grid-column:1/-1!important;grid-row:1!important;margin:0!important}
+  .stock-head h1{grid-column:1!important;grid-row:2!important;margin:0!important;white-space:nowrap!important;font-size:23px!important}
+  .stock-head h1 small{font-size:12px!important}
+  .stock-head #marketLabel{display:inline!important;font-size:0!important}
+  .stock-head #marketLabel:not(:empty)::before{content:" | ";font-size:12px;color:var(--muted)}
+  .stock-head #marketLabel:not(:empty)::after{content:attr(data-short-market);font-size:12px;color:var(--muted)}
+  .price-block{display:contents!important}
+  .price-block strong{grid-column:2!important;grid-row:2!important;text-align:right!important;font-size:25px!important;white-space:nowrap!important}
+  .price-block span{grid-column:1!important;grid-row:3!important;margin:0!important;font-size:11px!important;white-space:nowrap!important;text-align:left!important}
+  .price-block small{grid-column:2!important;grid-row:3!important;margin:0!important;font-size:10px!important;white-space:nowrap!important;text-align:center!important}
+  .stock-list-actions{display:grid!important;grid-template-columns:1fr 1fr!important;grid-column:3!important;grid-row:3!important;gap:5px!important;margin:0!important}
+  .stock-head{grid-template-columns:minmax(80px,1fr) 70px 154px!important}
+  .stock-head h1{grid-column:1/3!important}.price-block strong{grid-column:3!important}
+  .stock-list-actions button{min-width:0!important;padding:6px 5px!important;font-size:11px!important;white-space:nowrap!important}
+
+  /* B stays B on phone: fixed target column + broker list column */
+  .target-b-card{padding:14px 10px!important;overflow-x:auto!important}
+  .target-b-card>.card-title{position:sticky;left:0;margin-bottom:12px}
+  .target-b-layout{grid-template-columns:180px minmax(355px,1fr)!important;gap:10px!important;min-width:545px}
+  .target-b-main{padding:10px!important}
+  .target-b-kicker{font-size:15px!important;padding-bottom:7px!important}
+  .target-b-main .target-play-head select{height:31px;font-size:11px}
+  .target-b-main .target-levels>div{grid-template-columns:38px 1fr;padding:7px 8px!important}.target-b-main .target-levels strong{font-size:14px!important}
+  .target-b-main .target-play-base{grid-template-columns:58px 1fr!important;font-size:10px}.target-b-reason{grid-template-columns:32px 1fr;font-size:10px}
+  .target-b-main .target-history3{display:none!important}
+  .target-b-list{padding-left:10px!important}
+  .target-b-list .target-tabs button{font-size:13px!important;padding:8px 5px!important}
+  .target-b-columns,.target-b-list .broker-row{grid-template-columns:minmax(92px,1fr) 58px 78px 28px 28px!important;column-gap:3px!important}
+  .target-b-columns{padding:6px 4px!important;font-size:9px!important}
+  .target-b-list .broker-row{padding:9px 4px!important}
+  .target-b-list .broker-row>span:first-child,.target-b-list .broker-row>strong{font-size:10px!important}.target-b-list .broker-row>time{font-size:9px!important}
+  .target-b-list .broker-expand,.target-b-list .broker-menu-btn{width:28px!important;min-width:28px!important;height:26px!important}
+}
+
 </style>
 </head>
 <body>
@@ -452,26 +520,26 @@ body{padding-bottom:68px}
           </div>
         </article>
 
-        <article class="card targets-card detail-panel" id="targets" data-view-panel="targets">
+        <article class="card targets-card detail-panel target-b-card" id="targets" data-view-panel="targets">
           <div class="card-title">券商目標價</div>
           <div class="target-b-layout">
-            <div id="targetPlay" class="target-play target-b-summary hidden">
-              <div class="target-b-label">目標</div>
+            <section id="targetPlay" class="target-play target-b-main hidden">
+              <div class="target-b-kicker">目標</div>
               <div class="target-play-head"><span>目標券商</span><select id="mainBrokerSelect"><option value="">自動選擇</option></select></div>
               <div class="target-levels">
                 <div><span>80%</span><strong id="target80">--</strong></div>
                 <div><span>85%</span><strong id="target85">--</strong></div>
                 <div><span>88%</span><strong id="target88">--</strong></div>
               </div>
-              <div class="target-play-base"><span>倍率基準</span><strong id="targetBase">--</strong><small id="targetRule">--</small></div>
-              <div class="target-b-reason"><span>原因</span><strong id="targetReason">--</strong></div>
-              <div class="target-history3 hidden" id="targetHistory3"></div>
-            </div>
-            <div class="target-b-list">
+              <div class="target-play-base"><span>倍率基準</span><strong id="targetBase">--</strong></div>
+              <div class="target-b-reason"><span>原因</span><strong id="targetRule">--</strong></div>
+              <div class="target-history3" id="targetHistory3"></div>
+            </section>
+            <section class="target-b-list">
               <div class="target-tabs"><button class="active" data-target-type="外資">外資</button><button data-target-type="本土">本土</button><button data-target-type="未知">未知</button></div>
-              <div class="broker-columns"><span>券商</span><span>目標價</span><span>日期</span><span></span><span></span></div>
+              <div class="target-b-columns"><span>券商</span><span>目標價</span><span>日期</span><i></i><i></i></div>
               <div id="brokerRows" class="broker-placeholder"><p>搜尋股票後載入目標價。</p></div>
-            </div>
+            </section>
           </div>
         </article>
       </section>
@@ -520,6 +588,6 @@ body{padding-bottom:68px}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.4.0"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.4.6.4"></script>
 </body>
 </html>
