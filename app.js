@@ -181,10 +181,10 @@ function pickMainTarget(rows){
 function targetBasis(main){
   const h=main.history,latest=targetPriceValue(h[0]),previous=h.length>1?targetPriceValue(h[1]):NaN;
   if(Number.isFinite(previous)){
-    if(latest>previous)return {base:previous,rule:"上調 → 前次目標價為基準"};
-    if(latest<previous)return {base:latest,rule:"下調 → 最新目標價為基準"};
+    if(latest>previous)return {base:previous,rule:"上調 → 以前次為基準"};
+    if(latest<previous)return {base:latest,rule:"下調 → 以最新為基準"};
   }
-  return {base:latest,rule:h.length>1?"維持 → 最新目標價為基準":"只有一筆 → 最新目標價為基準"};
+  return {base:latest,rule:h.length>1?"維持 → 以最新為基準":"只有一筆 → 以最新為基準"};
 }
 
 const MAIN_BROKER_KEY="stockzone_main_broker_v232";
@@ -211,7 +211,7 @@ function renderTargetHistory3(main){
   const host=$("targetHistory3"); if(!host)return;
   if(!main){host.innerHTML="";return}
   const h=main.history.slice(0,3);
-  host.innerHTML=h.map((x,i)=>`<div class="history3-row"><span>${i===0?"最新":i===1?"前次":"上次"}</span><strong>${targetFmt(targetPriceValue(x))} 元</strong><time>${String(x.date||x.publishedAt||x.published||"—").slice(0,10)}</time></div>`).join("");
+  host.innerHTML=h.map((x,i)=>`<div class="history3-row"><span>${i===0?"最新":i===1?"前次":"上次"}</span><strong>${targetFmt(targetPriceValue(x))}</strong><time>${String(x.date||x.publishedAt||x.published||"—").slice(0,10)}</time></div>`).join("");
 }
 $("mainBrokerSelect")?.addEventListener("change",e=>{
   setBrokerPref(e.target.value);
@@ -229,13 +229,13 @@ function renderMainTarget(main){
  }
  const basis=targetBasis(main);
  const current=Number(currentStock?.last??currentStock?.price??currentStock?.regularMarketPrice);
- const levels=[.80,.85,.88].map(rate=>({rate,price:basis.base*rate}));
+ const levels=[.80,.85,.88].map(rate=>({rate,price:Math.floor(basis.base*rate)}));
  const nearest=Number.isFinite(current)?levels.slice().sort((x,y)=>Math.abs(x.price-current)-Math.abs(y.price-current))[0]:levels[0];
- setText("overviewNearestPrice",`${targetFmt(nearest.price)} 元`);
+ setText("overviewNearestPrice",`${targetFmt(nearest.price)}`);
  setText("overviewNearestRate",`（倍率${Math.round(nearest.rate*100)}%）`);
- setText("overviewMainBrokerLine",`${targetBrokerName(main.row)}：${targetFmt(targetPriceValue(main.latest))}元`);
- setText("targetBase",`${targetFmt(basis.base)} 元`); setText("targetRule",basis.rule);
- setText("target80",`${targetFmt(basis.base*.80)} 元`); setText("target85",`${targetFmt(basis.base*.85)} 元`); setText("target88",`${targetFmt(basis.base*.88)} 元`);
+ setText("overviewMainBrokerLine",`${targetBrokerName(main.row)}：${targetFmt(targetPriceValue(main.latest))}`);
+ setText("targetBase",`${targetFmt(basis.base)}`); setText("targetRule",basis.rule);
+ setText("target80",`${targetFmt(Math.floor(basis.base*.80))}`); setText("target85",`${targetFmt(Math.floor(basis.base*.85))}`); setText("target88",`${targetFmt(Math.floor(basis.base*.88))}`);
  renderTargetHistory3(main); play?.classList.remove("hidden");
 }
 const TARGET_CORR_KEY="stockzone_target_corrections_v239"; let editingTarget=null;
@@ -325,7 +325,7 @@ function renderBrokerRows(){
   if(!rows.length){host.innerHTML=`<p>目前沒有${targetTypeFilter}目標價。</p>`;return}
   host.innerHTML=rows.map((x,i)=>{
     const d=x.latest.date||x.latest.publishedAt||x.latest.published||"—",src=x.latest?.sourceUrl||x.row?.sourceUrl||"",name=targetBrokerName(x.row),open=expandedBrokerRows.has(name);
-    const history=x.history.map((h,j)=>{const hsrc=h?.sourceUrl||x.row?.sourceUrl||"";return `<div class="broker-history-row"><span>${j===0?"最新":`歷史 ${j}`}</span><strong>${targetFmt(targetPriceValue(h))} 元</strong><time>${String(h.date||h.publishedAt||"—").slice(0,10)}</time><span class="broker-actions history-actions"><button class="broker-menu-btn" data-history-menu="${i}-${j}" type="button">︙</button><span class="broker-menu hidden" data-history-menu-box="${i}-${j}">${hsrc?`<a href="${hsrc}" target="_blank" rel="noopener">來源</a>`:""}<button type="button" data-edit-history="${i}-${j}">修改</button></span></span></div>`}).join("");
+    const history=x.history.map((h,j)=>{const hsrc=h?.sourceUrl||x.row?.sourceUrl||"";return `<div class="broker-history-row"><span>${j===0?"最新":`歷史 ${j}`}</span><strong>${targetFmt(targetPriceValue(h))}</strong><time>${String(h.date||h.publishedAt||"—").slice(0,10)}</time><span class="broker-actions history-actions"><button class="broker-menu-btn" data-history-menu="${i}-${j}" type="button">︙</button><span class="broker-menu hidden" data-history-menu-box="${i}-${j}">${hsrc?`<a href="${hsrc}" target="_blank" rel="noopener">來源</a>`:""}<button type="button" data-edit-history="${i}-${j}">修改</button></span></span></div>`}).join("");
     return `<div class="broker-row" data-index="${i}"><span><b>${name}</b>${isNewTarget(x.row)?'<em class="target-new">NEW</em>':''}</span><strong>${targetFmt(targetPriceValue(x.latest))}</strong><time>${String(d).slice(0,10)}</time><button class="broker-expand" data-expand="${i}" type="button">${open?"︿":"⌵"}</button><span class="broker-actions"><button class="broker-menu-btn" data-menu="${i}" type="button">︙</button><span class="broker-menu hidden" data-menu-box="${i}">${src?`<a href="${src}" target="_blank" rel="noopener">來源</a>`:""}<button type="button" data-edit-target="${i}">修改</button></span></span><div class="broker-history ${open?"":"hidden"}" data-history="${i}">${history}</div></div>`;
   }).join("");
   host.querySelectorAll("[data-expand]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();const i=Number(btn.dataset.expand),name=targetBrokerName(rows[i].row);expandedBrokerRows.has(name)?expandedBrokerRows.delete(name):expandedBrokerRows.add(name);renderBrokerRows()}));
