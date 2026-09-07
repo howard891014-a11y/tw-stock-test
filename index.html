@@ -334,7 +334,7 @@ body{padding-bottom:68px}
   .broker-row>.broker-expand{grid-column:4!important;grid-row:1!important;width:30px!important;min-width:30px!important;height:28px!important}.broker-row>.broker-actions{grid-column:5!important;grid-row:1!important;display:block!important;position:relative!important;width:30px!important;min-width:30px!important}.broker-menu-btn{width:30px!important;min-width:30px!important;height:28px!important}.broker-history{grid-column:1/-1!important;grid-row:2!important}
   .manage-stock{display:grid!important;grid-template-columns:minmax(0,1fr) 52px 76px 24px!important;column-gap:6px!important;align-items:center!important;padding:11px 8px!important}.manage-stock-main{grid-column:1!important;grid-row:1!important;min-width:0!important}.manage-stock-main strong{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:15px!important}.manage-stock-main strong small{display:inline!important;font-size:11px!important}.manage-stock>.list-market{grid-column:2!important;grid-row:1!important;text-align:center!important;white-space:nowrap!important;font-size:11px!important}.manage-stock>.list-price{grid-column:3!important;grid-row:1!important;text-align:right!important;white-space:nowrap!important;font-size:16px!important}.manage-stock>.remove-list{grid-column:4!important;grid-row:1!important;width:24px!important;min-width:24px!important;padding:0!important}
 }
-/* v2.4.6.4 — B target-price layout only + verified mobile header correction */
+/* v2.4.6.5 — confirmed mobile header geometry + target controls cleanup */
 .target-b-card{overflow:visible}
 .target-b-card>.card-title{margin-bottom:18px}
 .target-b-layout{display:grid;grid-template-columns:minmax(260px,31%) minmax(0,1fr);gap:16px;align-items:stretch}
@@ -402,6 +402,49 @@ body{padding-bottom:68px}
   .target-b-list .broker-expand,.target-b-list .broker-menu-btn{width:28px!important;min-width:28px!important;height:26px!important}
 }
 
+
+/* v2.4.6.5 acceptance-locked mobile stock header */
+@media(max-width:720px){
+  .stock-head{
+    display:grid!important;
+    grid-template-columns:55% 45%!important;
+    grid-template-rows:auto 50px 40px!important;
+    column-gap:0!important;row-gap:0!important;align-items:stretch!important;
+    padding:6px 3px 16px!important;
+  }
+  .stock-head>div:first-child{display:contents!important}
+  .stock-head .eyebrow{grid-column:1/-1!important;grid-row:1!important;margin:0 0 6px!important}
+  .stock-head h1{
+    grid-column:1!important;grid-row:2!important;margin:0!important;height:50px!important;
+    display:flex!important;align-items:center!important;white-space:nowrap!important;font-size:30px!important;line-height:50px!important;
+  }
+  .stock-head h1 small{font-size:15px!important;line-height:25px!important;align-self:center!important;margin-left:6px!important}
+  .stock-head #marketLabel{display:inline!important;font-size:0!important;line-height:25px!important}
+  .stock-head #marketLabel:not(:empty)::before{content:" | ";font-size:15px;color:var(--muted)}
+  .stock-head #marketLabel:not(:empty)::after{content:attr(data-short-market);font-size:15px;color:var(--muted)}
+  .price-block{display:contents!important}
+  .price-block strong{
+    grid-column:2!important;grid-row:2!important;height:50px!important;margin:0!important;
+    display:flex!important;align-items:center!important;justify-content:flex-end!important;
+    text-align:right!important;font-size:30px!important;line-height:50px!important;white-space:nowrap!important;
+  }
+  .stock-list-actions{
+    grid-column:1!important;grid-row:3!important;height:40px!important;margin:0!important;
+    display:flex!important;align-items:stretch!important;justify-content:flex-start!important;gap:6px!important;
+  }
+  .stock-list-actions button{height:40px!important;min-width:0!important;width:auto!important;padding:0 10px!important;font-size:12px!important;line-height:40px!important;white-space:nowrap!important}
+  .price-block span{
+    grid-column:2!important;grid-row:3!important;height:30px!important;margin:0!important;padding:0!important;
+    align-self:start!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;
+    font-size:12px!important;line-height:30px!important;white-space:nowrap!important;text-align:right!important;
+  }
+  .price-block small{
+    grid-column:2!important;grid-row:3!important;height:10px!important;margin:30px 0 0!important;padding:0!important;
+    align-self:start!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;
+    font-size:9px!important;line-height:10px!important;white-space:nowrap!important;text-align:right!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -428,7 +471,7 @@ body{padding-bottom:68px}
       </div>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.4.6.4</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.4.6.5</span></button>
   </aside>
 
   <div class="main-shell">
@@ -525,7 +568,7 @@ body{padding-bottom:68px}
           <div class="target-b-layout">
             <section id="targetPlay" class="target-play target-b-main hidden">
               <div class="target-b-kicker">目標</div>
-              <div class="target-play-head"><span>目標券商</span><select id="mainBrokerSelect"><option value="">自動選擇</option></select></div>
+              <div class="target-play-head"><select id="mainBrokerSelect"><option value="">自動選擇</option></select></div>
               <div class="target-levels">
                 <div><span>80%</span><strong id="target80">--</strong></div>
                 <div><span>85%</span><strong id="target85">--</strong></div>
