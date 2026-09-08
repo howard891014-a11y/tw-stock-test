@@ -11,9 +11,7 @@ function cleanArticleHtml(html){
     .replace(/<\/(?:p|div|section|article|li|h[1-6]|blockquote|tr)>/gi,"\n")
     .replace(/<br\s*\/?\s*>/gi,"\n")
     .replace(/<[^>]+>/g," "))
-    .split(/\n+/).map(x=>x.replace(/\s+/g," ").trim()).filter(Boolean)
-    .reduce((out,line)=>{if(out.stop)return out;if(/^(?:延伸閱讀|相關新聞|更多新聞|推薦閱讀|熱門新聞|你可能也喜歡|延伸影音|看更多)/i.test(line)){out.stop=true;return out}out.push(line);return out},{stop:false})
-    .filter(Boolean).join("\n");
+    .split(/\n+/).map(x=>x.replace(/\s+/g," ").trim()).filter(Boolean).filter((line,i,arr)=>{const cut=arr.findIndex(x=>/^(?:延伸閱讀|相關新聞|更多新聞|推薦閱讀|熱門新聞|你可能也喜歡|延伸影音|看更多)/i.test(x));return cut<0||i<cut}).join("\n");
 }
 function tag(block,name){const m=block.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)<\\/${name}>`,`i`));return m?decode(m[1]):""}
 function sourceTag(block){const m=block.match(/<source[^>]*>([\s\S]*?)<\/source>/i);return m?stripHtml(m[1]):""}
@@ -52,7 +50,7 @@ function embeddedArticleStrings(html){
 }
 function authorNoiseSentence(s=""){
   const t=String(s||"").trim();
-  return /(?:作者|小編|筆者|撰文|編輯|記者|責任編輯|關於作者|個人簡介|自我介紹|本文作者|在.{0,12}(?:產業|公司|科技業).{0,12}(?:工作|任職).{0,10}(?:年|多年|十幾年)|平常(?:習慣|喜歡).{0,12}(?:財報|產業動態|投資)|投資經驗|追蹤產業動態|免責聲明|僅供參考|非投資建議|加入會員|登入|註冊|延伸閱讀|相關新聞|熱門新聞|今天舉行法說會|今日舉行法說會|今日在法說會上表示|概念股|盤中觀察|族群齊揚|值得關注|真正要盯|三道驗證|市場焦點|討論焦點|多空分歧|先進製程需求推動|產業即時新聞)/i.test(t)
+  return /(?:作者|小編|筆者|撰文|編輯|記者|責任編輯|關於作者|個人簡介|自我介紹|本文作者|在.{0,12}(?:產業|公司|科技業).{0,12}(?:工作|任職).{0,10}(?:年|多年|十幾年)|平常(?:習慣|喜歡).{0,12}(?:財報|產業動態|投資)|投資經驗|追蹤產業動態|免責聲明|僅供參考|非投資建議|加入會員|登入|註冊|延伸閱讀|相關新聞|熱門新聞|今天舉行法說會|今日舉行法說會|今日在法說會上表示|概念股|盤中觀察|族群齊揚|值得關注|真正要盯|三道驗證|市場焦點|討論焦點|多空分歧|產業即時新聞)/i.test(t)
 }
 function headlineOtherNames(headline="",target=""){
   const title=String(headline||""),name=String(target||"").trim(),out=new Set();if(!name)return out;
@@ -280,7 +278,7 @@ module.exports=async function handler(req,res){
   try{
     const r=await fetch(rss,{headers:RSS_HEADERS});if(!r.ok)throw new Error(`Google News HTTP ${r.status}`);
     const xml=await r.text(),raw=[...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(x=>x[1]).map(block=>({title:stripHtml(tag(block,"title")),url:stripHtml(tag(block,"link")),publishedAt:stripHtml(tag(block,"pubDate")),source:sourceTag(block)})).filter(x=>x.title&&x.url&&!blockedNews(x));
-    const seen=new Set(),picked=[];for(const x of raw){const k=x.title.replace(/【[^】]{0,16}】/g,"").replace(/[「」『』\[\]()（）｜|：:，,。！？!?\s]/g,"").replace(/即時新聞|新聞/g,"").toLowerCase();if([...seen].some(y=>k===y||(k.length>18&&y.length>18&&(k.includes(y)||y.includes(k)))))continue;seen.add(k);picked.push(x);if(picked.length>=24)break}
+    const seen=[] ,picked=[];for(const x of raw){const k=x.title.replace(/【[^】]{0,16}】/g,"").replace(/[「」『』\[\]()（）｜|：:，,。！？!?\s]/g,"").replace(/即時新聞|新聞/g,"").toLowerCase();if(seen.some(y=>k===y||(k.length>18&&y.length>18&&(k.includes(y)||y.includes(k)))))continue;seen.push(k);picked.push(x);if(picked.length>=24)break}
     const items=[];
     for(let i=0;i<picked.length;i+=4){
       const batch=picked.slice(i,i+4);
