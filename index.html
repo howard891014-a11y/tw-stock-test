@@ -456,6 +456,9 @@ body{padding-bottom:68px}
 
 /* v2.5.0.3 — news pin + persistent unread NEW */
 .news-head{display:flex;align-items:flex-start;gap:10px}.news-head .news-title{flex:1;min-width:0}.news-star{border:0;background:transparent;color:#a9bdd1;font-size:25px;line-height:1;cursor:pointer;padding:0 2px;flex:0 0 auto}.news-star.active{color:#f2c94c}.news-new{margin-left:7px}.news-item:has(.news-star.active){border-color:#365b7d}
+.manual-refresh{border:0;background:transparent;color:var(--muted);padding:0;cursor:pointer;font-size:10px;line-height:10px}
+.manual-refresh:disabled{opacity:.45}
+@media(max-width:720px){.manual-refresh{grid-column:2!important;grid-row:3!important;justify-self:end!important;align-self:start!important;height:10px!important;width:12px!important;margin:30px 42px 0 0!important;font-size:10px!important;line-height:10px!important;z-index:2}.price-block small{padding-left:16px!important}}
 </style>
 </head>
 <body>
@@ -507,7 +510,7 @@ body{padding-bottom:68px}
         <div class="price-block">
           <strong id="currentPrice">--</strong>
           <span id="priceChange">-- (--%)</span>
-          <small id="updateTime">尚未更新</small>
+          <button id="manualRefreshBtn" class="manual-refresh" type="button" aria-label="手動更新" title="更新股價、新聞、目標價">↻</button><small id="updateTime">尚未更新</small>
         </div>
       </section>
 
