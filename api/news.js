@@ -18,6 +18,10 @@ function sourceTag(block){const m=block.match(/<source[^>]*>([\s\S]*?)<\/source>
 function cleanTitle(s=""){return stripHtml(s).replace(/\s+-\s+[^-]{1,40}$/,'').trim()}
 function attr(html,name){const m=String(html||"").match(new RegExp(`${name}=["']([^"']+)["']`,`i`));return m?decodeEntities(m[1]):""}
 function usableSourceUrl(url){return /^https?:\/\//i.test(String(url||""))&&!/^https?:\/\/news\.google\.com\//i.test(String(url||""))}
+function blockedNews(x={}){const t=`${x.title||""} ${x.source||""}`;return /股市爆料同學會|同學風向與貼文摘要/.test(t)}
+function trimPoint(s="",max=88){s=String(s||"").replace(/\s+/g," ").trim();if(s.length<=max)return s;const cut=s.slice(0,max);const at=Math.max(cut.lastIndexOf("，"),cut.lastIndexOf("；"),cut.lastIndexOf("。"));return (at>=36?cut.slice(0,at):cut).replace(/[，；。]+$/,'')+"…"}
+function stockMarkers(s=""){return [...String(s||"").matchAll(/([\u4e00-\u9fffA-Za-z]{2,14})\s*[（(](\d{4,6})[）)]/g)].map(m=>({name:m[1],code:m[2]}))}
+function priceOnlySentence(s=""){return /股價|現價|收盤價|漲幅|漲跌|即時股價|盤中.{0,18}(?:漲|跌)|(?:上漲|下跌|強漲|走高|走低).{0,18}(?:%|％|元)|漲停|跌停/.test(String(s||""))}
 
 async function fetchText(url,opts={},timeout=2200){
   const c=new AbortController(),timer=setTimeout(()=>c.abort(),timeout);
@@ -96,6 +100,15 @@ function extractArticleText(html,title=""){
     /<main\b[^>]*>[\s\S]*?<\/main>/gi
   ];
   for(const re of scopedPatterns){for(const block of source.match(re)||[])candidates.push(cleanArticleHtml(block))}
+  // 結構化正文抓不到時，退到實際 <p> 段落；仍不使用標題或 RSS description 冒充正文。
+  const paragraphs=[];
+  for(const m of source.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)){
+    const t=cleanArticleHtml(m[1]);
+    if(t.length<24)continue;
+    if(/^(延伸閱讀|相關新聞|更多新聞|熱門新聞|責任編輯|版權所有|Copyright|廣告|登入|註冊)/i.test(t))continue;
+    paragraphs.push(t);
+  }
+  if(paragraphs.length>=2)candidates.push(paragraphs.join("\n"));
   const cleaned=candidates.map(x=>cleanArticleHtml(x)).filter(x=>x.length>=80);
   let best=cleaned.sort((a,b)=>b.length-a.length)[0]||"";
   const anchors=[...String(title||"").matchAll(/[\u4e00-\u9fffA-Za-z0-9]{4,}/g)].map(m=>m[0]).slice(0,5);
@@ -127,14 +140,37 @@ const GROUPS={
   chips:["外資","投信","自營商","法人","主力","大戶","資金流","買超","賣超","持股","籌碼"]
 };
 const TARGET_WORDS=["目標價","券商喊價","評等","合理價"];
-function summarize(text=""){
+function summarize(text="",code="",name="",headline=""){
   if(text.length<80)return [];
-  const sentences=text.split(/(?<=[。！？!?])|[\n\r]+/).map(x=>x.trim()).filter(x=>x.length>=18&&x.length<=220);
-  const scored=sentences.map((s,i)=>{const low=s.toLowerCase();let score=0,cat="";for(const [k,words] of Object.entries(GROUPS)){const hits=words.filter(w=>low.includes(w.toLowerCase())).length;if(hits){score+=hits*4;cat=cat||k}}if(TARGET_WORDS.some(w=>s.includes(w)))score-=6;if(/記者|報導|指出|表示|預期|預估|年增|月增|季增|成長|衰退|億元|％|%/.test(s))score+=1;score-=i*0.002;return {s,score,cat}}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
-  const out=[],seen=new Set();for(const x of scored){const key=x.s.replace(/[\s，。；、]/g,"").slice(0,24);if(seen.has(key))continue;seen.add(key);out.push(x.s);if(out.length>=4)break}
-  if(!out.length){for(const s of sentences.slice(0,2))out.push(s)}
+  const lines=String(text).split(/[\n\r]+/).map(x=>x.trim()).filter(Boolean);
+  const sentences=[];
+  for(const line of lines){for(const part of line.split(/(?<=[。！？!?；;])/)){const s=part.trim();if(s.length>=16&&s.length<=240)sentences.push(s)}}
+  const title=String(headline||""),multiSubject=/[、／\/]|(?:與|和|及).{0,12}(?:營收|獲利|財報|股價|EPS|上半年|下半年|第\d季)/.test(title);
+  const targetName=String(name||"").trim(),targetCode=String(code||"").trim();
+  const prepared=sentences.map((s,i)=>{
+    const markers=stockMarkers(s),hasOther=markers.some(m=>m.code&&targetCode&&m.code!==targetCode);
+    const mentionsTarget=(targetName&&s.includes(targetName))||(targetCode&&s.includes(targetCode));
+    return {s,i,hasOther,mentionsTarget,markers};
+  });
+  const targetIdx=new Set(prepared.filter(x=>x.mentionsTarget&&!x.hasOther).map(x=>x.i));
+  // 多公司文章只收該公司明確所在句，並最多承接下一句；遇到其他股票立即停止承接。
+  if(multiSubject||prepared.some(x=>x.hasOther)){
+    for(const i of [...targetIdx]){
+      const n=prepared.find(x=>x.i===i+1);
+      if(n&&!n.hasOther&&!n.mentionsTarget&&!stockMarkers(n.s).length)targetIdx.add(i+1);
+    }
+  }else{
+    // 單一公司文章可接受省略主詞的正文，但仍排除明確出現其他股票的句子。
+    for(const x of prepared)if(!x.hasOther)targetIdx.add(x.i);
+  }
+  let pool=prepared.filter(x=>targetIdx.has(x.i)&&!x.hasOther&&!priceOnlySentence(x.s));
+  if(!pool.length)pool=prepared.filter(x=>x.mentionsTarget&&!x.hasOther&&!priceOnlySentence(x.s));
+  const scored=pool.map(x=>{const s=x.s,low=s.toLowerCase();let score=0,cat="";for(const [k,words] of Object.entries(GROUPS)){const hits=words.filter(w=>low.includes(w.toLowerCase())).length;if(hits){score+=hits*4;cat=cat||k}}if(TARGET_WORDS.some(w=>s.includes(w)))score-=6;if(/指出|表示|預期|預估|年增|月增|季增|成長|衰退|億元|％|%/.test(s))score+=1;score-=x.i*0.002;return {s,score,cat}}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  const out=[],seen=new Set();for(const x of scored){const point=trimPoint(x.s);const key=point.replace(/[\s，。；、]/g,"").slice(0,24);if(seen.has(key))continue;seen.add(key);out.push(point);if(out.length>=3)break}
+  if(!out.length){for(const x of pool.slice(0,2)){const point=trimPoint(x.s);if(point)out.push(point)}}
   return out;
 }
+
 function termsFrom(raw=""){return [...new Set(raw.split(/[，,、;；\n]+/).map(x=>x.trim()).filter(x=>x.length>=2))].slice(0,8)}
 
 module.exports=async function handler(req,res){
@@ -149,12 +185,12 @@ module.exports=async function handler(req,res){
   const rss=`https://news.google.com/rss/search?q=${encodeURIComponent(q+window)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
   try{
     const r=await fetch(rss,{headers:RSS_HEADERS});if(!r.ok)throw new Error(`Google News HTTP ${r.status}`);
-    const xml=await r.text(),raw=[...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(x=>x[1]).map(block=>({title:stripHtml(tag(block,"title")),url:stripHtml(tag(block,"link")),publishedAt:stripHtml(tag(block,"pubDate")),source:sourceTag(block)})).filter(x=>x.title&&x.url);
+    const xml=await r.text(),raw=[...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(x=>x[1]).map(block=>({title:stripHtml(tag(block,"title")),url:stripHtml(tag(block,"link")),publishedAt:stripHtml(tag(block,"pubDate")),source:sourceTag(block)})).filter(x=>x.title&&x.url&&!blockedNews(x));
     const seen=new Set(),picked=[];for(const x of raw){const k=x.title.replace(/\s+/g," ");if(seen.has(k))continue;seen.add(k);picked.push(x);if(picked.length>=24)break}
     const items=[];
     for(let i=0;i<picked.length;i+=4){
       const batch=picked.slice(i,i+4);
-      const got=await Promise.all(batch.map(async x=>{const a=await fetchArticle(x.url),points=summarize(a.text);return {...x,title:cleanTitle(x.title)||x.title,url:a.url||x.url,summaryPoints:points,summary:points.join("\n"),contentAvailable:points.length>0}}));
+      const got=await Promise.all(batch.map(async x=>{const a=await fetchArticle(x.url),points=summarize(a.text,code,name,x.title);return {...x,title:cleanTitle(x.title)||x.title,url:a.url||x.url,summaryPoints:points,summary:points.join("\n"),contentAvailable:points.length>0}}));
       items.push(...got)
     }
     res.setHeader("Cache-Control","s-maxage=900, stale-while-revalidate=1800");return res.status(200).json({ok:true,code,name,mode,items});
