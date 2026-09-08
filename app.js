@@ -377,35 +377,36 @@ document.querySelectorAll(".target-tabs button").forEach(btn=>{
 });
 
 
-// ---------- v2.5.0.1 news: per-stock cache + incremental refresh ----------
-const NEWS_CACHE_KEY="stockzone_news_cache_v2501";
+// ---------- v2.5.0.2 news: independent all/match caches + article summaries ----------
+const NEWS_CACHE_KEY="stockzone_news_cache_v2502";
+const NEWS_MATCH_CACHE_KEY="stockzone_news_match_cache_v2502";
 const NEWS_SUMMARY_KEY="stockzone_news_summary_v2501";
-let newsRowsCache=[],newsFilter="all";
-function readNewsStore(key){try{const x=JSON.parse(localStorage.getItem(key)||"{}");return x&&typeof x==="object"?x:{}}catch{return{}}}
-function writeNewsStore(key,x){localStorage.setItem(key,JSON.stringify(x))}
+let newsRowsCache=[],newsMatchRowsCache=[],newsFilter="all";
+function readNewsStore(k){try{return JSON.parse(localStorage.getItem(k)||"{}")||{}}catch{return {}}}
+function writeNewsStore(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 function newsCode(){return String(currentStock?.code||currentStock?.symbol||"")}
 function newsTime(x){const t=Date.parse(x?.publishedAt||x?.date||"");return Number.isFinite(t)?t:0}
 function newsKey(x){return `${String(x?.title||"").trim()}|${String(x?.url||"").trim()}`}
 function mergeNews(oldRows,newRows){const m=new Map();[...(oldRows||[]),...(newRows||[])].forEach(x=>{if(x?.title)m.set(newsKey(x),x)});return [...m.values()].sort((a,b)=>newsTime(b)-newsTime(a)).slice(0,80)}
 function currentNewsSummary(){return String(readNewsStore(NEWS_SUMMARY_KEY)[newsCode()]||"").trim()}
-function newsTerms(){return currentNewsSummary().split(/[，,、;；\n\s]+/).map(x=>x.trim().toLowerCase()).filter(x=>x.length>=2)}
-function newsMatches(x){const terms=newsTerms();if(!terms.length)return false;const hay=`${x.title||""} ${x.summary||""}`.toLowerCase();return terms.some(t=>hay.includes(t))}
+function escNews(s=""){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 function renderNews(){
- const host=$("newsList");if(!host)return;
- const rows=newsFilter==="match"?newsRowsCache.filter(newsMatches):newsRowsCache;
- if(!rows.length){host.innerHTML=`<div class="news-empty">${newsFilter==="match"?(currentNewsSummary()?"目前沒有符合摘要的新聞。":"請先輸入自訂新聞摘要／關鍵字。") : "目前沒有近期新聞。"}</div>`;return}
- host.innerHTML=rows.map(x=>`<article class="news-item"><a class="news-title" href="${String(x.url||"#").replace(/"/g,"&quot;")}" target="_blank" rel="noopener">${String(x.title||"").replace(/</g,"&lt;")}</a><div class="news-meta">${String(x.source||"")} ${x.publishedAt?`｜${new Date(x.publishedAt).toLocaleDateString("zh-TW")}`:""}</div><div class="news-summary"><b>重點整理</b><p>${String(x.summary||x.title||"").replace(/</g,"&lt;")}</p></div></article>`).join("");
+ const host=$("newsList");if(!host)return;const rows=newsFilter==="match"?newsMatchRowsCache:newsRowsCache;
+ if(!rows.length){host.innerHTML=`<div class="news-empty">${newsFilter==="match"?(currentNewsSummary()?"目前沒有搜尋到符合摘要的相關新聞。":"請先輸入自訂新聞摘要／關鍵字。") : "目前沒有近期新聞。"}</div>`;return}
+ host.innerHTML=rows.map(x=>{const pts=Array.isArray(x.summaryPoints)?x.summaryPoints.filter(Boolean):(x.summary?String(x.summary).split("\n").filter(Boolean):[]);const summary=pts.length?`<ul>${pts.map(p=>`<li>${escNews(p)}</li>`).join("")}</ul>`:`<p>暫時無法取得內文</p>`;return `<article class="news-item"><a class="news-title" href="${escNews(x.url||"#")}" target="_blank" rel="noopener">${escNews(x.title||"")}</a><div class="news-meta">${escNews(x.source||"")} ${x.publishedAt?`｜${new Date(x.publishedAt).toLocaleDateString("zh-TW")}`:""}</div><div class="news-summary"><b>重點整理</b>${summary}</div></article>`}).join("");
 }
 function loadNewsSummary(){const el=$("newsSummaryInput");if(el)el.value=currentNewsSummary();const st=$("newsSummaryStatus");if(st)st.textContent="此摘要會依目前股票分開保存"}
-function beginNews(){const code=newsCode(),store=readNewsStore(NEWS_CACHE_KEY);newsRowsCache=store[code]?.rows||[];loadNewsSummary();renderNews()}
-async function loadNews(code,name){
- const all=readNewsStore(NEWS_CACHE_KEY),cached=all[String(code)]?.rows||[];
- let since="";if(cached.length){const newest=Math.max(...cached.map(newsTime));if(Number.isFinite(newest)&&newest>0){const d=new Date(newest-86400000);since=d.toISOString().slice(0,10)}}
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
- try{const r=await fetch(`/api/news?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}${since?`&since=${since}`:""}`,{cache:"no-store",signal:controller.signal});const data=await readJson(r,"新聞");newsRowsCache=mergeNews(cached,data.items||[]);all[String(code)]={rows:newsRowsCache,updatedAt:new Date().toISOString()};writeNewsStore(NEWS_CACHE_KEY,all);loadNewsSummary();renderNews();return true}finally{clearTimeout(timer)}
+function beginNews(){const code=newsCode();newsRowsCache=readNewsStore(NEWS_CACHE_KEY)[code]?.rows||[];newsMatchRowsCache=readNewsStore(NEWS_MATCH_CACHE_KEY)[code]?.rows||[];loadNewsSummary();renderNews()}
+function newsSince(rows){if(!rows?.length)return"";const newest=Math.max(...rows.map(newsTime));if(!Number.isFinite(newest)||newest<=0)return"";return new Date(newest-86400000).toISOString().slice(0,10)}
+async function fetchNewsMode(code,name,mode,forceReset=false){
+ const key=mode==="match"?NEWS_MATCH_CACHE_KEY:NEWS_CACHE_KEY,all=readNewsStore(key),cached=forceReset?[]:(all[String(code)]?.rows||[]),terms=mode==="match"?currentNewsSummary():"";
+ if(mode==="match"&&!terms){newsMatchRowsCache=[];renderNews();return true}
+ const since=newsSince(cached),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+ try{const r=await fetch(`/api/news?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}&mode=${mode}${terms?`&terms=${encodeURIComponent(terms)}`:""}${since?`&since=${since}`:""}`,{cache:"no-store",signal:controller.signal});const data=await readJson(r,"新聞");const merged=mergeNews(cached,data.items||[]);all[String(code)]={rows:merged,query:terms,updatedAt:new Date().toISOString()};writeNewsStore(key,all);if(mode==="match")newsMatchRowsCache=merged;else newsRowsCache=merged;renderNews();return true}finally{clearTimeout(timer)}
 }
-$("saveNewsSummary")?.addEventListener("click",()=>{if(!currentStock)return setStatus("請先搜尋股票",true);const all=readNewsStore(NEWS_SUMMARY_KEY);all[newsCode()]=$("newsSummaryInput")?.value.trim()||"";writeNewsStore(NEWS_SUMMARY_KEY,all);loadNewsSummary();renderNews();setStatus("新聞摘要已儲存")});
-document.querySelectorAll("[data-news-filter]").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll("[data-news-filter]").forEach(x=>x.classList.remove("active"));btn.classList.add("active");newsFilter=btn.dataset.newsFilter||"all";renderNews()}));
+async function loadNews(code,name){return fetchNewsMode(code,name,"all")}
+$("saveNewsSummary")?.addEventListener("click",async()=>{if(!currentStock)return setStatus("請先搜尋股票",true);const all=readNewsStore(NEWS_SUMMARY_KEY),code=newsCode(),val=$("newsSummaryInput")?.value.trim()||"";all[code]=val;writeNewsStore(NEWS_SUMMARY_KEY,all);loadNewsSummary();const match=readNewsStore(NEWS_MATCH_CACHE_KEY);delete match[code];writeNewsStore(NEWS_MATCH_CACHE_KEY,match);newsMatchRowsCache=[];renderNews();if(val){setStatus("搜尋摘要相關新聞…");try{await fetchNewsMode(code,currentStock?.name||currentStock?.shortName||"","match",true);setStatus("摘要與相關新聞已更新")}catch(e){setStatus(`摘要已儲存，相關新聞搜尋失敗：${e.message}`,true)}}else setStatus("新聞摘要已儲存")});
+document.querySelectorAll("[data-news-filter]").forEach(btn=>btn.addEventListener("click",async()=>{document.querySelectorAll("[data-news-filter]").forEach(x=>x.classList.remove("active"));btn.classList.add("active");newsFilter=btn.dataset.newsFilter||"all";renderNews();if(newsFilter==="match"&&currentStock&&currentNewsSummary()){const store=readNewsStore(NEWS_MATCH_CACHE_KEY),row=store[newsCode()];if(!row||row.query!==currentNewsSummary()){try{await fetchNewsMode(newsCode(),currentStock?.name||currentStock?.shortName||"","match",true)}catch(e){console.warn("摘要新聞搜尋失敗",e)}}}}));
 
 // ---------- holdings / watchlist ----------
 function readList(type){
