@@ -497,6 +497,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
       </div>
       <div class="side-group smart-group">
         <div class="side-title side-title-link" data-view="screening">✦ <span>智慧選股</span></div>
+        <button data-view="fundflow">資金流向</button>
         <button data-view="featured">近期精選</button>
         <button data-view="simulation">模擬交易</button>
       </div>
@@ -506,7 +507,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.9</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.10</span></button>
   </aside>
 
   <div class="main-shell">
@@ -547,7 +548,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-view="news" type="button">新聞</button>
       </nav>
       <nav class="section-tabs analysis-tabs mode-tabs" id="screeningTabs" aria-label="智慧選股導覽">
-        <button class="active" data-view="featured" type="button">近期精選</button><button data-view="simulation" type="button">模擬交易</button>
+        <button class="active" data-view="fundflow" type="button">資金流向</button><button data-view="featured" type="button">近期精選</button><button data-view="simulation" type="button">模擬交易</button>
       </nav>
       <nav class="section-tabs analysis-tabs mode-tabs" id="managementTabs" aria-label="股票管理導覽">
         <button class="active" data-manage-page="holdings" type="button">持股清單</button><button data-manage-page="watchlist" type="button">觀察清單</button>
@@ -596,6 +597,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <article class="card detail-panel simple-detail" data-view-panel="analysis"><div class="card-title">建議玩法 <span class="badge">待接功能</span></div><div class="hero-value"><span>目前建議</span><strong class="purple">--</strong><small>之後接入判定邏輯</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="analysis"><div class="card-title">預期上漲空間 <span class="badge">待接功能</span></div><div class="hero-value"><span>預期空間</span><strong class="blue">--%</strong><small>之後接入計算邏輯</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="screening"><div class="card-title">智慧選股 <span class="badge">待接功能</span></div><div class="hero-value"><span>全市場自動篩選</span><strong>✦</strong><small>之後加入低點／剛站回／接近買點篩選</small></div></article>
+    <article class="card detail-panel simple-detail" data-view-panel="fundflow"><div class="card-title">資金流向 <span class="badge">待接功能</span></div><div class="hero-value"><span>市場資金流向</span><strong>↔</strong><small>之後接入零股、法人與族群資金流向</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title">近期精選 <span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="simulation"><div class="card-title">模擬交易 <span class="badge">待接功能</span></div><div class="hero-value"><span>模擬交易績效</span><strong>◎</strong><small>之後接入智慧選股模擬交易與績效回饋</small></div></article>
     <article class="card stage-card detail-panel" data-view-panel="analysis">
