@@ -96,6 +96,7 @@ async function search(){
   try{
     const data=await quote(q);
     renderStock(data);
+    setView("overview");
     beginTargetSearch();
     setStatus("搜尋目標價…");
     try{await loadTargetPlay(data.code||data.symbol||q,data.name||data.shortName||"")}catch(e){console.warn("目標價更新失敗，保留其他搜尋",e)}
@@ -385,8 +386,8 @@ document.querySelectorAll(".target-tabs button").forEach(btn=>{
 
 
 // ---------- v2.5.0.2 news: independent all/match caches + article summaries ----------
-const NEWS_CACHE_KEY="stockzone_news_cache_v2507";
-const NEWS_MATCH_CACHE_KEY="stockzone_news_match_cache_v2507";
+const NEWS_CACHE_KEY="stockzone_news_cache_v2508";
+const NEWS_MATCH_CACHE_KEY="stockzone_news_match_cache_v2508";
 const NEWS_SUMMARY_KEY="stockzone_news_summary_v2501";
 const NEWS_STAR_KEY="stockzone_news_star_v2503";
 const NEWS_UNREAD_KEY="stockzone_news_unread_v2503";
@@ -419,7 +420,7 @@ async function fetchNewsMode(code,name,mode,forceReset=false){
  const key=mode==="match"?NEWS_MATCH_CACHE_KEY:NEWS_CACHE_KEY,all=readNewsStore(key),cached=forceReset?[]:(all[String(code)]?.rows||[]),terms=mode==="match"?currentNewsSummary():"";
  if(mode==="match"&&!terms){newsMatchRowsCache=[];renderNews();return true}
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
- try{const r=await fetch(`/api/news?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}&mode=${mode}${terms?`&terms=${encodeURIComponent(terms)}`:""}&v=2507`,{cache:"no-store",signal:controller.signal});const data=await readJson(r,"新聞");const incoming=(data.items||[]).filter(x=>!blockedNewsItem(x)),oldKeys=new Set(cached.map(newsMergeKey)),unread=newsSet(NEWS_UNREAD_KEY,code);if(cached.length)for(const x of incoming)if(x?.title&&!oldKeys.has(newsMergeKey(x)))unread.add(newsKey(x));saveNewsSet(NEWS_UNREAD_KEY,unread,code);const merged=mergeNews(cached,incoming);all[String(code)]={rows:merged,query:terms,updatedAt:new Date().toISOString()};writeNewsStore(key,all);if(mode==="match")newsMatchRowsCache=merged;else newsRowsCache=merged;renderNews();return true}finally{clearTimeout(timer)}
+ try{const r=await fetch(`/api/news?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}&mode=${mode}${terms?`&terms=${encodeURIComponent(terms)}`:""}&v=2508`,{cache:"no-store",signal:controller.signal});const data=await readJson(r,"新聞");const incoming=(data.items||[]).filter(x=>!blockedNewsItem(x)),oldKeys=new Set(cached.map(newsMergeKey)),unread=newsSet(NEWS_UNREAD_KEY,code);if(cached.length)for(const x of incoming)if(x?.title&&!oldKeys.has(newsMergeKey(x)))unread.add(newsKey(x));saveNewsSet(NEWS_UNREAD_KEY,unread,code);const merged=mergeNews(cached,incoming);all[String(code)]={rows:merged,query:terms,updatedAt:new Date().toISOString()};writeNewsStore(key,all);if(mode==="match")newsMatchRowsCache=merged;else newsRowsCache=merged;renderNews();return true}finally{clearTimeout(timer)}
 }
 async function loadNews(code,name){return fetchNewsMode(code,name,"all")}
 $("saveNewsSummary")?.addEventListener("click",async()=>{if(!currentStock)return setStatus("請先搜尋股票",true);const all=readNewsStore(NEWS_SUMMARY_KEY),code=newsCode(),val=$("newsSummaryInput")?.value.trim()||"";all[code]=val;writeNewsStore(NEWS_SUMMARY_KEY,all);loadNewsSummary();const match=readNewsStore(NEWS_MATCH_CACHE_KEY);delete match[code];writeNewsStore(NEWS_MATCH_CACHE_KEY,match);newsMatchRowsCache=[];renderNews();if(val){setStatus("搜尋摘要相關新聞…");try{await fetchNewsMode(code,currentStock?.name||currentStock?.shortName||"","match",true);setStatus("摘要與相關新聞已更新")}catch(e){setStatus(`摘要已儲存，相關新聞搜尋失敗：${e.message}`,true)}}else setStatus("新聞摘要已儲存")});
@@ -488,12 +489,9 @@ document.querySelectorAll("[data-manage-tab]").forEach(btn=>btn.addEventListener
   document.querySelectorAll("[data-manage-tab]").forEach(b=>b.classList.toggle("active",b===btn));
   document.querySelectorAll("[data-manage-panel]").forEach(p=>p.classList.toggle("active",p.dataset.managePanel===btn.dataset.manageTab));
 }));
-document.querySelectorAll("[data-manage-jump]").forEach(btn=>btn.addEventListener("click",()=>{
-  const type=btn.dataset.manageJump;
-  document.querySelector(`[data-manage-tab="${type}"]`)?.click();
-  $("stockManagement")?.scrollIntoView({behavior:"smooth",block:"start"});
-  $("sidebar")?.classList.remove("open");$("overlay")?.classList.remove("show");
-}));
+function setManagementTab(type){document.querySelectorAll("[data-manage-tab]").forEach(b=>b.classList.toggle("active",b.dataset.manageTab===type));document.querySelectorAll("[data-manage-panel]").forEach(p=>p.classList.toggle("active",p.dataset.managePanel===type));document.querySelectorAll("[data-manage-page]").forEach(b=>b.classList.toggle("active",b.dataset.managePage===type))}
+document.querySelectorAll("[data-manage-page]").forEach(btn=>btn.addEventListener("click",()=>setManagementTab(btn.dataset.managePage)));
+document.querySelectorAll("[data-manage-jump]").forEach(btn=>btn.addEventListener("click",()=>{setManagementTab(btn.dataset.manageJump);setView("management")}));
 document.querySelectorAll("[data-search-jump]").forEach(btn=>btn.addEventListener("click",()=>{
   $("stockCode")?.focus();window.scrollTo({top:0,behavior:"smooth"});
 }));
@@ -523,12 +521,16 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 renderLists();
 
 function setView(view){
+  const screeningViews=new Set(["screening","featured","simulation"]),management=view==="management";
+  const mode=screeningViews.has(view)?"screening":management?"management":"analysis";
+  document.body.classList.remove("mode-analysis","mode-screening","mode-management");document.body.classList.add(`mode-${mode}`);
+  if(view==="screening")view="featured";
   document.body.classList.toggle("view-overview",view==="overview");
   document.querySelectorAll("[data-view-panel]").forEach(p=>p.classList.toggle("active-view",p.dataset.viewPanel===view));
   document.querySelectorAll(".section-tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
-  document.querySelectorAll(".side-group [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+  document.querySelectorAll(".side-group [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view||(mode==="screening"&&b.dataset.view==="screening")));
   $("sidebar")?.classList.remove("open");$("overlay")?.classList.remove("show");
-  window.scrollTo({top:document.querySelector(".stock-head")?.offsetTop||0,behavior:"smooth"});
+  window.scrollTo({top:mode==="analysis"?(document.querySelector(".stock-head")?.offsetTop||0):0,behavior:"smooth"});
 }
 document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>setView(btn.dataset.view)));
 document.querySelectorAll("[data-view-open]").forEach(btn=>btn.addEventListener("click",()=>setView(btn.dataset.viewOpen)));
