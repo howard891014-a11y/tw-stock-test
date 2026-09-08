@@ -5,14 +5,20 @@ function sourceTag(block){const m=block.match(/<source[^>]*>([\s\S]*?)<\/source>
 function cleanTitle(s=""){return stripHtml(s).replace(/\s+-\s+[^-]{1,40}$/,'').trim()}
 function sameHostGoogle(u=""){try{return /(^|\.)google\./.test(new URL(u).hostname)||/news\.google\.com/.test(new URL(u).hostname)}catch{return false}}
 function outboundFromHtml(html=""){
-  const urls=[...html.matchAll(/https?:\\?\/\\?\/[^"'<>\\\s]+/g)].map(m=>m[0].replace(/\\u0026/g,"&").replace(/\\\//g,"/").replace(/&amp;/g,"&"));
+  const clean=decode(html).replace(/\u0026/g,"&").replace(/\u003d/g,"=").replace(/\\//g,"/");
+  const urls=[...clean.matchAll(/https?:\/\/[^"'<>\s\)]+/g)].map(m=>m[0]);
   return urls.find(u=>{try{const h=new URL(u).hostname;return !/(^|\.)google\.|gstatic\.com|googleusercontent\.com/.test(h)}catch{return false}})||"";
+}
+function legacyGoogleUrl(u=""){
+ try{const x=new URL(u),token=x.pathname.split("/").filter(Boolean).pop();if(!token)return"";let b=token.replace(/-/g,"+").replace(/_/g,"/");while(b.length%4)b+="=";const buf=Buffer.from(b,"base64"),txt=buf.toString("utf8");const m=txt.match(/https?:\/\/[^\x00-\x20"'<>]+/);return m?m[0]:""}catch{return""}
 }
 async function fetchHtml(url,ms=9000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{const r=await fetch(url,{redirect:"follow",signal:c.signal,headers:{"User-Agent":"Mozilla/5.0 (compatible; StockZone/2.5; +news-reader)","Accept-Language":"zh-TW,zh;q=0.9,en;q=0.6"}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return {html:await r.text(),finalUrl:r.url||url}}finally{clearTimeout(t)}}
 async function resolveArticle(url){
-  try{const first=await fetchHtml(url);if(!sameHostGoogle(first.finalUrl))return first;
+  try{
+    const legacy=legacyGoogleUrl(url);if(legacy){try{return await fetchHtml(legacy)}catch{}}
+    const first=await fetchHtml(url);if(!sameHostGoogle(first.finalUrl))return first;
     const out=outboundFromHtml(first.html);if(out){try{return await fetchHtml(out)}catch{}}
-    return first;
+    return {html:"",finalUrl:url};
   }catch{return {html:"",finalUrl:url}}
 }
 function articleText(html=""){
