@@ -453,6 +453,9 @@ body{padding-bottom:68px}
 @media(max-width:720px){.target-b-main .target-history3 .history3-row{grid-template-columns:28px 1fr 72px!important;column-gap:4px!important;font-size:9px!important;padding:4px 0!important}.target-b-main .target-history3 .history3-row strong{font-size:9px!important}.target-b-main .target-history3 .history3-row time{font-size:8px!important}.broker-history .broker-history-row{grid-template-columns:44px 1fr 70px 28px!important;gap:3px!important;font-size:9px!important}}
 
 .brand-logo{width:28px;height:20px;object-fit:contain;display:block;flex:0 0 auto}.mobile-brand{align-items:center;gap:7px}.mobile-brand .brand-logo{width:25px;height:16px;display:inline-block;vertical-align:-2px;margin-right:6px}
+
+/* v2.5.0.3 — news pin + persistent unread NEW */
+.news-head{display:flex;align-items:flex-start;gap:10px}.news-head .news-title{flex:1;min-width:0}.news-star{border:0;background:transparent;color:#a9bdd1;font-size:25px;line-height:1;cursor:pointer;padding:0 2px;flex:0 0 auto}.news-star.active{color:#f2c94c}.news-new{margin-left:7px}.news-item:has(.news-star.active){border-color:#365b7d}
 </style>
 </head>
 <body>
@@ -475,7 +478,7 @@ body{padding-bottom:68px}
       </div>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.3</span></button>
   </aside>
 
   <div class="main-shell">
@@ -689,7 +692,7 @@ body{padding-bottom:68px}
 </style>
 
 <style id="stockzone-v2500-news-tabs">
-/* v2.5.0.2 — restored individual-stock navigation; isolated from target-price layout */
+/* v2.5.0.3 — restored individual-stock navigation; isolated from target-price layout */
 .section-tabs.analysis-tabs{display:flex!important;height:48px!important;margin:0 0 13px!important;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;overflow-x:auto!important;scrollbar-width:none}
 .section-tabs.analysis-tabs::-webkit-scrollbar{display:none}
 .section-tabs.analysis-tabs button{min-width:max-content!important;flex:0 0 auto!important;padding:0 18px!important;border:0!important;border-bottom:3px solid transparent!important;background:transparent!important;color:#9dacbe!important;white-space:nowrap}
@@ -721,7 +724,7 @@ body{padding-bottom:68px}
  .news-summary-editor label small{display:block;margin:4px 0 0}
 }
 
-/* v2.5.0.2 — analysis/news only; target-price selectors intentionally untouched */
+/* v2.5.0.3 — analysis/news only; target-price selectors intentionally untouched */
 .news-item{padding:14px;border:1px solid #223a52;border-radius:10px;background:#0a1725}
 .news-title{display:block;color:#eef5ff;font-size:15px;font-weight:800;line-height:1.45;text-decoration:none}
 .news-title:hover{color:var(--blue)}
