@@ -458,12 +458,29 @@ body{padding-bottom:68px}
 .news-head{display:flex;align-items:flex-start;gap:10px}.news-head .news-title{flex:1;min-width:0}.news-star{border:0;background:transparent;color:#a9bdd1;font-size:25px;line-height:1;cursor:pointer;padding:0 2px;flex:0 0 auto}.news-star.active{color:#f2c94c}.news-new{margin-left:7px}.news-item:has(.news-star.active){border-color:#365b7d}
 </style>
 
-<style id="stockzone-v2508-page-modes">
-.mode-tabs{display:none!important}.manual-refresh{border:0;background:transparent;color:var(--muted);padding:0;cursor:pointer;font-size:11px;line-height:1}.manual-refresh:disabled{opacity:.45}.update-row{display:flex;align-items:center;justify-content:flex-end;gap:7px}.update-row small{margin:0!important}
-body.mode-screening #analysisTabs,body.mode-management #analysisTabs{display:none!important}body.mode-screening #screeningTabs,body.mode-management #managementTabs{display:flex!important}
-body.mode-screening #overview,body.mode-management #overview{display:none!important}body.mode-screening #stockManagement{display:none!important}body.mode-analysis #stockManagement{display:none!important}body.mode-screening .overview-outline,body.mode-management .overview-outline{display:none!important}
+<style id="stockzone-v2509-page-modes">
+.mode-tabs{display:none!important}
+.mode-page-heading{display:none;margin:18px 10px 8px}.mode-page-heading .eyebrow{color:#55aaff;font-weight:800;font-size:16px}
+.manual-refresh{border:0;background:transparent;color:var(--muted);padding:0;cursor:pointer;font-size:11px;line-height:1}.manual-refresh:disabled{opacity:.45}.update-row{display:flex;align-items:center;justify-content:flex-end;gap:5px}.update-row[hidden]{display:none!important}.update-row small{margin:0!important}
+body.mode-analysis #analysisTabs{display:flex!important}
+body.mode-analysis #screeningTabs,body.mode-analysis #managementTabs,body.mode-analysis #screeningHeading,body.mode-analysis #managementHeading{display:none!important}
+body.mode-screening #analysisTabs,body.mode-screening #managementTabs,body.mode-screening #managementHeading{display:none!important}
+body.mode-screening #screeningTabs{display:flex!important}body.mode-screening #screeningHeading{display:block!important}
+body.mode-management #analysisTabs,body.mode-management #screeningTabs,body.mode-management #screeningHeading{display:none!important}
+body.mode-management #managementTabs{display:flex!important}body.mode-management #managementHeading{display:block!important}
+body.mode-screening #overview,body.mode-management #overview{display:none!important}
+body.mode-screening #stockManagement,body.mode-analysis #stockManagement{display:none!important}
+body.mode-screening .overview-outline,body.mode-management .overview-outline{display:none!important}
 body.mode-management .dashboard-grid{display:none!important}body.mode-management #stockManagement{display:block!important}
-@media(max-width:720px){.update-row{grid-column:2!important;grid-row:3!important;justify-self:end!important;align-self:start!important;gap:6px!important}.manual-refresh{font-size:10px!important}.update-row small{padding-left:0!important}}
+@media(max-width:720px){
+  .mode-page-heading{margin:18px 10px 8px!important}.mode-page-heading .eyebrow{font-size:13px!important}
+  .stock-head{grid-template-rows:auto 50px 30px 10px!important}
+  .stock-list-actions{grid-row:3/5!important;height:40px!important}
+  .price-block span{grid-column:2!important;grid-row:3!important;height:30px!important;margin:0!important;padding:0!important;align-self:start!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;font-size:12px!important;line-height:30px!important;white-space:nowrap!important;text-align:right!important}
+  .update-row{grid-column:2!important;grid-row:4!important;height:10px!important;margin:0!important;padding:0!important;justify-self:end!important;align-self:start!important;gap:4px!important;line-height:10px!important}
+  .manual-refresh{font-size:9px!important;width:10px!important;height:10px!important;line-height:10px!important}
+  .update-row small{position:static!important;display:block!important;width:auto!important;height:10px!important;margin:0!important;padding:0!important;font-size:9px!important;line-height:10px!important;white-space:nowrap!important;text-align:right!important}
+}
 </style>
 </head>
 <body>
@@ -473,6 +490,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
     <nav class="side-nav">
       <div class="side-group">
         <div class="side-title">▣ <span>個股分析</span></div>
+        <button data-view="overview">總覽</button>
         <button data-view="analysis">分析</button>
         <button data-view="targets">目標價</button>
         <button data-view="news">新聞</button>
@@ -488,7 +506,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.8</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.9</span></button>
   </aside>
 
   <div class="main-shell">
@@ -515,9 +533,12 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <div class="price-block">
           <strong id="currentPrice">--</strong>
           <span id="priceChange">-- (--%)</span>
-          <div class="update-row"><button id="manualRefreshBtn" class="manual-refresh" type="button" aria-label="手動更新" title="更新股價、新聞、目標價">↻</button><small id="updateTime">尚未更新</small></div>
+          <div class="update-row" id="updateRow" hidden><button id="manualRefreshBtn" class="manual-refresh" type="button" aria-label="手動更新" title="更新股價、新聞、目標價">↻</button><small id="updateTime"></small></div>
         </div>
       </section>
+
+      <section class="mode-page-heading" id="screeningHeading"><div class="eyebrow">智慧選股</div></section>
+      <section class="mode-page-heading" id="managementHeading"><div class="eyebrow">股票管理</div></section>
 
       <nav class="section-tabs analysis-tabs" id="analysisTabs" aria-label="個股分析導覽">
         <button class="active" data-view="overview" type="button">總覽</button>
@@ -684,7 +705,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.0.1"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.0.9"></script>
 </body>
 </html>
 <style>
