@@ -384,8 +384,8 @@ document.querySelectorAll(".target-tabs button").forEach(btn=>{
 
 
 // ---------- v2.5.0.2 news: independent all/match caches + article summaries ----------
-const NEWS_CACHE_KEY="stockzone_news_cache_v2505";
-const NEWS_MATCH_CACHE_KEY="stockzone_news_match_cache_v2505";
+const NEWS_CACHE_KEY="stockzone_news_cache_v2506";
+const NEWS_MATCH_CACHE_KEY="stockzone_news_match_cache_v2506";
 const NEWS_SUMMARY_KEY="stockzone_news_summary_v2501";
 const NEWS_STAR_KEY="stockzone_news_star_v2503";
 const NEWS_UNREAD_KEY="stockzone_news_unread_v2503";
@@ -400,7 +400,7 @@ function newsCode(){return String(currentStock?.code||currentStock?.symbol||"")}
 function newsTime(x){const t=Date.parse(x?.publishedAt||x?.date||"");return Number.isFinite(t)?t:0}
 function newsKey(x){return `${String(x?.title||"").trim()}|${String(x?.url||"").trim()}`}
 function newsMergeKey(x){return `${String(x?.title||"").replace(/\s+/g," ").trim()}|${String(x?.publishedAt||x?.date||"").slice(0,16)}|${String(x?.source||"").trim()}`}
-function blockedNewsItem(x){return /股市爆料同學會|同學風向與貼文摘要/.test(`${x?.title||""} ${x?.source||""}`)}
+function blockedNewsItem(x){const t=`${x?.title||""} ${x?.source||""}`,u=String(x?.url||"");return /股市爆料同學會|同學風向與貼文摘要/.test(t)||/cmoney\.tw\/forum\//i.test(u)}
 function mergeNews(oldRows,newRows){const m=new Map();[...(oldRows||[]),...(newRows||[])].forEach(x=>{if(x?.title&&!blockedNewsItem(x))m.set(newsMergeKey(x),x)});const stars=newsSet(NEWS_STAR_KEY);const rows=[...m.values()].sort((a,b)=>(stars.has(newsKey(b))-stars.has(newsKey(a)))||(newsTime(b)-newsTime(a)));const pinned=rows.filter(x=>stars.has(newsKey(x))),normal=rows.filter(x=>!stars.has(newsKey(x))).slice(0,80);return [...pinned,...normal]}
 function currentNewsSummary(){return String(readNewsStore(NEWS_SUMMARY_KEY)[newsCode()]||"").trim()}
 function escNews(s=""){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
@@ -418,7 +418,7 @@ async function fetchNewsMode(code,name,mode,forceReset=false){
  const key=mode==="match"?NEWS_MATCH_CACHE_KEY:NEWS_CACHE_KEY,all=readNewsStore(key),cached=forceReset?[]:(all[String(code)]?.rows||[]),terms=mode==="match"?currentNewsSummary():"";
  if(mode==="match"&&!terms){newsMatchRowsCache=[];renderNews();return true}
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
- try{const r=await fetch(`/api/news?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}&mode=${mode}${terms?`&terms=${encodeURIComponent(terms)}`:""}&v=2505`,{cache:"no-store",signal:controller.signal});const data=await readJson(r,"新聞");const incoming=(data.items||[]).filter(x=>!blockedNewsItem(x)),oldKeys=new Set(cached.map(newsMergeKey)),unread=newsSet(NEWS_UNREAD_KEY,code);if(cached.length)for(const x of incoming)if(x?.title&&!oldKeys.has(newsMergeKey(x)))unread.add(newsKey(x));saveNewsSet(NEWS_UNREAD_KEY,unread,code);const merged=mergeNews(cached,incoming);all[String(code)]={rows:merged,query:terms,updatedAt:new Date().toISOString()};writeNewsStore(key,all);if(mode==="match")newsMatchRowsCache=merged;else newsRowsCache=merged;renderNews();return true}finally{clearTimeout(timer)}
+ try{const r=await fetch(`/api/news?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}&mode=${mode}${terms?`&terms=${encodeURIComponent(terms)}`:""}&v=2506`,{cache:"no-store",signal:controller.signal});const data=await readJson(r,"新聞");const incoming=(data.items||[]).filter(x=>!blockedNewsItem(x)),oldKeys=new Set(cached.map(newsMergeKey)),unread=newsSet(NEWS_UNREAD_KEY,code);if(cached.length)for(const x of incoming)if(x?.title&&!oldKeys.has(newsMergeKey(x)))unread.add(newsKey(x));saveNewsSet(NEWS_UNREAD_KEY,unread,code);const merged=mergeNews(cached,incoming);all[String(code)]={rows:merged,query:terms,updatedAt:new Date().toISOString()};writeNewsStore(key,all);if(mode==="match")newsMatchRowsCache=merged;else newsRowsCache=merged;renderNews();return true}finally{clearTimeout(timer)}
 }
 async function loadNews(code,name){return fetchNewsMode(code,name,"all")}
 $("saveNewsSummary")?.addEventListener("click",async()=>{if(!currentStock)return setStatus("請先搜尋股票",true);const all=readNewsStore(NEWS_SUMMARY_KEY),code=newsCode(),val=$("newsSummaryInput")?.value.trim()||"";all[code]=val;writeNewsStore(NEWS_SUMMARY_KEY,all);loadNewsSummary();const match=readNewsStore(NEWS_MATCH_CACHE_KEY);delete match[code];writeNewsStore(NEWS_MATCH_CACHE_KEY,match);newsMatchRowsCache=[];renderNews();if(val){setStatus("搜尋摘要相關新聞…");try{await fetchNewsMode(code,currentStock?.name||currentStock?.shortName||"","match",true);setStatus("摘要與相關新聞已更新")}catch(e){setStatus(`摘要已儲存，相關新聞搜尋失敗：${e.message}`,true)}}else setStatus("新聞摘要已儲存")});
