@@ -61,6 +61,46 @@ function shortStockName(name){
   return s;
 }
 
+async function valuation(query,market,price){
+  const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});
+  return await readJson(await fetch(`/api/valuation?${params.toString()}`,{cache:"no-store"}),"估值");
+}
+function valuationFmt(n,suffix=""){
+  const x=Number(n);return Number.isFinite(x)?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:"--";
+}
+function resetValuation(msg="--"){
+  setText("valuationFairPrice","--");setText("valuationStatus",msg);setText("valuationUpside","--");
+  ["valuationTtmEps","valuationCurrentPe","valuationPeerPe","valuationLowPrice","valuationNeutralPrice","valuationHighPrice"].forEach(id=>setText(id,"--"));
+  const host=$("valuationEps4");if(host)host.innerHTML="";
+}
+function renderValuation(v){
+  setText("valuationFairPrice",valuationFmt(v.neutralPrice));
+  setText("valuationStatus",v.label||"資料不足");
+  setText("valuationUpside",Number.isFinite(Number(v.diffPct))?`距中性價 ${Number(v.diffPct)>=0?"+":""}${valuationFmt(v.diffPct,"%")}`:"--");
+  setText("valuationTtmEps",valuationFmt(v.ttm));
+  setText("valuationCurrentPe",valuationFmt(v.currentPe," 倍"));
+  setText("valuationPeerPe",valuationFmt(v.peerPe," 倍"));
+  setText("valuationLowPrice",valuationFmt(v.conservativePrice));
+  setText("valuationNeutralPrice",valuationFmt(v.neutralPrice));
+  setText("valuationHighPrice",valuationFmt(v.optimisticPrice));
+  setText("valuationMethod",v.method||"近四季 EPS × Yahoo 同業平均本益比");
+  setText("valuationNote","第一版採 Yahoo 實際 EPS 與同業平均本益比，不使用預估 EPS；結果屬同業相對估值。");
+  const host=$("valuationEps4");
+  if(host){host.innerHTML=(Array.isArray(v.latest4)?v.latest4:[]).map(x=>`<div class="valuation-eps-chip"><span>${String(x.period||"")}</span><b>${valuationFmt(x.eps)}</b></div>`).join("")}
+}
+async function loadValuation(stock){
+  const card=$("valuation");card?.classList.add("is-loading");resetValuation("讀取中");
+  try{
+    const code=stock?.code||stock?.symbol||"";
+    const price=Number(stock?.last??stock?.price??stock?.regularMarketPrice);
+    const data=await valuation(code,stock?.market||"",price);
+    renderValuation(data);
+  }catch(e){
+    console.warn("估值更新失敗",e);resetValuation("資料不足");
+    setText("valuationNote",`Yahoo 估值資料暫時無法取得：${e.message}`);
+  }finally{card?.classList.remove("is-loading")}
+}
+
 function renderStock(x){
   currentStock=x;
   const last=Number(x.last ?? x.price ?? x.regularMarketPrice);
@@ -100,6 +140,7 @@ async function search(){
   try{
     const data=await quote(q);
     renderStock(data);
+    loadValuation(data);
     setView("overview");
     beginTargetSearch();
     setStatus("搜尋目標價…");
