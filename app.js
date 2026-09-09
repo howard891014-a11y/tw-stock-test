@@ -389,13 +389,13 @@ document.querySelectorAll(".target-tabs button").forEach(btn=>{
 });
 
 
-// ---------- v2.5.0.12 news: layered summaries + digest NEW ----------
-const NEWS_CACHE_KEY="stockzone_news_cache_v2512";
-const NEWS_MATCH_CACHE_KEY="stockzone_news_match_cache_v2512";
+// ---------- v2.5.0.13 news: layered summaries + digest NEW ----------
+const NEWS_CACHE_KEY="stockzone_news_cache_v2513";
+const NEWS_MATCH_CACHE_KEY="stockzone_news_match_cache_v2513";
 const NEWS_SUMMARY_KEY="stockzone_news_summary_v2501";
 const NEWS_STAR_KEY="stockzone_news_star_v2503";
 const NEWS_UNREAD_KEY="stockzone_news_unread_v2503";
-const NEWS_DIGEST_NEW_KEY="stockzone_news_digest_new_v2512";
+const NEWS_DIGEST_NEW_KEY="stockzone_news_digest_new_v2513";
 let newsRowsCache=[],newsMatchRowsCache=[],newsFilter="digest";
 function newsSet(key,code=newsCode()){const all=readNewsStore(key);return new Set(all[String(code)]||[])}
 function saveNewsSet(key,set,code=newsCode()){const all=readNewsStore(key);all[String(code)]=[...set];writeNewsStore(key,all)}
@@ -511,7 +511,7 @@ async function fetchNewsMode(code,name,mode,forceReset=false){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
  try{
    const beforeRows=mode==="all"?mergeNews(cached,[]):[];
-   const r=await fetch(`/api/news?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}&mode=${mode}${terms?`&terms=${encodeURIComponent(terms)}`:""}&v=2512`,{cache:"no-store",signal:controller.signal});
+   const r=await fetch(`/api/news?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}&mode=${mode}${terms?`&terms=${encodeURIComponent(terms)}`:""}&v=2513`,{cache:"no-store",signal:controller.signal});
    const data=await readJson(r,"新聞"),incoming=(data.items||[]).filter(x=>!blockedNewsItem(x)),oldKeys=new Set(cached.map(newsMergeKey)),unread=newsSet(NEWS_UNREAD_KEY,code);
    if(cached.length)for(const x of incoming)if(x?.title&&!oldKeys.has(newsMergeKey(x)))unread.add(newsKey(x));saveNewsSet(NEWS_UNREAD_KEY,unread,code);
    const merged=mergeNews(cached,incoming);all[String(code)]={rows:merged,query:terms,updatedAt:new Date().toISOString()};writeNewsStore(key,all);
