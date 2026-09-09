@@ -507,7 +507,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.10</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.0.11</span></button>
   </aside>
 
   <div class="main-shell">
@@ -623,16 +623,17 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             <div class="card-title">▤ 新聞</div>
           </div>
           <div class="news-summary-editor">
-            <label for="newsSummaryInput">自訂新聞摘要／關鍵字 <small>系統將特別偵測符合內容的新聞</small></label>
+            <label for="newsSummaryInput">自訂關鍵字 <small>系統將特別偵測符合內容的新聞</small></label>
             <div class="news-summary-row">
               <textarea id="newsSummaryInput" maxlength="500" placeholder="例如：CoWoS、先進封裝、台積電擴產、設備訂單"></textarea>
               <button id="saveNewsSummary" type="button">儲存</button>
             </div>
-            <div class="news-summary-status" id="newsSummaryStatus">此摘要會依目前股票分開保存</div>
+            <div class="news-summary-status" id="newsSummaryStatus">此關鍵字會依目前股票分開保存</div>
           </div>
           <div class="news-filter-row">
-            <button class="active" type="button" data-news-filter="all">全部</button>
-            <button type="button" data-news-filter="match">符合摘要</button>
+            <button class="active" type="button" data-news-filter="digest">摘要</button>
+            <button type="button" data-news-filter="all">全部</button>
+            <button type="button" data-news-filter="match">關鍵字</button>
           </div>
           <div class="news-list" id="newsList">
             <div class="news-empty">搜尋股票後，這裡會自動載入該公司的近期新聞。</div>
