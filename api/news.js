@@ -33,7 +33,13 @@ function blockedTitle(title=""){
 function blockedNews(x={}){const t=`${x.title||""} ${x.source||""}`;return /股市爆料同學會|同學風向與貼文摘要/.test(t)||blockedUrl(x.url)||blockedTitle(x.title)}
 function trimPoint(s="",max=90){s=String(s||"").replace(/\s+/g," ").trim();if(s.length<=max)return s;const cut=s.slice(0,max);const at=Math.max(cut.lastIndexOf("，"),cut.lastIndexOf("；"),cut.lastIndexOf("。"));return (at>=28?cut.slice(0,at):cut).replace(/[，；。]+$/,'')+"…"}
 function stockMarkers(s=""){return [...String(s||"").matchAll(/([\u4e00-\u9fffA-Za-z]{2,14})\s*[（(](\d{4,6})[）)]/g)].map(m=>({name:m[1],code:m[2]}))}
-function priceOnlySentence(s=""){return /股價|現價|收盤價|漲幅|漲跌|即時股價|盤中.{0,18}(?:漲|跌)|(?:上漲|下跌|強漲|走高|走低).{0,18}(?:%|％|元)|漲停|跌停/.test(String(s||""))}
+function marketOnlyFragment(s=""){
+  const t=String(s||"");
+  const market=/(?:股價|現價|收盤價|盤中價|開盤價|最高價|最低價|漲幅|跌幅|漲跌|上漲|下跌|漲停|跌停|成交量|成交金額|成交張數|加權指數|大盤|櫃買指數|買超|賣超|主力|外資|投信|自營商)/i.test(t);
+  const fundamental=/(?:營收|毛利率|毛利|EPS|每股盈餘|淨利|獲利|訂單|接單|能見度|需求|出貨|產能|擴產|量產|稼動率|資本支出|產品|技術|研發|認證|客戶|合作|財測|營運|展望|預估|預期|有望|優於|低於|持平|好轉|改善|回升|成長|衰退|轉強)/i.test(t);
+  return market&&!fundamental;
+}
+function priceOnlySentence(s=""){return marketOnlyFragment(s)}
 
 function absoluteUrl(base,href=""){try{return new URL(decodeEntities(href),base).href}catch{return ""}}
 function ampUrlFromHtml(html,base){const m=String(html||"").match(/<link[^>]+rel=["']amphtml["'][^>]+href=["']([^"']+)["']/i)||String(html||"").match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']amphtml["']/i);return m?absoluteUrl(base,m[1]):""}
@@ -373,21 +379,25 @@ function fragmentInTargetContext(frags=[],i=0,name="",code="",headline=""){
   }
   // 標題直接命中目標時，開頭幾個具體片段可承接標題主詞；一旦出現其他公司主體就不承接。
   const titleHit=fragmentHasTarget(headline,name,code);
-  if(titleHit&&i<5){
-    for(let j=0;j<=i;j++)if(unrelatedCompanySentence(frags[j]?.raw||"",name,code))return false;
-    return true;
+  if(titleHit){
+    // 標題已確認目標公司時，正文後段的「明確基本面事件」仍可承接主詞；遇到其他公司主體則拒絕。
+    if(fragmentEvent(cur)&&fragmentConcrete(cur))return true;
+    if(i<5){for(let j=0;j<=i;j++)if(unrelatedCompanySentence(frags[j]?.raw||"",name,code))return false;return true;}
   }
   return false;
 }
 function fragmentConcrete(s=""){
-  return /(?:訂單|接單|能見度|產能|擴產|量產|資本支出|營收|毛利率|毛利|EPS|每股盈餘|獲利|出貨|庫存|客戶|產品|技術|認證|合作|供需|缺貨|轉單|漲價|降價|矽光子|CPO|CoWoS|先進封裝|研發|財測|法說|20\d{2}年|第[一二三四1234]季|Q[1-4]|\d+(?:\.\d+)?[%％億兆元張])/i.test(String(s||""));
+  return /(?:訂單|接單|能見度|需求|產能|擴產|量產|稼動率|資本支出|營收|毛利率|毛利|EPS|每股盈餘|淨利|獲利|出貨|庫存|客戶|產品|技術|認證|合作|供需|缺貨|轉單|漲價|降價|矽光子|CPO|CoWoS|先進封裝|研發|財測|法說|營運|展望|預估|預期|有望|優於|低於|持平|好轉|改善|回升|成長|衰退|轉強|創高|歷史新高|創歷史新高|20\d{2}年|第[一二三四1234]季|Q[1-4]|\d+(?:\.\d+)?[%％億兆元張])/i.test(String(s||""));
 }
+function hasPeriodToken(t=""){return /(?:20\d{2}年(?:\d{1,2}月|第?[一二三四1234]季)?|\d{1,2}月|第?[一二三四1234]季|Q[1-4]|今年|明年|全年|上半年|下半年)/i.test(String(t||""))}
 function fragmentEvent(s=""){
   const t=String(s||"");
   if(/營收/.test(t))return "revenue"; if(/毛利率|毛利/.test(t))return "margin"; if(/EPS|每股盈餘|淨利|獲利/.test(t))return "profit";
-  if(/訂單|接單|能見度/.test(t))return "order"; if(/產能|擴產|量產|產線/.test(t))return "capacity"; if(/資本支出/.test(t))return "capex";
+  if(/訂單|接單|能見度|需求/.test(t))return "order"; if(/產能|擴產|量產|產線|稼動率/.test(t))return "capacity"; if(/資本支出/.test(t))return "capex";
   if(/矽光子|CPO|CoWoS|先進封裝|技術|研發|產品/.test(t))return "technology"; if(/客戶|合作|認證|供應鏈/.test(t))return "customer";
-  if(/漲價|降價|缺貨|供需|庫存/.test(t))return "supply"; if(/外資|投信|自營商|買超|賣超|持股/.test(t))return "flow"; return "";
+  if(/漲價|降價|缺貨|供需|庫存/.test(t))return "supply";
+  if(/(?:營運|展望|財測|預估|預期|有望|優於|低於|持平|好轉|改善|回升|成長|衰退|轉強)/.test(t)&&hasPeriodToken(t))return "outlook";
+  return "";
 }
 function cleanFragment(s="",name="",code=""){
   let t=String(s||"").replace(/\s+/g," ").trim();
@@ -422,18 +432,25 @@ function articleSubjectRelevant(title="",text="",name="",code=""){
   if(targetTitle>=4)return true;
   return targetBody>=3&&targetBody*2>=other;
 }
-function pointKey(p=""){
-  const t=String(p||""),nums=(t.match(/\d+(?:\.\d+)?[%％億兆元張]?/g)||[]).join("|");
-  const period=(t.match(/20\d{2}年\d{1,2}月|\d{1,2}月|20\d{2}年第?[一二三四1234]季|第?[一二三四1234]季|Q[1-4]/i)||[])[0]||"";
-  return `${fragmentEvent(t)||"other"}|${period}|${nums}`;
+function normalizePeriod(t="",defaultYear=""){
+  const s=String(t||"");let m;
+  if((m=s.match(/(20\d{2})年\s*(\d{1,2})月/)))return `${m[1]}-${String(+m[2]).padStart(2,"0")}`;
+  if((m=s.match(/(20\d{2})年\s*第?([一二三四1234])季/))){const q={一:1,二:2,三:3,四:4}[m[2]]||m[2];return `${m[1]}-Q${q}`}
+  if((m=s.match(/第?([一二三四1234])季|Q([1-4])/i))){const q=m[2]||({一:1,二:2,三:3,四:4}[m[1]]||m[1]);return `Q${q}`}
+  if((m=s.match(/(\d{1,2})月/)))return `${defaultYear||""}-${String(+m[1]).padStart(2,"0")}`;
+  if((m=s.match(/(20\d{2})年/)))return `${m[1]}-FY`;
+  if(/今年/.test(s))return "THIS-FY";if(/明年/.test(s))return "NEXT-FY";if(/上半年/.test(s))return "H1";if(/下半年/.test(s))return "H2";return "";
 }
-function summarize(text="",code="",name="",headline=""){
+function pointKey(p="",defaultYear=""){
+  const t=String(p||"");return `${fragmentEvent(t)||"other"}|${normalizePeriod(t,defaultYear)}`;
+}
+function summarize(text="",code="",name="",headline="",publishedAt=""){
   if(text.length<80||blockedTitle(headline)||!articleSubjectRelevant(headline,text,name,code))return [];
-  const n=String(name||"").trim(),c=String(code||"").trim(),frags=splitFragments(text),candidates=[];
+  const n=String(name||"").trim(),c=String(code||"").trim(),frags=splitFragments(text),candidates=[],defaultYear=(String(publishedAt||"").match(/20\d{2}/)||[])[0]||"";
   // 第一層：先切碎，再找核心碎片；保留前後文，清洗後才決定是否拼接。
   for(let i=0;i<frags.length;i++){
     const raw=frags[i].raw,direct=fragmentHasTarget(raw,n,c);
-    if(!fragmentInTargetContext(frags,i,n,c,headline)||priceOnlySentence(raw)||genericLowValue(raw))continue;
+    if(!fragmentInTargetContext(frags,i,n,c,headline)||marketOnlyFragment(raw)||genericLowValue(raw))continue;
     // 同一句已由前面的目標公司片段當核心時，後續碎片只拿來補上下文，不另外開一條重點。
     if(!direct){
       let owned=false;
@@ -456,16 +473,26 @@ function summarize(text="",code="",name="",headline=""){
     let point=group.filter(Boolean).join("，").replace(/，{2,}/g,"，");
     point=cleanFragment(point,n,c);if(point.length<8||!fragmentConcrete(point)||obviousBoilerplate(point)||authorNoiseSentence(point))continue;
     let score=(event?6:0)+(/\d/.test(point)?4:0)+(/主因|導致|年增|月增|季增|較去年|能見度|量產|擴產/.test(point)?4:0);
-    candidates.push({point:trimPoint(point,86),score,order:i,key:pointKey(point)});
+    candidates.push({point:trimPoint(point,86),score,order:i,key:pointKey(point,defaultYear)});
   }
-  // 第二層：單篇事件去重；同事件保留資訊較完整者，再做一次殘留詞清洗。
+  // 第二層：以「事件類型＋標準化期間」真正合併；不同寫法的數字/原因/創高資訊併入同一重點。
+  const groups=new Map();
+  for(const x of candidates){if(!groups.has(x.key))groups.set(x.key,[]);groups.get(x.key).push(x)}
   const kept=[];
-  for(const x of candidates.sort((a,b)=>b.score-a.score||b.point.length-a.point.length)){
-    const norm=normNewsText(x.point),dup=kept.find(y=>y.key===x.key||(norm.length>16&&y.norm.length>16&&(norm.includes(y.norm)||y.norm.includes(norm))));
-    if(dup)continue;
-    let point=cleanFragment(x.point,n,c).replace(/^(?:根據|顯示|反映|意味著|可見|由此可見)[，,:：]?\s*/,"");
-    if(/^(?:因為|由於|受到|若|如果|隨著|相較|較去年|較上季)[，,:：]?\s*$/.test(point))continue;
-    kept.push({...x,point,norm});
+  for(const [key,list] of groups){
+    const sorted=[...list].sort((a,b)=>b.score-a.score||b.point.length-a.point.length),best=sorted[0];
+    let point=cleanFragment(best.point,n,c),have=new Set(point.match(/\d+(?:\.\d+)?[%％億兆元張]?/g)||[]);
+    for(const x of sorted.slice(1))for(const clause of cleanFragment(x.point,n,c).split(/[，；。]/).map(v=>v.trim()).filter(Boolean)){
+      const nums=clause.match(/\d+(?:\.\d+)?[%％億兆元張]?/g)||[],novel=nums.some(v=>!have.has(v));
+      const fact=/(?:年增|月增|季增|創.*高|歷史新高|主因|導致|能見度|優於|低於|持平|好轉|改善|回升|成長|衰退|轉強)/.test(clause);
+      const metric=(clause.match(/(?:營收|月增|年增|季增|毛利率|EPS|每股盈餘|能見度|創.*高|歷史新高|優於|低於|持平|好轉|改善|回升)/)||[])[0]||"";
+      const already=metric&&new RegExp(metric.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).test(point);
+      if((novel||fact)&&!already&&!marketOnlyFragment(clause)&&!point.includes(clause)&&point.length+clause.length<112){point+=`，${clause}`;nums.forEach(v=>have.add(v))}
+    }
+    point=cleanFragment(point,n,c).replace(/^(?:根據|顯示|反映|意味著|可見|由此可見)[，,:：]?\s*/,"");
+    if(point.length<8||marketOnlyFragment(point))continue;
+    const norm=normNewsText(point);if(kept.some(y=>norm.length>16&&y.norm.length>16&&(norm.includes(y.norm)||y.norm.includes(norm))))continue;
+    kept.push({...best,key,point,norm,order:Math.min(...list.map(x=>x.order))});
   }
   return kept.sort((a,b)=>a.order-b.order).slice(0,8).map(x=>x.point);
 }
@@ -481,7 +508,7 @@ module.exports=async function handler(req,res){
   const since=String(req.query.since||"").trim(),dateOk=/^\d{4}-\d{2}-\d{2}$/.test(since);
   const window=dateOk?` after:${since}`:" when:30d";
   try{
-    // v2.5.0.15: keep v2.5.0.13/14 safe single-primary discovery; separate body availability from summary availability.
+    // v2.5.0.16: keep v2.5.0.13/14 safe single-primary discovery; separate body availability from summary availability.
     // Only when the primary query has too few direct stock hits do we run ONE lightweight fallback.
     const rssRows=async q=>{
       const rss=`https://news.google.com/rss/search?q=${encodeURIComponent(q+window)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
@@ -514,7 +541,7 @@ module.exports=async function handler(req,res){
         try{
           const a=await fetchArticle(x.url,{title:x.title,source:x.source,name,code});
           if(a.blocked)return null;
-          const points=summarize(a.text,code,name,x.title);
+          const points=summarize(a.text,code,name,x.title,x.publishedAt);
           return {...x,title:cleanTitle(x.title)||x.title,url:a.url||x.url,summaryPoints:points,summary:points.join("\n"),contentAvailable:a.text.length>=80,summaryAvailable:points.length>0};
         }catch{
           // A single publisher/body failure must never erase the whole stock's news list.
