@@ -19,9 +19,16 @@ function cleanTitle(s=""){return stripHtml(s).replace(/\s+-\s+[^-]{1,40}$/,'').t
 function attr(html,name){const m=String(html||"").match(new RegExp(`${name}=["']([^"']+)["']`,`i`));return m?decodeEntities(m[1]):""}
 function usableSourceUrl(url){return /^https?:\/\//i.test(String(url||""))&&!/^https?:\/\/news\.google\.com\//i.test(String(url||""))}
 function blockedUrl(url=""){const u=String(url||"").toLowerCase();return /(?:^|\.)cmoney\.tw\/forum\/(?:article|topic|post)\//i.test(u)||/cmoney\.tw\/forum\//i.test(u)}
+function pureFlowTitle(title=""){
+  const t=String(title||"").replace(/\s+/g," ").trim();
+  if(!t)return false;
+  // 只排除「整篇主題就是法人/外資/投信買賣超排行」；一般新聞內文提到買賣超仍保留。
+  return /(?:三大法人買賣超|外資買賣超|投信買賣超|自營商買賣超|法人合計買賣超|買超股票\s*TOP\s*\d+|賣超股票\s*TOP\s*\d+|買賣超股票\s*TOP\s*\d+|外資買超金額最大|外資賣超金額最大|投信買超金額最大|投信賣超金額最大|法人買超金額最大|法人賣超金額最大)/i.test(t)
+    && !/(?:營收|獲利|毛利率|EPS|訂單|產能|擴產|量產|法說|財測|新產品|新技術|客戶|合作|漲價|降價|缺貨|供需)/i.test(t);
+}
 function blockedTitle(title=""){
   const t=String(title||"");
-  return /(?:零股排行榜|零股排行|盤中零股成交量|零股成交量\s*TOP|零股成交量TOP|零股交易排行|PTT\s*[:：]|神秘客|洗盤結束|該補漲了|盤前分析|籌碼卡位|短線朋友|技術面.*(?:買點|賣點|洗盤|拉回))/i.test(t);
+  return pureFlowTitle(t)||/(?:零股排行榜|零股排行|盤中零股成交量|零股成交量\s*TOP|零股成交量TOP|零股交易排行|PTT\s*[:：]|神秘客|洗盤結束|該補漲了|盤前分析|籌碼卡位|短線朋友|技術面.*(?:買點|賣點|洗盤|拉回))/i.test(t);
 }
 function blockedNews(x={}){const t=`${x.title||""} ${x.source||""}`;return /股市爆料同學會|同學風向與貼文摘要/.test(t)||blockedUrl(x.url)||blockedTitle(x.title)}
 function trimPoint(s="",max=90){s=String(s||"").replace(/\s+/g," ").trim();if(s.length<=max)return s;const cut=s.slice(0,max);const at=Math.max(cut.lastIndexOf("，"),cut.lastIndexOf("；"),cut.lastIndexOf("。"));return (at>=28?cut.slice(0,at):cut).replace(/[，；。]+$/,'')+"…"}
@@ -34,6 +41,39 @@ function canonicalUrlFromHtml(html,base){
   const src=String(html||"");
   const m=src.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i)||src.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']canonical["']/i)||src.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i);
   const u=m?absoluteUrl(base,m[1]):"";return usableSourceUrl(u)&&!blockedUrl(u)?u:"";
+}
+function isCmoneyUrl(url=""){try{return /(?:^|\.)cmoney\.tw$/i.test(new URL(String(url||"")).hostname)}catch{return false}}
+function cmoneyNid(url="",html=""){
+  const src=`${String(url||"")} ${String(html||"")}`;
+  const m=src.match(/[?&]nid=(\d{4,})/i)||src.match(/note[-_]?detail[^"'<>]{0,80}nid[=:"'\s]+(\d{4,})/i)||src.match(/\bnid["']?\s*[:=]\s*["']?(\d{4,})/i);
+  return m?.[1]||"";
+}
+function cmoneyNoteUrl(nid=""){return /^\d{4,}$/.test(String(nid||""))?`https://www.cmoney.tw/notes/note-detail.aspx?nid=${nid}`:""}
+function normalizeCmoneyUrl(url="",html=""){
+  const nid=cmoneyNid(url,html);return nid?cmoneyNoteUrl(nid):String(url||"");
+}
+function titleSimilarity(a="",b=""){
+  const norm=x=>String(x||"").replace(/【[^】]*】/g,"").replace(/[「」『』\[\](){ }（）｜|：:，,。！？!?%％\s]/g,"").toLowerCase();
+  const x=norm(a),y=norm(b);if(!x||!y)return 0;if(x===y)return 100;
+  const shorter=x.length<y.length?x:y,longer=x.length<y.length?y:x;
+  if(shorter.length>=12&&longer.includes(shorter))return 80+Math.min(15,shorter.length/4);
+  let hit=0;for(let i=0;i<shorter.length-2;i+=3)if(longer.includes(shorter.slice(i,i+3)))hit++;
+  return hit/Math.max(1,Math.ceil((shorter.length-2)/3))*60;
+}
+async function recoverCmoneyByTitle(title="",name="",code=""){
+  const query=[name&&`"${name}"`,code&&`"${code}"`,`CMoney`].filter(Boolean).join(" ")+" when:45d";
+  if(!query.trim())return "";
+  try{
+    const rss=`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
+    const r=await fetchText(rss,{headers:RSS_HEADERS},2600);if(!r.ok)return "";
+    const xml=await r.text();
+    const rows=[...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(m=>m[1]).map(block=>({title:stripHtml(tag(block,"title")),url:stripHtml(tag(block,"link")),source:sourceTag(block)})).filter(x=>/CMoney/i.test(x.source)||/cmoney/i.test(x.title));
+    rows.sort((a,b)=>titleSimilarity(b.title,title)-titleSimilarity(a.title,title));
+    for(const x of rows.slice(0,5)){
+      const d=await decodeGoogleNewsUrl(x.url);const u=normalizeCmoneyUrl(d);if(isCmoneyUrl(u)&&/note-detail\.aspx\?nid=\d+/i.test(u))return u;
+    }
+  }catch{}
+  return "";
 }
 function embeddedArticleStrings(html){
   const out=[];
@@ -181,38 +221,70 @@ function extractArticleText(html,title=""){
   }
   return paragraphs.length>=2?cleanArticleHtml(paragraphs.join("\n")):"";
 }
+function anchoredWholePageText(html,title=""){
+  const text=cleanArticleHtml(html);if(text.length<140)return "";
+  const rawTitle=stripHtml(title).replace(/\s+-\s+[^-]{1,40}$/,'').trim();
+  let start=-1;
+  if(rawTitle.length>=8)start=text.indexOf(rawTitle);
+  if(start<0){const key=(rawTitle.match(/[\u4e00-\u9fffA-Za-z0-9]{6,}/)||[])[0]||"";if(key)start=text.indexOf(key)}
+  if(start<0)return "";
+  let body=text.slice(start+Math.min(rawTitle.length,120));
+  const stop=body.search(/(?:文章相關股票|想更快掌握|延伸閱讀|相關新聞|更多新聞|推薦閱讀|熱門新聞|CMoney 團隊透過|關於作者|免責聲明|Copyright)/i);
+  if(stop>120)body=body.slice(0,stop);
+  body=body.split(/\n+/).filter(line=>!/^(?:CMoney|撰文者|作者|更新|最後更新|收藏|分享|瀏覽人次|標籤|繼續閱讀)/i.test(line.trim())).join("\n");
+  return body.length>=100&&/[。！？]/.test(body)?body:"";
+}
 
-async function fetchArticle(url){
+async function fetchArticle(url,meta={}){
   if(!url)return{url:"",text:"",resolved:false,status:0,blocked:false};
+  const original=url;
   let resolved=url;
   try{resolved=await decodeGoogleNewsUrl(url)}catch{}
+  if(isCmoneyUrl(resolved))resolved=normalizeCmoneyUrl(resolved);
   if(blockedUrl(resolved))return{url:resolved,text:"",resolved:true,status:200,blocked:true};
-  if(!usableSourceUrl(resolved))return{url:resolved,text:"",resolved:false,status:0,blocked:false};
+  if(!usableSourceUrl(resolved))return{url:original,text:"",resolved:false,status:0,blocked:false};
   const headersList=[PAGE_HEADERS,{...PAGE_HEADERS,"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}];
-  let lastStatus=0,lastUrl=resolved,lastHtml="";
-  for(const headers of headersList){
-    try{
-      const r=await fetchText(resolved,{headers,redirect:"follow"},4600),finalUrl=r.url||resolved;lastStatus=r.status;lastUrl=finalUrl;
-      if(blockedUrl(finalUrl))return{url:finalUrl,text:"",resolved:true,status:r.status,blocked:true};
-      if(!r.ok)continue;
-      const html=await r.text();lastHtml=html;
-      if(/^https?:\/\/news\.google\.com\//i.test(finalUrl)&&/<c-wiz|DotsSplashUi|data-n-a-/i.test(html))continue;
-      const title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"";
-      const text=extractArticleText(html,title);
-      if(text.length>=80){const canonical=canonicalUrlFromHtml(html,finalUrl);return{url:canonical||finalUrl,text,resolved:true,status:r.status,blocked:false};}
-    }catch{}
+  let lastStatus=0,lastUrl=resolved,lastHtml="",verifiedUrl="";
+  const attempt=async candidate=>{
+    for(const headers of headersList){
+      try{
+        const r=await fetchText(candidate,{headers,redirect:"follow"},5200),finalUrl=r.url||candidate;lastStatus=r.status;lastUrl=finalUrl;
+        if(blockedUrl(finalUrl))return{done:true,result:{url:finalUrl,text:"",resolved:true,status:r.status,blocked:true}};
+        if(!r.ok)continue;
+        const html=await r.text();lastHtml=html;verifiedUrl=finalUrl;
+        if(/^https?:\/\/news\.google\.com\//i.test(finalUrl)&&/<c-wiz|DotsSplashUi|data-n-a-/i.test(html))continue;
+        const title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||meta.title||"";
+        let text=extractArticleText(html,title);
+        if(text.length<80)text=anchoredWholePageText(html,title||meta.title||"");
+        if(text.length>=80){
+          const canonical=canonicalUrlFromHtml(html,finalUrl),cmoney=normalizeCmoneyUrl(canonical||finalUrl,html);
+          const clickUrl=isCmoneyUrl(cmoney)?cmoney:(canonical||finalUrl);
+          return{done:true,result:{url:clickUrl,text,resolved:true,status:r.status,blocked:false}};
+        }
+      }catch{}
+    }
+    return{done:false};
+  };
+
+  let got=await attempt(resolved);if(got.done)return got.result;
+
+  // CMoney 常見問題：Google News 解到舊路徑或 404。只要能取得 nid 就重建正式 note-detail URL；否則用標題再找一次。
+  if(isCmoneyUrl(resolved)||/CMoney/i.test(String(meta.source||""))){
+    const reconstructed=normalizeCmoneyUrl(resolved,lastHtml);
+    if(reconstructed&&reconstructed!==resolved){got=await attempt(reconstructed);if(got.done)return got.result}
+    const recovered=await recoverCmoneyByTitle(meta.title||"",meta.name||"",meta.code||"");
+    if(recovered&&recovered!==resolved&&recovered!==reconstructed){got=await attempt(recovered);if(got.done)return got.result}
   }
-  // 第二層：原頁 HTML 有 AMP 版本時改抓 AMP；不少新聞站正文只在 AMP/SSR 版完整輸出。
+
+  // 第二層：原頁 HTML 有 AMP 版本時改抓 AMP。
   const amp=ampUrlFromHtml(lastHtml,lastUrl);
   if(amp&&!blockedUrl(amp)&&amp!==lastUrl){
-    try{
-      const r=await fetchText(amp,{headers:PAGE_HEADERS,redirect:"follow"},4200),finalUrl=r.url||amp;
-      if(blockedUrl(finalUrl))return{url:finalUrl,text:"",resolved:true,status:r.status,blocked:true};
-      if(r.ok){const html=await r.text(),title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"",text=extractArticleText(html,title);if(text.length>=80){const canonical=canonicalUrlFromHtml(lastHtml,lastUrl)||canonicalUrlFromHtml(html,finalUrl);return{url:canonical||lastUrl||finalUrl,text,resolved:true,status:r.status,blocked:false}}}
-    }catch{}
+    got=await attempt(amp);if(got.done)return got.result;
   }
-  return{url:lastUrl,text:"",resolved:usableSourceUrl(lastUrl),status:lastStatus,blocked:false};
+  // 不能把已確認 404 的 publisher URL 當點擊網址；退回原 Google News 連結至少不會直送失效頁。
+  return{url:verifiedUrl||original,text:"",resolved:usableSourceUrl(verifiedUrl||original),status:lastStatus,blocked:false};
 }
+
 
 const GROUPS={
   fundamental:["產能","擴產","營收","eps","每股盈餘","毛利","毛利率","獲利","訂單","接單","能見度","財測","資本支出","出貨","營運","營收成長","庫存","產品組合","研發","客戶需求"],
@@ -272,19 +344,28 @@ function removeOtherCompanyClauses(s="",name="",code=""){
 }
 function compressPoint(s="",name="",code=""){
   let t=stripLeadJunk(concisePoint(removeOtherCompanyClauses(s,name,code),name,code));
-  // 第二次文字壓縮：只刪新聞文筆，不刪數字、事件、比較與因果。
+  // 第二次濃縮：把第一層抽出的句群改寫成「事實句」，不是只做表面清字。
   t=t.replace(/^(?:[一二三四五六七八九十]+|\d+)[、.．)）]\s*/,"");
-  t=t.replace(/^(?:護國神山|晶圓代工龍頭|全球最大晶圓代工廠|半導體龍頭|科技巨頭|重量級|市場焦點)\s*/,"");
-  t=t.replace(/^(?:市場對|投資人對)[^，。]{0,20}(?:抱持|維持)[^，。]{0,10}(?:期待|樂觀)[，,:：]?\s*/,"");
-  t=t.replace(/(?:法人圈)?(?:普遍)?(?:吃下定心丸|抱持樂觀看法|充滿期待)/g,"");
-  t=t.replace(/(?:不約而同|普遍|順利|備受|持續受到|相當|非常|明顯|積極地|強勁地)/g,"");
-  t=t.replace(/(?:成為市場焦點|引發市場關注|值得關注|備受市場關注)/g,"");
-  t=t.replace(/(?:目前|現階段)\s*(?=(?:公司|訂單|產能|營收|毛利率|EPS|矽光子))/g,"");
-  t=t.replace(/(?:非常)?努力(?:在)?進行(?:的)?/g,"").replace(/持續(?:投入)?(?:研發)?(?:人力|資源)?/g,"持續投入研發").replace(/(較去年同期[^，。]{0,24}(?:下降|下滑))[，,]?(?:是)?因([^，。]{2,32})導致較去年同期(?:略為|微幅)?(?:下降|下滑)/,"$1，主因$2");
+  t=t.replace(/^(?:護國神山|晶圓代工龍頭|全球最大晶圓代工廠|全球最大晶圓代工廠商|半導體龍頭|科技巨頭|重量級|市場焦點|指標大廠|指標股)\s*/,"");
+  t=t.replace(/(?:法人圈)?(?:普遍)?(?:吃下定心丸|抱持樂觀看法|充滿期待|看好後市)/g,"");
+  t=t.replace(/(?:不約而同|普遍|順利|備受|持續受到|相當|非常|明顯|積極地|強勁地|全力|大舉|火速|強勢|重磅|驚人|亮眼|樂觀地)/g,"");
+  t=t.replace(/(?:成為市場焦點|引發市場關注|值得關注|備受市場關注|受到市場矚目|成為討論焦點|為後市增添想像空間)/g,"");
+  t=t.replace(/(?:市場|法人|投資人|外界)[^，。；]{0,18}(?:認為|預期|看好|關注)[，,:：]?\s*/g,"");
+  t=t.replace(/(?:目前|現階段|近期|接下來)\s*(?=(?:公司|訂單|產能|營收|毛利率|EPS|矽光子|資本支出|客戶|產品))/g,"");
+  t=t.replace(/(?:非常)?努力(?:在)?進行(?:的)?/g,"").replace(/持續(?:投入)?(?:研發)?(?:人力|資源)?/g,"持續投入研發");
+  t=t.replace(/(較去年同期[^，。]{0,24}(?:下降|下滑))[，,]?(?:是)?因([^，。]{2,32})導致較去年同期(?:略為|微幅)?(?:下降|下滑)/,"$1，主因$2");
+  // 刪掉只負責新聞語氣、移除後不改變事實的子句。
+  t=t.split(/(?<=[，；])/).map(x=>x.trim()).filter(x=>x&&!/^(?:顯示|反映|意味著|可見|由此可見|這也讓|這使得).{0,30}(?:市場|投資人|法人|後市|信心|期待)/.test(x)).join("");
   t=t.replace(/，\s*(?:法人圈|市場|投資人)[^，。]{0,28}(?=，|$)/g,"");
-  t=t.replace(/\s+/g," ").replace(/^[，、；：:\s]+|[。；，\s]+$/g,"").trim();
-  return trimPoint(t,82);
+  // 常見「公布時間 + 投顧預估」合併為單一事實，避免把開獎/倒數當重點。
+  const fm=t.match(/^(.{2,10}?)(?:[（(](\d{4,6})[）)])?\s*(\d{1,2}月營收)(?:即將|將)?(?:在)?(?:下週|下周|近期)?(?:公布|開獎)?[，,]\s*(.{2,36}?)(?:董事長|董座|研究員)?(?:預估|預期|看好)營收(?:將|可望|有望)?(?:突破|越過|達|衝上)?\s*([\d,.]+億元)/);
+  if(fm){const subject=(name||fm[1]||"").trim(),who=fm[4].replace(/(?:董事長|董座|研究員)/g,"").trim();t=`${who}預期${subject}${fm[3]}突破${fm[5]}`}
+  t=t.replace(/([投顧券商]{2,}|(?:群益|統一|元大|國泰|富邦|中信|第一金|凱基|永豐|玉山|兆豐)投顧)(?:董事長|董座|研究員)/g,"$1");
+  t=t.replace(/。(?=(?:在|因|主因|因此|受到|較|相較|海外|公司))/g,"，");
+  t=t.replace(/^[，、；：:\s]+|[。；，\s]+$/g,"").replace(/，{2,}/g,"，").replace(/\s+/g," ").trim();
+  return trimPoint(t,78);
 }
+
 function pointKey(p=""){
   const n=normNewsText(p);
   if(/訂單.*能見度/.test(p)){const y=p.match(/20\d{2}/)?.[0]||"",q=p.match(/第?([1-4一二三四])季|Q([1-4])/i);return `order|${y}|${q?.[1]||q?.[2]||""}`}
@@ -362,18 +443,25 @@ module.exports=async function handler(req,res){
   const terms=termsFrom(String(req.query.terms||""));
   if(mode==="match"&&!terms.length)return res.status(200).json({ok:true,code,name,mode,items:[]});
   const base=[name,code].filter(Boolean).join(" ");
-  const q=mode==="match"?`${base} (${terms.map(x=>`\"${x}\"`).join(" OR ")})`:base;
   const since=String(req.query.since||"").trim(),dateOk=/^\d{4}-\d{2}-\d{2}$/.test(since);
   const window=dateOk?` after:${since}`:" when:30d";
-  const rss=`https://news.google.com/rss/search?q=${encodeURIComponent(q+window)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
+  const queries=mode==="match"
+    ? [`${base} (${terms.map(x=>`\"${x}\"`).join(" OR ")})`]
+    : [...new Set([base,name,code,name&&code?`\"${name}(${code})\"`:""]).filter(Boolean)];
   try{
-    const r=await fetch(rss,{headers:RSS_HEADERS});if(!r.ok)throw new Error(`Google News HTTP ${r.status}`);
-    const xml=await r.text(),raw=[...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(x=>x[1]).map(block=>({title:stripHtml(tag(block,"title")),url:stripHtml(tag(block,"link")),publishedAt:stripHtml(tag(block,"pubDate")),source:sourceTag(block)})).filter(x=>x.title&&x.url&&!blockedNews(x));
-    const seen=[] ,picked=[];for(const x of raw){const k=x.title.replace(/【[^】]{0,16}】/g,"").replace(/[「」『』\[\]()（）｜|：:，,。！？!?\s]/g,"").replace(/即時新聞|新聞/g,"").toLowerCase();if(seen.some(y=>k===y||(k.length>18&&y.length>18&&(k.includes(y)||y.includes(k)))))continue;seen.push(k);picked.push(x);if(picked.length>=24)break}
+    const xmls=[];
+    for(const q of queries.slice(0,4)){
+      const rss=`https://news.google.com/rss/search?q=${encodeURIComponent(q+window)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
+      const r=await fetch(rss,{headers:RSS_HEADERS});if(!r.ok)continue;xmls.push(await r.text());
+    }
+    if(!xmls.length)throw new Error("Google News 無可用回應");
+    const raw=xmls.flatMap(xml=>[...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(x=>x[1]).map(block=>({title:stripHtml(tag(block,"title")),url:stripHtml(tag(block,"link")),publishedAt:stripHtml(tag(block,"pubDate")),source:sourceTag(block)}))).filter(x=>x.title&&x.url&&!blockedNews(x));
+    raw.sort((a,b)=>{const score=x=>((name&&x.title.includes(name))?8:0)+((code&&x.title.includes(code))?8:0)+(/CMoney/i.test(x.source)?2:0)+(Date.parse(x.publishedAt)||0)/1e13;return score(b)-score(a)});
+    const seen=[] ,picked=[];for(const x of raw){const k=x.title.replace(/【[^】]{0,16}】/g,"").replace(/[「」『』\[\]()（）｜|：:，,。！？!?\s]/g,"").replace(/即時新聞|新聞/g,"").toLowerCase();if(seen.some(y=>k===y||(k.length>18&&y.length>18&&(k.includes(y)||y.includes(k)))))continue;seen.push(k);picked.push(x);if(picked.length>=32)break}
     const items=[];
     for(let i=0;i<picked.length;i+=4){
       const batch=picked.slice(i,i+4);
-      const got=await Promise.all(batch.map(async x=>{const a=await fetchArticle(x.url);if(a.blocked)return null;const points=summarize(a.text,code,name,x.title);return {...x,title:cleanTitle(x.title)||x.title,url:a.url||x.url,summaryPoints:points,summary:points.join("\n"),contentAvailable:points.length>0}}));
+      const got=await Promise.all(batch.map(async x=>{const a=await fetchArticle(x.url,{title:x.title,source:x.source,name,code});if(a.blocked)return null;const points=summarize(a.text,code,name,x.title);return {...x,title:cleanTitle(x.title)||x.title,url:a.url||x.url,summaryPoints:points,summary:points.join("\n"),contentAvailable:points.length>0}}));
       items.push(...got.filter(Boolean))
     }
     res.setHeader("Cache-Control","s-maxage=900, stale-while-revalidate=1800");return res.status(200).json({ok:true,code,name,mode,items});
