@@ -186,6 +186,30 @@ function jsonLdArticleBodies(html){
   return out;
 }
 
+function sourceSpecificArticleText(html,url="",title=""){
+  const src=String(html||""),u=String(url||"");
+  const candidates=[];
+  const pushMatches=re=>{for(const m of src.matchAll(re))if(m[1])candidates.push(m[1])};
+  try{
+    const host=new URL(u).hostname.toLowerCase();
+    if(host.endsWith("cmoney.tw")){
+      // CMoney note-detail 歷代模板：正文常在 article/content/note detail 容器或 JSON 字段。
+      pushMatches(/<(?:div|section)[^>]+(?:id|class)=["'][^"']*(?:note[-_ ]?(?:content|detail)|article[-_ ]?(?:content|body)|post[-_ ]?content|content[-_ ]?detail)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/gi);
+      for(const m of src.matchAll(/["'](?:content|articleBody|noteContent|body)["']\s*:\s*["']((?:\\.|[^"']){120,})["']/gi))candidates.push(m[1].replace(/\\n/g,"\n").replace(/\\"/g,'"').replace(/\\u003c/g,"<").replace(/\\u003e/g,">").replace(/\\u0026/g,"&"));
+    }else if(host.includes("yahoo.com")){
+      pushMatches(/<(?:div|section)[^>]+(?:class|id)=["'][^"']*(?:caas-body|article-body|story-body|article-content)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/gi);
+    }else if(host.includes("line.me")||host.includes("today.line.me")){
+      pushMatches(/<(?:article|div|section)[^>]+(?:class|id)=["'][^"']*(?:articleContent|article-content|news-content|content-body)[^"']*["'][^>]*>([\s\S]*?)<\/(?:article|div|section)>/gi);
+    }else if(host.includes("moneydj.com")||host.includes("anue.com")||host.includes("cnyes.com")||host.includes("udn.com")){
+      pushMatches(/<(?:article|div|section)[^>]+(?:class|id)=["'][^"']*(?:article-body|article-content|story_body_content|story-content|article-content__editor)[^"']*["'][^>]*>([\s\S]*?)<\/(?:article|div|section)>/gi);
+    }
+  }catch{}
+  const cleaned=candidates.map(cleanArticleHtml).filter(x=>x.length>=100&&/[。！？]/.test(x));
+  if(!cleaned.length)return "";
+  const keys=[...String(title||"").matchAll(/[\u4e00-\u9fffA-Za-z0-9]{4,}/g)].map(x=>x[0]).slice(0,5);
+  return cleaned.sort((a,b)=>{const sa=keys.some(k=>a.includes(k))?100000:0,sb=keys.some(k=>b.includes(k))?100000:0;return sb+b.length-sa-a.length})[0]||"";
+}
+
 // 與目標價相同：JSON-LD -> <article> -> 常見正文容器 -> <main>。
 // 新聞摘要只接受實際正文，沒有正文就回空字串，不用標題/description 冒充。
 function extractArticleText(html,title=""){
@@ -254,7 +278,8 @@ async function fetchArticle(url,meta={}){
         const html=await r.text();lastHtml=html;verifiedUrl=finalUrl;
         if(/^https?:\/\/news\.google\.com\//i.test(finalUrl)&&/<c-wiz|DotsSplashUi|data-n-a-/i.test(html))continue;
         const title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||meta.title||"";
-        let text=extractArticleText(html,title);
+        let text=sourceSpecificArticleText(html,finalUrl,title);
+        if(text.length<80)text=extractArticleText(html,title);
         if(text.length<80)text=anchoredWholePageText(html,title||meta.title||"");
         if(text.length>=80){
           const canonical=canonicalUrlFromHtml(html,finalUrl),cmoney=normalizeCmoneyUrl(canonical||finalUrl,html);
@@ -311,126 +336,98 @@ function obviousBoilerplate(s=""){
   return /(?:更新時間|最後更新|發布時間|本文僅供|投資人仍應|投資有風險|本文不代表|合作關係|部分商品|平台與Yahoo|作者觀點|個人看法|因此選擇|先將低檔布局|核心持股仍應|應扣有賺錢的AI股|不構成投資建議|按讚|分享|訂閱|加入LINE|更多內容|完整文章|點此查看|來源：|圖片來源)/i.test(t)
     || /^20\d{2}年\d{1,2}月\d{1,2}日(?:週.|星期.)?\s*(?:上午|下午)?\d{1,2}:\d{2}$/i.test(t);
 }
-function fragmentLike(s=""){
-  const t=String(s||"").trim();
-  if(!t)return true;
-  return /^(?:即使|雖然|儘管|在.+(?:情況|情形|背景|之下)|因為|由於|受到|若|如果|隨著|相較|較去年|較上季|但|不過|然而|並|以及|同時)/.test(t)
-    || /(?:的情況下|之下|之際|同時)$/.test(t);
-}
-function sentenceHasConcrete(s=""){
-  return /(?:訂單能見度|訂單|接單|產能|擴產|量產|資本支出|營收|毛利率|EPS|每股盈餘|獲利|出貨|庫存|客戶|新產品|新技術|新市場|認證|合作|切入|供需|缺貨|轉單|漲價|降價|矽光子|CPO|CoWoS|先進封裝|買超|賣超|持股|外資|投信|自營商|20\d{2}年|第[一二三四1234]季|Q[1-4]|\d+(?:\.\d+)?[%％]|\d+(?:\.\d+)?億|\d+(?:\.\d+)?兆)/i.test(String(s||""));
-}
-function genericLowValue(s=""){
-  const t=String(s||"").trim();
-  if(/(?:市場期待|市場關注|值得關注|備受關注|成為焦點|討論焦點|表現強勢|表現亮眼|題材發酵|族群齊揚|多頭結構|多空分歧|後市可期|前景看好|成長動能可期|有望受惠|搶卡位|概念股|大戶籌碼動向曝光|盤中強勢|短線拉回|高檔震盪|均線|KD|MACD)/i.test(t)&&!/(?:\d+(?:\.\d+)?[%％億兆]|訂單|產能|營收|毛利率|EPS|量產|資本支出)/i.test(t))return true;
-  if(/^(?:全球最大|全球領先|半導體龍頭|晶圓代工龍頭).{0,30}(?:公司|廠|台積電)/.test(t)&&!/(?:\d|擴產地點|資本支出|產能增加|量產)/.test(t))return true;
-  return false;
-}
-function directTargetMention(s="",name="",code=""){
-  const t=String(s||"");return !!((name&&t.includes(name))||(code&&t.includes(code)));
-}
-function otherCompanyMention(s="",name="",code=""){
-  return unrelatedCompanySentence(s,name,code);
-}
-function removeOtherCompanyClauses(s="",name="",code=""){
-  const parts=String(s||"").split(/([，；。])/),out=[];let lastSep="";
-  for(let i=0;i<parts.length;i+=2){
-    const part=(parts[i]||"").trim(),sep=parts[i+1]||"";if(!part)continue;
-    const direct=directTargetMention(part,name,code),other=otherCompanyMention(part,name,code);
-    if(other&&!direct)continue;
-    out.push((lastSep&&out.length?lastSep:"")+part);lastSep=sep;
-  }
-  return out.join("").trim()||String(s||"");
-}
-function compressPoint(s="",name="",code=""){
-  let t=stripLeadJunk(concisePoint(removeOtherCompanyClauses(s,name,code),name,code));
-  // 第二次濃縮：把第一層抽出的句群改寫成「事實句」，不是只做表面清字。
-  t=t.replace(/^(?:[一二三四五六七八九十]+|\d+)[、.．)）]\s*/,"");
-  t=t.replace(/^(?:護國神山|晶圓代工龍頭|全球最大晶圓代工廠|全球最大晶圓代工廠商|半導體龍頭|科技巨頭|重量級|市場焦點|指標大廠|指標股)\s*/,"");
-  t=t.replace(/(?:法人圈)?(?:普遍)?(?:吃下定心丸|抱持樂觀看法|充滿期待|看好後市)/g,"");
-  t=t.replace(/(?:不約而同|普遍|順利|備受|持續受到|相當|非常|明顯|積極地|強勁地|全力|大舉|火速|強勢|重磅|驚人|亮眼|樂觀地)/g,"");
-  t=t.replace(/(?:成為市場焦點|引發市場關注|值得關注|備受市場關注|受到市場矚目|成為討論焦點|為後市增添想像空間)/g,"");
-  t=t.replace(/(?:市場|法人|投資人|外界)[^，。；]{0,18}(?:認為|預期|看好|關注)[，,:：]?\s*/g,"");
-  t=t.replace(/(?:目前|現階段|近期|接下來)\s*(?=(?:公司|訂單|產能|營收|毛利率|EPS|矽光子|資本支出|客戶|產品))/g,"");
-  t=t.replace(/(?:非常)?努力(?:在)?進行(?:的)?/g,"").replace(/持續(?:投入)?(?:研發)?(?:人力|資源)?/g,"持續投入研發");
-  t=t.replace(/(較去年同期[^，。]{0,24}(?:下降|下滑))[，,]?(?:是)?因([^，。]{2,32})導致較去年同期(?:略為|微幅)?(?:下降|下滑)/,"$1，主因$2");
-  // 刪掉只負責新聞語氣、移除後不改變事實的子句。
-  t=t.split(/(?<=[，；])/).map(x=>x.trim()).filter(x=>x&&!/^(?:顯示|反映|意味著|可見|由此可見|這也讓|這使得).{0,30}(?:市場|投資人|法人|後市|信心|期待)/.test(x)).join("");
-  t=t.replace(/，\s*(?:法人圈|市場|投資人)[^，。]{0,28}(?=，|$)/g,"");
-  // 常見「公布時間 + 投顧預估」合併為單一事實，避免把開獎/倒數當重點。
-  const fm=t.match(/^(.{2,10}?)(?:[（(](\d{4,6})[）)])?\s*(\d{1,2}月營收)(?:即將|將)?(?:在)?(?:下週|下周|近期)?(?:公布|開獎)?[，,]\s*(.{2,36}?)(?:董事長|董座|研究員)?(?:預估|預期|看好)營收(?:將|可望|有望)?(?:突破|越過|達|衝上)?\s*([\d,.]+億元)/);
-  if(fm){const subject=(name||fm[1]||"").trim(),who=fm[4].replace(/(?:董事長|董座|研究員)/g,"").trim();t=`${who}預期${subject}${fm[3]}突破${fm[5]}`}
-  t=t.replace(/([投顧券商]{2,}|(?:群益|統一|元大|國泰|富邦|中信|第一金|凱基|永豐|玉山|兆豐)投顧)(?:董事長|董座|研究員)/g,"$1");
-  t=t.replace(/。(?=(?:在|因|主因|因此|受到|較|相較|海外|公司))/g,"，");
-  t=t.replace(/^[，、；：:\s]+|[。；，\s]+$/g,"").replace(/，{2,}/g,"，").replace(/\s+/g," ").trim();
-  return trimPoint(t,78);
-}
-
-function pointKey(p=""){
-  const n=normNewsText(p);
-  if(/訂單.*能見度/.test(p)){const y=p.match(/20\d{2}/)?.[0]||"",q=p.match(/第?([1-4一二三四])季|Q([1-4])/i);return `order|${y}|${q?.[1]||q?.[2]||""}`}
-  if(/毛利率/.test(p))return `margin|${(p.match(/\d+(?:\.\d+)?[%％]/g)||[]).join("|")}`;
-  if(/營收/.test(p)&&/年增|月增|季增|成長|衰退|下降/.test(p))return `revenue|${(p.match(/\d+(?:\.\d+)?[%％]/g)||[]).join("|")}`;
-  if(/矽光子/.test(p))return "silicon-photonics";
-  return n.slice(0,30);
-}
-function summarize(text="",code="",name="",headline=""){
-  if(text.length<80||blockedTitle(headline))return [];
-  const targetName=String(name||"").trim(),targetCode=String(code||"").trim();
-  const sentences=[];
-  for(const line of String(text).split(/[\n\r]+/).map(x=>x.trim()).filter(Boolean)){
+function splitFragments(text=""){
+  const out=[];
+  for(const line of String(text||"").split(/[\n\r]+/).map(x=>x.trim()).filter(Boolean)){
     if(/^(?:延伸閱讀|相關新聞|更多新聞|推薦閱讀|熱門新聞|你可能也喜歡|看更多)/i.test(line))break;
     if(obviousBoilerplate(line)||authorNoiseSentence(line))continue;
-    for(const z of line.split(/(?<=[。！？!?；;])/).map(x=>x.trim()).filter(x=>x.length>=8&&x.length<=360)){
-      if(!obviousBoilerplate(z)&&!authorNoiseSentence(z))sentences.push(z);
+    const parts=line.split(/([，,。！？!?；;：:])/);
+    for(let i=0;i<parts.length;i+=2){
+      const raw=(parts[i]||"").replace(/\s+/g," ").trim(),sep=parts[i+1]||"";
+      if(raw.length>=2)out.push({raw,sep});
     }
   }
-  const candidates=[];
-  for(let i=0;i<sentences.length;i++){
-    const s0=sentences[i];
-    if(!directTargetMention(s0,targetName,targetCode))continue;
-    if(priceOnlySentence(s0)||genericLowValue(s0))continue;
-    let parts=[s0];
-    // 只承接緊鄰的因果／比較／代名詞句；遇到別家公司立即停止。
-    for(let j=1;j<=2&&i+j<sentences.length;j++){
-      const nx=sentences[i+j];
-      if(otherCompanyMention(nx,targetName,targetCode)&&!directTargetMention(nx,targetName,targetCode))break;
-      const connective=fragmentLike(nx)||/^(?:公司|該公司|其|同時|另外|此外|其中|主因|原因|因此|因而|導致|受到|較|相較)/.test(nx);
-      const continuation=!directTargetMention(nx,targetName,targetCode)&&connective&&sentenceHasConcrete(nx);
-      if(continuation)parts.push(nx); else break;
+  return out;
+}
+function fragmentHasTarget(s="",name="",code=""){
+  const t=String(s||"");return !!((name&&t.includes(name))||(code&&t.includes(code)));
+}
+function fragmentConcrete(s=""){
+  return /(?:訂單|接單|能見度|產能|擴產|量產|資本支出|營收|毛利率|毛利|EPS|每股盈餘|獲利|出貨|庫存|客戶|產品|技術|認證|合作|供需|缺貨|轉單|漲價|降價|矽光子|CPO|CoWoS|先進封裝|研發|財測|法說|20\d{2}年|第[一二三四1234]季|Q[1-4]|\d+(?:\.\d+)?[%％億兆元張])/i.test(String(s||""));
+}
+function fragmentEvent(s=""){
+  const t=String(s||"");
+  if(/營收/.test(t))return "revenue"; if(/毛利率|毛利/.test(t))return "margin"; if(/EPS|每股盈餘|淨利|獲利/.test(t))return "profit";
+  if(/訂單|接單|能見度/.test(t))return "order"; if(/產能|擴產|量產|產線/.test(t))return "capacity"; if(/資本支出/.test(t))return "capex";
+  if(/矽光子|CPO|CoWoS|先進封裝|技術|研發|產品/.test(t))return "technology"; if(/客戶|合作|認證|供應鏈/.test(t))return "customer";
+  if(/漲價|降價|缺貨|供需|庫存/.test(t))return "supply"; if(/外資|投信|自營商|買超|賣超|持股/.test(t))return "flow"; return "";
+}
+function cleanFragment(s="",name="",code=""){
+  let t=String(s||"").replace(/\s+/g," ").trim();
+  t=t.replace(/^(?:[一二三四五六七八九十]+|\d+)[、.．)）]\s*/,"");
+  t=t.replace(/^(?:護國神山|晶圓代工龍頭|全球晶圓代工龍頭|全球最大晶圓代工廠商?|半導體龍頭|科技巨頭|重量級|市場焦點|指標大廠|指標股)\s*/,"");
+  t=t.replace(/^(?:以及|並且|並|而且|但|不過|然而|即使|雖然|儘管|另外|此外|同時|至於|其中|另一方面|值得注意的是|展望未來|回顧前一交易日|從營運數字來看|身為)[，,:：]?\s*/,"");
+  t=t.replace(/(?:不約而同|普遍|順利|備受|持續受到|相當|非常|明顯|積極地|強勁地|全力|大舉|火速|強勢|重磅|驚人|亮眼|樂觀地|成功地)/g,"");
+  t=t.replace(/(?:吃下定心丸|抱持樂觀看法|充滿期待|成為市場焦點|引發市場關注|值得關注|備受市場關注|受到市場矚目|成為討論焦點|為後市增添想像空間)/g,"");
+  t=t.replace(/^(?:市場|法人|投資人|外界)[^，。；]{0,18}(?:認為|預期|看好|關注)[，,:：]?\s*/,"");
+  if(name&&code)t=t.replace(new RegExp(`${name}\\s*[（(]${code}[）)]`,`g`),name);
+  return t.replace(/^[，、；：:\s]+|[。；，\s]+$/g,"").replace(/，{2,}/g,"，").trim();
+}
+function relatedFragments(a,b,name,code){
+  if(!a||!b)return false;
+  if(unrelatedCompanySentence(b,name,code)&&!fragmentHasTarget(b,name,code))return false;
+  const ea=fragmentEvent(a),eb=fragmentEvent(b);
+  const connective=/^(?:因|主因|原因|因此|因而|導致|受到|較|相較|年增|月增|季增|預估|預期|其中|公司|該公司|其)/.test(b);
+  if(ea&&eb&&ea===eb)return true;
+  if(connective&&fragmentConcrete(b))return true;
+  const nums=/\d+(?:\.\d+)?[%％億兆元張]/.test(b);
+  return !!(ea&&nums&&!eb);
+}
+function articleSubjectRelevant(title="",text="",name="",code=""){
+  const n=String(name||"").trim(),c=String(code||"").trim(),h=String(title||""),body=String(text||"").slice(0,2200);
+  if(!n&&!c)return true;
+  const targetTitle=(n&&h.includes(n)?5:0)+(c&&h.includes(c)?4:0);
+  const targetBody=(n?(body.split(n).length-1):0)+(c?(body.split(c).length-1):0);
+  let other=0;
+  for(const m of stockMarkers(h+" "+body)){if(m.code&&m.code!==c)other++}
+  for(const x of OTHER_COMPANY_TOKENS)if(x!==n){const re=new RegExp(x.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"gi");other+=(body.match(re)||[]).length+(h.match(re)||[]).length*3}
+  // 標題直接命中目標最可靠；若標題未命中，正文必須有足夠密度且不能明顯由別家公司主導。
+  if(targetTitle>=4)return true;
+  return targetBody>=3&&targetBody*2>=other;
+}
+function pointKey(p=""){
+  const t=String(p||""),nums=(t.match(/\d+(?:\.\d+)?[%％億兆元張]?/g)||[]).join("|");
+  const period=(t.match(/20\d{2}年\d{1,2}月|\d{1,2}月|20\d{2}年第?[一二三四1234]季|第?[一二三四1234]季|Q[1-4]/i)||[])[0]||"";
+  return `${fragmentEvent(t)||"other"}|${period}|${nums}`;
+}
+function summarize(text="",code="",name="",headline=""){
+  if(text.length<80||blockedTitle(headline)||!articleSubjectRelevant(headline,text,name,code))return [];
+  const n=String(name||"").trim(),c=String(code||"").trim(),frags=splitFragments(text),candidates=[];
+  // 第一層：先切碎，再找核心碎片；保留前後文，清洗後才決定是否拼接。
+  for(let i=0;i<frags.length;i++){
+    const raw=frags[i].raw;
+    if(!fragmentHasTarget(raw,n,c)||priceOnlySentence(raw)||genericLowValue(raw))continue;
+    let group=[cleanFragment(raw,n,c)],event=fragmentEvent(raw);
+    for(let j=i+1;j<=Math.min(i+3,frags.length-1);j++){
+      const nx=frags[j].raw,clean=cleanFragment(nx,n,c);if(!clean)continue;
+      if(unrelatedCompanySentence(nx,n,c)&&!fragmentHasTarget(nx,n,c))break;
+      if(relatedFragments(group[group.length-1],clean,n,c)){group.push(clean);if(!event)event=fragmentEvent(clean)}else break;
     }
-    // 若後句已完整包含前句的核心數字/事件，直接以後句為主，避免重複敘述。
-    if(parts.length>1){
-      const firstCore=normNewsText(compressPoint(parts[0],targetName,targetCode));
-      const later=parts.slice(1).join(" ");
-      if(firstCore.length>6&&normNewsText(later).includes(firstCore.slice(0,Math.min(14,firstCore.length))))parts=parts.slice(1);
-    }
-    let g=parts.join(" ").replace(/\s+/g," ").trim();
-    if(!g||obviousBoilerplate(g)||authorNoiseSentence(g)||priceOnlySentence(g)||genericLowValue(g))continue;
-    if(!sentenceHasConcrete(g))continue;
-    candidates.push({g,order:i});
+    // 前一碎片可能是期間/原因/比較基準，只有能補足目前事件時才補。
+    if(i>0){const prev=cleanFragment(frags[i-1].raw,n,c);if(prev&&fragmentConcrete(prev)&&relatedFragments(prev,group[0],n,c)&&!unrelatedCompanySentence(prev,n,c))group.unshift(prev)}
+    let point=group.filter(Boolean).join("，").replace(/，{2,}/g,"，");
+    point=cleanFragment(point,n,c);if(point.length<8||!fragmentConcrete(point)||obviousBoilerplate(point)||authorNoiseSentence(point))continue;
+    let score=(event?6:0)+(/\d/.test(point)?4:0)+(/主因|導致|年增|月增|季增|較去年|能見度|量產|擴產/.test(point)?4:0);
+    candidates.push({point:trimPoint(point,86),score,order:i,key:pointKey(point)});
   }
-
-  const facts=[];
-  for(const {g,order} of candidates){
-    let score=0,low=g.toLowerCase();
-    for(const words of Object.values(GROUPS))score+=words.filter(w=>low.includes(w.toLowerCase())).length*4;
-    if(/\d+(?:\.\d+)?[%％億兆]/.test(g))score+=4;
-    if(/(?:年增|月增|季增|較去年|較上季|主因|導致|訂單能見度|量產|擴產|資本支出|認證|新客戶|新產品)/.test(g))score+=5;
-    if(TARGET_WORDS.some(w=>g.includes(w)))score-=5;
-    if(score<9)continue;
-    let point=compressPoint(g,targetName,targetCode);
-    point=point.replace(/^(?:（?\d{4,6}）?)\s*/,"");
-    if(point.length<8||obviousBoilerplate(point)||authorNoiseSentence(point)||priceOnlySentence(point)||genericLowValue(point))continue;
-    if(/^(?:根據|以及|並|但|不過|然而|因此|由於|受到|即使)/.test(point))continue;
-    facts.push({point,score,order});
-  }
-
+  // 第二層：單篇事件去重；同事件保留資訊較完整者，再做一次殘留詞清洗。
   const kept=[];
-  for(const x of facts.sort((a,b)=>b.score-a.score||a.order-b.order)){
-    const key=pointKey(x.point),norm=normNewsText(x.point);
-    if(kept.some(y=>y.key===key||(norm.length>18&&y.norm.length>18&&(norm.includes(y.norm)||y.norm.includes(norm)))))continue;
-    kept.push({...x,key,norm});
+  for(const x of candidates.sort((a,b)=>b.score-a.score||b.point.length-a.point.length)){
+    const norm=normNewsText(x.point),dup=kept.find(y=>y.key===x.key||(norm.length>16&&y.norm.length>16&&(norm.includes(y.norm)||y.norm.includes(norm))));
+    if(dup)continue;
+    let point=cleanFragment(x.point,n,c).replace(/^(?:根據|顯示|反映|意味著|可見|由此可見)[，,:：]?\s*/,"");
+    if(/^(?:因為|由於|受到|若|如果|隨著|相較|較去年|較上季)[，,:：]?\s*$/.test(point))continue;
+    kept.push({...x,point,norm});
   }
   return kept.sort((a,b)=>a.order-b.order).slice(0,8).map(x=>x.point);
 }
@@ -446,7 +443,7 @@ module.exports=async function handler(req,res){
   const since=String(req.query.since||"").trim(),dateOk=/^\d{4}-\d{2}-\d{2}$/.test(since);
   const window=dateOk?` after:${since}`:" when:30d";
   try{
-    // v2.5.0.13: restore v2.5.0.11's proven single primary discovery.
+    // v2.5.0.14: restore v2.5.0.11's proven single primary discovery.
     // Only when the primary query has too few direct stock hits do we run ONE lightweight fallback.
     const rssRows=async q=>{
       const rss=`https://news.google.com/rss/search?q=${encodeURIComponent(q+window)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
