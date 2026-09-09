@@ -445,25 +445,50 @@ module.exports=async function handler(req,res){
   const base=[name,code].filter(Boolean).join(" ");
   const since=String(req.query.since||"").trim(),dateOk=/^\d{4}-\d{2}-\d{2}$/.test(since);
   const window=dateOk?` after:${since}`:" when:30d";
-  const queries=mode==="match"
-    ? [`${base} (${terms.map(x=>`\"${x}\"`).join(" OR ")})`]
-    : [...new Set([base,name,code,name&&code?`\"${name}(${code})\"`:""]).filter(Boolean)];
   try{
-    const xmls=[];
-    for(const q of queries.slice(0,4)){
+    // v2.5.0.13: restore v2.5.0.11's proven single primary discovery.
+    // Only when the primary query has too few direct stock hits do we run ONE lightweight fallback.
+    const rssRows=async q=>{
       const rss=`https://news.google.com/rss/search?q=${encodeURIComponent(q+window)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
-      const r=await fetch(rss,{headers:RSS_HEADERS});if(!r.ok)continue;xmls.push(await r.text());
+      const r=await fetch(rss,{headers:RSS_HEADERS});if(!r.ok)return [];
+      const xml=await r.text();
+      return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(x=>x[1]).map(block=>({title:stripHtml(tag(block,"title")),url:stripHtml(tag(block,"link")),publishedAt:stripHtml(tag(block,"pubDate")),source:sourceTag(block)})).filter(x=>x.title&&x.url&&!blockedNews(x));
+    };
+    const primaryQ=mode==="match"?`${base} (${terms.map(x=>`\"${x}\"`).join(" OR ")})`:base;
+    let raw=await rssRows(primaryQ);
+    if(mode!=="match"){
+      const directHits=raw.filter(x=>(name&&x.title.includes(name))||(code&&x.title.includes(code))).length;
+      if(directHits<4){
+        // Fix sparse-name cases such as 新唐 without multiplying every stock request by 4.
+        const fallbackQ=name||code;
+        if(fallbackQ&&fallbackQ!==primaryQ)raw.push(...await rssRows(fallbackQ));
+      }
     }
-    if(!xmls.length)throw new Error("Google News 無可用回應");
-    const raw=xmls.flatMap(xml=>[...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(x=>x[1]).map(block=>({title:stripHtml(tag(block,"title")),url:stripHtml(tag(block,"link")),publishedAt:stripHtml(tag(block,"pubDate")),source:sourceTag(block)}))).filter(x=>x.title&&x.url&&!blockedNews(x));
-    raw.sort((a,b)=>{const score=x=>((name&&x.title.includes(name))?8:0)+((code&&x.title.includes(code))?8:0)+(/CMoney/i.test(x.source)?2:0)+(Date.parse(x.publishedAt)||0)/1e13;return score(b)-score(a)});
-    const seen=[] ,picked=[];for(const x of raw){const k=x.title.replace(/【[^】]{0,16}】/g,"").replace(/[「」『』\[\]()（）｜|：:，,。！？!?\s]/g,"").replace(/即時新聞|新聞/g,"").toLowerCase();if(seen.some(y=>k===y||(k.length>18&&y.length>18&&(k.includes(y)||y.includes(k)))))continue;seen.push(k);picked.push(x);if(picked.length>=32)break}
+    if(!raw.length)throw new Error("Google News 無可用回應");
+    raw.sort((a,b)=>{const score=x=>((name&&x.title.includes(name))?8:0)+((code&&x.title.includes(code))?8:0)+(Date.parse(x.publishedAt)||0)/1e13;return score(b)-score(a)});
+    const seen=[],picked=[];
+    for(const x of raw){
+      const k=x.title.replace(/【[^】]{0,16}】/g,"").replace(/[「」『』\[\]()（）｜|：:，,。！？!?\s]/g,"").replace(/即時新聞|新聞/g,"").toLowerCase();
+      if(seen.some(y=>k===y||(k.length>18&&y.length>18&&(k.includes(y)||y.includes(k)))))continue;
+      seen.push(k);picked.push(x);if(picked.length>=24)break;
+    }
     const items=[];
     for(let i=0;i<picked.length;i+=4){
       const batch=picked.slice(i,i+4);
-      const got=await Promise.all(batch.map(async x=>{const a=await fetchArticle(x.url,{title:x.title,source:x.source,name,code});if(a.blocked)return null;const points=summarize(a.text,code,name,x.title);return {...x,title:cleanTitle(x.title)||x.title,url:a.url||x.url,summaryPoints:points,summary:points.join("\n"),contentAvailable:points.length>0}}));
-      items.push(...got.filter(Boolean))
+      const got=await Promise.all(batch.map(async x=>{
+        try{
+          const a=await fetchArticle(x.url,{title:x.title,source:x.source,name,code});
+          if(a.blocked)return null;
+          const points=summarize(a.text,code,name,x.title);
+          return {...x,title:cleanTitle(x.title)||x.title,url:a.url||x.url,summaryPoints:points,summary:points.join("\n"),contentAvailable:points.length>0};
+        }catch{
+          // A single publisher/body failure must never erase the whole stock's news list.
+          return {...x,title:cleanTitle(x.title)||x.title,summaryPoints:[],summary:"",contentAvailable:false};
+        }
+      }));
+      items.push(...got.filter(Boolean));
     }
-    res.setHeader("Cache-Control","s-maxage=900, stale-while-revalidate=1800");return res.status(200).json({ok:true,code,name,mode,items});
+    res.setHeader("Cache-Control","s-maxage=900, stale-while-revalidate=1800");
+    return res.status(200).json({ok:true,code,name,mode,items});
   }catch(e){return res.status(502).json({ok:false,error:e.message||"新聞搜尋失敗"})}
 }
