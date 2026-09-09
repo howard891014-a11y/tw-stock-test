@@ -30,6 +30,11 @@ function priceOnlySentence(s=""){return /股價|現價|收盤價|漲幅|漲跌|�
 
 function absoluteUrl(base,href=""){try{return new URL(decodeEntities(href),base).href}catch{return ""}}
 function ampUrlFromHtml(html,base){const m=String(html||"").match(/<link[^>]+rel=["']amphtml["'][^>]+href=["']([^"']+)["']/i)||String(html||"").match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']amphtml["']/i);return m?absoluteUrl(base,m[1]):""}
+function canonicalUrlFromHtml(html,base){
+  const src=String(html||"");
+  const m=src.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i)||src.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']canonical["']/i)||src.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i);
+  const u=m?absoluteUrl(base,m[1]):"";return usableSourceUrl(u)&&!blockedUrl(u)?u:"";
+}
 function embeddedArticleStrings(html){
   const out=[];
   const blocks=String(html||"").match(/<script[^>]*(?:id=["']__NEXT_DATA__["']|type=["']application\/json["'])[^>]*>[\s\S]*?<\/script>/gi)||[];
@@ -194,7 +199,7 @@ async function fetchArticle(url){
       if(/^https?:\/\/news\.google\.com\//i.test(finalUrl)&&/<c-wiz|DotsSplashUi|data-n-a-/i.test(html))continue;
       const title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"";
       const text=extractArticleText(html,title);
-      if(text.length>=80)return{url:finalUrl,text,resolved:true,status:r.status,blocked:false};
+      if(text.length>=80){const canonical=canonicalUrlFromHtml(html,finalUrl);return{url:canonical||finalUrl,text,resolved:true,status:r.status,blocked:false};}
     }catch{}
   }
   // 第二層：原頁 HTML 有 AMP 版本時改抓 AMP；不少新聞站正文只在 AMP/SSR 版完整輸出。
@@ -203,7 +208,7 @@ async function fetchArticle(url){
     try{
       const r=await fetchText(amp,{headers:PAGE_HEADERS,redirect:"follow"},4200),finalUrl=r.url||amp;
       if(blockedUrl(finalUrl))return{url:finalUrl,text:"",resolved:true,status:r.status,blocked:true};
-      if(r.ok){const html=await r.text(),title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"",text=extractArticleText(html,title);if(text.length>=80)return{url:lastUrl||finalUrl,text,resolved:true,status:r.status,blocked:false}}
+      if(r.ok){const html=await r.text(),title=html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]||"",text=extractArticleText(html,title);if(text.length>=80){const canonical=canonicalUrlFromHtml(lastHtml,lastUrl)||canonicalUrlFromHtml(html,finalUrl);return{url:canonical||lastUrl||finalUrl,text,resolved:true,status:r.status,blocked:false}}}
     }catch{}
   }
   return{url:lastUrl,text:"",resolved:usableSourceUrl(lastUrl),status:lastStatus,blocked:false};
@@ -267,10 +272,18 @@ function removeOtherCompanyClauses(s="",name="",code=""){
 }
 function compressPoint(s="",name="",code=""){
   let t=stripLeadJunk(concisePoint(removeOtherCompanyClauses(s,name,code),name,code));
+  // 第二次文字壓縮：只刪新聞文筆，不刪數字、事件、比較與因果。
+  t=t.replace(/^(?:[一二三四五六七八九十]+|\d+)[、.．)）]\s*/,"");
+  t=t.replace(/^(?:護國神山|晶圓代工龍頭|全球最大晶圓代工廠|半導體龍頭|科技巨頭|重量級|市場焦點)\s*/,"");
   t=t.replace(/^(?:市場對|投資人對)[^，。]{0,20}(?:抱持|維持)[^，。]{0,10}(?:期待|樂觀)[，,:：]?\s*/,"");
+  t=t.replace(/(?:法人圈)?(?:普遍)?(?:吃下定心丸|抱持樂觀看法|充滿期待)/g,"");
+  t=t.replace(/(?:不約而同|普遍|順利|備受|持續受到|相當|非常|明顯|積極地|強勁地)/g,"");
+  t=t.replace(/(?:成為市場焦點|引發市場關注|值得關注|備受市場關注)/g,"");
   t=t.replace(/(?:目前|現階段)\s*(?=(?:公司|訂單|產能|營收|毛利率|EPS|矽光子))/g,"");
-  t=t.replace(/(?:非常)?努力(?:在)?進行(?:的)?/g,"").replace(/持續(?:投入)?(?:研發)?(?:人力|資源)?/g,"持續投入研發").replace(/(較去年同期[^，。]{0,24}(?:下降|下滑))[，,]?(?:是)?因([^，。]{2,32})導致較去年同期(?:略為|微幅)?(?:下降|下滑)/,"$1，主因$2").replace(/\s+/g," ").replace(/[。；]+$/g,"").trim();
-  return trimPoint(t,88);
+  t=t.replace(/(?:非常)?努力(?:在)?進行(?:的)?/g,"").replace(/持續(?:投入)?(?:研發)?(?:人力|資源)?/g,"持續投入研發").replace(/(較去年同期[^，。]{0,24}(?:下降|下滑))[，,]?(?:是)?因([^，。]{2,32})導致較去年同期(?:略為|微幅)?(?:下降|下滑)/,"$1，主因$2");
+  t=t.replace(/，\s*(?:法人圈|市場|投資人)[^，。]{0,28}(?=，|$)/g,"");
+  t=t.replace(/\s+/g," ").replace(/^[，、；：:\s]+|[。；，\s]+$/g,"").trim();
+  return trimPoint(t,82);
 }
 function pointKey(p=""){
   const n=normNewsText(p);
