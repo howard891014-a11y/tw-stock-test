@@ -23,6 +23,15 @@ function pickPeFromText(text=""){
   const m=String(text).match(/(-?\d+(?:\.\d+)?)\s*\(\s*(-?\d+(?:\.\d+)?)\s*\)\s*本益比\s*\(同業平均\)/);
   return m?{currentPe:num(m[1]),peerPe:num(m[2])}:{};
 }
+function pickPbFromText(text=""){
+  const t=String(text);
+  const patterns=[
+    /(-?\d+(?:\.\d+)?)\s*\(\s*(-?\d+(?:\.\d+)?)\s*\)\s*股價淨值比\s*\(同業平均\)/,
+    /股價淨值比[^0-9-]*(-?\d+(?:\.\d+)?)[^0-9-]+同業平均[^0-9-]*(-?\d+(?:\.\d+)?)/
+  ];
+  for(const re of patterns){const m=t.match(re);if(m)return {pagePb:num(m[1]),peerPb:num(m[2])}}
+  return {};
+}
 function parseQuarterly(lines){
   const out=[];
   for(let i=0;i<lines.length;i++){
@@ -43,10 +52,11 @@ function parseYahooEpsPage(html){
   const lines=htmlToLines(html);
   const joined=lines.join(" ");
   const pe=pickPeFromText(joined);
+  const pb=pickPbFromText(joined);
   const quarterly=parseQuarterly(lines);
   const latest4=quarterly.slice(0,4);
   const ttm=latest4.length===4?round2(latest4.reduce((s,x)=>s+x.eps,0)):null;
-  return {quarterly,latest4,ttm,...pe};
+  return {quarterly,latest4,ttm,...pe,...pb};
 }
 function firstNumberAfterLabel(lines,labelRe,maxLook=4){
   for(let i=0;i<lines.length;i++){
@@ -101,15 +111,17 @@ function buildValuation(parsed,profile,price){
   // Yahoo 顯示的 PE 保留原口徑，不以「股價 / 自行加總 TTM EPS」覆寫，以免不同資料口徑混用。
   const currentPe=ttm>0?num(parsed.currentPe):null;
   const latestEps=parsed.latest4?.length?num(parsed.latest4[0].eps):null;
-  const pb=(last>0&&bookValue>0)?round2(last/bookValue):null;
+  const pb=num(parsed.pagePb) ?? ((last>0&&bookValue>0)?round2(last/bookValue):null);
+  const peerPb=num(parsed.peerPb);
+  const pbPremiumPct=(pb>0&&peerPb>0)?round2((pb/peerPb-1)*100):null;
   const dividendYield=(last>0&&cashDividend>=0)?round2(cashDividend/last*100):null;
   const pe=peStatus(currentPe,peerPe,ttm);
   return {
     ttm,latestEps,currentPe,peerPe,pePremiumPct:pe.premiumPct,
-    bookValue,currentPb:pb,cashDividend,dividendYield,last,
+    bookValue,currentPb:pb,peerPb,pbPremiumPct,cashDividend,dividendYield,last,
     label:pe.label,statusDetail:pe.detail,latest4:parsed.latest4||[],
     source:"Yahoo 股市",
-    method:"Yahoo PE 同業比較＋實際 EPS／BPS／現金股利",
+    method:"Yahoo PE／PB 同業比較＋實際 EPS／BPS",
     profitable:ttm>0
   };
 }
@@ -143,4 +155,4 @@ module.exports=async function handler(req,res){
   }
 };
 
-module.exports._test={htmlToLines,parseQuarterly,parseYahooEpsPage,parseYahooProfilePage,buildValuation,pickPeFromText,peStatus};
+module.exports._test={htmlToLines,parseQuarterly,parseYahooEpsPage,parseYahooProfilePage,buildValuation,pickPeFromText,pickPbFromText,peStatus};
