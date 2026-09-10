@@ -82,14 +82,14 @@ function renderValuation(v){
   setText("valuationStatusDetail",v.statusDetail||"--");
   setText("valuationCurrentPe",profitable?valuationMetric(v.currentPe," 倍","資料不足"):"不適用");
   setText("valuationPeerPe",valuationMetric(v.peerPe," 倍","資料不足"));
-  setText("valuationPeGap",Number.isFinite(Number(v.pePremiumPct))?`${Number(v.pePremiumPct)>=0?"溢價":"折價"} ${valuationFmt(Math.abs(Number(v.pePremiumPct)),"%")}`:(profitable?"資料不足":"不適用"));
+  setText("valuationPeGap",Number.isFinite(Number(v.pePremiumPct))?`${Number(v.pePremiumPct)>=0?"+":"-"}${valuationFmt(Math.abs(Number(v.pePremiumPct)),"%")}`:(profitable?"資料不足":"不適用"));
   setText("valuationBookValue",valuationMetric(v.bookValue," 元","資料不足"));
   setText("valuationCurrentPb",valuationMetric(v.currentPb," 倍","資料不足"));
   setText("valuationPeerPb",valuationMetric(v.peerPb," 倍","資料不足"));
-  setText("valuationPbGap",Number.isFinite(Number(v.pbPremiumPct))?`${Number(v.pbPremiumPct)>=0?"溢價":"折價"} ${valuationFmt(Math.abs(Number(v.pbPremiumPct)),"%")}`:"資料不足");
+  setText("valuationPbGap",Number.isFinite(Number(v.pbPremiumPct))?`${Number(v.pbPremiumPct)>=0?"+":"-"}${valuationFmt(Math.abs(Number(v.pbPremiumPct)),"%")}`:"資料不足");
   const peGap=$("valuationPeGap"), pbGap=$("valuationPbGap");
-  if(peGap){peGap.classList.remove("valuation-premium-high","valuation-premium-low");if(Number.isFinite(Number(v.pePremiumPct)))peGap.classList.add(Number(v.pePremiumPct)>=0?"valuation-premium-high":"valuation-premium-low");}
-  if(pbGap){pbGap.classList.remove("valuation-premium-high","valuation-premium-low");if(Number.isFinite(Number(v.pbPremiumPct)))pbGap.classList.add(Number(v.pbPremiumPct)>=0?"valuation-premium-high":"valuation-premium-low");}
+  if(peGap){peGap.classList.remove("valuation-premium-high","valuation-premium-low");peGap.removeAttribute("data-tag");if(Number.isFinite(Number(v.pePremiumPct))){const high=Number(v.pePremiumPct)>=0;peGap.classList.add(high?"valuation-premium-high":"valuation-premium-low");peGap.dataset.tag=high?"較同業高":"較同業低";}}
+  if(pbGap){pbGap.classList.remove("valuation-premium-high","valuation-premium-low");pbGap.removeAttribute("data-tag");if(Number.isFinite(Number(v.pbPremiumPct))){const high=Number(v.pbPremiumPct)>=0;pbGap.classList.add(high?"valuation-premium-high":"valuation-premium-low");pbGap.dataset.tag=high?"較同業高":"較同業低";}}
   setText("valuationMethod",v.statusDetail||v.method||"Yahoo PE／PB 同業比較＋實際 EPS／BPS");
   setText("valuationNote",profitable
     ?"估值用來判斷相對昂貴程度，不直接當作買賣價。PE 採 Yahoo 顯示口徑；PB 與同業比較依 Yahoo 可取得資料計算。"

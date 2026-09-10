@@ -467,6 +467,69 @@ body{padding-bottom:68px}
 .valuation-compare{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:0!important}.valuation-mini{min-height:88px!important;padding:8px 10px!important;border:0!important;border-radius:0!important;background:transparent!important;text-align:center!important;display:flex!important;flex-direction:column!important;justify-content:center!important;position:relative!important}.valuation-mini+.valuation-mini:before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:1px;background:#2a5672}.valuation-mini span{display:block!important;color:#a7bed1!important;font-size:13px!important}.valuation-mini b{display:block!important;margin-top:7px!important;font-size:22px!important;color:#f5f8fc!important}.valuation-section:nth-of-type(2) .valuation-mini:last-child b{color:#ff6574!important}.valuation-section:nth-of-type(3) .valuation-mini:last-child b{color:#13e0aa!important}
 .valuation-bps{display:block!important}.valuation-bps .valuation-mini{display:grid!important;grid-template-columns:220px 1px 1fr!important;align-items:center!important;min-height:74px!important;text-align:left!important}.valuation-bps .valuation-mini:after{content:"代表公司每股的淨資產價值";grid-column:3;color:#a7bed1;font-size:15px;padding-left:28px}.valuation-bps .valuation-mini:before{content:"";grid-column:2;grid-row:1/3;width:1px;height:50px;background:#2a5672}.valuation-bps .valuation-mini span{grid-column:1;font-size:0!important}.valuation-bps .valuation-mini span:after{content:"每股淨值";font-size:13px;color:#a7bed1}.valuation-bps .valuation-mini b{grid-column:1;font-size:27px!important}.valuation-note{display:none!important}.valuation-card.is-loading .valuation-hero strong,.valuation-card.is-loading .valuation-section b{opacity:.45}
 @media(max-width:720px){.valuation-card{padding:12px!important}.valuation-card .card-title{font-size:21px!important}.valuation-card .valuation-hero{grid-template-columns:42% 58%!important;min-height:96px!important}.valuation-card .valuation-hero span,.valuation-card .valuation-hero strong{padding-left:20px!important}.valuation-card .valuation-hero strong{font-size:32px!important}.valuation-card .valuation-hero small{padding:0 16px!important;font-size:14px!important}.valuation-section{padding:12px!important}.valuation-section-title{font-size:16px!important;margin-bottom:11px!important}.valuation-eps5{gap:5px!important}.valuation-eps-chip{min-height:94px!important;padding:10px 3px 7px!important}.valuation-eps-chip span{font-size:9px!important}.valuation-eps-chip b{font-size:17px!important;margin-top:7px!important}.valuation-eps-chip em{font-size:8px!important;padding:2px 7px!important;margin-top:6px!important}.valuation-mini{min-height:76px!important;padding:6px 4px!important}.valuation-mini span{font-size:10px!important}.valuation-mini b{font-size:17px!important}.valuation-bps .valuation-mini{grid-template-columns:40% 1px 1fr!important}.valuation-bps .valuation-mini:after{font-size:11px;padding-left:14px}.valuation-bps .valuation-mini b{font-size:22px!important}}
+
+/* v2.5.1.6 — valuation mobile UI fidelity pass */
+.valuation-card{padding:14px!important;background:#071827!important;border:1px solid #17364d!important;border-radius:18px!important}
+.valuation-card .card-title{font-size:26px!important;font-weight:900!important;margin:0 0 14px!important;padding:0 2px!important}
+.valuation-card .card-title .badge{font-size:0!important;border:0!important;background:transparent!important;padding:0!important}
+.valuation-card .card-title .badge:after{content:"資料來源：Yahoo 股市";font-size:11px!important;font-weight:500;color:#8baac2!important}
+.valuation-card .valuation-hero{display:grid!important;grid-template-columns:27% 73%!important;min-height:92px!important;margin:0 0 14px!important;border:1px solid #008d78!important;border-radius:14px!important;background:linear-gradient(90deg,rgba(0,105,88,.48),rgba(0,54,58,.42))!important;overflow:hidden!important;position:relative!important}
+.valuation-card .valuation-hero:before{width:9px!important;background:#0ce3ae!important}
+.valuation-card .valuation-hero span{grid-column:1!important;grid-row:1!important;padding:14px 10px 0 22px!important;font-size:13px!important;color:#c8d7e2!important;align-self:start!important}
+.valuation-card .valuation-hero strong{grid-column:1!important;grid-row:1!important;padding:0 10px 13px 22px!important;margin:0!important;font-size:31px!important;line-height:1!important;color:#10e8a9!important;align-self:end!important}
+.valuation-card .valuation-hero small{grid-column:2!important;grid-row:1!important;min-height:62px!important;margin:12px 0!important;padding:0 18px!important;border-left:1px solid #2abca8!important;display:flex!important;align-items:center!important;color:#c8d7e2!important;font-size:14px!important;line-height:1.55!important}
+.valuation-section{margin-top:12px!important;padding:14px!important;border:1px solid #1b3b53!important;border-radius:15px!important;background:linear-gradient(135deg,#0a1d2d,#081724)!important}
+.valuation-section-title{margin-bottom:12px!important;gap:10px!important;font-size:18px!important;font-weight:900!important}
+.valuation-section-title>span{font-size:10px!important;padding:5px 9px!important}
+.valuation-section:nth-of-type(1) .valuation-section-title:before{content:"▥"!important;color:#43bfff!important;font-size:25px!important}
+.valuation-section:nth-of-type(2) .valuation-section-title:before{content:"PE"!important;width:32px!important;height:32px!important;border-radius:50%!important;background:#46bcff!important;color:#082033!important;font-size:14px!important}
+.valuation-section:nth-of-type(3) .valuation-section-title:before{content:"◆"!important;color:#45bfff!important;font-size:24px!important}
+.valuation-section:nth-of-type(4) .valuation-section-title:before{content:"▣"!important;color:#45bfff!important;font-size:24px!important}
+.valuation-eps5{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important}
+.valuation-eps-chip{min-height:102px!important;padding:10px 4px 8px!important;border:1px solid #1d4058!important;border-radius:11px!important;background:#091a29!important;justify-content:flex-start!important}
+.valuation-eps-chip span{font-size:10px!important;line-height:1.3!important;color:#9eb5c9!important}
+.valuation-eps-chip b{font-size:19px!important;margin-top:10px!important;color:#f5f8fc!important}
+.valuation-eps-chip.is-ttm{border:1px solid #1d4058!important;background:#091a29!important}
+.valuation-eps-chip.is-latest{border:2px solid #41caff!important;background:linear-gradient(145deg,#0c3145,#0a1b2a)!important;overflow:visible!important}
+.valuation-eps-chip.is-latest em{position:absolute!important;left:50%!important;bottom:-10px!important;transform:translateX(-50%)!important;margin:0!important;padding:3px 10px!important;border-radius:999px!important;background:#159bd5!important;color:#e7f8ff!important;font-size:9px!important;white-space:nowrap!important;box-shadow:0 0 0 1px rgba(65,202,255,.2)!important}
+.valuation-compare{display:grid!important;grid-template-columns:1fr 1fr 1.08fr!important;align-items:stretch!important}
+.valuation-mini{min-height:90px!important;padding:8px 8px!important;background:transparent!important;display:flex!important;justify-content:center!important;align-items:center!important}
+.valuation-mini+.valuation-mini:before{top:16px!important;bottom:16px!important;background:#2a5672!important}
+.valuation-mini span{font-size:12px!important;color:#a7bed1!important}
+.valuation-mini b{font-size:23px!important;margin-top:8px!important;color:#f5f8fc!important}
+.valuation-mini:last-child b.valuation-premium-high,.valuation-mini:last-child b.valuation-premium-low{background:none!important;padding:0!important;border-radius:0!important;font-size:25px!important;line-height:1!important}
+.valuation-mini:last-child b.valuation-premium-high{color:#ff6574!important}
+.valuation-mini:last-child b.valuation-premium-low{color:#13e0aa!important}
+.valuation-mini:last-child b.valuation-premium-high:after,.valuation-mini:last-child b.valuation-premium-low:after{content:attr(data-tag);display:block;margin:8px auto 0;width:max-content;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;line-height:1.2}
+.valuation-mini:last-child b.valuation-premium-high:after{background:rgba(255,101,116,.20);color:#ff7885}
+.valuation-mini:last-child b.valuation-premium-low:after{background:rgba(19,224,170,.17);color:#13e0aa}
+.valuation-bps .valuation-mini{grid-template-columns:38% 1px 1fr!important;min-height:76px!important;padding:0 6px!important}
+.valuation-bps .valuation-mini span{font-size:0!important}
+.valuation-bps .valuation-mini b{font-size:27px!important;margin:0!important;text-align:left!important;padding-left:12px!important}
+.valuation-bps .valuation-mini:after{content:"代表公司每股的淨資產價值"!important;font-size:13px!important;padding-left:24px!important;color:#a7bed1!important}
+@media(max-width:720px){
+ .valuation-card{padding:12px!important}
+ .valuation-card .card-title{font-size:23px!important}
+ .valuation-card .valuation-hero{grid-template-columns:42% 58%!important;min-height:96px!important}
+ .valuation-card .valuation-hero span{padding:14px 8px 0 20px!important;font-size:13px!important}
+ .valuation-card .valuation-hero strong{padding:0 8px 14px 20px!important;font-size:30px!important}
+ .valuation-card .valuation-hero small{padding:0 14px!important;font-size:13px!important}
+ .valuation-section{padding:12px!important;margin-top:12px!important}
+ .valuation-section-title{font-size:17px!important;margin-bottom:11px!important}
+ .valuation-eps5{gap:5px!important}
+ .valuation-eps-chip{min-height:96px!important;padding:9px 2px 7px!important}
+ .valuation-eps-chip span{font-size:9px!important}
+ .valuation-eps-chip b{font-size:17px!important}
+ .valuation-mini{min-height:82px!important;padding:5px 3px!important}
+ .valuation-mini span{font-size:10px!important}
+ .valuation-mini b{font-size:18px!important}
+ .valuation-mini:last-child b.valuation-premium-high,.valuation-mini:last-child b.valuation-premium-low{font-size:20px!important}
+ .valuation-mini:last-child b.valuation-premium-high:after,.valuation-mini:last-child b.valuation-premium-low:after{font-size:9px!important;padding:4px 7px!important;margin-top:7px!important}
+ .valuation-bps .valuation-mini{grid-template-columns:40% 1px 1fr!important}
+ .valuation-bps .valuation-mini b{font-size:23px!important}
+ .valuation-bps .valuation-mini:after{font-size:11px!important;padding-left:14px!important}
+}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -813,7 +876,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .dashboard-grid>.detail-panel[data-view-panel="analysis"].active-view{display:block}
 @media(min-width:721px){.dashboard-grid:has(>.detail-panel[data-view-panel="analysis"].active-view){grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-/* v2.5.1.5 valuation fidelity fixes */
+/* v2.5.1.6 valuation fidelity fixes */
 .valuation-eps-chip.is-ttm{border:1px solid #1d4058!important;background:#091a29!important}
 .valuation-eps-chip.is-latest{border:2px solid #41caff!important;background:linear-gradient(145deg,#0c3145,#0a1b2a)!important}
 .valuation-eps-chip.is-latest em{background:#159bd5!important;color:#e7f8ff!important}
