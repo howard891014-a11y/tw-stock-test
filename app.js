@@ -77,6 +77,7 @@ function valuationMetric(n,suffix="",na="--"){
 }
 function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
+  ["valuationCompositeFair","valuationCompositeGap","valuationPeFair","valuationPeFairGap","valuationPbFair","valuationPbFairGap","valuationSummaryBps"].forEach(id=>setText(id,"--"));
   ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap"].forEach(id=>setText(id,"--"));
   const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");
 }
@@ -84,6 +85,24 @@ function renderValuation(v){
   const profitable=v.profitable===true || Number(v.ttm)>0;
   setText("valuationStatus",v.label||"資料不足");
   setText("valuationStatusDetail",v.statusDetail||"--");
+  const last=valuationNum(v.last), ttm=valuationNum(v.ttm), peerPe=valuationNum(v.peerPe), bps=valuationNum(v.bookValue), peerPb=valuationNum(v.peerPb);
+  const peFair=(ttm!==null&&ttm>0&&peerPe!==null&&peerPe>0)?ttm*peerPe:null;
+  const pbFair=(bps!==null&&bps>0&&peerPb!==null&&peerPb>0)?bps*peerPb:null;
+  const fairVals=[peFair,pbFair].filter(x=>Number.isFinite(x)&&x>0);
+  const compositeFair=fairVals.length?fairVals.reduce((a,b)=>a+b,0)/fairVals.length:null;
+  const fairGap=x=>(last!==null&&last>0&&Number.isFinite(x))?(x/last-1)*100:null;
+  const renderFair=(valueId,gapId,value)=>{
+    setText(valueId,Number.isFinite(value)?valuationFmt(value," 元"):"資料不足");
+    const el=$(gapId), gap=fairGap(value);
+    if(!el)return; el.classList.remove("fair-up","fair-down","fair-flat");
+    if(gap===null){el.textContent="--";el.classList.add("fair-flat");return;}
+    el.textContent=`較現價 ${gap>=0?"+":"-"}${valuationFmt(Math.abs(gap),"%")}`;
+    el.classList.add(gap>0.5?"fair-up":gap<-0.5?"fair-down":"fair-flat");
+  };
+  renderFair("valuationPeFair","valuationPeFairGap",peFair);
+  renderFair("valuationPbFair","valuationPbFairGap",pbFair);
+  renderFair("valuationCompositeFair","valuationCompositeGap",compositeFair);
+  setText("valuationSummaryBps",bps!==null?valuationFmt(bps," 元"):"資料不足");
   setText("valuationCurrentPe",profitable?valuationMetric(v.currentPe," 倍","資料不足"):"不適用");
   setText("valuationPeerPe",valuationMetric(v.peerPe," 倍","資料不足"));
   setText("valuationPeGap",Number.isFinite(Number(v.pePremiumPct))?`${Number(v.pePremiumPct)>=0?"+":"-"}${valuationFmt(Math.abs(Number(v.pePremiumPct)),"%")}`:(profitable?"資料不足":"不適用"));

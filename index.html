@@ -637,6 +637,41 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
  #valuation .valuation-mini b{font-size:16px!important}
 }
 </style>
+
+<style>
+/* v2.5.1.9 — approved valuation summary layout */
+#valuation .card-title{font-size:23px!important;margin-bottom:14px!important}
+#valuation .valuation-summary-grid{display:grid!important;grid-template-columns:44% 28% 28%!important;grid-template-rows:1fr 1fr!important;min-height:196px!important;margin:0 0 10px!important;border:1px solid #008d78!important;border-radius:15px!important;background:linear-gradient(90deg,rgba(0,105,88,.34),rgba(0,54,58,.24))!important;overflow:hidden!important;position:relative!important}
+#valuation .valuation-summary-main{grid-column:1!important;grid-row:1/3!important;position:relative!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:flex-start!important;padding:20px 18px 20px 28px!important;border-right:1px solid #2abca8!important}
+#valuation .valuation-summary-main:before{content:"";position:absolute;left:0;top:0;bottom:0;width:9px;background:#0ce3ae}
+#valuation .valuation-summary-main span,#valuation .valuation-summary-cell span{color:#c8d7e2!important;font-weight:500!important}
+#valuation .valuation-summary-main span{font-size:15px!important}
+#valuation .valuation-summary-main strong{margin-top:10px!important;color:#f6fbff!important;font-size:37px!important;line-height:1!important;font-weight:900!important;white-space:nowrap!important}
+#valuation .valuation-summary-main b{margin-top:15px!important;padding:6px 11px!important;border-radius:9px!important;font-size:14px!important;line-height:1.1!important}
+#valuation .valuation-summary-cell{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important;padding:10px 7px!important;min-width:0!important;background:transparent!important}
+#valuation .valuation-summary-cell:nth-of-type(2),#valuation .valuation-summary-cell:nth-of-type(4){border-right:1px solid #2a5672!important}
+#valuation .valuation-summary-cell:nth-of-type(2),#valuation .valuation-summary-cell:nth-of-type(3){border-bottom:1px solid #2a5672!important}
+#valuation .valuation-summary-cell span{font-size:12px!important}
+#valuation .valuation-summary-cell strong{margin-top:7px!important;color:#f6fbff!important;font-size:21px!important;line-height:1.05!important;font-weight:900!important;white-space:nowrap!important}
+#valuation .valuation-summary-cell b{margin-top:7px!important;padding:4px 7px!important;border-radius:8px!important;font-size:10px!important;line-height:1.1!important;white-space:nowrap!important}
+#valuation .valuation-summary-status strong{color:#10e8a9!important;font-size:21px!important}
+#valuation .valuation-summary-bps strong{font-size:21px!important}
+#valuation .fair-up{color:#ff6574!important;background:rgba(255,101,116,.20)!important}
+#valuation .fair-down{color:#13e0aa!important;background:rgba(19,224,170,.17)!important}
+#valuation .fair-flat{color:#c8d7e2!important;background:#10263a!important}
+@media(max-width:420px){
+ #valuation .valuation-summary-grid{grid-template-columns:44% 28% 28%!important;min-height:178px!important}
+ #valuation .valuation-summary-main{padding:16px 10px 16px 22px!important}
+ #valuation .valuation-summary-main span{font-size:13px!important}
+ #valuation .valuation-summary-main strong{font-size:30px!important;margin-top:9px!important}
+ #valuation .valuation-summary-main b{font-size:11px!important;margin-top:12px!important;padding:5px 8px!important}
+ #valuation .valuation-summary-cell{padding:8px 4px!important}
+ #valuation .valuation-summary-cell span{font-size:10px!important}
+ #valuation .valuation-summary-cell strong{font-size:17px!important;margin-top:6px!important}
+ #valuation .valuation-summary-cell b{font-size:8px!important;padding:3px 5px!important;margin-top:6px!important}
+ #valuation .valuation-summary-status strong{font-size:17px!important}
+}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -662,7 +697,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.1.8</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.1.9</span></button>
   </aside>
 
   <div class="main-shell">
@@ -737,7 +772,26 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 
         <article class="card detail-panel valuation-card" id="valuation" data-view-panel="analysis">
           <div class="card-title">估值分析 <span class="badge" id="valuationBadge" hidden></span></div>
-          <div class="hero-value valuation-hero"><span>相對估值</span><strong id="valuationStatus">--</strong><small id="valuationMethod">Yahoo PE／PB 同業比較＋實際 EPS／BPS</small></div>
+          <div class="valuation-summary-grid">
+            <div class="valuation-summary-main">
+              <span>綜合合理價</span>
+              <strong id="valuationCompositeFair">--</strong>
+              <b id="valuationCompositeGap">--</b>
+            </div>
+            <div class="valuation-summary-cell">
+              <span>PE 合理股價</span><strong id="valuationPeFair">--</strong><b id="valuationPeFairGap">--</b>
+            </div>
+            <div class="valuation-summary-cell">
+              <span>PB 合理股價</span><strong id="valuationPbFair">--</strong><b id="valuationPbFairGap">--</b>
+            </div>
+            <div class="valuation-summary-cell valuation-summary-status">
+              <span>相對估值</span><strong id="valuationStatus">--</strong>
+            </div>
+            <div class="valuation-summary-cell valuation-summary-bps">
+              <span>每股淨值</span><strong id="valuationSummaryBps">--</strong>
+            </div>
+            <small id="valuationMethod" hidden></small>
+          </div>
           <div class="valuation-status-line"><span>判斷依據</span><b id="valuationStatusDetail">--</b></div>
           <div class="valuation-section valuation-eps-section">
             <div class="valuation-section-title"><span class="val-icon val-icon-eps" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="17" width="6" height="11" rx="2"/><rect x="13" y="10" width="6" height="18" rx="2"/><rect x="23" y="4" width="6" height="24" rx="2"/></svg></span>EPS 獲利能力 <span class="valuation-unit">單位：元</span></div>
