@@ -561,7 +561,7 @@ body{padding-bottom:68px}
 }
 
 
-/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+/* v2.5.1.11 — valuation sizing, formulas, overview fair price */
 #valuation .card-title{font-size:22px!important;}
 @media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
 #valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
@@ -597,7 +597,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
   .update-row small{position:static!important;display:block!important;width:auto!important;height:10px!important;margin:0!important;padding:0!important;font-size:9px!important;line-height:10px!important;white-space:nowrap!important;text-align:right!important}
 }
 
-/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+/* v2.5.1.11 — valuation sizing, formulas, overview fair price */
 #valuation .card-title{font-size:22px!important;}
 @media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
 #valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
@@ -659,7 +659,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
  #valuation .valuation-mini b{font-size:16px!important}
 }
 
-/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+/* v2.5.1.11 — valuation sizing, formulas, overview fair price */
 #valuation .card-title{font-size:22px!important;}
 @media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
 #valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
@@ -672,7 +672,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 </style>
 
 <style>
-/* v2.5.1.10 — approved valuation summary layout */
+/* v2.5.1.11 — approved valuation summary layout */
 #valuation .card-title{font-size:23px!important;margin-bottom:14px!important}
 #valuation .valuation-summary-grid{display:grid!important;grid-template-columns:44% 28% 28%!important;grid-template-rows:1fr 1fr!important;min-height:196px!important;margin:0 0 10px!important;border:1px solid #008d78!important;border-radius:15px!important;background:linear-gradient(90deg,rgba(0,105,88,.34),rgba(0,54,58,.24))!important;overflow:hidden!important;position:relative!important}
 #valuation .valuation-summary-main{grid-column:1!important;grid-row:1/3!important;position:relative!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:flex-start!important;padding:20px 18px 20px 28px!important;border-right:1px solid #2abca8!important}
@@ -705,7 +705,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
  #valuation .valuation-summary-status strong{font-size:17px!important}
 }
 
-/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+/* v2.5.1.11 — valuation sizing, formulas, overview fair price */
 #valuation .card-title{font-size:22px!important;}
 @media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
 #valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
@@ -741,7 +741,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.1.10</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.1.11</span></button>
   </aside>
 
   <div class="main-shell">
@@ -838,7 +838,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           </div>
           <div class="valuation-status-line"><span>判斷依據</span><b id="valuationStatusDetail">--</b></div>
           <div class="valuation-section valuation-eps-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-eps" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="17" width="6" height="11" rx="2"/><rect x="13" y="10" width="6" height="18" rx="2"/><rect x="23" y="4" width="6" height="24" rx="2"/></svg></span>EPS 獲利能力 <span class="valuation-unit">單位：元</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-eps" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="17" width="6" height="11" rx="2"/><rect x="13" y="10" width="6" height="18" rx="2"/><rect x="23" y="4" width="6" height="24" rx="2"/></svg></span>EPS 獲利能力 <button class="formula-info definition-info" type="button" data-formula="epsdef" aria-label="查看 EPS 獲利能力定義">i</button> <span class="valuation-unit">單位：元</span></div>
             <div class="valuation-eps-layout">
               <div class="valuation-quarter-grid" id="valuationQuarterGrid"></div>
               <div class="valuation-eps-divider" aria-hidden="true"></div>
@@ -846,7 +846,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </div>
           <div class="valuation-section valuation-pe-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-pe" aria-hidden="true">PE</span>本益比 <span class="valuation-unit">單位：倍</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-pe" aria-hidden="true">PE</span>本益比 <button class="formula-info definition-info" type="button" data-formula="pedef" aria-label="查看本益比定義">i</button> <span class="valuation-unit">單位：倍</span></div>
             <div class="valuation-compare">
               <div class="valuation-mini"><span>目前本益比</span><b id="valuationCurrentPe">--</b></div>
               <div class="valuation-mini"><span>同業平均本益比</span><b id="valuationPeerPe">--</b></div>
@@ -854,7 +854,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </div>
           <div class="valuation-section valuation-pb-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-pb" aria-hidden="true"><svg viewBox="0 0 40 32"><path d="M20 2 36 9 20 16 4 9Z"/><path d="M4 15 20 22 36 15" fill="none"/><path d="M4 21 20 28 36 21" fill="none"/></svg></span>股價淨值比 <span class="valuation-unit">單位：倍</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-pb" aria-hidden="true"><svg viewBox="0 0 40 32"><path d="M20 2 36 9 20 16 4 9Z"/><path d="M4 15 20 22 36 15" fill="none"/><path d="M4 21 20 28 36 21" fill="none"/></svg></span>股價淨值比 <button class="formula-info definition-info" type="button" data-formula="pbdef" aria-label="查看股價淨值比定義">i</button> <span class="valuation-unit">單位：倍</span></div>
             <div class="valuation-compare">
               <div class="valuation-mini"><span>目前 PB</span><b id="valuationCurrentPb">--</b></div>
               <div class="valuation-mini"><span>同業平均 PB</span><b id="valuationPeerPb">--</b></div>
@@ -1016,7 +1016,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
   .broker-history .broker-history-row>.history-actions{grid-column:5!important;justify-self:center!important;width:32px!important}
 }
 
-/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+/* v2.5.1.11 — valuation sizing, formulas, overview fair price */
 #valuation .card-title{font-size:22px!important;}
 @media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
 #valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
@@ -1102,7 +1102,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #valuation .valuation-mini:last-child b.valuation-premium-high:after{background:rgba(255,101,116,.20)!important;color:#ff7885!important}
 #valuation .valuation-mini:last-child b.valuation-premium-low:after{background:rgba(19,224,170,.17)!important;color:#13e0aa!important}
 
-/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+/* v2.5.1.11 — valuation sizing, formulas, overview fair price */
 #valuation .card-title{font-size:22px!important;}
 @media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
 #valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
@@ -1112,4 +1112,11 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #valuation .formula-popover strong{display:block!important;margin-bottom:10px!important;font-size:17px!important;}
 #valuation .formula-popover div{font-size:14px!important;line-height:1.7!important;color:#bcd0df!important;}
 #valuation .formula-popover-close{position:absolute!important;right:10px!important;top:8px!important;border:0!important;background:transparent!important;color:#a9bfd1!important;font-size:25px!important;cursor:pointer!important;}
+</style>
+
+<style id="v25111-info-sizing">
+/* v2.5.1.11 — info icon follows adjacent label size */
+#valuation .formula-info{display:inline-flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;width:1em!important;height:1em!important;min-width:1em!important;padding:0!important;margin-left:.22em!important;border:.10em solid currentColor!important;border-radius:50%!important;background:transparent!important;color:#9eb8cf!important;font-size:1em!important;font-weight:800!important;line-height:1!important;vertical-align:-.08em!important;}
+#valuation .fair-label .formula-info{font-size:1em!important;}
+#valuation .valuation-section-title .formula-info{font-size:1em!important;}
 </style>

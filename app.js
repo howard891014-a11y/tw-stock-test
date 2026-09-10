@@ -737,12 +737,15 @@ $("closeSettings")?.addEventListener("click",()=>$("settingsModal")?.classList.a
 $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"))$("settingsModal").classList.add("hidden")});
 
 
-// v2.5.1.10 valuation formula info
+// v2.5.1.11 valuation formula and definition info
 (function(){
  const formulas={
   pe:{title:"PE 合理價",text:"近四季 EPS × 同業平均本益比"},
   pb:{title:"PB 合理價",text:"每股淨值（BPS）× 同業平均 PB"},
-  composite:{title:"綜合合理價",text:"（PE 合理價 + PB 合理價）÷ 2；若其中一項資料不足，則採用可計算的那一項。"}
+  composite:{title:"綜合合理價",text:"（PE 合理價 + PB 合理價）÷ 2；若其中一項資料不足，則採用可計算的那一項。"},
+  epsdef:{title:"EPS 獲利能力",text:"EPS 是每股盈餘，代表公司每一股普通股能分配到多少獲利；數值越高，代表每股獲利能力越強。"},
+  pedef:{title:"本益比",text:"本益比＝股價 ÷ 每股盈餘（EPS），代表市場願意用多少倍的價格購買公司目前的每股獲利。"},
+  pbdef:{title:"股價淨值比",text:"股價淨值比＝股價 ÷ 每股淨值（BPS），代表股價相對公司每股帳面淨資產價值的倍數。"}
  };
  const pop=$("valuationFormulaPopover"), title=$("valuationFormulaTitle"), text=$("valuationFormulaText");
  document.addEventListener("click",e=>{
