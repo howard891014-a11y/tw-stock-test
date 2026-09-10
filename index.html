@@ -468,7 +468,7 @@ body{padding-bottom:68px}
 .valuation-bps{display:block!important}.valuation-bps .valuation-mini{display:grid!important;grid-template-columns:220px 1px 1fr!important;align-items:center!important;min-height:74px!important;text-align:left!important}.valuation-bps .valuation-mini:after{content:"代表公司每股的淨資產價值";grid-column:3;color:#a7bed1;font-size:15px;padding-left:28px}.valuation-bps .valuation-mini:before{content:"";grid-column:2;grid-row:1/3;width:1px;height:50px;background:#2a5672}.valuation-bps .valuation-mini span{grid-column:1;font-size:0!important}.valuation-bps .valuation-mini span:after{content:"每股淨值";font-size:13px;color:#a7bed1}.valuation-bps .valuation-mini b{grid-column:1;font-size:27px!important}.valuation-note{display:none!important}.valuation-card.is-loading .valuation-hero strong,.valuation-card.is-loading .valuation-section b{opacity:.45}
 @media(max-width:720px){.valuation-card{padding:12px!important}.valuation-card .card-title{font-size:21px!important}.valuation-card .valuation-hero{grid-template-columns:42% 58%!important;min-height:96px!important}.valuation-card .valuation-hero span,.valuation-card .valuation-hero strong{padding-left:20px!important}.valuation-card .valuation-hero strong{font-size:32px!important}.valuation-card .valuation-hero small{padding:0 16px!important;font-size:14px!important}.valuation-section{padding:12px!important}.valuation-section-title{font-size:16px!important;margin-bottom:11px!important}.valuation-eps5{gap:5px!important}.valuation-eps-chip{min-height:94px!important;padding:10px 3px 7px!important}.valuation-eps-chip span{font-size:9px!important}.valuation-eps-chip b{font-size:17px!important;margin-top:7px!important}.valuation-eps-chip em{font-size:8px!important;padding:2px 7px!important;margin-top:6px!important}.valuation-mini{min-height:76px!important;padding:6px 4px!important}.valuation-mini span{font-size:10px!important}.valuation-mini b{font-size:17px!important}.valuation-bps .valuation-mini{grid-template-columns:40% 1px 1fr!important}.valuation-bps .valuation-mini:after{font-size:11px;padding-left:14px}.valuation-bps .valuation-mini b{font-size:22px!important}}
 
-/* v2.5.1.6 — valuation mobile UI fidelity pass */
+/* v2.5.1.7 — valuation mobile UI fidelity pass */
 .valuation-card{padding:14px!important;background:#071827!important;border:1px solid #17364d!important;border-radius:18px!important}
 .valuation-card .card-title{font-size:26px!important;font-weight:900!important;margin:0 0 14px!important;padding:0 2px!important}
 .valuation-card .card-title .badge{font-size:0!important;border:0!important;background:transparent!important;padding:0!important}
@@ -528,6 +528,36 @@ body{padding-bottom:68px}
  .valuation-bps .valuation-mini{grid-template-columns:40% 1px 1fr!important}
  .valuation-bps .valuation-mini b{font-size:23px!important}
  .valuation-bps .valuation-mini:after{font-size:11px!important;padding-left:14px!important}
+}
+
+/* v2.5.1.7 — exact valuation mockup treatment */
+#valuation .valuation-section-title:before{display:none!important;content:none!important}
+#valuation .valuation-section-title{position:relative!important;display:flex!important;align-items:center!important;gap:10px!important}
+#valuation .valuation-section-title>span:last-child{margin-left:auto!important}
+#valuation .val-icon{display:inline-flex!important;flex:0 0 auto!important;margin:0!important;padding:0!important;background:none!important;border:0!important}
+#valuation .val-icon-eps{width:38px;height:34px;align-items:flex-end;justify-content:center;gap:3px}
+#valuation .val-icon-eps i{display:block;width:8px;border-radius:4px 4px 2px 2px;background:linear-gradient(#4dc9ff,#249de8);box-shadow:0 0 10px rgba(65,190,255,.18)}
+#valuation .val-icon-eps i:nth-child(1){height:16px}#valuation .val-icon-eps i:nth-child(2){height:25px}#valuation .val-icon-eps i:nth-child(3){height:31px}
+#valuation .val-icon-pe{width:36px;height:36px;border-radius:50%!important;align-items:center;justify-content:center;background:linear-gradient(145deg,#5bd0ff,#249de8)!important;color:#082033!important;font-size:16px!important;font-weight:900!important;line-height:36px!important}
+#valuation .val-icon-pb{width:42px;height:35px;position:relative;display:block!important}
+#valuation .val-icon-pb i{position:absolute;left:7px;width:28px;height:13px;background:linear-gradient(145deg,#5bd0ff,#249de8);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+#valuation .val-icon-pb i:nth-child(1){top:0}#valuation .val-icon-pb i:nth-child(2){top:8px}#valuation .val-icon-pb i:nth-child(3){top:16px}
+#valuation .val-icon-bps{width:42px;height:34px;position:relative;display:block!important}
+#valuation .val-icon-bps i{position:absolute;top:2px;width:19px;height:29px;background:linear-gradient(145deg,#5bd0ff,#249de8)}
+#valuation .val-icon-bps i:first-child{left:1px;border-radius:5px 1px 2px 5px;clip-path:polygon(0 0,100% 8%,100% 100%,0 90%)}
+#valuation .val-icon-bps i:last-child{right:1px;border-radius:1px 5px 5px 2px;clip-path:polygon(0 8%,100% 0,100% 90%,0 100%)}
+#valuation .valuation-mini:last-child b.valuation-premium-high,#valuation .valuation-mini:last-child b.valuation-premium-low{background:none!important;padding:0!important;border-radius:0!important;display:block!important;align-self:center!important;font-size:25px!important;line-height:1.05!important}
+#valuation .valuation-mini:last-child b.valuation-premium-high:after,#valuation .valuation-mini:last-child b.valuation-premium-low:after{content:attr(data-tag)!important;display:block!important;width:max-content!important;margin:8px auto 0!important;padding:5px 10px!important;border-radius:8px!important;font-size:11px!important;font-weight:800!important;line-height:1.2!important}
+#valuation .valuation-mini:last-child b.valuation-premium-high:after{background:rgba(255,101,116,.20)!important;color:#ff7885!important}
+#valuation .valuation-mini:last-child b.valuation-premium-low:after{background:rgba(19,224,170,.17)!important;color:#13e0aa!important}
+@media(max-width:720px){
+ #valuation.valuation-card{padding:14px!important}
+ #valuation .valuation-section{padding:14px!important}
+ #valuation .valuation-section-title{font-size:17px!important;min-height:38px!important;margin-bottom:12px!important}
+ #valuation .val-icon-eps{width:34px;height:31px}#valuation .val-icon-eps i{width:7px}#valuation .val-icon-eps i:nth-child(1){height:14px}#valuation .val-icon-eps i:nth-child(2){height:22px}#valuation .val-icon-eps i:nth-child(3){height:28px}
+ #valuation .val-icon-pe{width:34px;height:34px;font-size:15px!important;line-height:34px!important}
+ #valuation .val-icon-pb,#valuation .val-icon-bps{transform:scale(.9);transform-origin:center}
+ #valuation .valuation-mini:last-child b.valuation-premium-high,#valuation .valuation-mini:last-child b.valuation-premium-low{font-size:21px!important}
 }
 
 </style>
@@ -659,11 +689,11 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           <div class="hero-value valuation-hero"><span>相對估值</span><strong id="valuationStatus">--</strong><small id="valuationMethod">Yahoo PE／PB 同業比較＋實際 EPS／BPS</small></div>
           <div class="valuation-status-line"><span>判斷依據</span><b id="valuationStatusDetail">--</b></div>
           <div class="valuation-section">
-            <div class="valuation-section-title">EPS 獲利能力 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：元</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-eps" aria-hidden="true"><i></i><i></i><i></i></span>EPS 獲利能力 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：元</span></div>
             <div class="valuation-eps5" id="valuationEps5"></div>
           </div>
           <div class="valuation-section">
-            <div class="valuation-section-title">本益比 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：倍</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-pe" aria-hidden="true">PE</span>本益比 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：倍</span></div>
             <div class="valuation-compare">
               <div class="valuation-mini"><span>目前本益比</span><b id="valuationCurrentPe">--</b></div>
               <div class="valuation-mini"><span>同業平均本益比</span><b id="valuationPeerPe">--</b></div>
@@ -671,7 +701,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </div>
           <div class="valuation-section">
-            <div class="valuation-section-title">股價淨值比 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：倍</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-pb" aria-hidden="true"><i></i><i></i><i></i></span>股價淨值比 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：倍</span></div>
             <div class="valuation-compare">
               <div class="valuation-mini"><span>目前 PB</span><b id="valuationCurrentPb">--</b></div>
               <div class="valuation-mini"><span>同業平均 PB</span><b id="valuationPeerPb">--</b></div>
@@ -679,7 +709,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </div>
           <div class="valuation-section">
-            <div class="valuation-section-title">每股淨值 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：元</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-bps" aria-hidden="true"><i></i><i></i></span>每股淨值 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：元</span></div>
             <div class="valuation-bps"><div class="valuation-mini"><span>每股淨值</span><b id="valuationBookValue">--</b></div></div>
           </div>
           <small class="valuation-note" id="valuationNote">估值只判斷相對昂貴程度，不直接作為買賣價。</small>
@@ -876,7 +906,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .dashboard-grid>.detail-panel[data-view-panel="analysis"].active-view{display:block}
 @media(min-width:721px){.dashboard-grid:has(>.detail-panel[data-view-panel="analysis"].active-view){grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-/* v2.5.1.6 valuation fidelity fixes */
+/* v2.5.1.7 valuation fidelity fixes */
 .valuation-eps-chip.is-ttm{border:1px solid #1d4058!important;background:#091a29!important}
 .valuation-eps-chip.is-latest{border:2px solid #41caff!important;background:linear-gradient(145deg,#0c3145,#0a1b2a)!important}
 .valuation-eps-chip.is-latest em{background:#159bd5!important;color:#e7f8ff!important}
@@ -887,4 +917,8 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .valuation-mini:last-child b.valuation-premium-high,.valuation-mini:last-child b.valuation-premium-low{display:inline-block!important;align-self:center!important;padding:4px 10px!important;border-radius:8px!important}
 .valuation-mini:last-child b.valuation-premium-high{background:rgba(255,101,116,.18)!important}
 .valuation-mini:last-child b.valuation-premium-low{background:rgba(19,224,170,.16)!important}
+
+/* v2.5.1.7 final precedence */
+#valuation .valuation-section-title:before{display:none!important;content:none!important}
+#valuation .valuation-mini:last-child b.valuation-premium-high,#valuation .valuation-mini:last-child b.valuation-premium-low{background:none!important;padding:0!important;border-radius:0!important}
 </style>
