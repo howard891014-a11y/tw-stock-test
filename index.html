@@ -741,7 +741,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.4</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.5</span></button>
   </aside>
 
   <div class="main-shell">
@@ -851,7 +851,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           </div>
           <div class="valuation-status-line"><span>判斷依據</span><b id="valuationStatusDetail">--</b></div>
           <div class="valuation-section valuation-eps-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-eps" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="17" width="6" height="11" rx="2"/><rect x="13" y="10" width="6" height="18" rx="2"/><rect x="23" y="4" width="6" height="24" rx="2"/></svg></span>EPS 獲利能力 <button class="formula-info definition-info" type="button" data-formula="epsdef" aria-label="查看 EPS 獲利能力定義">i</button> <span class="valuation-unit">單位：元</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-eps" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="17" width="6" height="11" rx="2"/><rect x="13" y="10" width="6" height="18" rx="2"/><rect x="23" y="4" width="6" height="24" rx="2"/></svg></span>EPS 獲利能力 <button class="formula-info definition-info" type="button" data-formula="epsdef" aria-label="查看 EPS 獲利能力定義">i</button></div>
             <div class="valuation-eps-layout">
               <div class="valuation-quarter-grid" id="valuationQuarterGrid"></div>
               <div class="valuation-eps-divider" aria-hidden="true"></div>
@@ -859,7 +859,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </div>
           <div class="valuation-section valuation-pe-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-pe" aria-hidden="true">PE</span>本益比 <button class="formula-info definition-info" type="button" data-formula="pedef" aria-label="查看本益比定義">i</button> <span class="valuation-unit">單位：倍</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-pe" aria-hidden="true">PE</span>本益比 <button class="formula-info definition-info" type="button" data-formula="pedef" aria-label="查看本益比定義">i</button></div>
             <div class="valuation-compare">
               <div class="valuation-mini"><span>目前本益比</span><b id="valuationCurrentPe">--</b></div>
               <div class="valuation-mini"><span>同業平均本益比</span><b id="valuationPeerPe">--</b></div>
@@ -867,7 +867,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </div>
           <div class="valuation-section valuation-pb-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-pb" aria-hidden="true"><svg viewBox="0 0 40 32"><path d="M20 2 36 9 20 16 4 9Z"/><path d="M4 15 20 22 36 15" fill="none"/><path d="M4 21 20 28 36 21" fill="none"/></svg></span>股價淨值比 <button class="formula-info definition-info" type="button" data-formula="pbdef" aria-label="查看股價淨值比定義">i</button> <span class="valuation-unit">單位：倍</span></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-pb" aria-hidden="true"><svg viewBox="0 0 40 32"><path d="M20 2 36 9 20 16 4 9Z"/><path d="M4 15 20 22 36 15" fill="none"/><path d="M4 21 20 28 36 21" fill="none"/></svg></span>股價淨值比 <button class="formula-info definition-info" type="button" data-formula="pbdef" aria-label="查看股價淨值比定義">i</button></div>
             <div class="valuation-compare">
               <div class="valuation-mini"><span>目前 PB</span><b id="valuationCurrentPb">--</b></div>
               <div class="valuation-mini"><span>同業平均 PB</span><b id="valuationPeerPb">--</b></div>
@@ -1005,7 +1005,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.2.4"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.2.5"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -1167,4 +1167,10 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #valuation .valuation-mini:last-child b.risk-safe:after{background:rgba(19,224,170,.17)!important;color:#13e0aa!important}
 #valuation .valuation-mini:last-child b.risk-watch:after{background:rgba(255,210,74,.17)!important;color:#ffd24a!important}
 #valuation .valuation-mini:last-child b.risk-danger:after{background:rgba(255,101,116,.20)!important;color:#ff6574!important}
+</style>
+
+<style id="v2525-technical-metrics">
+.tech-tile small.tech-metrics{display:grid!important;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:0;padding-top:8px!important}
+.tech-metric{min-width:0;text-align:left;padding:0 6px;border-left:1px solid #24445b}.tech-metric:first-child{border-left:0;padding-left:0}.tech-metric:last-child{padding-right:0}.tech-metric span{display:block;color:#91a8bb;font-size:8px;white-space:nowrap}.tech-metric b{display:block;color:#dce6ee;font-size:10px;margin-top:3px;white-space:nowrap;font-weight:700}.tech-summary::before{content:"▤";display:flex;align-items:center;justify-content:center;width:28px;height:32px;color:#eef7ff;font-size:25px;font-weight:900}.tech-summary{grid-template-columns:auto auto 1fr!important}.tech-summary b{grid-column:2}.tech-summary p{grid-column:3}
+@media(max-width:720px){.tech-metric{padding:0 4px}.tech-metric span{font-size:7px}.tech-metric b{font-size:9px}.tech-summary::before{width:24px;font-size:22px}}
 </style>
