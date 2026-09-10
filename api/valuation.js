@@ -23,15 +23,6 @@ function pickPeFromText(text=""){
   const m=String(text).match(/(-?\d+(?:\.\d+)?)\s*\(\s*(-?\d+(?:\.\d+)?)\s*\)\s*本益比\s*\(同業平均\)/);
   return m?{currentPe:num(m[1]),peerPe:num(m[2])}:{};
 }
-function pickPbFromText(text=""){
-  const t=String(text);
-  const patterns=[
-    /(-?\d+(?:\.\d+)?)\s*\(\s*(-?\d+(?:\.\d+)?)\s*\)\s*股價淨值比\s*\(同業平均\)/,
-    /股價淨值比[^0-9-]*(-?\d+(?:\.\d+)?)[^0-9-]+同業平均[^0-9-]*(-?\d+(?:\.\d+)?)/
-  ];
-  for(const re of patterns){const m=t.match(re);if(m)return {pagePb:num(m[1]),peerPb:num(m[2])}}
-  return {};
-}
 function parseQuarterly(lines){
   const out=[];
   for(let i=0;i<lines.length;i++){
@@ -52,11 +43,10 @@ function parseYahooEpsPage(html){
   const lines=htmlToLines(html);
   const joined=lines.join(" ");
   const pe=pickPeFromText(joined);
-  const pb=pickPbFromText(joined);
   const quarterly=parseQuarterly(lines);
   const latest4=quarterly.slice(0,4);
   const ttm=latest4.length===4?round2(latest4.reduce((s,x)=>s+x.eps,0)):null;
-  return {quarterly,latest4,ttm,...pe,...pb};
+  return {quarterly,latest4,ttm,...pe};
 }
 function firstNumberAfterLabel(lines,labelRe,maxLook=4){
   for(let i=0;i<lines.length;i++){
@@ -83,6 +73,47 @@ function parseYahooProfilePage(html){
   if(cashDividend==null)cashDividend=firstNumberAfterLabel(lines,/^現金股利$/);
   return {bookValue,cashDividend};
 }
+
+function parseYahooQuotePrice(html=""){
+  const lines=htmlToLines(html);
+  for(const line of lines){
+    let m=line.match(/^成交\s*(-?\d+(?:,\d{3})*(?:\.\d+)?)/);
+    if(m)return num(m[1]);
+  }
+  const joined=lines.join(" ");
+  let m=joined.match(/(?:成交|收盤)\s*(-?\d+(?:,\d{3})*(?:\.\d+)?)/);
+  return m?num(m[1]):null;
+}
+function extractPeerSymbols(html="",selfCode=""){
+  const text=String(html);
+  const start=Math.max(text.indexOf("公司數量"),text.indexOf("同業比較"));
+  const end=text.indexOf("行事曆",start>0?start:0);
+  const scope=start>=0?text.slice(start,end>start?end:Math.min(text.length,start+180000)):text;
+  const out=[]; const seen=new Set([String(selfCode)]);
+  const re=/\/quote\/(\d{4,6})(?:\.(TW|TWO))?(?=["'/?#<])/g;
+  let m;
+  while((m=re.exec(scope))){
+    const code=m[1]; if(seen.has(code))continue; seen.add(code);
+    out.push({code,suffix:m[2]?`.${m[2]}`:""}); if(out.length>=8)break;
+  }
+  return out;
+}
+async function computePeerPb(compareHtml,selfCode,defaultSuffix){
+  const peers=extractPeerSymbols(compareHtml,selfCode);
+  if(!peers.length)return null;
+  const vals=await Promise.all(peers.slice(0,6).map(async peer=>{
+    const suffix=peer.suffix||defaultSuffix||".TW";
+    const base=`https://tw.stock.yahoo.com/quote/${peer.code}${suffix}`;
+    try{
+      const [profileHtml,quoteHtml]=await Promise.all([fetchText(`${base}/profile`,6500),fetchText(base,6500)]);
+      const bps=num(parseYahooProfilePage(profileHtml).bookValue), price=num(parseYahooQuotePrice(quoteHtml));
+      return price>0&&bps>0?price/bps:null;
+    }catch{return null}
+  }));
+  const good=vals.filter(x=>Number.isFinite(x)&&x>0&&x<100);
+  if(good.length<2)return null;
+  return round2(good.reduce((a,b)=>a+b,0)/good.length);
+}
 async function fetchText(url,timeout=9000){
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);
   try{
@@ -106,22 +137,22 @@ function peStatus(currentPe,peerPe,ttm){
   const detail=`PE 較同業${premiumPct>=0?"高":"低"} ${Math.abs(premiumPct)}%`;
   return {label,detail,premiumPct};
 }
-function buildValuation(parsed,profile,price){
-  const ttm=num(parsed.ttm),peerPe=num(parsed.peerPe),last=num(price),bookValue=num(profile.bookValue),cashDividend=num(profile.cashDividend);
+function buildValuation(parsed,profile,price,quotePrice=null,peerPb=null){
+  const ttm=num(parsed.ttm),peerPe=num(parsed.peerPe),requestedPrice=num(price),pagePrice=num(quotePrice),last=requestedPrice>0?requestedPrice:pagePrice,bookValue=num(profile.bookValue),cashDividend=num(profile.cashDividend);
   // Yahoo 顯示的 PE 保留原口徑，不以「股價 / 自行加總 TTM EPS」覆寫，以免不同資料口徑混用。
   const currentPe=ttm>0?num(parsed.currentPe):null;
   const latestEps=parsed.latest4?.length?num(parsed.latest4[0].eps):null;
-  const pb=num(parsed.pagePb) ?? ((last>0&&bookValue>0)?round2(last/bookValue):null);
-  const peerPb=num(parsed.peerPb);
-  const pbPremiumPct=(pb>0&&peerPb>0)?round2((pb/peerPb-1)*100):null;
+  const pb=(last>0&&bookValue>0)?round2(last/bookValue):null;
   const dividendYield=(last>0&&cashDividend>=0)?round2(cashDividend/last*100):null;
+  const cleanPeerPb=num(peerPb);
+  const pbPremiumPct=(pb>0&&cleanPeerPb>0)?round2((pb/cleanPeerPb-1)*100):null;
   const pe=peStatus(currentPe,peerPe,ttm);
   return {
     ttm,latestEps,currentPe,peerPe,pePremiumPct:pe.premiumPct,
-    bookValue,currentPb:pb,peerPb,pbPremiumPct,cashDividend,dividendYield,last,
+    bookValue,currentPb:pb,peerPb:cleanPeerPb,pbPremiumPct,cashDividend,dividendYield,last,
     label:pe.label,statusDetail:pe.detail,latest4:parsed.latest4||[],
     source:"Yahoo 股市",
-    method:"Yahoo PE／PB 同業比較＋實際 EPS／BPS",
+    method:"Yahoo PE 同業比較＋實際 EPS／BPS／現金股利",
     profitable:ttm>0
   };
 }
@@ -136,18 +167,25 @@ module.exports=async function handler(req,res){
     for(const suffix of suffixes){
       try{
         const base=`https://tw.stock.yahoo.com/quote/${q}${suffix}`;
-        const [epsHtml,profileResult]=await Promise.all([
+        const [epsHtml,profileResult,quoteResult,compareResult]=await Promise.all([
           fetchText(`${base}/eps`),
-          fetchText(`${base}/profile`).catch(()=>"")
+          fetchText(`${base}/profile`).catch(()=>""),
+          fetchText(base).catch(()=>""),
+          fetchText(`${base}/compare`).catch(()=>"")
         ]);
         const p=parseYahooEpsPage(epsHtml);
         if(p.latest4?.length||p.currentPe!=null||p.peerPe!=null){
-          parsed=p;profile=profileResult?parseYahooProfilePage(profileResult):{};symbol=q+suffix;break;
+          parsed=p;profile=profileResult?parseYahooProfilePage(profileResult):{};symbol=q+suffix;
+          parsed.quotePrice=quoteResult?parseYahooQuotePrice(quoteResult):null;
+          parsed.compareHtml=compareResult||"";
+          parsed.suffix=suffix;
+          break;
         }
       }catch(e){lastErr=e}
     }
     if(!parsed)throw lastErr||new Error("Yahoo EPS 資料解析失敗");
-    const valuation=buildValuation(parsed,profile,price);
+    const peerPb=parsed.compareHtml?await computePeerPb(parsed.compareHtml,q,parsed.suffix):null;
+    const valuation=buildValuation(parsed,profile,price,parsed.quotePrice,peerPb);
     return res.status(200).json({ok:true,code:q,symbol,...valuation});
   }catch(e){
     console.error("valuation error",e);
@@ -155,4 +193,4 @@ module.exports=async function handler(req,res){
   }
 };
 
-module.exports._test={htmlToLines,parseQuarterly,parseYahooEpsPage,parseYahooProfilePage,buildValuation,pickPeFromText,pickPbFromText,peStatus};
+module.exports._test={htmlToLines,parseQuarterly,parseYahooEpsPage,parseYahooProfilePage,parseYahooQuotePrice,extractPeerSymbols,buildValuation,pickPeFromText,peStatus};
