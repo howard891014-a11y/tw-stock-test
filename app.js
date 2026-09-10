@@ -100,6 +100,10 @@ function valuationFmt(n,suffix=""){
 function valuationMetric(n,suffix="",na="--"){
   const x=valuationTrunc(n);return x!==null?`${x.toLocaleString("zh-TW")}${suffix}`:na;
 }
+function valuationEpsFmt(n){
+  const x=valuationNum(n);
+  return x!==null?x.toLocaleString("zh-TW",{maximumFractionDigits:2,minimumFractionDigits:0}):"--";
+}
 function valuationRiskByCurrentFair(current,fair){
   if(!(current>0&&fair>0))return "neutral";
   const premium=(current/fair-1)*100;
@@ -165,11 +169,11 @@ function renderValuation(v){
     ?"估值用來判斷相對昂貴程度，不直接當作買賣價。PE 採 Yahoo 顯示口徑；PB 與同業比較依 Yahoo 可取得資料計算。"
     :"近四季 EPS 為負時，本益比估值不適用；不會以 0 倍代替。仍保留同業 PE、BPS 與 PB 資料供比較。"
   );
-  setText("valuationTtmEps",valuationMetric(v.ttm,"","資料不足"));
+  setText("valuationTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   const host=$("valuationQuarterGrid");
   if(host){
     const q=Array.isArray(v.latest4)?v.latest4:[];
-    host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");
+    host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");
   }
 }
 async function loadValuation(stock){
@@ -199,7 +203,7 @@ function renderStock(x){
   setText("decisionPrice",fmt(last));
 
   const ch=Number.isFinite(change)
-    ? `${change>0?"+":""}${fmt(change)}${Number.isFinite(pct)?`（${pct>0?"+":""}${fmt(pct)}%）`:""}`
+    ? `${change>0?"+":""}${fmt(change)}${Number.isFinite(pct)?`(${pct>0?"+":""}${fmt(pct)}%)`:""}`
     : "—";
   setText("priceChange",ch);
   setText("metricChange",ch);
