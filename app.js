@@ -61,6 +61,25 @@ function shortStockName(name){
   return s;
 }
 
+async function technical(query,market){
+  const params=new URLSearchParams({q:String(query||""),market:String(market||"")});
+  return await readJson(await fetch(`/api/technical?${params.toString()}`,{cache:"no-store"}),"技術資料");
+}
+function technicalFmt(n,suffix=""){const x=Number(n);return Number.isFinite(x)?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:"--"}
+async function loadTechnical(data){
+  const code=data?.code||data?.symbol||"",market=data?.market||data?.marketLabel||"";
+  try{
+    const t=await technical(code,market);
+    setText("technicalSource",`Yahoo｜${t.updatedAt||"--"}`);
+    setText("techMaOrder",t.ma?.order||"--");
+    setText("techMaValues",`5MA ${technicalFmt(t.ma?.ma5)}｜10MA ${technicalFmt(t.ma?.ma10)}｜20MA ${technicalFmt(t.ma?.ma20)}｜60MA ${technicalFmt(t.ma?.ma60)}`);
+    setText("techBias20",technicalFmt(t.ma?.bias20,"%"));
+    setText("techBoll",`${t.bollinger?.position||"--"}｜帶寬 ${technicalFmt(t.bollinger?.bandwidth,"%")}`);
+    setText("techVolume",`量比 ${technicalFmt(t.volume?.ratio20)}｜20日均量 ${technicalFmt(t.volume?.avg20)}`);
+    setText("techTrend",`距60日高 ${technicalFmt(t.trend?.fromHigh60Pct,"%")}｜距60日低 ${technicalFmt(t.trend?.fromLow60Pct,"%")}`);
+    setText("techMomentum",`RSI ${technicalFmt(t.momentum?.rsi14)}｜MACD柱 ${technicalFmt(t.momentum?.histogram)}`);
+  }catch(e){console.warn("技術資料更新失敗",e);setText("technicalSource","Yahoo｜取得失敗")}
+}
 async function valuation(query,market,price){
   const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});
   return await readJson(await fetch(`/api/valuation?${params.toString()}`,{cache:"no-store"}),"估值");
@@ -203,6 +222,7 @@ async function search(){
     const data=await quote(q);
     renderStock(data);
     loadValuation(data);
+    loadTechnical(data);
     setView("overview");
     beginTargetSearch();
     setStatus("搜尋目標價…");

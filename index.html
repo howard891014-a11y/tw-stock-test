@@ -805,12 +805,15 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 
       <section class="dashboard-grid">
         <article class="card detail-panel" id="technical" data-view-panel="analysis">
-          <div class="card-title">技術分析 <span class="badge">待接功能</span></div>
+          <div class="card-title">技術分析 <span class="badge" id="technicalSource">Yahoo｜--</span></div>
           <div class="data-list">
-            <div><span>均線位置</span><b>--</b></div>
-            <div><span>均線方向</span><b>--</b></div>
-            <div><span>乖離率（20MA）</span><b>--%</b></div>
-            <div><span>五階段位置</span><b>--</b></div>
+            <div><span>均線排列</span><b id="techMaOrder">--</b></div>
+            <div><span>均線數值</span><b id="techMaValues">--</b></div>
+            <div><span>20MA 乖離率</span><b id="techBias20">--</b></div>
+            <div><span>布林通道</span><b id="techBoll">--</b></div>
+            <div><span>成交量</span><b id="techVolume">--</b></div>
+            <div><span>60日位置</span><b id="techTrend">--</b></div>
+            <div><span>動能</span><b id="techMomentum">--</b></div>
           </div>
         </article>
 
