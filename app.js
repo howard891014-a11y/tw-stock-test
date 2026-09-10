@@ -79,6 +79,7 @@ function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
   ["valuationCompositeFair","valuationCompositeGap","valuationPeFair","valuationPeFairGap","valuationPbFair","valuationPbFairGap","valuationSummaryBps"].forEach(id=>setText(id,"--"));
   ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap"].forEach(id=>setText(id,"--"));
+  setText("overviewCompositeFair","--");
   const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");
 }
 function renderValuation(v){
@@ -92,7 +93,7 @@ function renderValuation(v){
   const compositeFair=fairVals.length?fairVals.reduce((a,b)=>a+b,0)/fairVals.length:null;
   const fairGap=x=>(last!==null&&last>0&&Number.isFinite(x))?(x/last-1)*100:null;
   const renderFair=(valueId,gapId,value)=>{
-    setText(valueId,Number.isFinite(value)?valuationFmt(value," 元"):"資料不足");
+    setText(valueId,Number.isFinite(value)?valuationFmt(value,""):"資料不足");
     const el=$(gapId), gap=fairGap(value);
     if(!el)return; el.classList.remove("fair-up","fair-down","fair-flat");
     if(gap===null){el.textContent="--";el.classList.add("fair-flat");return;}
@@ -102,7 +103,8 @@ function renderValuation(v){
   renderFair("valuationPeFair","valuationPeFairGap",peFair);
   renderFair("valuationPbFair","valuationPbFairGap",pbFair);
   renderFair("valuationCompositeFair","valuationCompositeGap",compositeFair);
-  setText("valuationSummaryBps",bps!==null?valuationFmt(bps," 元"):"資料不足");
+  setText("overviewCompositeFair",Number.isFinite(compositeFair)?valuationFmt(compositeFair):"--");
+  setText("valuationSummaryBps",bps!==null?valuationFmt(bps,""):"資料不足");
   setText("valuationCurrentPe",profitable?valuationMetric(v.currentPe," 倍","資料不足"):"不適用");
   setText("valuationPeerPe",valuationMetric(v.peerPe," 倍","資料不足"));
   setText("valuationPeGap",Number.isFinite(Number(v.pePremiumPct))?`${Number(v.pePremiumPct)>=0?"+":"-"}${valuationFmt(Math.abs(Number(v.pePremiumPct)),"%")}`:(profitable?"資料不足":"不適用"));
@@ -733,3 +735,19 @@ document.querySelectorAll(".settings-open").forEach(btn=>btn.addEventListener("c
 }));
 $("closeSettings")?.addEventListener("click",()=>$("settingsModal")?.classList.add("hidden"));
 $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"))$("settingsModal").classList.add("hidden")});
+
+
+// v2.5.1.10 valuation formula info
+(function(){
+ const formulas={
+  pe:{title:"PE 合理價",text:"近四季 EPS × 同業平均本益比"},
+  pb:{title:"PB 合理價",text:"每股淨值（BPS）× 同業平均 PB"},
+  composite:{title:"綜合合理價",text:"（PE 合理價 + PB 合理價）÷ 2；若其中一項資料不足，則採用可計算的那一項。"}
+ };
+ const pop=$("valuationFormulaPopover"), title=$("valuationFormulaTitle"), text=$("valuationFormulaText");
+ document.addEventListener("click",e=>{
+  const btn=e.target.closest?.(".formula-info");
+  if(btn&&pop){const f=formulas[btn.dataset.formula];if(f){title.textContent=f.title;text.textContent=f.text;pop.hidden=false;}return;}
+  if(e.target.closest?.(".formula-popover-close")){if(pop)pop.hidden=true;}
+ });
+})();

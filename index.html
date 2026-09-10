@@ -560,6 +560,17 @@ body{padding-bottom:68px}
  #valuation .valuation-mini:last-child b.valuation-premium-high,#valuation .valuation-mini:last-child b.valuation-premium-low{font-size:21px!important}
 }
 
+
+/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+#valuation .card-title{font-size:22px!important;}
+@media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
+#valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
+#valuation .valuation-summary-main .fair-label{justify-content:flex-start!important;}
+#valuation .formula-info{width:18px!important;height:18px!important;min-width:18px!important;padding:0!important;border:1.5px solid #7897b2!important;border-radius:50%!important;background:transparent!important;color:#9eb8cf!important;font-size:12px!important;font-weight:800!important;line-height:15px!important;text-align:center!important;cursor:pointer!important;}
+#valuation .formula-popover{position:fixed!important;z-index:9999!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(330px,calc(100vw - 40px))!important;padding:18px 42px 18px 18px!important;border:1px solid #315d7b!important;border-radius:14px!important;background:#0b2031!important;box-shadow:0 14px 45px rgba(0,0,0,.55)!important;color:#eaf4fb!important;}
+#valuation .formula-popover strong{display:block!important;margin-bottom:10px!important;font-size:17px!important;}
+#valuation .formula-popover div{font-size:14px!important;line-height:1.7!important;color:#bcd0df!important;}
+#valuation .formula-popover-close{position:absolute!important;right:10px!important;top:8px!important;border:0!important;background:transparent!important;color:#a9bfd1!important;font-size:25px!important;cursor:pointer!important;}
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -585,6 +596,17 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
   .manual-refresh{font-size:9px!important;width:10px!important;height:10px!important;line-height:10px!important}
   .update-row small{position:static!important;display:block!important;width:auto!important;height:10px!important;margin:0!important;padding:0!important;font-size:9px!important;line-height:10px!important;white-space:nowrap!important;text-align:right!important}
 }
+
+/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+#valuation .card-title{font-size:22px!important;}
+@media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
+#valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
+#valuation .valuation-summary-main .fair-label{justify-content:flex-start!important;}
+#valuation .formula-info{width:18px!important;height:18px!important;min-width:18px!important;padding:0!important;border:1.5px solid #7897b2!important;border-radius:50%!important;background:transparent!important;color:#9eb8cf!important;font-size:12px!important;font-weight:800!important;line-height:15px!important;text-align:center!important;cursor:pointer!important;}
+#valuation .formula-popover{position:fixed!important;z-index:9999!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(330px,calc(100vw - 40px))!important;padding:18px 42px 18px 18px!important;border:1px solid #315d7b!important;border-radius:14px!important;background:#0b2031!important;box-shadow:0 14px 45px rgba(0,0,0,.55)!important;color:#eaf4fb!important;}
+#valuation .formula-popover strong{display:block!important;margin-bottom:10px!important;font-size:17px!important;}
+#valuation .formula-popover div{font-size:14px!important;line-height:1.7!important;color:#bcd0df!important;}
+#valuation .formula-popover-close{position:absolute!important;right:10px!important;top:8px!important;border:0!important;background:transparent!important;color:#a9bfd1!important;font-size:25px!important;cursor:pointer!important;}
 </style>
 
 <style>
@@ -636,10 +658,21 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
  #valuation .valuation-mini{min-height:62px!important;padding:3px!important}
  #valuation .valuation-mini b{font-size:16px!important}
 }
+
+/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+#valuation .card-title{font-size:22px!important;}
+@media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
+#valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
+#valuation .valuation-summary-main .fair-label{justify-content:flex-start!important;}
+#valuation .formula-info{width:18px!important;height:18px!important;min-width:18px!important;padding:0!important;border:1.5px solid #7897b2!important;border-radius:50%!important;background:transparent!important;color:#9eb8cf!important;font-size:12px!important;font-weight:800!important;line-height:15px!important;text-align:center!important;cursor:pointer!important;}
+#valuation .formula-popover{position:fixed!important;z-index:9999!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(330px,calc(100vw - 40px))!important;padding:18px 42px 18px 18px!important;border:1px solid #315d7b!important;border-radius:14px!important;background:#0b2031!important;box-shadow:0 14px 45px rgba(0,0,0,.55)!important;color:#eaf4fb!important;}
+#valuation .formula-popover strong{display:block!important;margin-bottom:10px!important;font-size:17px!important;}
+#valuation .formula-popover div{font-size:14px!important;line-height:1.7!important;color:#bcd0df!important;}
+#valuation .formula-popover-close{position:absolute!important;right:10px!important;top:8px!important;border:0!important;background:transparent!important;color:#a9bfd1!important;font-size:25px!important;cursor:pointer!important;}
 </style>
 
 <style>
-/* v2.5.1.9 — approved valuation summary layout */
+/* v2.5.1.10 — approved valuation summary layout */
 #valuation .card-title{font-size:23px!important;margin-bottom:14px!important}
 #valuation .valuation-summary-grid{display:grid!important;grid-template-columns:44% 28% 28%!important;grid-template-rows:1fr 1fr!important;min-height:196px!important;margin:0 0 10px!important;border:1px solid #008d78!important;border-radius:15px!important;background:linear-gradient(90deg,rgba(0,105,88,.34),rgba(0,54,58,.24))!important;overflow:hidden!important;position:relative!important}
 #valuation .valuation-summary-main{grid-column:1!important;grid-row:1/3!important;position:relative!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:flex-start!important;padding:20px 18px 20px 28px!important;border-right:1px solid #2abca8!important}
@@ -671,6 +704,17 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
  #valuation .valuation-summary-cell b{font-size:8px!important;padding:3px 5px!important;margin-top:6px!important}
  #valuation .valuation-summary-status strong{font-size:17px!important}
 }
+
+/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+#valuation .card-title{font-size:22px!important;}
+@media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
+#valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
+#valuation .valuation-summary-main .fair-label{justify-content:flex-start!important;}
+#valuation .formula-info{width:18px!important;height:18px!important;min-width:18px!important;padding:0!important;border:1.5px solid #7897b2!important;border-radius:50%!important;background:transparent!important;color:#9eb8cf!important;font-size:12px!important;font-weight:800!important;line-height:15px!important;text-align:center!important;cursor:pointer!important;}
+#valuation .formula-popover{position:fixed!important;z-index:9999!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(330px,calc(100vw - 40px))!important;padding:18px 42px 18px 18px!important;border:1px solid #315d7b!important;border-radius:14px!important;background:#0b2031!important;box-shadow:0 14px 45px rgba(0,0,0,.55)!important;color:#eaf4fb!important;}
+#valuation .formula-popover strong{display:block!important;margin-bottom:10px!important;font-size:17px!important;}
+#valuation .formula-popover div{font-size:14px!important;line-height:1.7!important;color:#bcd0df!important;}
+#valuation .formula-popover-close{position:absolute!important;right:10px!important;top:8px!important;border:0!important;background:transparent!important;color:#a9bfd1!important;font-size:25px!important;cursor:pointer!important;}
 </style>
 </head>
 <body>
@@ -697,7 +741,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.1.9</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.1.10</span></button>
   </aside>
 
   <div class="main-shell">
@@ -749,7 +793,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
       <article class="card outline-card" data-view-open="analysis"><span>建議玩法</span><strong class="purple">--</strong><small>查看建議策略</small></article>
       <article class="card outline-card" data-view-open="analysis"><span>預期上漲空間</span><strong class="blue">--%</strong><small>查看預期空間</small></article>
       <article class="card outline-card" data-view-open="analysis"><span>技術分析</span><strong>→</strong><small>均線／乖離率</small></article>
-      <article class="card outline-card" data-view-open="analysis"><span>估值分析</span><strong>→</strong><small>近四季 EPS／同業 PE</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>估值分析</span><strong id="overviewCompositeFair">--</strong><small>綜合合理價</small></article>
       <article class="card outline-card" data-view-open="analysis"><span>波段分析</span><strong>→</strong><small>1.5X／2X／2.5X</small></article>
       <article class="card outline-card" data-view-open="analysis"><span>買賣決策</span><strong>→</strong><small>買進／減碼／賣出區</small></article>
       <article class="card outline-card target-outline-card" data-view-open="targets">
@@ -774,15 +818,15 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           <div class="card-title">估值分析 <span class="badge" id="valuationBadge" hidden></span></div>
           <div class="valuation-summary-grid">
             <div class="valuation-summary-main">
-              <span>綜合合理價</span>
+              <span class="fair-label">綜合合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看綜合合理價公式">i</button></span>
               <strong id="valuationCompositeFair">--</strong>
               <b id="valuationCompositeGap">--</b>
             </div>
             <div class="valuation-summary-cell">
-              <span>PE 合理股價</span><strong id="valuationPeFair">--</strong><b id="valuationPeFairGap">--</b>
+              <span class="fair-label">PE 合理股價 <button class="formula-info" type="button" data-formula="pe" aria-label="查看 PE 合理價公式">i</button></span><strong id="valuationPeFair">--</strong><b id="valuationPeFairGap">--</b>
             </div>
             <div class="valuation-summary-cell">
-              <span>PB 合理股價</span><strong id="valuationPbFair">--</strong><b id="valuationPbFairGap">--</b>
+              <span class="fair-label">PB 合理股價 <button class="formula-info" type="button" data-formula="pb" aria-label="查看 PB 合理價公式">i</button></span><strong id="valuationPbFair">--</strong><b id="valuationPbFairGap">--</b>
             </div>
             <div class="valuation-summary-cell valuation-summary-status">
               <span>相對估值</span><strong id="valuationStatus">--</strong>
@@ -817,9 +861,10 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
               <div class="valuation-mini"><span>相對同業</span><b id="valuationPbGap">--</b></div>
             </div>
           </div>
-          <div class="valuation-section valuation-bps-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-bps" aria-hidden="true"><svg viewBox="0 0 40 32"><path d="M3 5c6-2 11-1 17 2v21c-6-3-11-4-17-2Z"/><path d="M37 5c-6-2-11-1-17 2v21c6-3 11-4 17-2Z"/></svg></span>每股淨值 <span class="valuation-unit">單位：元</span></div>
-            <div class="valuation-bps-value"><b id="valuationBookValue">--</b><span>代表公司每股的淨資產價值</span></div>
+          <div class="formula-popover" id="valuationFormulaPopover" hidden>
+            <button class="formula-popover-close" type="button" aria-label="關閉">×</button>
+            <strong id="valuationFormulaTitle"></strong>
+            <div id="valuationFormulaText"></div>
           </div>
           <small class="valuation-note" id="valuationNote">估值只判斷相對昂貴程度，不直接作為買賣價。</small>
         </article>
@@ -970,6 +1015,17 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
   .broker-history .broker-history-row>time{font-size:9px!important}
   .broker-history .broker-history-row>.history-actions{grid-column:5!important;justify-self:center!important;width:32px!important}
 }
+
+/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+#valuation .card-title{font-size:22px!important;}
+@media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
+#valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
+#valuation .valuation-summary-main .fair-label{justify-content:flex-start!important;}
+#valuation .formula-info{width:18px!important;height:18px!important;min-width:18px!important;padding:0!important;border:1.5px solid #7897b2!important;border-radius:50%!important;background:transparent!important;color:#9eb8cf!important;font-size:12px!important;font-weight:800!important;line-height:15px!important;text-align:center!important;cursor:pointer!important;}
+#valuation .formula-popover{position:fixed!important;z-index:9999!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(330px,calc(100vw - 40px))!important;padding:18px 42px 18px 18px!important;border:1px solid #315d7b!important;border-radius:14px!important;background:#0b2031!important;box-shadow:0 14px 45px rgba(0,0,0,.55)!important;color:#eaf4fb!important;}
+#valuation .formula-popover strong{display:block!important;margin-bottom:10px!important;font-size:17px!important;}
+#valuation .formula-popover div{font-size:14px!important;line-height:1.7!important;color:#bcd0df!important;}
+#valuation .formula-popover-close{position:absolute!important;right:10px!important;top:8px!important;border:0!important;background:transparent!important;color:#a9bfd1!important;font-size:25px!important;cursor:pointer!important;}
 </style>
 
 <style id="stockzone-v2500-news-tabs">
@@ -1045,4 +1101,15 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #valuation .valuation-mini:last-child b.valuation-premium-high,#valuation .valuation-mini:last-child b.valuation-premium-low{background:none!important;padding:0!important;border-radius:0!important}
 #valuation .valuation-mini:last-child b.valuation-premium-high:after{background:rgba(255,101,116,.20)!important;color:#ff7885!important}
 #valuation .valuation-mini:last-child b.valuation-premium-low:after{background:rgba(19,224,170,.17)!important;color:#13e0aa!important}
+
+/* v2.5.1.10 — valuation sizing, formulas, overview fair price */
+#valuation .card-title{font-size:22px!important;}
+@media(max-width:720px){#valuation .card-title{font-size:18px!important;}}
+#valuation .fair-label{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;}
+#valuation .valuation-summary-main .fair-label{justify-content:flex-start!important;}
+#valuation .formula-info{width:18px!important;height:18px!important;min-width:18px!important;padding:0!important;border:1.5px solid #7897b2!important;border-radius:50%!important;background:transparent!important;color:#9eb8cf!important;font-size:12px!important;font-weight:800!important;line-height:15px!important;text-align:center!important;cursor:pointer!important;}
+#valuation .formula-popover{position:fixed!important;z-index:9999!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(330px,calc(100vw - 40px))!important;padding:18px 42px 18px 18px!important;border:1px solid #315d7b!important;border-radius:14px!important;background:#0b2031!important;box-shadow:0 14px 45px rgba(0,0,0,.55)!important;color:#eaf4fb!important;}
+#valuation .formula-popover strong{display:block!important;margin-bottom:10px!important;font-size:17px!important;}
+#valuation .formula-popover div{font-size:14px!important;line-height:1.7!important;color:#bcd0df!important;}
+#valuation .formula-popover-close{position:absolute!important;right:10px!important;top:8px!important;border:0!important;background:transparent!important;color:#a9bfd1!important;font-size:25px!important;cursor:pointer!important;}
 </style>
