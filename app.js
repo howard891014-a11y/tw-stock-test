@@ -87,7 +87,7 @@ function renderValuation(v){
   setText("valuationCurrentPb",valuationMetric(v.currentPb," 倍","資料不足"));
   setText("valuationPeerPb",valuationMetric(v.peerPb," 倍","資料不足"));
   setText("valuationPbGap",Number.isFinite(Number(v.pbPremiumPct))?`${Number(v.pbPremiumPct)>=0?"溢價":"折價"} ${valuationFmt(Math.abs(Number(v.pbPremiumPct)),"%")}`:"資料不足");
-  setText("valuationMethod",v.method||"Yahoo PE／PB 同業比較＋實際 EPS／BPS");
+  setText("valuationMethod",v.statusDetail||v.method||"Yahoo PE／PB 同業比較＋實際 EPS／BPS");
   setText("valuationNote",profitable
     ?"估值用來判斷相對昂貴程度，不直接當作買賣價。PE 採 Yahoo 顯示口徑；PB 與同業比較依 Yahoo 可取得資料計算。"
     :"近四季 EPS 為負時，本益比估值不適用；不會以 0 倍代替。仍保留同業 PE、BPS 與 PB 資料供比較。"
