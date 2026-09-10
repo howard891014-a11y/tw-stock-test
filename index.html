@@ -804,17 +804,21 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
     </section>
 
       <section class="dashboard-grid">
-        <article class="card detail-panel" id="technical" data-view-panel="analysis">
+        <article class="card detail-panel technical-card" id="technical" data-view-panel="analysis">
           <div class="card-title">技術分析 <span class="badge" id="technicalSource">Yahoo｜--</span></div>
-          <div class="data-list">
-            <div><span>均線排列</span><b id="techMaOrder">--</b></div>
-            <div><span>均線數值</span><b id="techMaValues">--</b></div>
-            <div><span>20MA 乖離率</span><b id="techBias20">--</b></div>
-            <div><span>布林通道</span><b id="techBoll">--</b></div>
-            <div><span>成交量</span><b id="techVolume">--</b></div>
-            <div><span>60日位置</span><b id="techTrend">--</b></div>
-            <div><span>動能</span><b id="techMomentum">--</b></div>
-          </div>
+          <section class="tech-overview">
+            <div><span>技術狀態</span><strong id="techState">--</strong></div>
+            <div><span>技術分數</span><strong><b id="techScore">--</b><small>/ 100</small></strong></div>
+            <p id="techHeadline">--</p>
+          </section>
+          <section class="tech-grid">
+            <div class="tech-tile"><header><b>均線</b><em id="techMaState">--</em></header><p id="techMaConclusion">--</p><small id="techMaValues">--</small></div>
+            <div class="tech-tile"><header><b>布林通道</b><em id="techBollState">--</em></header><p id="techBollConclusion">--</p><small id="techBoll">--</small></div>
+            <div class="tech-tile"><header><b>量價</b><em id="techVolumeState">--</em></header><p id="techVolumeConclusion">--</p><small id="techVolume">--</small></div>
+            <div class="tech-tile"><header><b>趨勢位置</b><em id="techTrendState">--</em></header><p id="techTrendConclusion">--</p><small id="techTrend">--</small></div>
+            <div class="tech-tile tech-wide"><header><b>動能</b><em id="techMomentumState">--</em></header><p id="techMomentumConclusion">--</p><small id="techMomentum">--</small></div>
+          </section>
+          <section class="tech-summary"><b>技術總結</b><p id="techSummary">--</p></section>
         </article>
 
         <article class="card detail-panel valuation-card" id="valuation" data-view-panel="analysis">
@@ -996,6 +1000,18 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
 <small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.1.8"></script>
+
+<style id="v2522-technical">
+#technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
+#technical .card-title{display:flex;justify-content:space-between;align-items:center;font-size:22px;font-weight:900;margin-bottom:12px}
+#technical .card-title .badge{font-size:10px;font-weight:500}
+.tech-overview{display:grid;grid-template-columns:1fr 1fr 2fr;gap:0;align-items:center;padding:14px;border:1px solid #28506c;border-radius:14px;background:#0a1c2b;margin-bottom:12px}
+.tech-overview>div{padding:0 14px;border-right:1px solid #28485f}.tech-overview>div:first-child{padding-left:2px}.tech-overview span{display:block;color:#9fb3c5;font-size:12px;margin-bottom:5px}.tech-overview strong{font-size:27px}.tech-overview strong small{font-size:13px;color:#a9bdcf;margin-left:4px}.tech-overview p{margin:0;padding-left:18px;color:#d6e1ea;font-size:14px;line-height:1.55}.tech-overview .tone-good{color:#13e0aa}.tech-overview .tone-watch{color:#ffd24a}.tech-overview .tone-bad{color:#ff6574}.tech-overview .tone-neutral{color:#72bfff}
+.tech-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.tech-tile{padding:12px;border:1px solid #1c3b52;border-radius:12px;background:#091a29}.tech-tile header{display:flex;align-items:center;justify-content:space-between;gap:8px}.tech-tile header b{font-size:15px}.tech-tile header em{font-style:normal;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;background:#102a3c;color:#72bfff}.tech-tile header em.tone-good{color:#13e0aa;border:1px solid #168b70}.tech-tile header em.tone-watch{color:#ffd24a;border:1px solid #8d7421}.tech-tile header em.tone-bad{color:#ff6574;border:1px solid #87404a}.tech-tile header em.tone-neutral{color:#72bfff;border:1px solid #2e6993}.tech-tile p{margin:9px 0 8px;color:#dce6ee;font-size:13px;line-height:1.45;min-height:38px}.tech-tile small{display:block;padding-top:8px;border-top:1px solid #173249;color:#91a8bb;font-size:10px;line-height:1.5}.tech-wide{grid-column:1/-1}.tech-summary{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;margin-top:10px;padding:12px;border:1px solid #2a5570;border-radius:12px;background:#0a1b29}.tech-summary b{white-space:nowrap;font-size:14px}.tech-summary p{margin:0;color:#cbd9e4;font-size:12px;line-height:1.55}
+@media(max-width:720px){#technical.technical-card{padding:12px!important}#technical .card-title{font-size:18px}.tech-overview{grid-template-columns:1fr 1fr;padding:12px}.tech-overview>div{padding:0 10px}.tech-overview>div:nth-child(2){border-right:0}.tech-overview p{grid-column:1/-1;border-top:1px solid #28485f;margin-top:10px;padding:10px 0 0;font-size:12px}.tech-overview strong{font-size:24px}.tech-grid{gap:7px}.tech-tile{padding:10px}.tech-tile header b{font-size:13px}.tech-tile p{font-size:11px;min-height:34px}.tech-tile small{font-size:9px}.tech-summary{gap:9px;padding:10px}.tech-summary b{font-size:12px}.tech-summary p{font-size:10px}
+.stock-head .eyebrow{font-size:15px!important}.price-block span{font-size:14px!important;line-height:30px!important}.price-block small{font-size:11px!important;line-height:10px!important}
+}
+</style>
 </body>
 </html>
 <style>
