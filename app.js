@@ -87,6 +87,9 @@ function renderValuation(v){
   setText("valuationCurrentPb",valuationMetric(v.currentPb," 倍","資料不足"));
   setText("valuationPeerPb",valuationMetric(v.peerPb," 倍","資料不足"));
   setText("valuationPbGap",Number.isFinite(Number(v.pbPremiumPct))?`${Number(v.pbPremiumPct)>=0?"溢價":"折價"} ${valuationFmt(Math.abs(Number(v.pbPremiumPct)),"%")}`:"資料不足");
+  const peGap=$("valuationPeGap"), pbGap=$("valuationPbGap");
+  if(peGap){peGap.classList.remove("valuation-premium-high","valuation-premium-low");if(Number.isFinite(Number(v.pePremiumPct)))peGap.classList.add(Number(v.pePremiumPct)>=0?"valuation-premium-high":"valuation-premium-low");}
+  if(pbGap){pbGap.classList.remove("valuation-premium-high","valuation-premium-low");if(Number.isFinite(Number(v.pbPremiumPct)))pbGap.classList.add(Number(v.pbPremiumPct)>=0?"valuation-premium-high":"valuation-premium-low");}
   setText("valuationMethod",v.statusDetail||v.method||"Yahoo PE／PB 同業比較＋實際 EPS／BPS");
   setText("valuationNote",profitable
     ?"估值用來判斷相對昂貴程度，不直接當作買賣價。PE 採 Yahoo 顯示口徑；PB 與同業比較依 Yahoo 可取得資料計算。"
@@ -95,8 +98,8 @@ function renderValuation(v){
   const host=$("valuationEps5");
   if(host){
     const q=Array.isArray(v.latest4)?v.latest4:[];
-    const cards=[`<div class="valuation-eps-chip is-ttm"><span>近四季 EPS<br>(TTM)</span><b>${valuationFmt(v.ttm)}</b></div>`];
-    q.forEach((x,i)=>cards.push(`<div class="valuation-eps-chip"><span>${String(x.period||"")}</span><b>${valuationFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`));
+    const cards=[`<div class="valuation-eps-chip is-ttm"><span>近四季 EPS</span><b>${valuationFmt(v.ttm)}</b></div>`];
+    q.forEach((x,i)=>cards.push(`<div class="valuation-eps-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`));
     host.innerHTML=cards.join("");
   }
 }

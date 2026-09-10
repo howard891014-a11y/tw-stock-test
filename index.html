@@ -600,7 +600,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             <div class="valuation-eps5" id="valuationEps5"></div>
           </div>
           <div class="valuation-section">
-            <div class="valuation-section-title">本益比（PE） <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：倍</span></div>
+            <div class="valuation-section-title">本益比 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：倍</span></div>
             <div class="valuation-compare">
               <div class="valuation-mini"><span>目前本益比</span><b id="valuationCurrentPe">--</b></div>
               <div class="valuation-mini"><span>同業平均本益比</span><b id="valuationPeerPe">--</b></div>
@@ -608,7 +608,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </div>
           <div class="valuation-section">
-            <div class="valuation-section-title">股價淨值比（PB） <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：倍</span></div>
+            <div class="valuation-section-title">股價淨值比 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：倍</span></div>
             <div class="valuation-compare">
               <div class="valuation-mini"><span>目前 PB</span><b id="valuationCurrentPb">--</b></div>
               <div class="valuation-mini"><span>同業平均 PB</span><b id="valuationPeerPb">--</b></div>
@@ -616,7 +616,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </div>
           <div class="valuation-section">
-            <div class="valuation-section-title">每股淨值（BPS） <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：元</span></div>
+            <div class="valuation-section-title">每股淨值 <span style="margin-left:auto;font-size:10px;font-weight:500;color:#9eb5c9;background:#10263a;padding:5px 9px;border-radius:999px">單位：元</span></div>
             <div class="valuation-bps"><div class="valuation-mini"><span>每股淨值</span><b id="valuationBookValue">--</b></div></div>
           </div>
           <small class="valuation-note" id="valuationNote">估值只判斷相對昂貴程度，不直接作為買賣價。</small>
@@ -812,4 +812,16 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .news-summary b{color:#eef5ff}.news-summary p{margin:4px 0 0}
 .dashboard-grid>.detail-panel[data-view-panel="analysis"].active-view{display:block}
 @media(min-width:721px){.dashboard-grid:has(>.detail-panel[data-view-panel="analysis"].active-view){grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v2.5.1.5 valuation fidelity fixes */
+.valuation-eps-chip.is-ttm{border:1px solid #1d4058!important;background:#091a29!important}
+.valuation-eps-chip.is-latest{border:2px solid #41caff!important;background:linear-gradient(145deg,#0c3145,#0a1b2a)!important}
+.valuation-eps-chip.is-latest em{background:#159bd5!important;color:#e7f8ff!important}
+.valuation-section:nth-of-type(2) .valuation-mini:last-child b.valuation-premium-high{color:#ff6574!important}
+.valuation-section:nth-of-type(2) .valuation-mini:last-child b.valuation-premium-low{color:#13e0aa!important}
+.valuation-section:nth-of-type(3) .valuation-mini:last-child b.valuation-premium-high{color:#ff6574!important}
+.valuation-section:nth-of-type(3) .valuation-mini:last-child b.valuation-premium-low{color:#13e0aa!important}
+.valuation-mini:last-child b.valuation-premium-high,.valuation-mini:last-child b.valuation-premium-low{display:inline-block!important;align-self:center!important;padding:4px 10px!important;border-radius:8px!important}
+.valuation-mini:last-child b.valuation-premium-high{background:rgba(255,101,116,.18)!important}
+.valuation-mini:last-child b.valuation-premium-low{background:rgba(19,224,170,.16)!important}
 </style>
