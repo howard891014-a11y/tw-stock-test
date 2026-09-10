@@ -65,16 +65,20 @@ async function valuation(query,market,price){
   const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});
   return await readJson(await fetch(`/api/valuation?${params.toString()}`,{cache:"no-store"}),"估值");
 }
+function valuationNum(n){
+  if(n===null||n===undefined||n==="")return null;
+  const x=Number(n);return Number.isFinite(x)?x:null;
+}
 function valuationFmt(n,suffix=""){
-  const x=Number(n);return Number.isFinite(x)?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:"--";
+  const x=valuationNum(n);return x!==null?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:"--";
 }
 function valuationMetric(n,suffix="",na="--"){
-  const x=Number(n);return Number.isFinite(x)?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:na;
+  const x=valuationNum(n);return x!==null?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:na;
 }
 function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
   ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap"].forEach(id=>setText(id,"--"));
-  const host=$("valuationEps5");if(host)host.innerHTML="";
+  const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");
 }
 function renderValuation(v){
   const profitable=v.profitable===true || Number(v.ttm)>0;
@@ -95,12 +99,11 @@ function renderValuation(v){
     ?"估值用來判斷相對昂貴程度，不直接當作買賣價。PE 採 Yahoo 顯示口徑；PB 與同業比較依 Yahoo 可取得資料計算。"
     :"近四季 EPS 為負時，本益比估值不適用；不會以 0 倍代替。仍保留同業 PE、BPS 與 PB 資料供比較。"
   );
-  const host=$("valuationEps5");
+  setText("valuationTtmEps",valuationMetric(v.ttm,"","資料不足"));
+  const host=$("valuationQuarterGrid");
   if(host){
     const q=Array.isArray(v.latest4)?v.latest4:[];
-    const cards=[`<div class="valuation-eps-chip is-ttm"><span>近四季 EPS</span><b>${valuationFmt(v.ttm)}</b></div>`];
-    q.forEach((x,i)=>cards.push(`<div class="valuation-eps-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`));
-    host.innerHTML=cards.join("");
+    host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");
   }
 }
 async function loadValuation(stock){
