@@ -69,11 +69,23 @@ function valuationNum(n){
   if(n===null||n===undefined||n==="")return null;
   const x=Number(n);return Number.isFinite(x)?x:null;
 }
+function valuationTrunc(n){
+  const x=valuationNum(n);return x===null?null:Math.trunc(x);
+}
 function valuationFmt(n,suffix=""){
-  const x=valuationNum(n);return x!==null?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:"--";
+  const x=valuationTrunc(n);return x!==null?`${x.toLocaleString("zh-TW")}${suffix}`:"--";
 }
 function valuationMetric(n,suffix="",na="--"){
-  const x=valuationNum(n);return x!==null?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:na;
+  const x=valuationTrunc(n);return x!==null?`${x.toLocaleString("zh-TW")}${suffix}`:na;
+}
+function valuationRiskByCurrentFair(current,fair){
+  if(!(current>0&&fair>0))return "neutral";
+  const premium=(current/fair-1)*100;
+  return premium<-10?"safe":premium<=20?"watch":"danger";
+}
+function valuationRiskByPeer(premium){
+  const x=valuationNum(premium);if(x===null)return "neutral";
+  return x<=0?"safe":x<=30?"watch":"danger";
 }
 function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
@@ -95,10 +107,10 @@ function renderValuation(v){
   const renderFair=(valueId,gapId,value)=>{
     setText(valueId,Number.isFinite(value)?valuationFmt(value,""):"資料不足");
     const el=$(gapId), gap=fairGap(value);
-    if(!el)return; el.classList.remove("fair-up","fair-down","fair-flat");
-    if(gap===null){el.textContent="--";el.classList.add("fair-flat");return;}
+    if(!el)return; el.classList.remove("risk-safe","risk-watch","risk-danger","risk-neutral");
+    if(gap===null){el.textContent="--";el.classList.add("risk-neutral");return;}
     el.textContent=`較現價 ${gap>=0?"+":"-"}${valuationFmt(Math.abs(gap),"%")}`;
-    el.classList.add(gap>0.5?"fair-up":gap<-0.5?"fair-down":"fair-flat");
+    el.classList.add(`risk-${valuationRiskByCurrentFair(last,value)}`);
   };
   renderFair("valuationPeFair","valuationPeFairGap",peFair);
   renderFair("valuationPbFair","valuationPbFairGap",pbFair);
@@ -113,8 +125,19 @@ function renderValuation(v){
   setText("valuationPeerPb",valuationMetric(v.peerPb," 倍","資料不足"));
   setText("valuationPbGap",Number.isFinite(Number(v.pbPremiumPct))?`${Number(v.pbPremiumPct)>=0?"+":"-"}${valuationFmt(Math.abs(Number(v.pbPremiumPct)),"%")}`:"資料不足");
   const peGap=$("valuationPeGap"), pbGap=$("valuationPbGap");
-  if(peGap){peGap.classList.remove("valuation-premium-high","valuation-premium-low");peGap.removeAttribute("data-tag");if(Number.isFinite(Number(v.pePremiumPct))){const high=Number(v.pePremiumPct)>=0;peGap.classList.add(high?"valuation-premium-high":"valuation-premium-low");peGap.dataset.tag=high?"較同業高":"較同業低";}}
-  if(pbGap){pbGap.classList.remove("valuation-premium-high","valuation-premium-low");pbGap.removeAttribute("data-tag");if(Number.isFinite(Number(v.pbPremiumPct))){const high=Number(v.pbPremiumPct)>=0;pbGap.classList.add(high?"valuation-premium-high":"valuation-premium-low");pbGap.dataset.tag=high?"較同業高":"較同業低";}}
+  const applyPeerRisk=(el,premium)=>{
+    if(!el)return;
+    el.classList.remove("valuation-premium-high","valuation-premium-low","risk-safe","risk-watch","risk-danger","risk-neutral");
+    el.removeAttribute("data-tag");
+    if(!Number.isFinite(Number(premium)))return;
+    const risk=valuationRiskByPeer(premium);
+    el.classList.add(`risk-${risk}`);
+    el.dataset.tag=risk==="safe"?"安全":risk==="watch"?"注意":"危險";
+  };
+  applyPeerRisk(peGap,v.pePremiumPct);
+  applyPeerRisk(pbGap,v.pbPremiumPct);
+  const statusEl=$("valuationStatus");
+  if(statusEl){statusEl.classList.remove("risk-text-safe","risk-text-watch","risk-text-danger","risk-text-neutral");statusEl.classList.add(`risk-text-${valuationRiskByCurrentFair(last,compositeFair)}`);}
   setText("valuationMethod",v.statusDetail||v.method||"Yahoo PE／PB 同業比較＋實際 EPS／BPS");
   setText("valuationNote",profitable
     ?"估值用來判斷相對昂貴程度，不直接當作買賣價。PE 採 Yahoo 顯示口徑；PB 與同業比較依 Yahoo 可取得資料計算。"

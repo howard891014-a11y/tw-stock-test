@@ -1120,3 +1120,19 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #valuation .fair-label .formula-info{font-size:1em!important;}
 #valuation .valuation-section-title .formula-info{font-size:1em!important;}
 </style>
+<style>
+/* v2.5.1.12 — valuation risk semantics */
+#valuation .risk-safe{color:#13e0aa!important;background:rgba(19,224,170,.17)!important}
+#valuation .risk-watch{color:#ffd24a!important;background:rgba(255,210,74,.17)!important}
+#valuation .risk-danger{color:#ff6574!important;background:rgba(255,101,116,.20)!important}
+#valuation .risk-neutral{color:#c8d7e2!important;background:#10263a!important}
+#valuation .risk-text-safe{color:#13e0aa!important}
+#valuation .risk-text-watch{color:#ffd24a!important}
+#valuation .risk-text-danger{color:#ff6574!important}
+#valuation .risk-text-neutral{color:#c8d7e2!important}
+#valuation .valuation-mini:last-child b.risk-safe,#valuation .valuation-mini:last-child b.risk-watch,#valuation .valuation-mini:last-child b.risk-danger{background:none!important;padding:0!important;border-radius:0!important;font-size:19px!important;line-height:1.05!important}
+#valuation .valuation-mini:last-child b.risk-safe:after,#valuation .valuation-mini:last-child b.risk-watch:after,#valuation .valuation-mini:last-child b.risk-danger:after{content:attr(data-tag)!important;display:block!important;width:max-content!important;margin:5px auto 0!important;padding:3px 7px!important;border-radius:7px!important;font-size:9px!important;font-weight:800!important;line-height:1.2!important}
+#valuation .valuation-mini:last-child b.risk-safe:after{background:rgba(19,224,170,.17)!important;color:#13e0aa!important}
+#valuation .valuation-mini:last-child b.risk-watch:after{background:rgba(255,210,74,.17)!important;color:#ffd24a!important}
+#valuation .valuation-mini:last-child b.risk-danger:after{background:rgba(255,101,116,.20)!important;color:#ff6574!important}
+</style>
