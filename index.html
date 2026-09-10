@@ -741,7 +741,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.3</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.4</span></button>
   </aside>
 
   <div class="main-shell">
@@ -806,10 +806,16 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
       <section class="dashboard-grid">
         <article class="card detail-panel technical-card" id="technical" data-view-panel="analysis">
           <div class="card-title">技術分析 <span class="badge" id="technicalSource">Yahoo｜--</span></div>
-          <section class="tech-overview">
-            <div><span>技術狀態</span><strong id="techState">--</strong></div>
-            <div><span>技術分數</span><strong><b id="techScore">--</b><small>/ 100</small></strong></div>
-            <p id="techHeadline">--</p>
+          <section class="tech-overview" id="techOverview">
+            <div class="tech-overview-main">
+              <span>技術狀態</span>
+              <div class="tech-state-line"><i class="tech-state-icon" aria-hidden="true">↑</i><strong id="techState">--</strong></div>
+              <div class="tech-score-line"><span>技術分數</span><strong><b id="techScore">--</b><small>/ 100</small></strong></div>
+            </div>
+            <div class="tech-overview-points">
+              <ul id="techKeyPoints"><li>--</li></ul>
+              <p id="techHeadline">--</p>
+            </div>
           </section>
           <section class="tech-grid">
             <div class="tech-tile"><header><b>均線</b><em id="techMaState">--</em></header><p id="techMaConclusion">--</p><small id="techMaValues">--</small></div>
@@ -999,18 +1005,16 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.2.3"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.2.4"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
 #technical .card-title{display:flex;justify-content:space-between;align-items:center;font-size:22px;font-weight:900;margin-bottom:12px}
 #technical .card-title .badge{font-size:10px;font-weight:500}
-.tech-overview{display:grid;grid-template-columns:1fr 1fr 2fr;gap:0;align-items:center;padding:14px;border:1px solid #28506c;border-radius:14px;background:#0a1c2b;margin-bottom:12px}
-.tech-overview>div{padding:0 14px;border-right:1px solid #28485f}.tech-overview>div:first-child{padding-left:2px}.tech-overview span{display:block;color:#9fb3c5;font-size:12px;margin-bottom:5px}.tech-overview strong{font-size:27px}.tech-overview strong small{font-size:13px;color:#a9bdcf;margin-left:4px}.tech-overview p{margin:0;padding-left:18px;color:#d6e1ea;font-size:14px;line-height:1.55}.tech-overview .tone-good{color:#13e0aa}.tech-overview .tone-watch{color:#ffd24a}.tech-overview .tone-bad{color:#ff6574}.tech-overview .tone-neutral{color:#72bfff}
-.tech-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.tech-tile{padding:12px;border:1px solid #1c3b52;border-radius:12px;background:#091a29}.tech-tile header{display:flex;align-items:center;justify-content:space-between;gap:8px}.tech-tile header b{font-size:15px}.tech-tile header em{font-style:normal;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;background:#102a3c;color:#72bfff}.tech-tile header em.tone-good{color:#13e0aa;border:1px solid #168b70}.tech-tile header em.tone-watch{color:#ffd24a;border:1px solid #8d7421}.tech-tile header em.tone-bad{color:#ff6574;border:1px solid #87404a}.tech-tile header em.tone-neutral{color:#72bfff;border:1px solid #2e6993}.tech-tile p{margin:9px 0 8px;color:#dce6ee;font-size:13px;line-height:1.45;min-height:38px}.tech-tile small{display:block;padding-top:8px;border-top:1px solid #173249;color:#91a8bb;font-size:10px;line-height:1.5}.tech-wide{grid-column:1/-1}.tech-summary{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;margin-top:10px;padding:12px;border:1px solid #2a5570;border-radius:12px;background:#0a1b29}.tech-summary b{white-space:nowrap;font-size:14px}.tech-summary p{margin:0;color:#cbd9e4;font-size:12px;line-height:1.55}
-@media(max-width:720px){#technical.technical-card{padding:12px!important}#technical .card-title{font-size:18px}.tech-overview{grid-template-columns:1fr 1fr;padding:12px}.tech-overview>div{padding:0 10px}.tech-overview>div:nth-child(2){border-right:0}.tech-overview p{grid-column:1/-1;border-top:1px solid #28485f;margin-top:10px;padding:10px 0 0;font-size:12px}.tech-overview strong{font-size:24px}.tech-grid{gap:7px}.tech-tile{padding:10px}.tech-tile header b{font-size:13px}.tech-tile p{font-size:11px;min-height:34px}.tech-tile small{font-size:9px}.tech-summary{gap:9px;padding:10px}.tech-summary b{font-size:12px}.tech-summary p{font-size:10px}
-.stock-head .eyebrow{font-size:15px!important}.price-block span{font-size:14px!important;line-height:30px!important}.price-block small{font-size:11px!important;line-height:10px!important}
-}
+.tech-overview{display:grid;grid-template-columns:44% 56%;gap:0;align-items:stretch;padding:0;border:1px solid #28506c;border-radius:14px;background:#0a1c2b;margin-bottom:12px;overflow:hidden}
+.tech-overview-main{padding:15px 16px;border-right:1px solid #28485f}.tech-overview-main>span{display:block;color:#9fb3c5;font-size:12px;margin-bottom:7px}.tech-state-line{display:flex;align-items:center;gap:10px}.tech-state-icon{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:23px;font-style:normal;font-weight:900;background:#14334a;color:#72bfff}.tech-state-line strong{font-size:29px;line-height:1;color:#72bfff}.tech-score-line{display:flex;align-items:baseline;gap:9px;margin-top:13px}.tech-score-line>span{font-size:12px;color:#a9bdcf}.tech-score-line strong{font-size:23px}.tech-score-line strong small{font-size:12px;color:#a9bdcf;margin-left:4px}.tech-overview-points{padding:13px 15px}.tech-overview-points ul{margin:0;padding-left:18px;display:grid;gap:4px}.tech-overview-points li{color:#dce6ee;font-size:11px;line-height:1.35}.tech-overview-points p{margin:9px 0 0;padding-top:8px;border-top:1px solid #213f55;color:#9fb3c5;font-size:10px;line-height:1.4}.tech-overview.tone-good .tech-state-icon,.tech-overview.tone-good .tech-state-line strong{background-color:#13e0aa;color:#06251d}.tech-overview.tone-good .tech-state-line strong{background:none;color:#13e0aa}.tech-overview.tone-watch .tech-state-icon{background:#ffd24a;color:#332a00}.tech-overview.tone-watch .tech-state-line strong{color:#ffd24a}.tech-overview.tone-bad .tech-state-icon{background:#ff6574;color:#34070c}.tech-overview.tone-bad .tech-state-line strong{color:#ff6574}.tech-overview.tone-bad .tech-state-icon{transform:rotate(180deg)}.tech-overview.tone-neutral .tech-state-icon,.tech-overview.tone-neutral .tech-state-line strong{color:#72bfff}
+.tech-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.tech-tile{grid-column:span 2;padding:11px;border:1px solid #1c3b52;border-radius:12px;background:#091a29}.tech-tile:nth-child(4),.tech-tile:nth-child(5){grid-column:span 3}.tech-tile header{display:flex;align-items:center;justify-content:space-between;gap:7px}.tech-tile header b{font-size:14px}.tech-tile header em{font-style:normal;font-size:10px;font-weight:800;padding:3px 7px;border-radius:999px;background:#102a3c;color:#72bfff}.tech-tile header em.tone-good{color:#13e0aa;border:1px solid #168b70}.tech-tile header em.tone-watch{color:#ffd24a;border:1px solid #8d7421}.tech-tile header em.tone-bad{color:#ff6574;border:1px solid #87404a}.tech-tile header em.tone-neutral{color:#72bfff;border:1px solid #2e6993}.tech-tile p{margin:8px 0 7px;color:#dce6ee;font-size:11px;line-height:1.4;min-height:31px}.tech-tile small{display:block;padding-top:7px;border-top:1px solid #173249;color:#91a8bb;font-size:9px;line-height:1.45}.tech-wide{grid-column:span 3}.tech-summary{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;margin-top:10px;padding:11px 12px;border:1px solid #2a5570;border-radius:12px;background:#0a1b29}.tech-summary b{white-space:nowrap;font-size:13px}.tech-summary p{margin:0;color:#cbd9e4;font-size:11px;line-height:1.5}
+@media(max-width:720px){#technical.technical-card{padding:12px!important}#technical .card-title{font-size:18px}.tech-overview{grid-template-columns:42% 58%}.tech-overview-main{padding:13px 11px}.tech-state-icon{width:30px;height:30px;font-size:20px}.tech-state-line{gap:7px}.tech-state-line strong{font-size:25px}.tech-score-line{gap:6px;margin-top:11px}.tech-score-line strong{font-size:21px}.tech-overview-points{padding:11px 10px}.tech-overview-points li{font-size:10px}.tech-overview-points p{font-size:9px}.tech-grid{gap:7px}.tech-tile{padding:9px 8px}.tech-tile header b{font-size:12px}.tech-tile header em{font-size:9px;padding:2px 5px}.tech-tile p{font-size:10px;min-height:29px}.tech-tile small{font-size:8px}.tech-summary{gap:8px;padding:9px 10px}.tech-summary b{font-size:12px}.tech-summary p{font-size:10px}}
 </style>
 
 <style id="stockzone-v2523-mobile-header-fixes">

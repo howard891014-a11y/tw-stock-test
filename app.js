@@ -80,6 +80,9 @@ async function loadTechnical(data){
     techSet("techVolumeState",a.volume?.state||"--",a.volume?.tone); setText("techVolumeConclusion",a.volume?.conclusion||"--"); setText("techVolume",`當日量 ${technicalFmt(t.volume?.current)}｜5日 ${technicalFmt(t.volume?.avg5)}｜20日 ${technicalFmt(t.volume?.avg20)}｜量比 ${technicalFmt(t.volume?.ratio20)}`);
     techSet("techTrendState",a.trend?.state||"--",a.trend?.tone); setText("techTrendConclusion",a.trend?.conclusion||"--"); setText("techTrend",`60日高 ${technicalFmt(t.trend?.high60)}｜低 ${technicalFmt(t.trend?.low60)}｜距高 ${technicalFmt(t.trend?.fromHigh60Pct,"%")}`);
     techSet("techMomentumState",a.momentum?.state||"--",a.momentum?.tone); setText("techMomentumConclusion",a.momentum?.conclusion||"--"); setText("techMomentum",`RSI ${technicalFmt(t.momentum?.rsi14)}｜MACD ${technicalFmt(t.momentum?.macd)}｜Signal ${technicalFmt(t.momentum?.signal)}｜柱 ${technicalFmt(t.momentum?.histogram)}`);
+    const keyPoints=[a.ma?.conclusion,a.bollinger?.conclusion,a.volume?.conclusion,a.trend?.conclusion,a.momentum?.conclusion].filter(Boolean);
+    const keyHost=$("techKeyPoints"); if(keyHost)keyHost.innerHTML=keyPoints.slice(0,5).map(x=>`<li>${String(x)}</li>`).join("");
+    const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${a.overall?.tone||"neutral"}`);}
     setText("techSummary",a.overall?.summary||"--");
   }catch(e){console.warn("技術資料更新失敗",e);setText("technicalSource","Yahoo｜取得失敗")}
 }
@@ -95,10 +98,14 @@ function valuationTrunc(n){
   const x=valuationNum(n);return x===null?null:Math.trunc(x);
 }
 function valuationFmt(n,suffix=""){
+  // Only prices calculated by StockZone (PE/PB/composite fair price) are truncated.
   const x=valuationTrunc(n);return x!==null?`${x.toLocaleString("zh-TW")}${suffix}`:"--";
 }
 function valuationMetric(n,suffix="",na="--"){
-  const x=valuationTrunc(n);return x!==null?`${x.toLocaleString("zh-TW")}${suffix}`:na;
+  const x=valuationNum(n);return x!==null?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2,minimumFractionDigits:0})}${suffix}`:na;
+}
+function valuationPercent(n,na="--"){
+  const x=valuationNum(n);return x!==null?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2,minimumFractionDigits:0})}%`:na;
 }
 function valuationEpsFmt(n){
   const x=valuationNum(n);
@@ -135,21 +142,21 @@ function renderValuation(v){
     const el=$(gapId), gap=fairGap(value);
     if(!el)return; el.classList.remove("risk-safe","risk-watch","risk-danger","risk-neutral");
     if(gap===null){el.textContent="--";el.classList.add("risk-neutral");return;}
-    el.textContent=`較現價 ${gap>=0?"+":"-"}${valuationFmt(Math.abs(gap),"%")}`;
+    el.textContent=`較現價 ${gap>=0?"+":"-"}${valuationPercent(Math.abs(gap))}`;
     el.classList.add(`risk-${valuationRiskByCurrentFair(last,value)}`);
   };
   renderFair("valuationPeFair","valuationPeFairGap",peFair);
   renderFair("valuationPbFair","valuationPbFairGap",pbFair);
   renderFair("valuationCompositeFair","valuationCompositeGap",compositeFair);
   setText("overviewCompositeFair",Number.isFinite(compositeFair)?valuationFmt(compositeFair):"--");
-  setText("valuationSummaryBps",bps!==null?valuationFmt(bps,""):"資料不足");
+  setText("valuationSummaryBps",bps!==null?valuationMetric(bps,""):"資料不足");
   setText("valuationCurrentPe",profitable?valuationMetric(v.currentPe," 倍","資料不足"):"不適用");
   setText("valuationPeerPe",valuationMetric(v.peerPe," 倍","資料不足"));
-  setText("valuationPeGap",Number.isFinite(Number(v.pePremiumPct))?`${Number(v.pePremiumPct)>=0?"+":"-"}${valuationFmt(Math.abs(Number(v.pePremiumPct)),"%")}`:(profitable?"資料不足":"不適用"));
+  setText("valuationPeGap",Number.isFinite(Number(v.pePremiumPct))?`${Number(v.pePremiumPct)>=0?"+":"-"}${valuationPercent(Math.abs(Number(v.pePremiumPct)))}`:(profitable?"資料不足":"不適用"));
   setText("valuationBookValue",valuationMetric(v.bookValue," 元","資料不足"));
   setText("valuationCurrentPb",valuationMetric(v.currentPb," 倍","資料不足"));
   setText("valuationPeerPb",valuationMetric(v.peerPb," 倍","資料不足"));
-  setText("valuationPbGap",Number.isFinite(Number(v.pbPremiumPct))?`${Number(v.pbPremiumPct)>=0?"+":"-"}${valuationFmt(Math.abs(Number(v.pbPremiumPct)),"%")}`:"資料不足");
+  setText("valuationPbGap",Number.isFinite(Number(v.pbPremiumPct))?`${Number(v.pbPremiumPct)>=0?"+":"-"}${valuationPercent(Math.abs(Number(v.pbPremiumPct)))}`:"資料不足");
   const peGap=$("valuationPeGap"), pbGap=$("valuationPbGap");
   const applyPeerRisk=(el,premium)=>{
     if(!el)return;
