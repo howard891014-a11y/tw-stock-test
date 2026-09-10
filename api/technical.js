@@ -1,5 +1,5 @@
 const UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36';
-function num(x){x=Number(x);return Number.isFinite(x)?x:null}
+function num(x){if(x===null||x===undefined||x==='')return null;x=Number(x);return Number.isFinite(x)?x:null}
 function avg(a){const x=a.filter(Number.isFinite);return x.length?x.reduce((s,v)=>s+v,0)/x.length:null}
 function sma(a,n){return a.length>=n?avg(a.slice(-n)):null}
 function std(a,n){if(a.length<n)return null;const x=a.slice(-n),m=avg(x);return Math.sqrt(x.reduce((s,v)=>s+(v-m)**2,0)/n)}
@@ -14,7 +14,7 @@ export default async function handler(req,res){
  try{
   const q=req.query?.q,market=req.query?.market||'';if(!q)return res.status(400).json({ok:false,error:'缺少股票代碼'});
   const symbol=yahooSymbol(q,market),r=await chart(symbol),ts=r.timestamp||[],z=r.indicators?.quote?.[0]||{};
-  const rows=ts.map((t,i)=>({date:new Date(t*1000).toISOString().slice(0,10),open:num(z.open?.[i]),high:num(z.high?.[i]),low:num(z.low?.[i]),close:num(z.close?.[i]),volume:num(z.volume?.[i])})).filter(x=>Number.isFinite(x.close));
+  const rows=ts.map((t,i)=>({date:new Date(t*1000).toISOString().slice(0,10),open:num(z.open?.[i]),high:num(z.high?.[i]),low:num(z.low?.[i]),close:num(z.close?.[i]),volume:num(z.volume?.[i])})).filter(x=>[x.open,x.high,x.low,x.close].every(v=>Number.isFinite(v)&&v>0)&&Number.isFinite(x.volume)&&x.volume>=0&&x.high>=x.low&&x.high>=x.open&&x.high>=x.close&&x.low<=x.open&&x.low<=x.close);
   if(rows.length<60)throw new Error('Yahoo 歷史資料不足 60 個交易日');
   const c=rows.map(x=>x.close),v=rows.map(x=>x.volume),last=c.at(-1),ma5=sma(c,5),ma10=sma(c,10),ma20=sma(c,20),ma60=sma(c,60);
   const sd20=std(c,20),upper=ma20+2*sd20,lower=ma20-2*sd20,bw=ma20?((upper-lower)/ma20)*100:null;
