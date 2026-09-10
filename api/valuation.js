@@ -34,7 +34,7 @@ function parseQuarterly(lines){
       const token=lines[j].replace(/,/g,"").replace(/%$/g,"").trim();
       if(/^-?\d+(?:\.\d+)?$/.test(token))vals.push(Number(token));
     }
-    if(vals.length){out.push({period:`${m[1]} Q${m[2]}`,eps:vals[0]})}
+    if(vals.length)out.push({period:`${m[1]} Q${m[2]}`,eps:vals[0]});
   }
   const seen=new Set();
   return out.filter(x=>!seen.has(x.period)&&(seen.add(x.period),true));
@@ -46,8 +46,32 @@ function parseYahooEpsPage(html){
   const quarterly=parseQuarterly(lines);
   const latest4=quarterly.slice(0,4);
   const ttm=latest4.length===4?round2(latest4.reduce((s,x)=>s+x.eps,0)):null;
-  const nameIdx=lines.findIndex(x=>/每股盈餘/.test(x));
-  return {name:nameIdx>1?lines[Math.max(0,nameIdx-2)]:"",quarterly,latest4,ttm,...pe};
+  return {quarterly,latest4,ttm,...pe};
+}
+function firstNumberAfterLabel(lines,labelRe,maxLook=4){
+  for(let i=0;i<lines.length;i++){
+    if(!labelRe.test(lines[i]))continue;
+    const own=lines[i].match(/(-?\d+(?:,\d{3})*(?:\.\d+)?)/);
+    if(own)return num(own[1]);
+    for(let j=i+1;j<Math.min(lines.length,i+1+maxLook);j++){
+      const m=lines[j].match(/^-?\d+(?:,\d{3})*(?:\.\d+)?(?:\s*(?:元|%))?$/);
+      if(m)return num(lines[j].match(/-?\d+(?:,\d{3})*(?:\.\d+)?/)[0]);
+      if(/每股淨值|現金股利|股票股利|營業毛利率|每股盈餘/.test(lines[j]))break;
+    }
+  }
+  return null;
+}
+function parseYahooProfilePage(html){
+  const lines=htmlToLines(html);
+  const joined=lines.join(" ");
+  let bookValue=null,cashDividend=null;
+  let m=joined.match(/每股淨值\s*(-?\d+(?:\.\d+)?)\s*元/);
+  if(m)bookValue=num(m[1]);
+  if(bookValue==null)bookValue=firstNumberAfterLabel(lines,/^每股淨值$/);
+  m=joined.match(/現金股利\s*(-?\d+(?:\.\d+)?)\s*元/);
+  if(m)cashDividend=num(m[1]);
+  if(cashDividend==null)cashDividend=firstNumberAfterLabel(lines,/^現金股利$/);
+  return {bookValue,cashDividend};
 }
 async function fetchText(url,timeout=9000){
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);
@@ -62,20 +86,32 @@ function suffixFor(market=""){
   if(/上市|TWSE|TW/i.test(m))return ".TW";
   return "";
 }
-function buildValuation(parsed,price){
-  const ttm=num(parsed.ttm),peerPe=num(parsed.peerPe),currentPe=num(parsed.currentPe),last=num(price);
-  let conservativePe=null,neutralPe=null,optimisticPe=null,conservativePrice=null,neutralPrice=null,optimisticPrice=null,diffPct=null,label="資料不足";
-  if(ttm<=0){label="近四季虧損"}
-  else if(ttm>0&&peerPe>0){
-    conservativePe=round2(peerPe*.8); neutralPe=round2(peerPe); optimisticPe=round2(peerPe*1.2);
-    conservativePrice=round2(ttm*conservativePe); neutralPrice=round2(ttm*neutralPe); optimisticPrice=round2(ttm*optimisticPe);
-    if(last>0&&neutralPrice>0){
-      diffPct=round2((neutralPrice/last-1)*100);
-      const ratio=last/neutralPrice;
-      label=ratio<=.8?"相對低估":ratio<=1?"相對合理":ratio<=1.2?"相對偏高":"相對過熱";
-    }
-  }
-  return {ttm,currentPe,peerPe,last,conservativePe,neutralPe,optimisticPe,conservativePrice,neutralPrice,optimisticPrice,diffPct,label,latest4:parsed.latest4||[],method:"近四季 EPS × Yahoo 同業平均本益比",source:"Yahoo 股市"};
+function peStatus(currentPe,peerPe,ttm){
+  if(!(ttm>0))return {label:"PE 不適用",detail:"近四季虧損",premiumPct:null};
+  if(!(currentPe>0))return {label:"PE 資料不足",detail:"Yahoo 未提供有效本益比",premiumPct:null};
+  if(!(peerPe>0))return {label:"同業資料不足",detail:"Yahoo 未提供有效同業平均本益比",premiumPct:null};
+  const premiumPct=round2((currentPe/peerPe-1)*100);
+  const ratio=currentPe/peerPe;
+  const label=ratio<=0.8?"相對低估":ratio<=1.2?"接近同業":ratio<=1.5?"相對偏高":"相對高估";
+  const detail=`PE 較同業${premiumPct>=0?"高":"低"} ${Math.abs(premiumPct)}%`;
+  return {label,detail,premiumPct};
+}
+function buildValuation(parsed,profile,price){
+  const ttm=num(parsed.ttm),peerPe=num(parsed.peerPe),last=num(price),bookValue=num(profile.bookValue),cashDividend=num(profile.cashDividend);
+  // Yahoo 顯示的 PE 保留原口徑，不以「股價 / 自行加總 TTM EPS」覆寫，以免不同資料口徑混用。
+  const currentPe=ttm>0?num(parsed.currentPe):null;
+  const latestEps=parsed.latest4?.length?num(parsed.latest4[0].eps):null;
+  const pb=(last>0&&bookValue>0)?round2(last/bookValue):null;
+  const dividendYield=(last>0&&cashDividend>=0)?round2(cashDividend/last*100):null;
+  const pe=peStatus(currentPe,peerPe,ttm);
+  return {
+    ttm,latestEps,currentPe,peerPe,pePremiumPct:pe.premiumPct,
+    bookValue,currentPb:pb,cashDividend,dividendYield,last,
+    label:pe.label,statusDetail:pe.detail,latest4:parsed.latest4||[],
+    source:"Yahoo 股市",
+    method:"Yahoo PE 同業比較＋實際 EPS／BPS／現金股利",
+    profitable:ttm>0
+  };
 }
 
 module.exports=async function handler(req,res){
@@ -84,16 +120,22 @@ module.exports=async function handler(req,res){
     const market=String(req.query?.market||""); const price=req.query?.price;
     if(!/^\d{4,6}$/.test(q))return res.status(400).json({ok:false,error:"股票代碼格式錯誤"});
     const preferred=suffixFor(market); const suffixes=preferred?[preferred]:[".TW",".TWO"];
-    let parsed=null,symbol="",lastErr=null;
+    let parsed=null,profile={},symbol="",lastErr=null;
     for(const suffix of suffixes){
       try{
-        const html=await fetchText(`https://tw.stock.yahoo.com/quote/${q}${suffix}/eps`);
-        const p=parseYahooEpsPage(html);
-        if(p.latest4?.length||p.currentPe||p.peerPe){parsed=p;symbol=q+suffix;break}
+        const base=`https://tw.stock.yahoo.com/quote/${q}${suffix}`;
+        const [epsHtml,profileResult]=await Promise.all([
+          fetchText(`${base}/eps`),
+          fetchText(`${base}/profile`).catch(()=>"")
+        ]);
+        const p=parseYahooEpsPage(epsHtml);
+        if(p.latest4?.length||p.currentPe!=null||p.peerPe!=null){
+          parsed=p;profile=profileResult?parseYahooProfilePage(profileResult):{};symbol=q+suffix;break;
+        }
       }catch(e){lastErr=e}
     }
     if(!parsed)throw lastErr||new Error("Yahoo EPS 資料解析失敗");
-    const valuation=buildValuation(parsed,price);
+    const valuation=buildValuation(parsed,profile,price);
     return res.status(200).json({ok:true,code:q,symbol,...valuation});
   }catch(e){
     console.error("valuation error",e);
@@ -101,4 +143,4 @@ module.exports=async function handler(req,res){
   }
 };
 
-module.exports._test={htmlToLines,parseQuarterly,parseYahooEpsPage,buildValuation,pickPeFromText};
+module.exports._test={htmlToLines,parseQuarterly,parseYahooEpsPage,parseYahooProfilePage,buildValuation,pickPeFromText,peStatus};
