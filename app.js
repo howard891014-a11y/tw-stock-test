@@ -73,29 +73,32 @@ function valuationMetric(n,suffix="",na="--"){
 }
 function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
-  ["valuationLatestEps","valuationTtmEps","valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationCashDividend","valuationDividendYield"].forEach(id=>setText(id,"--"));
-  const host=$("valuationEps4");if(host)host.innerHTML="";
+  ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap"].forEach(id=>setText(id,"--"));
+  const host=$("valuationEps5");if(host)host.innerHTML="";
 }
 function renderValuation(v){
   const profitable=v.profitable===true || Number(v.ttm)>0;
   setText("valuationStatus",v.label||"資料不足");
   setText("valuationStatusDetail",v.statusDetail||"--");
-  setText("valuationLatestEps",valuationMetric(v.latestEps));
-  setText("valuationTtmEps",valuationMetric(v.ttm));
   setText("valuationCurrentPe",profitable?valuationMetric(v.currentPe," 倍","資料不足"):"不適用");
   setText("valuationPeerPe",valuationMetric(v.peerPe," 倍","資料不足"));
   setText("valuationPeGap",Number.isFinite(Number(v.pePremiumPct))?`${Number(v.pePremiumPct)>=0?"溢價":"折價"} ${valuationFmt(Math.abs(Number(v.pePremiumPct)),"%")}`:(profitable?"資料不足":"不適用"));
-  setText("valuationBookValue",valuationMetric(v.bookValue));
+  setText("valuationBookValue",valuationMetric(v.bookValue," 元","資料不足"));
   setText("valuationCurrentPb",valuationMetric(v.currentPb," 倍","資料不足"));
-  setText("valuationCashDividend",valuationMetric(v.cashDividend," 元","資料不足"));
-  setText("valuationDividendYield",valuationMetric(v.dividendYield,"%","資料不足"));
-  setText("valuationMethod",v.method||"Yahoo PE 同業比較＋實際 EPS／BPS／現金股利");
+  setText("valuationPeerPb",valuationMetric(v.peerPb," 倍","資料不足"));
+  setText("valuationPbGap",Number.isFinite(Number(v.pbPremiumPct))?`${Number(v.pbPremiumPct)>=0?"溢價":"折價"} ${valuationFmt(Math.abs(Number(v.pbPremiumPct)),"%")}`:"資料不足");
+  setText("valuationMethod",v.method||"Yahoo PE／PB 同業比較＋實際 EPS／BPS");
   setText("valuationNote",profitable
-    ?"估值用來判斷相對昂貴程度，不直接當作買賣價。PE 採 Yahoo 顯示口徑；PB 由目前股價 ÷ Yahoo 每股淨值計算；殖利率以最新現金股利 ÷ 目前股價估算。"
-    :"近四季 EPS 為負時，本益比估值不適用；不會以 0 倍或 0 元代替。仍保留同業 PE、BPS、PB 與股利資料供比較。"
+    ?"估值用來判斷相對昂貴程度，不直接當作買賣價。PE 採 Yahoo 顯示口徑；PB 與同業比較依 Yahoo 可取得資料計算。"
+    :"近四季 EPS 為負時，本益比估值不適用；不會以 0 倍代替。仍保留同業 PE、BPS 與 PB 資料供比較。"
   );
-  const host=$("valuationEps4");
-  if(host){host.innerHTML=(Array.isArray(v.latest4)?v.latest4:[]).map(x=>`<div class="valuation-eps-chip"><span>${String(x.period||"")}</span><b>${valuationFmt(x.eps)}</b></div>`).join("")}
+  const host=$("valuationEps5");
+  if(host){
+    const q=Array.isArray(v.latest4)?v.latest4:[];
+    const cards=[`<div class="valuation-eps-chip is-ttm"><span>近四季 EPS<br>(TTM)</span><b>${valuationFmt(v.ttm)}</b></div>`];
+    q.forEach((x,i)=>cards.push(`<div class="valuation-eps-chip"><span>${String(x.period||"")}</span><b>${valuationFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`));
+    host.innerHTML=cards.join("");
+  }
 }
 async function loadValuation(stock){
   const card=$("valuation");card?.classList.add("is-loading");resetValuation("讀取中");

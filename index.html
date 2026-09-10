@@ -457,8 +457,8 @@ body{padding-bottom:68px}
 /* v2.5.0.3 — news pin + persistent unread NEW */
 .news-head{display:flex;align-items:flex-start;gap:10px}.news-head .news-title{flex:1;min-width:0}.news-star{border:0;background:transparent;color:#a9bdd1;font-size:25px;line-height:1;cursor:pointer;padding:0 2px;flex:0 0 auto}.news-star.active{color:#f2c94c}.news-new{margin-left:7px}.news-item:has(.news-star.active){border-color:#365b7d}
 
-/* v2.5.1.2 — relative valuation redesign */
-.valuation-card .valuation-hero{margin-bottom:10px}.valuation-status-line{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:10px;padding:10px 0 12px;border-bottom:1px solid #20364d}.valuation-status-line span{color:var(--muted);font-size:12px}.valuation-status-line b{font-size:18px}.valuation-status-line small{text-align:right;color:#9fb0c2}.valuation-eps4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:12px}.valuation-eps-chip{padding:8px;border:1px solid #20364d;border-radius:8px;background:#091725;text-align:center}.valuation-eps-chip span{display:block;color:var(--muted);font-size:10px}.valuation-eps-chip b{display:block;margin-top:3px;font-size:13px}.valuation-note{display:block;margin-top:10px;color:var(--muted);line-height:1.5}.valuation-eps-caption{margin-top:14px;color:#c8d5e3;font-size:12px;font-weight:700}.valuation-card.is-loading .valuation-hero strong,.valuation-card.is-loading .valuation-list b{opacity:.45}@media(max-width:720px){.valuation-eps4{grid-template-columns:repeat(2,minmax(0,1fr))}.valuation-status-line{grid-template-columns:auto auto}.valuation-status-line small{grid-column:1/-1;text-align:left}}
+/* v2.5.1.3 — compact valuation tiles */
+.valuation-card .valuation-hero{margin-bottom:10px}.valuation-status-line{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:10px;padding:10px 0 12px;border-bottom:1px solid #20364d}.valuation-status-line span{color:var(--muted);font-size:12px}.valuation-status-line b{font-size:18px}.valuation-status-line small{text-align:right;color:#9fb0c2}.valuation-section{margin-top:12px;padding:12px;border:1px solid #20364d;border-radius:12px;background:#0a1928}.valuation-section-title{font-size:14px;font-weight:800;margin-bottom:10px}.valuation-eps5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}.valuation-eps-chip{position:relative;padding:9px 5px;border:1px solid #20364d;border-radius:9px;background:#091725;text-align:center;min-width:0}.valuation-eps-chip span{display:block;color:var(--muted);font-size:10px;white-space:nowrap}.valuation-eps-chip b{display:block;margin-top:4px;font-size:14px}.valuation-eps-chip.is-ttm{border-color:#2a92c9}.valuation-eps-chip em{display:block;margin-top:4px;color:#72d7ff;font-size:9px;font-style:normal}.valuation-compare{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}.valuation-mini{padding:10px 7px;border:1px solid #20364d;border-radius:9px;background:#091725;text-align:center}.valuation-mini span{display:block;color:var(--muted);font-size:10px}.valuation-mini b{display:block;margin-top:5px;font-size:15px}.valuation-bps{display:grid;grid-template-columns:1fr;gap:7px}.valuation-note{display:block;margin-top:10px;color:var(--muted);line-height:1.5}.valuation-card.is-loading .valuation-hero strong,.valuation-card.is-loading .valuation-section b{opacity:.45}@media(max-width:720px){.valuation-eps5{gap:5px}.valuation-eps-chip{padding:8px 3px}.valuation-eps-chip span{font-size:9px}.valuation-eps-chip b{font-size:13px}.valuation-compare{grid-template-columns:repeat(3,minmax(0,1fr))}.valuation-status-line{grid-template-columns:auto auto}.valuation-status-line small{grid-column:1/-1;text-align:left}}
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -510,7 +510,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.1.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.1.3</span></button>
   </aside>
 
   <div class="main-shell">
@@ -585,21 +585,32 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 
         <article class="card detail-panel valuation-card" id="valuation" data-view-panel="analysis">
           <div class="card-title">估值分析 <span class="badge" id="valuationBadge">Yahoo 相對估值</span></div>
-          <div class="hero-value valuation-hero"><span>相對估值</span><strong id="valuationStatus">--</strong><small id="valuationMethod">Yahoo PE 同業比較＋實際 EPS／BPS／現金股利</small></div>
+          <div class="hero-value valuation-hero"><span>相對估值</span><strong id="valuationStatus">--</strong><small id="valuationMethod">Yahoo PE／PB 同業比較＋實際 EPS／BPS</small></div>
           <div class="valuation-status-line"><span>判斷依據</span><b id="valuationStatusDetail">--</b></div>
-          <div class="data-list valuation-list">
-            <div><span>最新單季 EPS</span><b id="valuationLatestEps">--</b></div>
-            <div><span>近四季 EPS（TTM）</span><b id="valuationTtmEps">--</b></div>
-            <div><span>Yahoo 目前本益比</span><b id="valuationCurrentPe">--</b></div>
-            <div><span>Yahoo 同業平均本益比</span><b id="valuationPeerPe">--</b></div>
-            <div><span>PE 相對同業</span><b id="valuationPeGap">--</b></div>
-            <div><span>每股淨值（BPS）</span><b id="valuationBookValue">--</b></div>
-            <div><span>目前股價淨值比（PB）</span><b id="valuationCurrentPb">--</b></div>
-            <div><span>最新現金股利</span><b id="valuationCashDividend">--</b></div>
-            <div><span>現金殖利率（目前股價估）</span><b id="valuationDividendYield">--</b></div>
+          <div class="valuation-section">
+            <div class="valuation-section-title">EPS 獲利能力</div>
+            <div class="valuation-eps5" id="valuationEps5"></div>
           </div>
-          <div class="valuation-eps-caption">最近四季單季 EPS</div>
-          <div class="valuation-eps4" id="valuationEps4"></div>
+          <div class="valuation-section">
+            <div class="valuation-section-title">本益比（PE）</div>
+            <div class="valuation-compare">
+              <div class="valuation-mini"><span>目前本益比</span><b id="valuationCurrentPe">--</b></div>
+              <div class="valuation-mini"><span>同業平均本益比</span><b id="valuationPeerPe">--</b></div>
+              <div class="valuation-mini"><span>相對同業</span><b id="valuationPeGap">--</b></div>
+            </div>
+          </div>
+          <div class="valuation-section">
+            <div class="valuation-section-title">股價淨值比（PB）</div>
+            <div class="valuation-compare">
+              <div class="valuation-mini"><span>目前 PB</span><b id="valuationCurrentPb">--</b></div>
+              <div class="valuation-mini"><span>同業平均 PB</span><b id="valuationPeerPb">--</b></div>
+              <div class="valuation-mini"><span>相對同業</span><b id="valuationPbGap">--</b></div>
+            </div>
+          </div>
+          <div class="valuation-section">
+            <div class="valuation-section-title">每股淨值（BPS）</div>
+            <div class="valuation-bps"><div class="valuation-mini"><span>每股淨值</span><b id="valuationBookValue">--</b></div></div>
+          </div>
           <small class="valuation-note" id="valuationNote">估值只判斷相對昂貴程度，不直接作為買賣價。</small>
         </article>
 
