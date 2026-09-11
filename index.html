@@ -757,6 +757,8 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .scenario-hero{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:16px 18px;border:1px solid #27516b;border-radius:14px;background:#0a2030}.scenario-hero span{color:#9fb5c7}.scenario-hero strong{grid-row:1/3;grid-column:2;font-size:26px;color:#13e0aa}.scenario-hero small{color:#829aae}.scenario-values{display:grid;grid-template-columns:repeat(5,1fr);margin-top:12px;border:1px solid #1d4058;border-radius:14px;overflow:hidden}.scenario-values>div{padding:13px 8px;text-align:center;background:#091a29;border-left:1px solid #1d4058}.scenario-values>div:first-child{border-left:0}.scenario-values span{display:block;color:#91a9bc;font-size:12px}.scenario-values b{display:block;margin-top:6px;font-size:18px}.scenario-summary{margin-top:12px;padding:15px 18px;border-left:5px solid #13e0aa;border-radius:10px;background:rgba(19,224,170,.07)}.scenario-summary p{margin:7px 0 0;color:#c7d4df;line-height:1.55}.scenario-tone-watch .scenario-hero strong{color:#ffd04d}.scenario-tone-danger .scenario-hero strong{color:#ff6977}
 @media(max-width:720px){.scenario-values{grid-template-columns:repeat(2,1fr)}.scenario-values>div{border-top:1px solid #1d4058}.scenario-values>div:nth-child(odd){border-left:0}.scenario-values>div:first-child,.scenario-values>div:nth-child(2){border-top:0}.scenario-hero strong{font-size:21px}}
 </style>
+
+
 </head>
 <body>
 <div class="app-shell">
@@ -931,7 +933,6 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         </article>
         <article class="card detail-panel valuation-scenario-card" id="valuationScenario" data-view-panel="valuation">
           <div class="card-title">九情境估值判讀 <span class="badge" id="valuationScenarioConsensus">--</span></div>
-          <div class="scenario-hero"><span>目前情境</span><strong id="valuationScenarioState">--</strong><small id="valuationScenarioConfidence">估值可信度 --</small></div>
           <div class="scenario-grid" aria-label="九情境">
             <div class="scenario-cell" data-scenario="1"><b>低估偏多</b><span>P &lt; F &lt; T；O ≈ B</span><small class="scenario-weight">估值 70%｜目標價 30%</small></div>
             <div class="scenario-cell" data-scenario="2"><b>合理偏多</b><span>P ≈ F &lt; T；O ≈ B</span><small class="scenario-weight">估值 60%｜目標價 40%</small></div>
@@ -943,7 +944,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             <div class="scenario-cell" data-scenario="8"><b>成長預期區</b><span>P &gt; O、B；P &lt; T</span><small class="scenario-weight">估值 35%｜目標價 65%</small></div>
             <div class="scenario-cell" data-scenario="9"><b>全面高估</b><span>P &gt; O、B、T</span><small class="scenario-weight">估值 80%｜目標價 20%</small></div>
           </div>
-          <div class="scenario-summary"><b>系統判讀</b><p id="valuationScenarioSummary">搜尋股票後判讀。</p></div>
+          <div class="scenario-summary disposal-summary-card"><div class="disposal-summary-head"><span class="disposal-bulb">💡</span><span class="disposal-card-title">系統判讀</span></div><span class="disposal-summary-sep">|</span><p id="valuationScenarioSummary">搜尋股票後判讀。</p></div>
         </article>
 
         <article class="card detail-panel" id="swing" data-view-panel="analysis">
@@ -1250,6 +1251,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .scenario-summary{padding:12px 14px!important}.scenario-summary b{font-size:13px!important}.scenario-summary p{font-size:11px!important;line-height:1.5!important}
 @media(max-width:720px){#valuation .card-title{font-size:17px!important}.scenario-cell{min-height:88px;padding:9px 5px}.scenario-cell b{font-size:11px}.scenario-cell span{font-size:7px}.scenario-cell small{font-size:6.5px}}
 </style>
+
 </body>
 </html>
 <style>
@@ -1485,5 +1487,35 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
   .disposal-summary-head{width:auto!important;gap:5px!important;align-self:center!important}
   .disposal-summary-sep{align-self:stretch!important;min-height:0!important;margin:0!important}
   .disposal-summary-card p{align-self:center!important}
+}
+</style>
+<style id="v2542-valuation-scenario-technical-tune">
+/* v2.5.4.2 — 九宮格字級提升；系統判讀沿用處置版型；乖離率偏低改藍色 */
+#valuationScenario .scenario-grid{margin-top:10px!important}
+#valuationScenario .scenario-cell{gap:4px!important}
+#valuationScenario .scenario-cell b{font-size:14px!important;line-height:1.22!important}
+#valuationScenario .scenario-cell span{font-size:10px!important;line-height:1.38!important}
+#valuationScenario .scenario-cell small{font-size:9px!important;line-height:1.32!important}
+#valuationScenario .scenario-summary{
+  margin-top:12px!important;
+  padding:16px 18px!important;
+  border:1px solid #1f4660!important;
+  border-left:1px solid #1f4660!important;
+  border-radius:14px!important;
+  background:linear-gradient(145deg,#0b1d2b,#0a1a27)!important;
+}
+#valuationScenario .scenario-summary .disposal-summary-head{background:transparent!important}
+#valuationScenario .scenario-summary .disposal-card-title{font-size:17px!important}
+#valuationScenario .scenario-summary p{font-size:13px!important;line-height:1.55!important;color:#f1f6fa!important}
+.tech-tile header em.tone-info{color:#63bfff!important;border:1px solid #3979a6!important;background:rgba(99,191,255,.08)!important}
+.tech-tile header em.tone-cyan{color:#37d7ff!important;border:1px solid #29849a!important;background:rgba(55,215,255,.08)!important}
+@media(max-width:720px){
+  #valuationScenario .scenario-cell{min-height:88px!important;padding:8px 4px!important;gap:3px!important}
+  #valuationScenario .scenario-cell b{font-size:13px!important}
+  #valuationScenario .scenario-cell span{font-size:8.5px!important}
+  #valuationScenario .scenario-cell small{font-size:7.5px!important}
+  #valuationScenario .scenario-summary{padding:14px 16px!important}
+  #valuationScenario .scenario-summary .disposal-card-title{font-size:15px!important}
+  #valuationScenario .scenario-summary p{font-size:12px!important}
 }
 </style>
