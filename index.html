@@ -776,7 +776,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.3.3</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.3.4</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1122,7 +1122,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 </style>
 
 <style id="v25301-disposal-polish">
-/* v2.5.3.3 disposal layout polish */
+/* v2.5.3.4 disposal layout polish */
 .disposal-help{width:1em!important;height:1em!important;min-width:1em!important;font-size:1em!important;line-height:.86!important;border-width:1.5px!important;vertical-align:0!important}
 .disposal-risk-side>span{margin-bottom:7px!important;line-height:1.2!important}
 .disposal-risk-side>strong{margin:0 0 7px!important;line-height:1.08!important}
@@ -1150,6 +1150,48 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 </style>
 <script id="v25301-disposal-label-normalizer">
 (()=>{const el=document.getElementById('disposalState');if(!el)return;const fix=()=>{if(el.textContent.trim()==='處置股票')el.textContent='注意股';if(el.textContent.trim()==='注意股票')el.textContent='注意股'};fix();new MutationObserver(fix).observe(el,{childList:true,characterData:true,subtree:true})})();
+</script>
+
+<style id="v25304-disposal-final-polish">
+/* v2.5.3.4: attention-state shield + summary alignment */
+.disposal-summary-card{display:grid!important;grid-template-columns:150px 1px minmax(0,1fr)!important;align-items:center!important;column-gap:14px!important}
+.disposal-summary-head{width:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important}
+.disposal-summary-sep{align-self:stretch!important;width:1px!important;min-height:100%!important;background:#496278!important;font-size:0!important;margin:0!important}
+.disposal-summary-card p{margin:0!important;min-width:0!important}
+.disposal-state-watch-force .disposal-shield{background:#ffd04d!important;color:#2b2100!important;font-size:0!important}
+.disposal-state-watch-force .disposal-shield::after{content:"!"!important;font-size:28px!important;font-weight:900!important}
+.disposal-state-watch-force .disposal-status-main strong{color:#ffd04d!important}
+.disposal-state-danger-force .disposal-shield{background:#ff6977!important;color:#2b080d!important;font-size:0!important}
+.disposal-state-danger-force .disposal-shield::after{content:"×"!important;font-size:29px!important;font-weight:900!important}
+.disposal-state-danger-force .disposal-status-main strong{color:#ff6977!important}
+@media(max-width:720px){
+ .disposal-summary-card{grid-template-columns:145px 1px minmax(0,1fr)!important;column-gap:10px!important}
+ .disposal-summary-head{gap:5px!important}
+ .disposal-state-watch-force .disposal-shield::after{font-size:23px!important}
+ .disposal-state-danger-force .disposal-shield::after{font-size:24px!important}
+}
+</style>
+<script id="v25304-disposal-state-normalizer">
+(()=>{
+ const panel=document.querySelector('.disposal-status-card');
+ const state=document.getElementById('disposalState');
+ const note=document.getElementById('disposalStateNote');
+ if(!panel||!state||!note)return;
+ const sync=()=>{
+   const t=(state.textContent||'').trim();
+   panel.classList.remove('disposal-state-watch-force','disposal-state-danger-force');
+   if(t==='注意股'||t==='注意股票'||t==='處置股票'){
+     if(t!=='注意股') state.textContent='注意股';
+     panel.classList.add('disposal-state-watch-force');
+     if(note.textContent.trim()!=='若進入處置：2分盤') note.textContent='若進入處置：2分盤';
+   }else if(t.includes('處置中')){
+     panel.classList.add('disposal-state-danger-force');
+   }
+ };
+ sync();
+ new MutationObserver(sync).observe(state,{childList:true,characterData:true,subtree:true});
+ new MutationObserver(sync).observe(note,{childList:true,characterData:true,subtree:true});
+})();
 </script>
 </body>
 </html>
@@ -1306,7 +1348,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 @media(max-width:720px){.tech-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.tech-tile{min-width:0!important}.tech-metric span{font-size:8px!important}.tech-metric b{font-size:10px!important}.tech-summary b::after{margin-left:8px}}
 </style>
 <style id="v2530-disposal-scope-fix">
-/* v2.5.3.3: disposal is isolated to its own tab */
+/* v2.5.3.4: disposal is isolated to its own tab */
 #disposal.detail-panel{display:none!important}
 #disposal.detail-panel.active-view{display:grid!important}
 @media(max-width:720px){
@@ -1328,7 +1370,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 }
 </style>
 <style id="v25302-ui-polish">
-/* v2.5.3.3 */
+/* v2.5.3.4 */
 .tech-overview-points{background:rgba(19,224,170,.07)!important}
 .disposal-summary-card{align-items:center!important}
 .disposal-summary-head{align-self:center!important;align-items:center!important}
