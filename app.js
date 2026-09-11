@@ -165,6 +165,19 @@ function renderValuation(v){
   setText("valuationTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   const host=$("valuationQuarterGrid");if(host){const q=Array.isArray(v.latest4)?v.latest4:[];host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");}
 }
+async function loadValuation(stock){
+  const card=$("valuation");card?.classList.add("is-loading");resetValuation("讀取中");
+  try{
+    const code=stock?.code||stock?.symbol||"";
+    const price=Number(stock?.last??stock?.price??stock?.regularMarketPrice);
+    const data=await valuation(code,stock?.market||"",price);
+    renderValuation(data);
+  }catch(e){
+    console.warn("估值更新失敗",e);resetValuation("資料不足");
+    setText("valuationNote",`Yahoo 估值資料暫時無法取得：${e.message}`);
+  }finally{card?.classList.remove("is-loading")}
+}
+
 function renderStock(x){
   currentStock=x;
   const last=Number(x.last ?? x.price ?? x.regularMarketPrice);
