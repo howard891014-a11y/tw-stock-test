@@ -166,33 +166,39 @@ function resetValuation(msg="--"){
 let latestValuationScenario=null;
 function currentTargetPrice(){const main=preferredMainTarget();return main?valuationNum(targetPriceValue(main.latest)):null}
 function scenarioClassify(P,O,B,F,T){
-  if(!(P>0&&O>0&&B>0&&F>0))return {n:null,state:"資料不足",consensus:"資料不足",confidence:"低",tone:"watch",summary:"營運合理價或 PB 合理價資料不足，暫時無法完成九情境判讀。"};
-  if(!(T>0))return {n:null,state:"等待目標價",consensus:"待完成",confidence:"--",tone:"watch",summary:"內部估值已完成，等待券商目標價後再進行完整九情境判讀。"};
-  const divergence=Math.abs(O-B)/F*100, close=divergence<=20, mid=divergence<=40;
+  if(!(P>0&&O>0&&B>0&&F>0))return {n:null,state:"資料不足",consensus:"資料不足",confidence:"低",tone:"watch",summary:"營運合理價或 PB 合理價資料不足，暫時無法完成九情境判讀。",condition:"資料不足",valuationWeight:100,targetWeight:0};
+  const hasTarget=T>0, divergence=Math.abs(O-B)/F*100, close=divergence<=20, mid=divergence<=40;
   const near=(a,b)=>a>0&&b>0&&Math.abs(a/b-1)<=.05;
   let n,state,summary,tone="watch";
   if(close){
-    if(P<F&&!near(P,F)&&(T?F<T:true)){n=1;state="低估偏多";summary="兩種估值高度接近，現價低於綜合合理價，且仍低於券商目標價。";tone="good"}
-    else if(near(P,F)&&(T?P<T:true)){n=2;state="合理偏多";summary="現價已接近綜合合理價，估值大致合理；若券商目標價更高，仍保留上行預期。";tone="good"}
-    else if(P>F&&T&&P<T&&!near(P,T)){n=3;state="溢價偏多";summary="現價高於內部合理價，但尚未到券商目標價，市場正給予一定成長溢價。"}
-    else if(P>F&&T&&near(P,T)){n=4;state="接近目標價";summary="現價已高於內部合理價並接近券商目標價，上行空間開始受限。";tone="watch"}
-    else {n=5;state="明顯高估";summary="現價高於內部合理價，且已高於券商目標價或缺乏更高目標價支撐。";tone="danger"}
+    if(P<F&&!near(P,F)){n=1;state="低估偏多";summary=hasTarget&&F<T?"兩種內部估值高度接近，現價低於綜合合理價，且仍低於券商目標價。":"兩種內部估值高度接近，現價低於綜合合理價；本次不依賴券商目標價即可判定內部低估。";tone="good"}
+    else if(near(P,F)){n=2;state="合理偏多";summary=hasTarget&&P<T?"現價接近綜合合理價，內部估值大致合理，券商目標價仍保留上行預期。":"現價接近綜合合理價，內部估值大致合理。";tone="good"}
+    else if(hasTarget&&near(P,T)){n=4;state="接近目標價";summary="現價已高於內部合理價並接近券商目標價，上行空間開始受限。"}
+    else if(hasTarget&&P>T){n=5;state="明顯高估";summary="現價高於內部合理價且已高於券商目標價，估值警訊明顯。";tone="danger"}
+    else {n=3;state="溢價偏多";summary=hasTarget?"現價高於內部合理價，但尚未到券商目標價，市場正給予一定成長溢價。":"現價高於內部合理價；無券商目標價時僅確認內部估值已進入溢價區。"}
   }else{
     const lo=Math.min(O,B),hi=Math.max(O,B);
     if(P<lo){n=6;state="雙重低估";summary="營運估值與 PB 雖有分歧，但現價同時低於兩者，屬雙重低估區。";tone="good"}
-    else if(P>=lo&&P<=hi){n=7;state="估值分歧區";summary="現價介於營運合理價與 PB 合理價之間，不同估值方法對合理價格看法明顯不同。"}
-    else if(P>hi&&T&&P<T){n=8;state="成長預期區";summary="現價已高於兩種內部合理價，但仍低於券商目標價，市場正在交易未來成長預期。";tone="watch"}
-    else {n=9;state="全面高估";summary="現價高於營運合理價、PB 合理價，且已高於券商目標價或缺乏目標價支撐。";tone="danger"}
+    else if(P<=hi){n=7;state="估值分歧區";summary="現價介於營運合理價與 PB 合理價之間，不同估值方法對合理價格看法明顯不同。"}
+    else if(hasTarget&&P>T){n=9;state="全面高估";summary="現價高於兩種內部合理價，且已高於券商目標價，屬全面高估。";tone="danger"}
+    else {n=8;state="成長預期區";summary=hasTarget?"現價已高於兩種內部合理價，但仍低於券商目標價，市場正在交易未來成長預期。":"現價已高於兩種內部合理價；無券商目標價，本次只確認市場價格已超越內部估值。"}
   }
-  return {n,state,consensus:close?"高共識":mid?"有分歧":"高分歧",confidence:close?"高":mid?"中":"低",tone,summary,divergence};
+  const defs={
+    1:{condition:"P < F < T；O ≈ B",vw:70,tw:30},2:{condition:"P ≈ F < T；O ≈ B",vw:60,tw:40},3:{condition:"F < P < T；O ≈ B",vw:45,tw:55},
+    4:{condition:"F < P ≈ T；O ≈ B",vw:40,tw:60},5:{condition:"F < T < P；O ≈ B",vw:70,tw:30},6:{condition:"P < O、B；O ≠ B",vw:80,tw:20},
+    7:{condition:"P 位於 O、B 之間；O ≠ B",vw:50,tw:50},8:{condition:"P > O、B；P < T",vw:35,tw:65},9:{condition:"P > O、B、T",vw:80,tw:20}
+  },d=defs[n];
+  return {n,state,consensus:close?"高共識":mid?"有分歧":"高分歧",confidence:close?"高":mid?"中":"低",tone,summary,divergence,condition:d.condition,valuationWeight:hasTarget?d.vw:100,targetWeight:hasTarget?d.tw:0,hasTarget};
 }
 function renderValuationScenario(){
   const x=latestValuationScenario;if(!x)return;
   const T=currentTargetPrice(),r=scenarioClassify(x.P,x.O,x.B,x.F,T),card=$("valuationScenario");
   card?.classList.remove("scenario-tone-watch","scenario-tone-danger");if(r.tone==="watch")card?.classList.add("scenario-tone-watch");if(r.tone==="danger")card?.classList.add("scenario-tone-danger");
-  setText("valuationScenarioState",r.n?`情境 ${r.n}｜${r.state}`:r.state);setText("valuationScenarioConsensus",r.consensus);setText("valuationScenarioConfidence",`估值可信度 ${r.confidence}`);setText("valuationScenarioSummary",r.summary);
-  setText("scenarioPrice",valuationMetric(x.P));setText("scenarioOperatingLabel",x.usePs?"PS 合理價":"PE 合理價");setText("scenarioOperating",valuationFmt(x.O));setText("scenarioPb",valuationFmt(x.B));setText("scenarioComposite",valuationFmt(x.F));setText("scenarioTarget",T?valuationMetric(T):"--");
-  setText("overviewValuationScenario",r.n?`${r.n}｜${r.state}`:r.state);setText("overviewValuationScenarioNote",`${r.consensus}｜可信度${r.confidence}`);
+  setText("valuationScenarioState",r.state);setText("valuationScenarioConsensus",r.consensus);setText("valuationScenarioConfidence",`估值可信度 ${r.confidence}`);
+  setText("valuationScenarioSummary",`${r.summary}${r.hasTarget===false?" 無券商目標價，本次以內部估值判讀。":""}`);
+  document.querySelectorAll("#valuationScenario .scenario-cell").forEach(el=>el.classList.toggle("is-active",Number(el.dataset.scenario)===r.n));
+  const active=document.querySelector(`#valuationScenario .scenario-cell[data-scenario="${r.n}"]`);if(active){const w=active.querySelector(".scenario-weight");if(w)w.textContent=`估值 ${r.valuationWeight}%｜目標價 ${r.targetWeight}%${r.hasTarget===false?"（無資料）":""}`;}
+  setText("overviewValuationScenario",r.state);setText("overviewValuationScenarioNote",`${r.consensus}｜可信度${r.confidence}`);
 }
 function renderValuation(v){
   const profitable=v.profitable===true || Number(v.ttm)>0;
