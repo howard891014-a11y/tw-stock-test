@@ -776,7 +776,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.3.0</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.3.1</span></button>
   </aside>
 
   <div class="main-shell">
@@ -982,7 +982,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
     </article>
 
     <article class="card disposal-exempt-card">
-      <div class="disposal-card-title">除外／豁免條件 <button class="disposal-help" type="button" data-disposal-help="exception">?</button></div>
+      <div class="disposal-card-title">豁免條件 <button class="disposal-help" type="button" data-disposal-help="exception">?</button></div>
       <div class="disposal-exempt-list">
         <div><span class="disposal-exempt-icon">—</span><span>成交量過低除外</span><b id="disposalExVolume">資料判讀</b></div>
         <div><span class="disposal-exempt-icon">—</span><span>週轉率過低除外</span><b id="disposalExTurnover">資料判讀</b></div>
@@ -994,7 +994,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
     </article>
   </div>
 
-  <article class="card disposal-summary-card"><span class="disposal-bulb">💡</span><div><div class="disposal-card-title">系統判讀</div><p id="disposalSummary">搜尋股票後顯示處置風險判讀。</p></div></article>
+  <article class="card disposal-summary-card"><div class="disposal-summary-head"><span class="disposal-bulb">💡</span><span class="disposal-card-title">系統判讀</span></div><span class="disposal-summary-sep">|</span><p id="disposalSummary">搜尋股票後顯示處置風險判讀。</p></article>
   <div class="formula-popover disposal-popover" id="disposalPopover" hidden><button class="formula-popover-close" id="disposalPopoverClose" type="button">×</button><strong id="disposalPopoverTitle">規則說明</strong><div id="disposalPopoverText"></div></div>
 </section>
 
@@ -1120,6 +1120,37 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
   #technical .tech-metric b{font-size:13px!important;line-height:1.25!important;margin:0 0 0 10px!important;text-align:right!important}
 }
 </style>
+
+<style id="v25301-disposal-polish">
+/* v2.5.3.1 disposal layout polish */
+.disposal-help{width:1em!important;height:1em!important;min-width:1em!important;font-size:1em!important;line-height:.86!important;border-width:1.5px!important;vertical-align:0!important}
+.disposal-risk-side>span{margin-bottom:7px!important;line-height:1.2!important}
+.disposal-risk-side>strong{margin:0 0 7px!important;line-height:1.08!important}
+.disposal-risk-side small{margin-top:2px!important;line-height:1.18!important}
+.disposal-state-watch .disposal-shield{background:#ffd04d!important;color:#2b2100!important;font-size:0!important}
+.disposal-state-watch .disposal-shield::after{content:"!";font-size:28px;font-weight:900}
+.disposal-state-danger .disposal-shield{background:#ff6977!important;color:#2b080d!important;font-size:0!important}
+.disposal-state-danger .disposal-shield::after{content:"×";font-size:29px;font-weight:900}
+.disposal-summary-card{display:flex!important;align-items:center!important;gap:12px!important}
+.disposal-summary-head{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
+.disposal-bulb{font-size:1em!important;line-height:1!important}
+.disposal-summary-sep{color:#496278;font-size:18px;flex:0 0 auto}
+.disposal-summary-card p{margin:0!important;min-width:0}
+@media(max-width:720px){
+ .disposal-help{font-size:17px!important}
+ .disposal-risk-side>span{margin-bottom:5px!important}
+ .disposal-risk-side>strong{margin-bottom:5px!important}
+ .disposal-risk-side small{margin-top:1px!important;line-height:1.12!important}
+ .disposal-state-watch .disposal-shield::after{font-size:23px}
+ .disposal-state-danger .disposal-shield::after{font-size:24px}
+ .disposal-summary-card{gap:7px!important;align-items:flex-start!important}
+ .disposal-summary-head{gap:4px}
+ .disposal-summary-sep{font-size:15px}
+}
+</style>
+<script id="v25301-disposal-label-normalizer">
+(()=>{const el=document.getElementById('disposalState');if(!el)return;const fix=()=>{if(el.textContent.trim()==='處置股票')el.textContent='注意股';if(el.textContent.trim()==='注意股票')el.textContent='注意股'};fix();new MutationObserver(fix).observe(el,{childList:true,characterData:true,subtree:true})})();
+</script>
 </body>
 </html>
 <style>
@@ -1275,7 +1306,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 @media(max-width:720px){.tech-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.tech-tile{min-width:0!important}.tech-metric span{font-size:8px!important}.tech-metric b{font-size:10px!important}.tech-summary b::after{margin-left:8px}}
 </style>
 <style id="v2530-disposal-scope-fix">
-/* v2.5.3.0: disposal is isolated to its own tab */
+/* v2.5.3.1: disposal is isolated to its own tab */
 #disposal.detail-panel{display:none!important}
 #disposal.detail-panel.active-view{display:grid!important}
 @media(max-width:720px){
