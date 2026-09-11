@@ -737,6 +737,14 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
   .tech-title-icon{width:17px;height:17px;margin-right:5px;font-size:11px}
 }
 </style>
+
+<style id="v25210-technical-title-icons">
+#technical .tech-tile header b{display:inline-flex!important;align-items:center!important;line-height:1.2!important}
+#technical .tech-title-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;vertical-align:middle!important;align-self:center!important;transform:none!important;line-height:1!important}
+#technical .tech-icon-ma{font-size:15px!important;font-weight:900!important}
+#technical .tech-icon-boll{font-size:16px!important;font-weight:900!important;letter-spacing:-3px;padding-right:3px}
+#technical .tech-icon-volume{font-size:8px!important;font-weight:900!important;letter-spacing:-2px;padding-right:2px}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -763,7 +771,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.9</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.10</span></button>
   </aside>
 
   <div class="main-shell">
@@ -841,9 +849,9 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </section>
           <section class="tech-grid">
-            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">〽</span>均線</b><em id="techMaState">--</em></header><p id="techMaConclusion">--</p><small id="techMaValues">--</small></div>
-            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">◉</span>布林通道</b><em id="techBollState">--</em></header><p id="techBollConclusion">--</p><small id="techBoll">--</small></div>
-            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">▥</span>量價</b><em id="techVolumeState">--</em></header><p id="techVolumeConclusion">--</p><small id="techVolume">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon tech-icon-ma" aria-hidden="true">⌁</span>均線</b><em id="techMaState">--</em></header><p id="techMaConclusion">--</p><small id="techMaValues">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon tech-icon-boll" aria-hidden="true">≋</span>布林通道</b><em id="techBollState">--</em></header><p id="techBollConclusion">--</p><small id="techBoll">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon tech-icon-volume" aria-hidden="true">▮▮</span>量價</b><em id="techVolumeState">--</em></header><p id="techVolumeConclusion">--</p><small id="techVolume">--</small></div>
             <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">↕</span>乖離率</b><em id="techBiasState">--</em></header><p id="techBiasConclusion">--</p><small id="techBias">--</small></div>
             <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">⌖</span>趨勢位置</b><em id="techTrendState">--</em></header><p id="techTrendConclusion">--</p><small id="techTrend">--</small></div>
             <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">⚡</span>動能</b><em id="techMomentumState">--</em></header><p id="techMomentumConclusion">--</p><small id="techMomentum">--</small></div>

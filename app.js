@@ -138,6 +138,7 @@ function renderValuation(v){
   setText("valuationOperatingFairLabel",usePs?"PS 合理股價":"PE 合理股價");
   setText("valuationOperatingIcon",usePs?"PS":"PE");
   setText("valuationOperatingTitle",usePs?"股價營收比":"本益比");
+  const operatingInfo=document.querySelector('#valuation .valuation-section-title [data-formula="pedef"], #valuation .valuation-section-title [data-formula="psdef"]'); if(operatingInfo){operatingInfo.dataset.formula=usePs?"psdef":"pedef"; operatingInfo.setAttribute("aria-label",usePs?"查看股價營收比定義":"查看本益比定義");}
   setText("valuationOperatingCurrentLabel",usePs?"目前 PS":"目前本益比");
   setText("valuationOperatingPeerLabel",usePs?"同業 PS 中位數":"同業平均本益比");
   const last=valuationNum(v.last), ttm=valuationNum(v.ttm), bps=valuationNum(v.bookValue), peerPb=valuationNum(v.peerPb);
@@ -785,6 +786,7 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
   composite:{title:"綜合合理價",text:"獲利公司使用 PE 合理價；虧損公司以 PS 合理價補位，再與 PB 合理價各 50% 合併。"},
   epsdef:{title:"EPS 獲利能力",text:"EPS 是每股盈餘，代表公司每一股普通股能分配到多少獲利；數值越高，代表每股獲利能力越強。"},
   pedef:{title:"本益比",text:"本益比＝股價 ÷ 每股盈餘（EPS），代表市場願意用多少倍的價格購買公司目前的每股獲利。"},
+  psdef:{title:"股價營收比",text:"股價營收比（PS）＝股價 ÷ 每股營收，代表市場願意用多少倍的價格購買公司每股所創造的營收；當近四季 EPS 為負、PE 不適用時，用 PS 作為營運估值的替代指標。"},
   pbdef:{title:"股價淨值比",text:"股價淨值比＝股價 ÷ 每股淨值（BPS），代表股價相對公司每股帳面淨資產價值的倍數。"}
  };
  const pop=$("valuationFormulaPopover"), title=$("valuationFormulaTitle"), text=$("valuationFormulaText");
