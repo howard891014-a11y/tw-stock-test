@@ -110,13 +110,25 @@ function parseIssuedShares(html=""){
   return m?num(m[1]):null;
 }
 function parseTtmRevenue(html=""){
-  const lines=htmlToLines(html); let start=lines.findIndex(x=>/^營業收入$/.test(x));
-  if(start<0)return null; const vals=[];
-  for(let i=start+1;i<lines.length&&vals.length<4;i++){
-    if(/^營業毛利$/.test(lines[i]))break;
-    const t=lines[i].replace(/,/g,"").trim(); if(/^-?\d+(?:\.\d+)?$/.test(t))vals.push(Number(t));
+  const lines=htmlToLines(html);
+  // Yahoo's income page contains a navigation copy of「營業收入」before the actual table.
+  // Try every occurrence and keep the first one that is followed by four numeric quarter values.
+  const starts=[];
+  for(let i=0;i<lines.length;i++)if(/^營業收入$/.test(lines[i]))starts.push(i);
+  for(const start of starts){
+    const vals=[];
+    for(let i=start+1;i<lines.length&&i<start+80&&vals.length<4;i++){
+      if(i>start+1&&/^營業毛利$/.test(lines[i]))break;
+      const t=lines[i].replace(/,/g,"").trim();
+      if(/^-?\d+(?:\.\d+)?$/.test(t)){
+        const v=Number(t);
+        // Quarterly revenue is in thousand dollars and should be a meaningful positive amount.
+        if(Number.isFinite(v)&&v>1000)vals.push(v);
+      }
+    }
+    if(vals.length===4)return vals.reduce((a,b)=>a+b,0)*1000;
   }
-  return vals.length===4?vals.reduce((a,b)=>a+b,0)*1000:null;
+  return null;
 }
 function median(vals){const a=vals.filter(x=>Number.isFinite(x)&&x>0).sort((x,y)=>x-y);if(!a.length)return null;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2}
 async function computePeerPs(compareHtml,selfCode,defaultSuffix){
