@@ -724,6 +724,19 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #valuation .risk-text-safe{color:#13e0aa!important}#valuation .risk-text-watch{color:#ffd24a!important}#valuation .risk-text-danger{color:#ff6574!important}#valuation .risk-text-neutral{color:#f6fbff!important}
 #valuation .valuation-not-applicable{color:#f6fbff!important}
 </style>
+
+<style id="v2529-technical-mobile-metrics">
+.tech-title-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:6px;border-radius:5px;background:rgba(78,181,255,.12);color:#8fd4ff;font-size:12px;line-height:1;vertical-align:-2px}
+#valuation #valuationOperatingTitle{font-size:inherit!important;font-weight:inherit!important}
+@media(max-width:720px){
+  .tech-tile small.tech-metrics{display:flex!important;flex-direction:column!important;gap:0!important;padding-top:8px!important}
+  .tech-metric{display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;min-width:0!important;padding:7px 0!important;border-left:0!important;border-top:1px solid #203b50!important;text-align:left!important}
+  .tech-metric:first-child{border-top:0!important}
+  .tech-metric span{display:block!important;font-size:11px!important;line-height:1.25!important;white-space:nowrap!important}
+  .tech-metric b{display:block!important;margin-top:0!important;margin-left:10px!important;font-size:13px!important;line-height:1.25!important;white-space:nowrap!important;text-align:right!important}
+  .tech-title-icon{width:17px;height:17px;margin-right:5px;font-size:11px}
+}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -750,7 +763,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.8</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.9</span></button>
   </aside>
 
   <div class="main-shell">
@@ -828,12 +841,12 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </section>
           <section class="tech-grid">
-            <div class="tech-tile"><header><b>均線</b><em id="techMaState">--</em></header><p id="techMaConclusion">--</p><small id="techMaValues">--</small></div>
-            <div class="tech-tile"><header><b>布林通道</b><em id="techBollState">--</em></header><p id="techBollConclusion">--</p><small id="techBoll">--</small></div>
-            <div class="tech-tile"><header><b>量價</b><em id="techVolumeState">--</em></header><p id="techVolumeConclusion">--</p><small id="techVolume">--</small></div>
-            <div class="tech-tile"><header><b>乖離率</b><em id="techBiasState">--</em></header><p id="techBiasConclusion">--</p><small id="techBias">--</small></div>
-            <div class="tech-tile"><header><b>趨勢位置</b><em id="techTrendState">--</em></header><p id="techTrendConclusion">--</p><small id="techTrend">--</small></div>
-            <div class="tech-tile"><header><b>動能</b><em id="techMomentumState">--</em></header><p id="techMomentumConclusion">--</p><small id="techMomentum">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">〽</span>均線</b><em id="techMaState">--</em></header><p id="techMaConclusion">--</p><small id="techMaValues">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">◉</span>布林通道</b><em id="techBollState">--</em></header><p id="techBollConclusion">--</p><small id="techBoll">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">▥</span>量價</b><em id="techVolumeState">--</em></header><p id="techVolumeConclusion">--</p><small id="techVolume">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">↕</span>乖離率</b><em id="techBiasState">--</em></header><p id="techBiasConclusion">--</p><small id="techBias">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">⌖</span>趨勢位置</b><em id="techTrendState">--</em></header><p id="techTrendConclusion">--</p><small id="techTrend">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">⚡</span>動能</b><em id="techMomentumState">--</em></header><p id="techMomentumConclusion">--</p><small id="techMomentum">--</small></div>
           </section>
           <section class="tech-summary"><b>技術總結</b><p id="techSummary">--</p></section>
         </article>
@@ -1036,6 +1049,18 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
   .update-row{gap:4px!important}
   .manual-refresh{font-size:11px!important;width:12px!important;height:10px!important;line-height:10px!important}
   .update-row small{font-size:11px!important;line-height:10px!important}
+}
+</style>
+
+<style id="v2529-final-overrides">
+#valuation #valuationOperatingTitle{font-size:22px!important;font-weight:900!important;line-height:1.2!important}
+@media(max-width:720px){
+  #valuation #valuationOperatingTitle{font-size:18px!important}
+  #technical .tech-tile small.tech-metrics{display:flex!important;flex-direction:column!important;gap:0!important;padding-top:8px!important}
+  #technical .tech-metric{display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;padding:7px 0!important;border-left:0!important;border-top:1px solid #203b50!important;text-align:left!important}
+  #technical .tech-metric:first-child{border-top:0!important}
+  #technical .tech-metric span{font-size:11px!important;line-height:1.25!important}
+  #technical .tech-metric b{font-size:13px!important;line-height:1.25!important;margin:0 0 0 10px!important;text-align:right!important}
 }
 </style>
 </body>
