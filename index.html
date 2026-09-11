@@ -741,7 +741,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.5</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.6</span></button>
   </aside>
 
   <div class="main-shell">
@@ -821,8 +821,9 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             <div class="tech-tile"><header><b>均線</b><em id="techMaState">--</em></header><p id="techMaConclusion">--</p><small id="techMaValues">--</small></div>
             <div class="tech-tile"><header><b>布林通道</b><em id="techBollState">--</em></header><p id="techBollConclusion">--</p><small id="techBoll">--</small></div>
             <div class="tech-tile"><header><b>量價</b><em id="techVolumeState">--</em></header><p id="techVolumeConclusion">--</p><small id="techVolume">--</small></div>
+            <div class="tech-tile"><header><b>乖離率</b><em id="techBiasState">--</em></header><p id="techBiasConclusion">--</p><small id="techBias">--</small></div>
             <div class="tech-tile"><header><b>趨勢位置</b><em id="techTrendState">--</em></header><p id="techTrendConclusion">--</p><small id="techTrend">--</small></div>
-            <div class="tech-tile tech-wide"><header><b>動能</b><em id="techMomentumState">--</em></header><p id="techMomentumConclusion">--</p><small id="techMomentum">--</small></div>
+            <div class="tech-tile"><header><b>動能</b><em id="techMomentumState">--</em></header><p id="techMomentumConclusion">--</p><small id="techMomentum">--</small></div>
           </section>
           <section class="tech-summary"><b>技術總結</b><p id="techSummary">--</p></section>
         </article>
@@ -1005,7 +1006,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.2.5"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.2.6"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -1173,4 +1174,9 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .tech-tile small.tech-metrics{display:grid!important;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:0;padding-top:8px!important}
 .tech-metric{min-width:0;text-align:left;padding:0 6px;border-left:1px solid #24445b}.tech-metric:first-child{border-left:0;padding-left:0}.tech-metric:last-child{padding-right:0}.tech-metric span{display:block;color:#91a8bb;font-size:8px;white-space:nowrap}.tech-metric b{display:block;color:#dce6ee;font-size:10px;margin-top:3px;white-space:nowrap;font-weight:700}.tech-summary::before{content:"▤";display:flex;align-items:center;justify-content:center;width:28px;height:32px;color:#eef7ff;font-size:25px;font-weight:900}.tech-summary{grid-template-columns:auto auto 1fr!important}.tech-summary b{grid-column:2}.tech-summary p{grid-column:3}
 @media(max-width:720px){.tech-metric{padding:0 4px}.tech-metric span{font-size:7px}.tech-metric b{font-size:9px}.tech-summary::before{width:24px;font-size:22px}}
+</style>
+
+<style id="v2526-technical-layout">
+.tech-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.tech-tile,.tech-tile:nth-child(4),.tech-tile:nth-child(5),.tech-wide{grid-column:span 1!important}.tech-overview-main{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important}.tech-state-line,.tech-score-line{justify-content:center!important}.tech-summary{grid-template-columns:auto auto auto 1fr!important}.tech-summary b{grid-column:2!important}.tech-summary b::after{content:"|";display:inline-block;margin-left:12px;color:#567086;font-weight:400}.tech-summary p{grid-column:4!important}.tech-summary::before{grid-column:1!important}
+@media(max-width:720px){.tech-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.tech-tile{min-width:0!important}.tech-metric span{font-size:8px!important}.tech-metric b{font-size:10px!important}.tech-summary b::after{margin-left:8px}}
 </style>
