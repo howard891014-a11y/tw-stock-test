@@ -74,7 +74,7 @@ function resetDisposal(msg="搜尋股票後判讀"){
   setText("disposalState","--");setText("disposalStateNote",msg);setText("disposalRisk","--");setText("disposalRiskNote","--");setText("disposalRiskDistance","--");
   [["disposalDots3","disposalCount3","disposalTag3",3],["disposalDots10","disposalCount10","disposalTag10",6],["disposalDots30","disposalCount30","disposalTag30",12]].forEach(([d,c,t,n])=>{disposalDots(d,0,n,n);setText(c,`-- / ${n}`);setText(t,"--")});
   const reason=$('disposalReasonList');if(reason)reason.querySelectorAll('div').forEach(x=>x.classList.remove('active'));setText("disposalReasonNote","尚未取得今日注意資訊");
-  setText("disposalPriceLine","--");setText("disposalPriceLineGap","僅價格款估算");setText("disposalExVolume","資料判讀");setText("disposalExTurnover","資料判讀");setText("disposalExEtf","不適用");setText("disposalExOther","不適用");setText("disposalSummary",msg);
+  setText("disposalPriceLine","--");setText("disposalPriceLineGap","僅價格款估算");setText("disposalExVolume","資料判讀");setText("disposalExTurnover","資料判讀");setText("disposalExEtf","不適用");setText("disposalExOther","不適用");setText("disposalSummary",msg);setText("overviewDisposalState","--");setText("overviewDisposalRisk","處置風險 --");
 }
 function renderDisposal(d){
   const panel=$("disposal");if(panel){panel.classList.remove("disposal-state-watch","disposal-state-danger");const c=disposalToneClass(d.state);if(c)panel.classList.add(c)}
@@ -85,7 +85,7 @@ function renderDisposal(d){
   const keys=new Set(Array.isArray(d.reasonKeys)?d.reasonKeys:[]), rows=$('disposalReasonList')?.querySelectorAll('div')||[];rows.forEach((x,i)=>x.classList.toggle('active',keys.has(["price","volume","turnover","concentration","valuation","margin","sbl"][i])));setText("disposalReasonNote",d.reasonText||"今日未發布注意資訊");
   const ex=d.exceptions||{};const setEx=(id,val,tone)=>{const e=$(id);if(!e)return;e.textContent=val||"資料不足";e.classList.remove("good","watch","bad");if(tone)e.classList.add(tone)};setEx("disposalExVolume",ex.volume?.label,ex.volume?.tone);setEx("disposalExTurnover",ex.turnover?.label,ex.turnover?.tone);setEx("disposalExEtf",ex.etf?.label,ex.etf?.tone);setEx("disposalExOther",ex.other?.label,ex.other?.tone);
   if(d.priceLine&&Number.isFinite(Number(d.priceLine.value))){setText("disposalPriceLine",`${fmt(d.priceLine.value)} 元`);setText("disposalPriceLineGap",d.priceLine.note||"僅價格款估算");const e=$("disposalPriceLine");if(e){e.classList.remove("good","watch","bad");e.classList.add(d.priceLine.tone||"")}}else{setText("disposalPriceLine","資料不足");setText("disposalPriceLineGap",d.priceLine?.note||"無法估算")}
-  setText("disposalSummary",d.summary||"--");
+  setText("disposalSummary",d.summary||"--");setText("overviewDisposalState",d.state||"正常");setText("overviewDisposalRisk",`處置風險 ${d.risk||"低"}`);
 }
 async function loadDisposal(stock){
   resetDisposal("讀取官方注意／處置資料中…");
@@ -160,8 +160,39 @@ function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
   ["valuationCompositeFair","valuationCompositeGap","valuationPeFair","valuationPeFairGap","valuationPbFair","valuationPbFairGap","valuationSummaryBps"].forEach(id=>setText(id,"--"));
   ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap"].forEach(id=>setText(id,"--"));
-  setText("overviewCompositeFair","--");
+  setText("overviewCompositeFair","--");latestValuationScenario=null;setText("overviewValuationScenario","--");setText("overviewValuationScenarioNote","估值情境判讀");
   const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");
+}
+let latestValuationScenario=null;
+function currentTargetPrice(){const main=preferredMainTarget();return main?valuationNum(targetPriceValue(main.latest)):null}
+function scenarioClassify(P,O,B,F,T){
+  if(!(P>0&&O>0&&B>0&&F>0))return {n:null,state:"資料不足",consensus:"資料不足",confidence:"低",tone:"watch",summary:"營運合理價或 PB 合理價資料不足，暫時無法完成九情境判讀。"};
+  if(!(T>0))return {n:null,state:"等待目標價",consensus:"待完成",confidence:"--",tone:"watch",summary:"內部估值已完成，等待券商目標價後再進行完整九情境判讀。"};
+  const divergence=Math.abs(O-B)/F*100, close=divergence<=20, mid=divergence<=40;
+  const near=(a,b)=>a>0&&b>0&&Math.abs(a/b-1)<=.05;
+  let n,state,summary,tone="watch";
+  if(close){
+    if(P<F&&!near(P,F)&&(T?F<T:true)){n=1;state="低估偏多";summary="兩種估值高度接近，現價低於綜合合理價，且仍低於券商目標價。";tone="good"}
+    else if(near(P,F)&&(T?P<T:true)){n=2;state="合理偏多";summary="現價已接近綜合合理價，估值大致合理；若券商目標價更高，仍保留上行預期。";tone="good"}
+    else if(P>F&&T&&P<T&&!near(P,T)){n=3;state="溢價偏多";summary="現價高於內部合理價，但尚未到券商目標價，市場正給予一定成長溢價。"}
+    else if(P>F&&T&&near(P,T)){n=4;state="接近目標價";summary="現價已高於內部合理價並接近券商目標價，上行空間開始受限。";tone="watch"}
+    else {n=5;state="明顯高估";summary="現價高於內部合理價，且已高於券商目標價或缺乏更高目標價支撐。";tone="danger"}
+  }else{
+    const lo=Math.min(O,B),hi=Math.max(O,B);
+    if(P<lo){n=6;state="雙重低估";summary="營運估值與 PB 雖有分歧，但現價同時低於兩者，屬雙重低估區。";tone="good"}
+    else if(P>=lo&&P<=hi){n=7;state="估值分歧區";summary="現價介於營運合理價與 PB 合理價之間，不同估值方法對合理價格看法明顯不同。"}
+    else if(P>hi&&T&&P<T){n=8;state="成長預期區";summary="現價已高於兩種內部合理價，但仍低於券商目標價，市場正在交易未來成長預期。";tone="watch"}
+    else {n=9;state="全面高估";summary="現價高於營運合理價、PB 合理價，且已高於券商目標價或缺乏目標價支撐。";tone="danger"}
+  }
+  return {n,state,consensus:close?"高共識":mid?"有分歧":"高分歧",confidence:close?"高":mid?"中":"低",tone,summary,divergence};
+}
+function renderValuationScenario(){
+  const x=latestValuationScenario;if(!x)return;
+  const T=currentTargetPrice(),r=scenarioClassify(x.P,x.O,x.B,x.F,T),card=$("valuationScenario");
+  card?.classList.remove("scenario-tone-watch","scenario-tone-danger");if(r.tone==="watch")card?.classList.add("scenario-tone-watch");if(r.tone==="danger")card?.classList.add("scenario-tone-danger");
+  setText("valuationScenarioState",r.n?`情境 ${r.n}｜${r.state}`:r.state);setText("valuationScenarioConsensus",r.consensus);setText("valuationScenarioConfidence",`估值可信度 ${r.confidence}`);setText("valuationScenarioSummary",r.summary);
+  setText("scenarioPrice",valuationMetric(x.P));setText("scenarioOperatingLabel",x.usePs?"PS 合理價":"PE 合理價");setText("scenarioOperating",valuationFmt(x.O));setText("scenarioPb",valuationFmt(x.B));setText("scenarioComposite",valuationFmt(x.F));setText("scenarioTarget",T?valuationMetric(T):"--");
+  setText("overviewValuationScenario",r.n?`${r.n}｜${r.state}`:r.state);setText("overviewValuationScenarioNote",`${r.consensus}｜可信度${r.confidence}`);
 }
 function renderValuation(v){
   const profitable=v.profitable===true || Number(v.ttm)>0;
@@ -181,6 +212,7 @@ function renderValuation(v){
   const pbFair=(bps!==null&&bps>0&&peerPb!==null&&peerPb>0)?bps*peerPb:null;
   const fairVals=[operatingFair,pbFair].filter(x=>Number.isFinite(x)&&x>0);
   const compositeFair=fairVals.length?fairVals.reduce((a,b)=>a+b,0)/fairVals.length:null;
+  latestValuationScenario={P:last,O:operatingFair,B:pbFair,F:compositeFair,usePs};renderValuationScenario();
   const fairGap=x=>(last!==null&&last>0&&Number.isFinite(x))?(x/last-1)*100:null;
   const renderFair=(valueId,gapId,value)=>{const el=$(gapId),gap=fairGap(value);setText(valueId,Number.isFinite(value)?valuationFmt(value,""):"資料不足");if(!el)return;el.classList.remove("risk-safe","risk-watch","risk-danger","risk-neutral");if(gap===null){el.textContent="--";el.classList.add("risk-neutral");return;}el.textContent=`較現價 ${gap>=0?"+":"-"}${valuationPercent(Math.abs(gap))}`;el.classList.add(`risk-${valuationRiskByCurrentFair(last,value)}`);};
   renderFair("valuationPeFair","valuationPeFairGap",operatingFair);renderFair("valuationPbFair","valuationPbFairGap",pbFair);renderFair("valuationCompositeFair","valuationCompositeGap",compositeFair);
@@ -391,7 +423,7 @@ function renderMainTarget(main){
  if(!main){
   play?.classList.add("hidden");
   setText("overviewNearestPrice","--"); setText("overviewNearestRate","倍率--");
-  setText("overviewMainBrokerLine","目標券商：--"); return;
+  setText("overviewMainBrokerLine","目標券商：--"); renderValuationScenario(); return;
  }
  const basis=targetBasis(main);
  const current=Number(currentStock?.last??currentStock?.price??currentStock?.regularMarketPrice);
@@ -402,7 +434,7 @@ function renderMainTarget(main){
  setText("overviewMainBrokerLine",`${targetBrokerName(main.row)}：${targetFmt(targetPriceValue(main.latest))}`);
  setText("targetBase",`${targetFmt(basis.base)}`); setText("targetRule",basis.rule);
  setText("target80",`${targetFmt(Math.floor(basis.base*.80))}`); setText("target85",`${targetFmt(Math.floor(basis.base*.85))}`); setText("target88",`${targetFmt(Math.floor(basis.base*.88))}`);
- renderTargetHistory3(main); play?.classList.remove("hidden");
+ renderTargetHistory3(main); play?.classList.remove("hidden"); renderValuationScenario();
 }
 const TARGET_CORR_KEY="stockzone_target_corrections_v239"; let editingTarget=null;
 function readCorr(){try{return JSON.parse(localStorage.getItem(TARGET_CORR_KEY)||"{}")||{}}catch{return{}}}
