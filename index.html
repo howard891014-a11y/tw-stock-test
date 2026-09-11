@@ -776,7 +776,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.3.4</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.3.5</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1122,7 +1122,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 </style>
 
 <style id="v25301-disposal-polish">
-/* v2.5.3.4 disposal layout polish */
+/* v2.5.3.5 disposal layout polish */
 .disposal-help{width:1em!important;height:1em!important;min-width:1em!important;font-size:1em!important;line-height:.86!important;border-width:1.5px!important;vertical-align:0!important}
 .disposal-risk-side>span{margin-bottom:7px!important;line-height:1.2!important}
 .disposal-risk-side>strong{margin:0 0 7px!important;line-height:1.08!important}
@@ -1153,7 +1153,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 </script>
 
 <style id="v25304-disposal-final-polish">
-/* v2.5.3.4: attention-state shield + summary alignment */
+/* v2.5.3.5: attention-state shield + summary alignment */
 .disposal-summary-card{display:grid!important;grid-template-columns:150px 1px minmax(0,1fr)!important;align-items:center!important;column-gap:14px!important}
 .disposal-summary-head{width:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important}
 .disposal-summary-sep{align-self:stretch!important;width:1px!important;min-height:100%!important;background:#496278!important;font-size:0!important;margin:0!important}
@@ -1348,7 +1348,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 @media(max-width:720px){.tech-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.tech-tile{min-width:0!important}.tech-metric span{font-size:8px!important}.tech-metric b{font-size:10px!important}.tech-summary b::after{margin-left:8px}}
 </style>
 <style id="v2530-disposal-scope-fix">
-/* v2.5.3.4: disposal is isolated to its own tab */
+/* v2.5.3.5: disposal is isolated to its own tab */
 #disposal.detail-panel{display:none!important}
 #disposal.detail-panel.active-view{display:grid!important}
 @media(max-width:720px){
@@ -1370,7 +1370,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 }
 </style>
 <style id="v25302-ui-polish">
-/* v2.5.3.4 */
+/* v2.5.3.5 */
 .tech-overview-points{background:rgba(19,224,170,.07)!important}
 .disposal-summary-card{align-items:center!important}
 .disposal-summary-head{align-self:center!important;align-items:center!important}
@@ -1378,4 +1378,55 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .disposal-summary-sep{align-self:stretch!important;width:1px!important;min-height:34px!important;background:#496278!important;font-size:0!important;margin:0 3px!important}
 .disposal-state-watch .disposal-shield{background:#ffd04d!important;color:#2b2100!important}
 @media(max-width:720px){.disposal-summary-card{align-items:center!important}.disposal-summary-head{align-self:center!important}.disposal-summary-sep{min-height:42px!important;margin:0 2px!important}}
+</style>
+<style>
+/* v2.5.3.5 — 系統判讀：不再固定左欄寬度，只讓燈泡與標題本身置中對齊 */
+.disposal-summary-card{
+  display:flex!important;
+  align-items:stretch!important;
+  gap:12px!important;
+}
+.disposal-summary-head{
+  width:auto!important;
+  flex:0 0 auto!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  align-self:center!important;
+  gap:6px!important;
+}
+.disposal-bulb{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  line-height:1!important;
+  margin:0!important;
+}
+.disposal-summary-head .disposal-card-title{
+  display:inline-flex!important;
+  align-items:center!important;
+  line-height:1.2!important;
+  margin:0!important;
+}
+.disposal-summary-sep{
+  flex:0 0 1px!important;
+  width:1px!important;
+  min-height:0!important;
+  align-self:stretch!important;
+  background:#496278!important;
+  font-size:0!important;
+  margin:0!important;
+}
+.disposal-summary-card p{
+  flex:1 1 auto!important;
+  align-self:center!important;
+  margin:0!important;
+  min-width:0!important;
+}
+@media(max-width:720px){
+  .disposal-summary-card{gap:10px!important;align-items:stretch!important}
+  .disposal-summary-head{width:auto!important;gap:5px!important;align-self:center!important}
+  .disposal-summary-sep{align-self:stretch!important;min-height:0!important;margin:0!important}
+  .disposal-summary-card p{align-self:center!important}
+}
 </style>
