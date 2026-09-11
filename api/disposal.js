@@ -37,6 +37,15 @@ function yahooSymbol(code,market){return `${code}${String(market||'').includes('
 async function priceLine(code,market,current){
   try{const s=yahooSymbol(code,market),j=await jfetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=1mo&interval=1d&events=history`),r=j?.chart?.result?.[0],q=r?.indicators?.quote?.[0],cl=(q?.close||[]).filter(x=>Number.isFinite(Number(x))).map(Number);if(cl.length<6)return {value:null,note:'歷史價格不足'};const base=cl.at(-6);const a=base*1.32,b=Math.max(base*1.25,base+50),line=Math.min(a,b),gap=Number.isFinite(current)&&current>0?(line/current-1)*100:null;return {value:Math.floor(line*100)/100,tone:gap!==null&&gap<0?'bad':gap!==null&&gap<5?'watch':'good',note:`6日價格異常保守線；現價距離 ${gap===null?'--':`${gap>=0?'+':''}${gap.toFixed(2)}%`}`};}catch{return {value:null,note:'價格警戒線暫無法估算'}}
 }
+
+function disposalInterval(punish=[]){
+ const t=(punish||[]).map(x=>x?.text||'').join(' ');
+ const m=t.match(/(?:每|約每)\s*(\d+)\s*分鐘/);
+ if(m)return `${m[1]}分盤處置`;
+ const m2=t.match(/(二|十|二十五|四十五|六十)分鐘/);
+ if(m2){const map={'二':'2','十':'10','二十五':'25','四十五':'45','六十':'60'};return `${map[m2[1]]||m2[1]}分盤處置`;}
+ return punish?.length?'處置撮合時間依官方公告':'若進入一般首次處置：2分盤';
+}
 function riskFrom(c,state){if(state==='處置中')return '處置中';const max=Math.max(c.d3/3,c.d10/6,c.d30/12);return max>=.83?'高':max>=.5?'中':'低'}
 export default async function handler(req,res){
  try{
@@ -46,7 +55,7 @@ export default async function handler(req,res){
   const latest=src.rows?.[0],reasonText=latest?.text||'今日未發布注意資訊',reasonKeys=pickKeys(reasonText),risk=riskFrom(counts,state);
   if(src.warning&&state!=='處置中')state='注意股票';
   const pl=await priceLine(code,market,current);
-  const stateNote=state==='處置中'?'官方已公告處置':state==='注意股票'?'目前有注意交易資訊':'目前未列為注意股票';
+  const stateNote=state==='處置中'?disposalInterval(src.punish):state==='注意股票'?'若進入一般首次處置：2分盤':'目前未列為注意股票';
   const distance=Math.min(3-counts.d3,6-counts.d10,12-counts.d30);
   const riskNote=state==='處置中'?'已進入處置期間':`近30日納入計算注意次數 ${counts.d30} 次`;
   const riskDistance=state==='處置中'?'請依官方處置期間交易':distance<=1?'距核心處置門檻僅差 1 次':`距核心門檻至少還差 ${Math.max(0,distance)} 次`;
