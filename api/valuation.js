@@ -17,7 +17,7 @@ function htmlToLines(html=""){
     .replace(/<[^>]+>/g," "))
     .split(/\n+/).map(x=>x.replace(/\s+/g," ").trim()).filter(Boolean);
 }
-function num(v){const n=Number(String(v??"").replace(/,/g,""));return Number.isFinite(n)?n:null}
+function num(v){if(v===null||v===undefined||v==="")return null;const n=Number(String(v).replace(/,/g,""));return Number.isFinite(n)?n:null}
 function round2(n){return Number.isFinite(n)?Math.round(n*100)/100:null}
 function pickPeFromText(text=""){
   const t=String(text);
@@ -103,6 +103,35 @@ function extractPeerSymbols(html="",selfCode=""){
   }
   return out;
 }
+
+function parseIssuedShares(html=""){
+  const lines=htmlToLines(html), joined=lines.join(" ");
+  let m=joined.match(/已發行普通股數\s*([\d,]+)/);
+  return m?num(m[1]):null;
+}
+function parseTtmRevenue(html=""){
+  const lines=htmlToLines(html); let start=lines.findIndex(x=>/^營業收入$/.test(x));
+  if(start<0)return null; const vals=[];
+  for(let i=start+1;i<lines.length&&vals.length<4;i++){
+    if(/^營業毛利$/.test(lines[i]))break;
+    const t=lines[i].replace(/,/g,"").trim(); if(/^-?\d+(?:\.\d+)?$/.test(t))vals.push(Number(t));
+  }
+  return vals.length===4?vals.reduce((a,b)=>a+b,0)*1000:null;
+}
+function median(vals){const a=vals.filter(x=>Number.isFinite(x)&&x>0).sort((x,y)=>x-y);if(!a.length)return null;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2}
+async function computePeerPs(compareHtml,selfCode,defaultSuffix){
+  const peers=extractPeerSymbols(compareHtml,selfCode); if(!peers.length)return null;
+  const vals=await Promise.all(peers.slice(0,6).map(async peer=>{
+    const suffix=peer.suffix||defaultSuffix||".TW", base=`https://tw.stock.yahoo.com/quote/${peer.code}${suffix}`;
+    try{
+      const [profileHtml,incomeHtml,quoteHtml]=await Promise.all([fetchText(`${base}/profile`,6500),fetchText(`${base}/income-statement`,6500),fetchText(base,6500)]);
+      const shares=parseIssuedShares(profileHtml), revenue=parseTtmRevenue(incomeHtml), price=parseYahooQuotePrice(quoteHtml);
+      return price>0&&shares>0&&revenue>0?(price*shares/revenue):null;
+    }catch{return null}
+  }));
+  const good=vals.filter(x=>Number.isFinite(x)&&x>0&&x<100); return good.length>=2?round2(median(good)):null;
+}
+
 async function computePeerPb(compareHtml,selfCode,defaultSuffix){
   const peers=extractPeerSymbols(compareHtml,selfCode);
   if(!peers.length)return null;
@@ -142,7 +171,7 @@ function peStatus(currentPe,peerPe,ttm){
   const detail=`PE 較同業${premiumPct>=0?"高":"低"} ${Math.abs(premiumPct)}%`;
   return {label,detail,premiumPct};
 }
-function buildValuation(parsed,profile,price,quotePrice=null,peerPb=null){
+function buildValuation(parsed,profile,price,quotePrice=null,peerPb=null,ttmRevenue=null,peerPs=null,issuedShares=null){
   const ttm=num(parsed.ttm),peerPe=num(parsed.peerPe),requestedPrice=num(price),pagePrice=num(quotePrice),last=requestedPrice>0?requestedPrice:pagePrice,bookValue=num(profile.bookValue),cashDividend=num(profile.cashDividend);
   // Yahoo 顯示的 PE 保留原口徑，不以「股價 / 自行加總 TTM EPS」覆寫，以免不同資料口徑混用。
   const currentPe=ttm>0?num(parsed.currentPe):null;
@@ -152,13 +181,17 @@ function buildValuation(parsed,profile,price,quotePrice=null,peerPb=null){
   const cleanPeerPb=num(peerPb);
   const pbPremiumPct=(pb>0&&cleanPeerPb>0)?round2((pb/cleanPeerPb-1)*100):null;
   const pe=peStatus(currentPe,peerPe,ttm);
+  const cleanRevenue=num(ttmRevenue), cleanShares=num(issuedShares), cleanPeerPs=num(peerPs);
+  const salesPerShare=(cleanRevenue>0&&cleanShares>0)?round2(cleanRevenue/cleanShares):null;
+  const currentPs=(last>0&&salesPerShare>0)?round2(last/salesPerShare):null;
+  const psPremiumPct=(currentPs>0&&cleanPeerPs>0)?round2((currentPs/cleanPeerPs-1)*100):null;
   return {
     ttm,latestEps,currentPe,peerPe,pePremiumPct:pe.premiumPct,
     bookValue,currentPb:pb,peerPb:cleanPeerPb,pbPremiumPct,cashDividend,dividendYield,last,
     label:pe.label,statusDetail:pe.detail,latest4:parsed.latest4||[],
     source:"Yahoo 股市",
     method:"Yahoo PE 同業比較＋實際 EPS／BPS／現金股利",
-    profitable:ttm>0
+    profitable:ttm>0,ttmRevenue:cleanRevenue,issuedShares:cleanShares,salesPerShare,currentPs,peerPs:cleanPeerPs,psPremiumPct
   };
 }
 
@@ -172,25 +205,31 @@ module.exports=async function handler(req,res){
     for(const suffix of suffixes){
       try{
         const base=`https://tw.stock.yahoo.com/quote/${q}${suffix}`;
-        const [epsHtml,profileResult,quoteResult,compareResult]=await Promise.all([
+        const [epsHtml,profileResult,quoteResult,compareResult,incomeResult]=await Promise.all([
           fetchText(`${base}/eps`),
           fetchText(`${base}/profile`).catch(()=>""),
           fetchText(base).catch(()=>""),
-          fetchText(`${base}/compare`).catch(()=>"")
+          fetchText(`${base}/compare`).catch(()=>""),
+          fetchText(`${base}/income-statement`).catch(()=>"")
         ]);
         const p=parseYahooEpsPage(epsHtml);
         if(p.latest4?.length||p.currentPe!=null||p.peerPe!=null){
           parsed=p;profile=profileResult?parseYahooProfilePage(profileResult):{};symbol=q+suffix;
           parsed.quotePrice=quoteResult?parseYahooQuotePrice(quoteResult):null;
           parsed.compareHtml=compareResult||"";
-          parsed.suffix=suffix;
+          parsed.suffix=suffix; parsed.incomeHtml=incomeResult||""; parsed.profileHtml=profileResult||"";
           break;
         }
       }catch(e){lastErr=e}
     }
     if(!parsed)throw lastErr||new Error("Yahoo EPS 資料解析失敗");
-    const peerPb=parsed.compareHtml?await computePeerPb(parsed.compareHtml,q,parsed.suffix):null;
-    const valuation=buildValuation(parsed,profile,price,parsed.quotePrice,peerPb);
+    const [peerPb,peerPs]=await Promise.all([
+      parsed.compareHtml?computePeerPb(parsed.compareHtml,q,parsed.suffix):null,
+      parsed.compareHtml?computePeerPs(parsed.compareHtml,q,parsed.suffix):null
+    ]);
+    const ttmRevenue=parseTtmRevenue(parsed.incomeHtml||"");
+    const issuedShares=parseIssuedShares(parsed.profileHtml||"");
+    const valuation=buildValuation(parsed,profile,price,parsed.quotePrice,peerPb,ttmRevenue,peerPs,issuedShares);
     return res.status(200).json({ok:true,code:q,symbol,...valuation});
   }catch(e){
     console.error("valuation error",e);
@@ -198,4 +237,4 @@ module.exports=async function handler(req,res){
   }
 };
 
-module.exports._test={htmlToLines,parseQuarterly,parseYahooEpsPage,parseYahooProfilePage,parseYahooQuotePrice,extractPeerSymbols,buildValuation,pickPeFromText,peStatus};
+module.exports._test={htmlToLines,parseQuarterly,parseYahooEpsPage,parseYahooProfilePage,parseYahooQuotePrice,extractPeerSymbols,buildValuation,pickPeFromText,peStatus,parseIssuedShares,parseTtmRevenue,median};
