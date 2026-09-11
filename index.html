@@ -716,6 +716,14 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #valuation .formula-popover div{font-size:14px!important;line-height:1.7!important;color:#bcd0df!important;}
 #valuation .formula-popover-close{position:absolute!important;right:10px!important;top:8px!important;border:0!important;background:transparent!important;color:#a9bfd1!important;font-size:25px!important;cursor:pointer!important;}
 </style>
+<style id="v2527-ui-fixes">
+#valuation .valuation-summary-main{align-items:center!important;text-align:center!important}
+#valuation .valuation-summary-main .fair-label{justify-content:center!important}
+#technical .tech-overview-main{position:relative!important;background:linear-gradient(90deg,rgba(0,105,88,.42),rgba(0,54,58,.34))!important}
+#technical .tech-overview-main:before{content:"";position:absolute;left:0;top:0;bottom:0;width:8px;background:#0ce3ae}
+#valuation .risk-text-safe{color:#13e0aa!important}#valuation .risk-text-watch{color:#ffd24a!important}#valuation .risk-text-danger{color:#ff6574!important}#valuation .risk-text-neutral{color:#f6fbff!important}
+#valuation .valuation-not-applicable{color:#f6fbff!important}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -726,6 +734,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <div class="side-title">▣ <span>個股分析</span></div>
         <button data-view="overview">總覽</button>
         <button data-view="analysis">分析</button>
+        <button data-view="disposal">處置</button>
         <button data-view="targets">目標價</button>
         <button data-view="news">新聞</button>
       </div>
@@ -741,7 +750,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.6</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.2.7</span></button>
   </aside>
 
   <div class="main-shell">
@@ -778,6 +787,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
       <nav class="section-tabs analysis-tabs" id="analysisTabs" aria-label="個股分析導覽">
         <button class="active" data-view="overview" type="button">總覽</button>
         <button data-view="analysis" type="button">分析</button>
+        <button data-view="disposal" type="button">處置</button>
         <button data-view="targets" type="button">目標價</button>
         <button data-view="news" type="button">新聞</button>
       </nav>
@@ -837,7 +847,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
               <b id="valuationCompositeGap">--</b>
             </div>
             <div class="valuation-summary-cell">
-              <span class="fair-label">PE 合理股價 <button class="formula-info" type="button" data-formula="pe" aria-label="查看 PE 合理價公式">i</button></span><strong id="valuationPeFair">--</strong><b id="valuationPeFairGap">--</b>
+              <span class="fair-label"><span id="valuationOperatingFairLabel">PE 合理股價</span> <button class="formula-info" type="button" data-formula="pe" aria-label="查看 PE 合理價公式">i</button></span><strong id="valuationPeFair">--</strong><b id="valuationPeFairGap">--</b>
             </div>
             <div class="valuation-summary-cell">
               <span class="fair-label">PB 合理股價 <button class="formula-info" type="button" data-formula="pb" aria-label="查看 PB 合理價公式">i</button></span><strong id="valuationPbFair">--</strong><b id="valuationPbFairGap">--</b>
@@ -860,10 +870,10 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             </div>
           </div>
           <div class="valuation-section valuation-pe-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-pe" aria-hidden="true">PE</span>本益比 <button class="formula-info definition-info" type="button" data-formula="pedef" aria-label="查看本益比定義">i</button></div>
+            <div class="valuation-section-title"><span class="val-icon val-icon-pe" id="valuationOperatingIcon" aria-hidden="true">PE</span><span id="valuationOperatingTitle">本益比</span> <button class="formula-info definition-info" type="button" data-formula="pedef" aria-label="查看本益比定義">i</button></div>
             <div class="valuation-compare">
-              <div class="valuation-mini"><span>目前本益比</span><b id="valuationCurrentPe">--</b></div>
-              <div class="valuation-mini"><span>同業平均本益比</span><b id="valuationPeerPe">--</b></div>
+              <div class="valuation-mini"><span id="valuationOperatingCurrentLabel">目前本益比</span><b id="valuationCurrentPe">--</b></div>
+              <div class="valuation-mini"><span id="valuationOperatingPeerLabel">同業平均本益比</span><b id="valuationPeerPe">--</b></div>
               <div class="valuation-mini"><span>相對同業</span><b id="valuationPeGap">--</b></div>
             </div>
           </div>
@@ -915,6 +925,8 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             <div class="sell"><span>建議賣出區</span><strong>-- ～ --</strong></div>
           </div>
         </article>
+
+        <article class="card detail-panel simple-detail" id="disposal" data-view-panel="disposal"><div class="card-title">處置</div><div class="hero-value"><span>處置／注意股判讀</span><strong>--</strong><small>功能待後續接入</small></div></article>
 
         <article class="card detail-panel news-analysis-card" id="news" data-view-panel="news">
           <div class="news-analysis-head">
