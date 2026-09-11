@@ -20,8 +20,13 @@ function htmlToLines(html=""){
 function num(v){const n=Number(String(v??"").replace(/,/g,""));return Number.isFinite(n)?n:null}
 function round2(n){return Number.isFinite(n)?Math.round(n*100)/100:null}
 function pickPeFromText(text=""){
-  const m=String(text).match(/(-?\d+(?:\.\d+)?)\s*\(\s*(-?\d+(?:\.\d+)?)\s*\)\s*本益比\s*\(同業平均\)/);
-  return m?{currentPe:num(m[1]),peerPe:num(m[2])}:{};
+  const t=String(text);
+  // Yahoo may show the company's PE as "--" when TTM EPS <= 0 while still
+  // publishing a valid industry-average PE in parentheses. Keep the two values independent.
+  const m=t.match(/(--|-|N\/?A|-?\d+(?:\.\d+)?)\s*\(\s*(-?\d+(?:\.\d+)?)\s*\)\s*本益比\s*\(同業平均\)/i);
+  if(m)return {currentPe:/^-?\d/.test(m[1])?num(m[1]):null,peerPe:num(m[2])};
+  const peer=t.match(/(-?\d+(?:\.\d+)?)\s*本益比\s*\(同業平均\)/i);
+  return peer?{peerPe:num(peer[1])}:{};
 }
 function parseQuarterly(lines){
   const out=[];
