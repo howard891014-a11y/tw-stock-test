@@ -25,7 +25,16 @@ async function readJson(res,label){
   return data;
 }
 async function stockMeta(query){
-  return await readJson(await fetch(`/api/stockmeta?q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股票基本資料");
+  let lastError=null;
+  for(let i=0;i<2;i++){
+    try{
+      return await readJson(await fetch(`/api/stockmeta?q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股票基本資料");
+    }catch(e){
+      lastError=e;
+      if(i<1)await new Promise(r=>setTimeout(r,260));
+    }
+  }
+  throw lastError||new Error("TWSE／TPEx 股票基本資料暫時無法取得");
 }
 function mergeStockMeta(data,meta){
   if(!meta)return data;
@@ -299,12 +308,10 @@ async function search(){
   btn.disabled=true;
   setStatus("搜尋股票…");
   try{
-    let meta=null;
-    try{meta=await stockMeta(q)}catch(e){console.warn("股票中文名稱解析失敗，改用原查價流程",e)}
-    let data=await quote(meta?.code||q);
-    if(!meta && (data?.code||data?.symbol)){
-      try{meta=await stockMeta(data.code||data.symbol)}catch(e){console.warn("股票代碼中文名稱補查失敗",e)}
-    }
+    // 股票身分（代號／中文名／市場別）一律由 TWSE／TPEx 官方主檔決定。
+    // Yahoo 僅負責行情，不再有權限覆蓋公司中文名稱或市場別。
+    const meta=await stockMeta(q);
+    let data=await quote(meta.code);
     data=mergeStockMeta(data,meta);
     renderStock(data);
     loadValuation(data);
