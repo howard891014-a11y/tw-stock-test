@@ -24,6 +24,14 @@ async function readJson(res,label){
   if(!res.ok || data?.ok===false) throw new Error(data?.error||`${label}查詢失敗（HTTP ${res.status}）`);
   return data;
 }
+async function stockMeta(query){
+  return await readJson(await fetch(`/api/stockmeta?q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股票基本資料");
+}
+function mergeStockMeta(data,meta){
+  if(!meta)return data;
+  return {...data,code:meta.code||data?.code||data?.symbol,symbol:data?.symbol||meta.symbol||meta.code,name:meta.name||data?.name||data?.shortName,shortName:meta.name||data?.shortName||data?.name,market:meta.market||data?.market||data?.marketLabel,marketLabel:meta.market||data?.marketLabel||data?.market};
+}
+
 async function quote(query){
   async function once(timeoutMs){
     const controller=new AbortController();
@@ -81,7 +89,11 @@ function renderDisposal(d){
   setText("disposalState",d.state||"正常");setText("disposalStateNote",d.stateNote||"目前未列為注意股票");setText("disposalRisk",d.risk||"低");setText("disposalRiskNote",d.riskNote||"--");setText("disposalRiskDistance",d.riskDistance||"--");
   const counts=d.counts||{};const c3=Number(counts.d3)||0,c10=Number(counts.d10)||0,c30=Number(counts.d30)||0;
   disposalDots("disposalDots3",c3,3,3);disposalDots("disposalDots10",c10,6,6);disposalDots("disposalDots30",c30,12,12);
-  setText("disposalCount3",`${c3} / 3`);setText("disposalCount10",`${c10} / 6`);setText("disposalCount30",`${c30} / 12`);disposalTag("disposalTag3",c3,3);disposalTag("disposalTag10",c10,6);disposalTag("disposalTag30",c30,12);
+  if(d.countsAvailable===false){
+    setText("disposalCount3","-- / 3");setText("disposalCount10","-- / 6");setText("disposalCount30","-- / 12");setText("disposalTag3","--");setText("disposalTag10","--");setText("disposalTag30","--");
+  }else{
+    setText("disposalCount3",`${c3} / 3`);setText("disposalCount10",`${c10} / 6`);setText("disposalCount30",`${c30} / 12`);disposalTag("disposalTag3",c3,3);disposalTag("disposalTag10",c10,6);disposalTag("disposalTag30",c30,12);
+  }
   const keys=new Set(Array.isArray(d.reasonKeys)?d.reasonKeys:[]), rows=$('disposalReasonList')?.querySelectorAll('div')||[];rows.forEach((x,i)=>x.classList.toggle('active',keys.has(["price","volume","turnover","concentration","valuation","margin","sbl"][i])));setText("disposalReasonNote",d.reasonText||"今日未發布注意資訊");
   const ex=d.exceptions||{};const setEx=(id,val,tone)=>{const e=$(id);if(!e)return;e.textContent=val||"資料不足";e.classList.remove("good","watch","bad");if(tone)e.classList.add(tone)};setEx("disposalExVolume",ex.volume?.label,ex.volume?.tone);setEx("disposalExTurnover",ex.turnover?.label,ex.turnover?.tone);setEx("disposalExEtf",ex.etf?.label,ex.etf?.tone);setEx("disposalExOther",ex.other?.label,ex.other?.tone);
   if(d.priceLine&&Number.isFinite(Number(d.priceLine.value))){setText("disposalPriceLine",`${fmt(d.priceLine.value)} 元`);setText("disposalPriceLineGap",d.priceLine.note||"僅價格款估算");const e=$("disposalPriceLine");if(e){e.classList.remove("good","watch","bad");e.classList.add(d.priceLine.tone||"")}}else{setText("disposalPriceLine","資料不足");setText("disposalPriceLineGap",d.priceLine?.note||"無法估算")}
@@ -287,7 +299,13 @@ async function search(){
   btn.disabled=true;
   setStatus("搜尋股票…");
   try{
-    const data=await quote(q);
+    let meta=null;
+    try{meta=await stockMeta(q)}catch(e){console.warn("股票中文名稱解析失敗，改用原查價流程",e)}
+    let data=await quote(meta?.code||q);
+    if(!meta && (data?.code||data?.symbol)){
+      try{meta=await stockMeta(data.code||data.symbol)}catch(e){console.warn("股票代碼中文名稱補查失敗",e)}
+    }
+    data=mergeStockMeta(data,meta);
     renderStock(data);
     loadValuation(data);
     loadTechnical(data);
