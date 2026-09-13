@@ -77,54 +77,63 @@ function legacyTpexRows(j){
 function parseCsvRows(text=''){const rows=[];let row=[],field='',quoted=false;const src=String(text||'').replace(/^\uFEFF/,'');for(let i=0;i<src.length;i++){const ch=src[i];if(quoted){if(ch==='\"'&&src[i+1]==='\"'){field+='\"';i++}else if(ch==='\"')quoted=false;else field+=ch}else if(ch==='\"')quoted=true;else if(ch===','){row.push(field);field=''}else if(ch==='\n'){row.push(field);rows.push(row);row=[];field=''}else if(ch!=='\r')field+=ch}if(field||row.length){row.push(field);rows.push(row)}return rows.filter(r=>r.some(x=>clean(x)!==''))}
 function legacyTpexCsvRows(text=''){const rows=parseCsvRows(text);if(rows.length<2)return [];const fields=rows[0].map(clean),data=rows.slice(1),idx=(names)=>{for(const n of names){const i=fields.indexOf(n);if(i>=0)return i}return -1};const ci=idx(['證券代號','股票代號','代號','證券代碼','股票代碼']),ni=idx(['證券名稱','股票名稱','名稱']),di=idx(['公布日期','公告日期','日期']),pi=idx(['處置起訖時間','處置起迄時間','處置期間']),ri=idx(['處置原因','處置條件']),ti=idx(['處置內容','處置措施']);if(ci<0||pi<0)return [];return data.map(r=>({Date:di>=0?clean(r[di]):'',SecuritiesCompanyCode:clean(r[ci]),CompanyName:ni>=0?clean(r[ni]):'',DispositionPeriod:clean(r[pi]),DispositionReasons:ri>=0?clean(r[ri]):'',DisposalCondition:ti>=0?clean(r[ti]):ri>=0?clean(r[ri]):''})).filter(x=>x.SecuritiesCompanyCode)}
 async function tpex(code){
-  const safe=async(url,retries=0,timeoutMs=2800)=>{try{return {ok:true,data:await jfetch(url,retries,timeoutMs),source:url}}catch(e){return {ok:false,data:[],error:e?.message||'fetch failed',source:url}}};
   const attUrl='https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_information';
   const disUrl='https://www.tpex.org.tw/openapi/v1/tpex_disposal_information';
   const legacyUrl='https://www.tpex.org.tw/web/bulletin/disposal_information/disposal_information_result.php?l=zh-tw&o=json';
   const csvUrl='https://www.tpex.org.tw/web/bulletin/disposal_information/disposal_information_result.php?l=zh-tw&o=data';
   const noteUrl='https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_note';
-  const [attR,primaryDisR,noteR]=await Promise.all([safe(attUrl),safe(disUrl),safe(noteUrl)]);
   const val=(x,keys)=>{for(const k of keys){if(x?.[k]!==undefined&&x?.[k]!==null&&clean(x[k])!=='')return clean(x[k])}return ''};
   const stockCode=x=>val(x,['SecuritiesCompanyCode','SecuritiesCode','SecurityCode','StockCode','Code','證券代號','股票代號','證券代碼','股票代碼','代號']);
+  const safeJson=async(url,retries=1,timeoutMs=3600)=>{try{return {ok:true,data:await jfetch(url,retries,timeoutMs),source:url}}catch(e){return {ok:false,data:null,error:e?.message||'fetch failed',source:url}}};
+  const safeText=async(url,retries=1,timeoutMs=3600)=>{try{return {ok:true,data:await tfetch(url,retries,timeoutMs),source:url}}catch(e){return {ok:false,data:null,error:e?.message||'fetch failed',source:url}}};
+
+  // 注意／累計預警和「是否處置中」分開；它們失敗不得把已核對的處置狀態改成資料不足。
+  const [attR,noteR,openR,legacyR,csvR]=await Promise.all([
+    safeJson(attUrl,0,3000),safeJson(noteUrl,0,3000),
+    safeJson(disUrl,1,3600),safeJson(legacyUrl,0,3600),safeText(csvUrl,0,3600)
+  ]);
+
   const rows=(Array.isArray(attR.data)?attR.data:[]).filter(x=>stockCode(x)===String(code)).map(x=>({date:rocToIso(val(x,['Date','AnnouncementDate','公告日期','資料日期'])),text:clean(val(x,['TradingInformation','TradingInfo','AttentionInformation','WarningInformation','注意交易資訊','近期達本中心「公布注意交易資訊」標準之情形'])),raw:x}));
+  const warning=(Array.isArray(noteR.data)?noteR.data:[]).find(x=>stockCode(x)===String(code))||null;
 
-  // v2.5.4.10 的已驗收策略保留：OpenAPI 成功就視為官方處置資料可用；失敗才由官網 JSON / HTML 接手。
-  // 唯一新增：若 OpenAPI 成功但「查無這一檔」，再順序查一次官網 JSON，只接受它補回的正向命中。
-  // 官網 JSON 若失敗，不反過來把原本成功的 OpenAPI 判成資料不足，避免 8064/6187 這類正常股又被修壞。
-  let disR=primaryDisR,secondaryError='';
-  let primaryMatched=primaryDisR.ok?(Array.isArray(primaryDisR.data)?primaryDisR.data:[]).filter(x=>stockCode(x)===String(code)):[];
-  if(primaryDisR.ok&&!primaryMatched.length){
-    const legacy=await safe(legacyUrl,0,3600);
-    if(legacy.ok){
-      const normalized=legacyTpexRows(legacy.data),matched=normalized.filter(x=>stockCode(x)===String(code));
-      if(matched.length)disR={ok:true,data:matched,source:`${disUrl} + ${legacyUrl}`,legacy:true,secondary:true};
-    }else secondaryError=legacy.error||'官方 JSON 二次核對失敗';
-  }
-  if(!disR.ok){
-    const legacy=await safe(legacyUrl,0,4500);
-    if(legacy.ok){
-      const normalized=legacyTpexRows(legacy.data);
-      if(normalized.length)disR={ok:true,data:normalized,source:legacyUrl,legacy:true};
-      else disR={...disR,backupError:'官方 JSON 備援回傳格式無可解析處置資料'};
-    }else disR={...disR,backupError:legacy.error||'官方 JSON 備援失敗'};
-  }
-  if(!disR.ok){
-    try{const csv=await tfetch(csvUrl,0,3200),normalized=legacyTpexCsvRows(csv);if(normalized.length)disR={ok:true,data:normalized,source:csvUrl,legacyCsv:true};else disR={...disR,csvBackupError:'官方 CSV 備援回傳格式無可解析處置資料'}}catch(e){disR={...disR,csvBackupError:e?.message||'CSV backup failed'}}
-  }
-  if(!disR.ok){
-    try{
-      const html=await tfetch('https://app.tpex.org.tw/HTML/Announce/MarketNews/disposal_info.html',0,2500),parsed=parseTpexDisposalHtml(html,code);
-      if(parsed.length)disR={ok:true,data:parsed,source:'https://app.tpex.org.tw/HTML/Announce/MarketNews/disposal_info.html',preparsed:true};
-      else disR={...disR,htmlBackupError:'官方 HTML 備援沒有解析到該股票處置資料'};
-    }catch(e){disR={...disR,htmlBackupError:e?.message||'HTML backup failed'}}
-  }
-  const dis=disR.data,note=noteR.data;
-  const punish=disR.preparsed?(Array.isArray(dis)?dis:[]):(Array.isArray(dis)?dis:[]).filter(x=>stockCode(x)===String(code)).map(x=>({date:rocToIso(val(x,['Date','AnnouncementDate','公布日期','處置日期'])),text:clean(val(x,['DisposalCondition','DispositionReasons','DispositionReason','DisposalInformation','處置原因','處置內容','處置起訖時間'])),raw:x}));
-  const activePunish=punish.filter(x=>isActiveDisposal(x));
-  const warning=(Array.isArray(note)?note:[]).find(x=>stockCode(x)===String(code))||null;
-  return {rows,punish,activePunish,warning,historyComplete:false,availability:{attention:attR.ok,disposal:disR.ok,warning:noteR.ok},sources:{attention:attR.source,disposal:disR.source,warning:noteR.source},errors:{attention:attR.error||'',disposal:disR.error||'',disposalSecondary:secondaryError,disposalBackup:disR.backupError||'',disposalCsvBackup:disR.csvBackupError||'',disposalHtmlBackup:disR.htmlBackupError||'',warning:noteR.error||''}};
+  // 三條官方處置來源獨立判斷可用性。任何一條成功都代表「官方處置清單可核對」。
+  // 來源失敗只能降低備援數，不能推翻其他來源已成功的資料。
+  const sourceSets=[];
+  const sourceNames=[];
+  const sourceErrors=[];
+  if(openR.ok&&Array.isArray(openR.data)){
+    sourceSets.push(openR.data);sourceNames.push(disUrl);
+  }else sourceErrors.push(`OpenAPI: ${openR.error||'格式錯誤'}`);
+
+  if(legacyR.ok){
+    const normalized=legacyTpexRows(legacyR.data);
+    const shapeOk=normalized.length>0||Array.isArray(legacyR.data?.tables)||(Array.isArray(legacyR.data?.fields)&&Array.isArray(legacyR.data?.data));
+    if(shapeOk){sourceSets.push(normalized);sourceNames.push(legacyUrl)}else sourceErrors.push('官方 JSON: 格式無法辨識');
+  }else sourceErrors.push(`官方 JSON: ${legacyR.error||'取得失敗'}`);
+
+  if(csvR.ok){
+    const normalized=legacyTpexCsvRows(csvR.data);
+    const head=String(csvR.data||'').split(/\r?\n/,1)[0]||'';
+    const shapeOk=normalized.length>0||(/處置起訖時間|處置起迄時間|處置期間/.test(head)&&/證券代號|股票代號|代號/.test(head));
+    if(shapeOk){sourceSets.push(normalized);sourceNames.push(csvUrl)}else sourceErrors.push('官方 CSV: 格式無法辨識');
+  }else sourceErrors.push(`官方 CSV: ${csvR.error||'取得失敗'}`);
+
+  const disposalAvailable=sourceSets.length>0;
+  const merged=[];const seen=new Set();
+  for(const set of sourceSets){for(const x of Array.isArray(set)?set:[]){
+    const c=stockCode(x);if(!c)continue;
+    const period=val(x,['DispositionPeriod','DisposalPeriod','處置起訖時間','處置起迄時間','處置期間']);
+    const text=val(x,['DisposalCondition','DispositionReasons','DispositionReason','DisposalInformation','處置原因','處置內容','處置起訖時間']);
+    const k=`${c}|${period}|${text}`;if(seen.has(k))continue;seen.add(k);merged.push(x)
+  }}
+  const punish=merged.filter(x=>stockCode(x)===String(code)).map(x=>({date:rocToIso(val(x,['Date','AnnouncementDate','公布日期','處置日期'])),text:clean(val(x,['DisposalCondition','DispositionReasons','DispositionReason','DisposalInformation','處置原因','處置內容','處置起訖時間'])),raw:x}));
+  // 同一股票可能連續收到兩段重疊處置；以公告日期較新的有效處置優先顯示。
+  const activePunish=punish.filter(x=>isActiveDisposal(x)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  return {rows,punish,activePunish,warning,historyComplete:false,
+    availability:{attention:attR.ok,disposal:disposalAvailable,warning:noteR.ok},
+    sources:{attention:attR.source,disposal:sourceNames.join(' + '),warning:noteR.source},
+    errors:{attention:attR.error||'',disposal:sourceErrors.join(' | '),warning:noteR.error||''}};
 }
-
 function yahooSymbol(code,market){return `${code}${String(market||'').includes('上櫃')?'.TWO':'.TW'}`}
 async function priceLine(code,market,current){
   try{const s=yahooSymbol(code,market),j=await jfetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=1mo&interval=1d&events=history`),r=j?.chart?.result?.[0],q=r?.indicators?.quote?.[0],cl=(q?.close||[]).filter(x=>Number.isFinite(Number(x))).map(Number);if(cl.length<6)return {value:null,note:'歷史價格不足'};const base=cl.at(-6);const a=base*1.32,b=Math.max(base*1.25,base+50),line=Math.min(a,b),gap=Number.isFinite(current)&&current>0?(line/current-1)*100:null;return {value:Math.floor(line*100)/100,tone:gap!==null&&gap<0?'bad':gap!==null&&gap<5?'watch':'good',note:`6日價格異常保守線；現價距離 ${gap===null?'--':`${gap>=0?'+':''}${gap.toFixed(2)}%`}`};}catch{return {value:null,note:'價格警戒線暫無法估算'}}
@@ -165,11 +174,13 @@ export default async function handler(req,res){
   else if(todayAttention||pl?.tone==='bad'||pl?.tone==='watch')risk='中';
   const stateNote=state==='處置中'?disposalInterval(activePunish):state==='注意股票'?(src.warning?'官方已列累計次數異常預警':'若進入處置：2分盤'):state==='資料不足'?'官方處置資料暫時無法取得':state==='未處置'?'官方處置公告已核對；注意資料暫缺':'目前未列為注意股票';
   const riskNote=state==='處置中'?'已進入處置期間':historyComplete?`近30個交易日納入計算 ${counts.d30} 次`:src.warning?'TPEx 官方已發布累計次數異常資訊':attentionAvailable?'TPEx 每日快照正常；歷史次數不以單日資料推算':'官方注意資料暫時無法取得';
+  const activePeriod=state==='處置中'&&activePunish.length?disposalPeriodOf(activePunish[0]):{start:'',end:''};
+  const disposalPeriod=state==='處置中'?{start:activePeriod.start,end:activePeriod.end,label:activePeriod.start&&activePeriod.end?`${activePeriod.start.replace(/-/g,'/')}～${activePeriod.end.replace(/-/g,'/')}`:'處置期間依官方公告'}:null;
   const riskDistance=state==='處置中'?disposalPeriodLabel(activePunish):state==='資料不足'?'待官方處置資料恢復後更新':state==='未處置'?'目前未處置；注意風險待資料恢復':src.warning?'最快下一交易日可能處置':historyComplete?(fast.days===0?'已達核心門檻，待官方公告':fast.days===1?'最快下一交易日可能處置':Number.isFinite(fast.days)?`最快 ${fast.days} 個交易日後可能處置`:'目前無近期處置路徑'):'官方未發布累計次數異常預警';
   let summary=state==='處置中'?'官方已公告處置，請直接以處置起訖日與措施為準。':state==='資料不足'?'TPEx／TWSE 官方處置資料本次未取得；本次不把缺資料誤判為未處置。':state==='未處置'?'TPEx 官方處置公告已成功核對，目前未列為處置股票；但注意股／累計預警來源本次未取得，因此風險進度暫不判讀。':src.warning?'TPEx 官方已發布「公布注意累計次數異常」資訊；若下一交易日再次符合注意條件，可能進入處置。':todayAttention?(historyComplete?`今日為注意股；近3日第一款 ${counts.d3}/3、近10日第一至八款 ${counts.d10}/6、近30日 ${counts.d30}/12。${fast.path}。`:'今日為注意股。TPEx OpenAPI 的注意股資料屬每日快照，因此本版不再用單日快照假算近 3／10／30 日次數；是否接近處置以 TPEx 官方累計次數異常資訊為優先。'):(historyComplete?`目前未列為今日注意股；近10日納入計算 ${counts.d10}/6、近30日 ${counts.d30}/12。${fast.path}。`:'目前未列為今日注意股，且 TPEx 官方未發布累計次數異常預警；歷史 3／10／30 日次數在沒有完整官方歷史資料時顯示為「--」，不再誤報 0 次。');
   if(pl.value)summary+=` 價格異常款保守警戒線約 ${pl.value} 元；低於此線只能排除該價格條件，不能保證其他注意條件不成立。`;
   res.setHeader('Cache-Control','no-store, max-age=0');
   res.setHeader('CDN-Cache-Control','no-store');
-  return res.status(200).json({ok:true,apiVersion:'2.5.4.13',source:isOtc?'TPEx':'TWSE',state,stateNote,risk:risk==='處置中'?'高':risk,riskNote,riskDistance,countsAvailable:historyComplete&&attentionAvailable,counts:{d3:counts.d3,d5:counts.d5,d10:counts.d10,d30:counts.d30},historyComplete,fastest:{days:fast.days,path:fast.path},reasonKeys,reasonText,priceLine:pl,exceptions:{volume:{label:'依適用款次判斷',tone:'watch'},turnover:{label:'依適用款次判斷',tone:'watch'},etf:{label:'一般個股不適用',tone:''},other:{label:'依官方公告',tone:''}},summary,official:{attentionRows:src.rows?.slice(0,12)||[],disposalRows:src.punish?.slice(0,8)||[],activeDisposalRows:activePunish.slice(0,5),warning:src.warning||null},availability:src.availability||null,sources:src.sources||null,sourceErrors:src.errors||null});
+  return res.status(200).json({ok:true,apiVersion:'2.5.4.14',source:isOtc?'TPEx':'TWSE',state,stateNote,risk:risk==='處置中'?'高':risk,riskNote,riskDistance,disposalPeriod,countsAvailable:historyComplete&&attentionAvailable,counts:{d3:counts.d3,d5:counts.d5,d10:counts.d10,d30:counts.d30},historyComplete,fastest:{days:fast.days,path:fast.path},reasonKeys,reasonText,priceLine:pl,exceptions:{volume:{label:'依適用款次判斷',tone:'watch'},turnover:{label:'依適用款次判斷',tone:'watch'},etf:{label:'一般個股不適用',tone:''},other:{label:'依官方公告',tone:''}},summary,official:{attentionRows:src.rows?.slice(0,12)||[],disposalRows:src.punish?.slice(0,8)||[],activeDisposalRows:activePunish.slice(0,5),warning:src.warning||null},availability:src.availability||null,sources:src.sources||null,sourceErrors:src.errors||null});
  }catch(e){return res.status(500).json({ok:false,error:e?.message||'處置資料取得失敗'})}
 }
