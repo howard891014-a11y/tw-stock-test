@@ -46,15 +46,17 @@ async function twse(code){
 }
 async function tradingDays(code,market){try{const s=yahooSymbol(code,market),j=await jfetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=3mo&interval=1d&events=history`),r=j?.chart?.result?.[0];return (r?.timestamp||[]).map(x=>{const d=new Date(Number(x)*1000);return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`}).filter(Boolean)}catch{return []}}
 async function tpex(code){
-  const [att,dis,note]=await Promise.all([
-    jfetch('https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_information'),
-    jfetch('https://www.tpex.org.tw/openapi/v1/tpex_disposal_information'),
-    jfetch('https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_note').catch(()=>[])
+  const safe=async url=>{try{return {ok:true,data:await jfetch(url)}}catch(e){return {ok:false,data:[],error:e?.message||'fetch failed'}}};
+  const [attR,disR,noteR]=await Promise.all([
+    safe('https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_information'),
+    safe('https://www.tpex.org.tw/openapi/v1/tpex_disposal_information'),
+    safe('https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_note')
   ]);
-  const rows=(Array.isArray(att)?att:[]).filter(x=>String(x.SecuritiesCompanyCode||'')===String(code)).map(x=>({date:rocToIso(x.Date),text:clean(x.TradingInformation),raw:x}));
-  const punish=(Array.isArray(dis)?dis:[]).filter(x=>String(x.SecuritiesCompanyCode||'')===String(code)).map(x=>({date:rocToIso(x.Date),text:clean(x.DisposalCondition||x.DispositionReasons),raw:x}));
+  const att=attR.data,dis=disR.data,note=noteR.data;
+  const rows=(Array.isArray(att)?att:[]).filter(x=>String(x.SecuritiesCompanyCode||x.Code||x.SecuritiesCode||'')===String(code)).map(x=>({date:rocToIso(x.Date),text:clean(x.TradingInformation||x.TradingInfo||x.AttentionInformation||''),raw:x}));
+  const punish=(Array.isArray(dis)?dis:[]).filter(x=>String(x.SecuritiesCompanyCode||x.Code||x.SecuritiesCode||'')===String(code)).map(x=>({date:rocToIso(x.Date),text:clean(x.DisposalCondition||x.DispositionReasons||x.DispositionReason||''),raw:x}));
   const warning=(Array.isArray(note)?note:[]).find(x=>String(x.SecuritiesCompanyCode||x.Code||x.SecuritiesCode||'')===String(code))||null;
-  return {rows,punish,warning};
+  return {rows,punish,warning,availability:{attention:attR.ok,disposal:disR.ok,warning:noteR.ok}};
 }
 function yahooSymbol(code,market){return `${code}${String(market||'').includes('上櫃')?'.TWO':'.TW'}`}
 async function priceLine(code,market,current){
@@ -75,18 +77,19 @@ export default async function handler(req,res){
   const code=String(req.query?.q||'').trim(),market=String(req.query?.market||''),current=n(req.query?.price);if(!code)return res.status(400).json({ok:false,error:'缺少股票代碼'});
   const src=market.includes('上櫃')?await tpex(code):await twse(code);
   const [td,pl]=await Promise.all([tradingDays(code,market),priceLine(code,market,current)]);
-  const counts=countEligibleRows(src.rows,td),fast=fastestFuture(counts,Boolean(src.warning));
+  const attentionAvailable=src.availability?.attention!==false,disposalAvailable=src.availability?.disposal!==false;
+  const counts=countEligibleRows(src.rows,td),fast=attentionAvailable?fastestFuture(counts,Boolean(src.warning)):{days:null,path:'官方注意資料暫時無法取得，暫不推算處置進度'};
   const latestTrading=td.at(-1)||isoDate(new Date().toISOString().slice(0,10)),latest=(src.rows||[]).slice().sort((a,b)=>String(isoDate(b.date)).localeCompare(String(isoDate(a.date))))[0];
   const todayAttention=Boolean(latest&&isoDate(latest.date)===latestTrading);
-  let state=src.punish?.length?'處置中':(todayAttention||src.warning)?'注意股票':'正常';
+  let state=src.punish?.length?'處置中':(!disposalAvailable||!attentionAvailable)?'資料不足':(todayAttention||src.warning)?'注意股票':'正常';
   const reasonText=todayAttention?(latest?.text||'今日已發布注意資訊'):'今日未發布注意資訊',reasonKeys=todayAttention?pickKeys(reasonText):[];
-  const risk=riskFrom(counts,state,fast,pl);
-  const stateNote=state==='處置中'?disposalInterval(src.punish):state==='注意股票'?'若進入處置：2分盤':'目前未列為注意股票';
-  const riskNote=state==='處置中'?'已進入處置期間':`近30個交易日納入計算 ${counts.d30} 次`;
-  const riskDistance=state==='處置中'?'請依官方處置期間交易':fast.days===0?'已達核心門檻，待官方公告':fast.days===1?'最快下一交易日可能處置':Number.isFinite(fast.days)?`最快 ${fast.days} 個交易日後可能處置`:'目前無近期處置路徑';
-  let summary=state==='處置中'?'官方已公告處置，請直接以處置起訖日與措施為準。':src.warning?'官方預警顯示：下一交易日若再次納入處置計算，即可能公告處置。':todayAttention?`今日為注意股；近3日第一款 ${counts.d3}/3、近10日第一至八款 ${counts.d10}/6、近30日 ${counts.d30}/12。${fast.path}。`:`目前未列為今日注意股；近10日納入計算 ${counts.d10}/6、近30日 ${counts.d30}/12。${fast.path}。`;
+  const risk=(attentionAvailable&&disposalAvailable)?riskFrom(counts,state,fast,pl):(state==='處置中'?'處置中':'--');
+  const stateNote=state==='處置中'?disposalInterval(src.punish):state==='注意股票'?'若進入處置：2分盤':state==='資料不足'?'部分官方資料暫時無法取得':'目前未列為注意股票';
+  const riskNote=state==='處置中'?'已進入處置期間':attentionAvailable?`近30個交易日納入計算 ${counts.d30} 次`:'官方注意資料暫時無法取得';
+  const riskDistance=state==='處置中'?'請依官方處置期間交易':!attentionAvailable?'待官方注意資料恢復後更新':fast.days===0?'已達核心門檻，待官方公告':fast.days===1?'最快下一交易日可能處置':Number.isFinite(fast.days)?`最快 ${fast.days} 個交易日後可能處置`:'目前無近期處置路徑';
+  let summary=state==='處置中'?'官方已公告處置，請直接以處置起訖日與措施為準。':!attentionAvailable?'官方處置公告可讀取，但注意股票資料來源暫時無法取得；本次不把缺資料誤判為 0 次，待來源恢復後自動補齊進度。':src.warning?'官方預警顯示：下一交易日若再次納入處置計算，即可能公告處置。':todayAttention?`今日為注意股；近3日第一款 ${counts.d3}/3、近10日第一至八款 ${counts.d10}/6、近30日 ${counts.d30}/12。${fast.path}。`:`目前未列為今日注意股；近10日納入計算 ${counts.d10}/6、近30日 ${counts.d30}/12。${fast.path}。`;
   if(pl.value)summary+=` 價格異常款保守警戒線約 ${pl.value} 元；低於此線只能排除該價格條件，不能保證其他注意條件不成立。`;
   res.setHeader('Cache-Control','s-maxage=300, stale-while-revalidate=600');
-  return res.status(200).json({ok:true,source:market.includes('上櫃')?'TPEx':'TWSE',state,stateNote,risk:risk==='處置中'?'高':risk,riskNote,riskDistance,counts:{d3:counts.d3,d5:counts.d5,d10:counts.d10,d30:counts.d30},fastest:{days:fast.days,path:fast.path},reasonKeys,reasonText,priceLine:pl,exceptions:{volume:{label:'依適用款次判斷',tone:'watch'},turnover:{label:'依適用款次判斷',tone:'watch'},etf:{label:'一般個股不適用',tone:''},other:{label:'依官方公告',tone:''}},summary,official:{attentionRows:src.rows?.slice(0,12)||[],disposalRows:src.punish?.slice(0,5)||[]}});
+  return res.status(200).json({ok:true,source:market.includes('上櫃')?'TPEx':'TWSE',state,stateNote,risk:risk==='處置中'?'高':risk,riskNote,riskDistance,countsAvailable:attentionAvailable,counts:{d3:counts.d3,d5:counts.d5,d10:counts.d10,d30:counts.d30},fastest:{days:fast.days,path:fast.path},reasonKeys,reasonText,priceLine:pl,exceptions:{volume:{label:'依適用款次判斷',tone:'watch'},turnover:{label:'依適用款次判斷',tone:'watch'},etf:{label:'一般個股不適用',tone:''},other:{label:'依官方公告',tone:''}},summary,official:{attentionRows:src.rows?.slice(0,12)||[],disposalRows:src.punish?.slice(0,5)||[]},availability:src.availability||null});
  }catch(e){return res.status(500).json({ok:false,error:e?.message||'處置資料取得失敗'})}
 }
