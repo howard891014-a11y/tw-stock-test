@@ -87,9 +87,44 @@ function shortStockName(name){
   return s;
 }
 
+function rocDispositionPeriodClient(row){
+  const raw=String(row?.DispositionPeriod||row?.["處置起訖時間"]||row?.DisposalCondition||row?.DispositionReasons||"");
+  let m=raw.match(/(\d{3})[\/. -]?(\d{2})[\/. -]?(\d{2})\s*[~～至-]\s*(\d{3})[\/. -]?(\d{2})[\/. -]?(\d{2})/);
+  if(m)return {start:`${Number(m[1])+1911}-${m[2]}-${m[3]}`,end:`${Number(m[4])+1911}-${m[5]}-${m[6]}`};
+  m=raw.match(/(\d{3})年(\d{1,2})月(\d{1,2})日(?:起|至)?[\s\S]{0,80}?(\d{3})年(\d{1,2})月(\d{1,2})日/);
+  if(m)return {start:`${Number(m[1])+1911}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`,end:`${Number(m[4])+1911}-${String(m[5]).padStart(2,"0")}-${String(m[6]).padStart(2,"0")}`};
+  return {start:"",end:""};
+}
+function taipeiDateClient(){try{return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
+function clientDisposalInterval(rows){const t=(rows||[]).map(x=>String(x?.DisposalCondition||x?.DispositionReasons||"")).join(" "),m=t.match(/(?:每|約每)\s*(\d+)\s*分鐘/);return m?`${m[1]}分盤處置`:"處置撮合時間依官方公告"}
+async function repairTpexDisposalInBrowser(d,query,market){
+  if(!String(market||"").includes("上櫃")||d?.availability?.disposal!==false)return d;
+  try{
+    const r=await fetch("https://www.tpex.org.tw/openapi/v1/tpex_disposal_information",{cache:"no-store",headers:{Accept:"application/json"}});
+    if(!r.ok)return d;
+    const all=await r.json();if(!Array.isArray(all))return d;
+    const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),today=taipeiDateClient();
+    const matched=all.filter(x=>String(x?.SecuritiesCompanyCode||x?.SecuritiesCode||x?.Code||"").trim()===code);
+    const active=matched.filter(x=>{const p=rocDispositionPeriodClient(x);return p.start&&p.end&&today>=p.start&&today<=p.end});
+    d.availability={...(d.availability||{}),disposal:true};
+    d.official={...(d.official||{}),disposalRows:matched.slice(0,8),activeDisposalRows:active.slice(0,5)};
+    d.sources={...(d.sources||{}),disposal:"TPEx OpenAPI（瀏覽器直接補抓）"};
+    if(active.length){
+      d.state="處置中";d.risk="高";d.stateNote=clientDisposalInterval(active);d.riskNote="已進入處置期間";d.riskDistance="請依官方處置期間交易";d.summary="TPEx 官方已公告處置，請直接以處置起訖日與措施為準。";
+    }else if(d.state==="資料不足"){
+      const att=Array.isArray(d.official?.attentionRows)&&d.official.attentionRows.length>0,warning=Boolean(d.official?.warning);
+      d.state=warning||att?"注意股票":"正常";d.stateNote=warning?"官方已列累計次數異常預警":att?"若進入處置：2分盤":"目前未列為處置股票";
+      if(d.risk==="--")d.risk=warning?"高":att?"中":"低";
+      d.riskDistance=warning?"最快下一交易日可能處置":"官方處置公告已正常核對";
+      d.summary=warning?"TPEx 官方處置公告已由瀏覽器直接補抓；目前未處置，但已列累計次數異常預警。":att?"TPEx 官方處置公告已由瀏覽器直接補抓；目前未處置，但今日列為注意股票。":"TPEx 官方處置公告已由瀏覽器直接補抓；目前未列為處置股票。";
+    }
+  }catch(e){console.warn("TPEx 瀏覽器端處置補抓失敗",e)}
+  return d;
+}
 async function disposal(query,market,price){
   const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});
-  return await readJson(await fetch(`/api/disposal?${params.toString()}`,{cache:"no-store"}),"處置資料");
+  const d=await readJson(await fetch(`/api/disposal?${params.toString()}`,{cache:"no-store"}),"處置資料");
+  return await repairTpexDisposalInBrowser(d,query,market);
 }
 function disposalToneClass(state){return state==="處置中"?"disposal-state-danger":state==="注意股票"||state==="注意股"?"disposal-state-watch":""}
 function disposalDots(id,count,total,dangerAt){
