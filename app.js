@@ -87,14 +87,10 @@ function shortStockName(name){
   return s;
 }
 
-function rocDispositionPeriodClient(row){
-  const raw=String(row?.DispositionPeriod||row?.["處置起訖時間"]||row?.DisposalCondition||row?.DispositionReasons||"");
-  let m=raw.match(/(\d{3})[\/. -]?(\d{2})[\/. -]?(\d{2})\s*[~～至-]\s*(\d{3})[\/. -]?(\d{2})[\/. -]?(\d{2})/);
-  if(m)return {start:`${Number(m[1])+1911}-${m[2]}-${m[3]}`,end:`${Number(m[4])+1911}-${m[5]}-${m[6]}`};
-  m=raw.match(/(\d{3})年(\d{1,2})月(\d{1,2})日(?:起|至)?[\s\S]{0,80}?(\d{3})年(\d{1,2})月(\d{1,2})日/);
-  if(m)return {start:`${Number(m[1])+1911}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`,end:`${Number(m[4])+1911}-${String(m[5]).padStart(2,"0")}-${String(m[6]).padStart(2,"0")}`};
-  return {start:"",end:""};
-}
+function dispositionDateClient(y,m,d){const yy=Number(y),mm=Number(m),dd=Number(d),year=yy<1911?yy+1911:yy;if(!Number.isFinite(year)||year<1900||year>2200||mm<1||mm>12||dd<1||dd>31)return "";return `${year}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`}
+function dispositionDatesClient(s=""){const text=String(s||""),out=[];for(const m of text.matchAll(/(?:^|[^\d])(\d{3,4})\s*(?:[\/.\-]|年)\s*(\d{1,2})\s*(?:[\/.\-]|月)\s*(\d{1,2})(?:日)?/g)){const x=dispositionDateClient(m[1],m[2],m[3]);if(x)out.push(x)}for(const m of text.matchAll(/(?:^|[^\d])(\d{7,8})(?!\d)/g)){const z=m[1],x=z.length===7?dispositionDateClient(z.slice(0,3),z.slice(3,5),z.slice(5,7)):dispositionDateClient(z.slice(0,4),z.slice(4,6),z.slice(6,8));if(x)out.push(x)}return [...new Set(out)]}
+function rocDispositionPeriodClient(row){if(row?.periodStart&&row?.periodEnd)return {start:row.periodStart,end:row.periodEnd};const raw=String(row?.DispositionPeriod||row?.DisposalPeriod||row?.["處置起訖時間"]||row?.["處置起迄時間"]||row?.DisposalCondition||row?.DispositionReasons||""),dates=dispositionDatesClient(raw);return dates.length>=2?{start:dates[0],end:dates.at(-1)}:{start:"",end:""}}
+
 function taipeiDateClient(){try{return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
 function clientDisposalInterval(rows){const t=(rows||[]).map(x=>String(x?.DisposalCondition||x?.DispositionReasons||"")).join(" "),m=t.match(/(?:每|約每)\s*(\d+)\s*分鐘/);return m?`${m[1]}分盤處置`:"處置撮合時間依官方公告"}
 function clientDisposalPeriod(rows){for(const row of rows||[]){const p=rocDispositionPeriodClient(row);if(p.start&&p.end)return `${p.start.replace(/-/g,"/")}～${p.end.replace(/-/g,"/")}`}return "處置期間依官方公告"}
@@ -123,7 +119,7 @@ async function repairTpexDisposalInBrowser(d,query,market){
   return d;
 }
 async function disposal(query,market,price){
-  const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});
+  const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??""),v:"2.5.4.12"});
   const d=await readJson(await fetch(`/api/disposal?${params.toString()}`,{cache:"no-store"}),"處置資料");
   return await repairTpexDisposalInBrowser(d,query,market);
 }
@@ -140,7 +136,7 @@ function resetDisposal(msg="搜尋股票後判讀"){
 }
 function renderDisposal(d){
   const panel=$("disposal");if(panel){panel.classList.remove("disposal-state-watch","disposal-state-danger");const c=disposalToneClass(d.state);if(c)panel.classList.add(c)}
-  setText("disposalState",d.state||"正常");setText("disposalStateNote",d.stateNote||"目前未列為注意股票");setText("disposalRisk",d.risk||"低");setText("disposalRiskNote",d.riskNote||"--");setText("disposalRiskDistance",d.riskDistance||"--");
+  setText("disposalState",d.state||"正常");setText("disposalStateNote",d.stateNote||"目前未列為注意股票");setText("disposalRisk",d.risk||"低");setText("disposalRiskNote",d.riskNote||"--");const periodLabel=d?.state==="處置中"&&d?.disposalPeriod?.label?d.disposalPeriod.label:d.riskDistance;setText("disposalRiskDistance",periodLabel||"--");
   const counts=d.counts||{};const c3=Number(counts.d3)||0,c10=Number(counts.d10)||0,c30=Number(counts.d30)||0;
   disposalDots("disposalDots3",c3,3,3);disposalDots("disposalDots10",c10,6,6);disposalDots("disposalDots30",c30,12,12);
   if(d.countsAvailable===false){
