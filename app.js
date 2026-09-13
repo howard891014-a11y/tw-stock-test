@@ -119,7 +119,7 @@ async function repairTpexDisposalInBrowser(d,query,market){
   return d;
 }
 async function disposal(query,market,price){
-  const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??""),v:"2.5.4.12"});
+  const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??""),v:"2.5.4.14"});
   const d=await readJson(await fetch(`/api/disposal?${params.toString()}`,{cache:"no-store"}),"處置資料");
   return await repairTpexDisposalInBrowser(d,query,market);
 }
