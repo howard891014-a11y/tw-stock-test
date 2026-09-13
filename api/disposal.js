@@ -112,6 +112,10 @@ async function priceLine(code,market,current){
   try{const s=yahooSymbol(code,market),j=await jfetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=1mo&interval=1d&events=history`),r=j?.chart?.result?.[0],q=r?.indicators?.quote?.[0],cl=(q?.close||[]).filter(x=>Number.isFinite(Number(x))).map(Number);if(cl.length<6)return {value:null,note:'歷史價格不足'};const base=cl.at(-6);const a=base*1.32,b=Math.max(base*1.25,base+50),line=Math.min(a,b),gap=Number.isFinite(current)&&current>0?(line/current-1)*100:null;return {value:Math.floor(line*100)/100,tone:gap!==null&&gap<0?'bad':gap!==null&&gap<5?'watch':'good',note:`6日價格異常保守線；現價距離 ${gap===null?'--':`${gap>=0?'+':''}${gap.toFixed(2)}%`}`};}catch{return {value:null,note:'價格警戒線暫無法估算'}}
 }
 
+function disposalPeriodLabel(punish=[]){
+ const periods=(punish||[]).map(row=>{const raw=row?.raw||{},p=parseDispositionPeriod(raw.DispositionPeriod||raw['處置起訖時間']||'',row?.text||'');return p.start&&p.end?p:null}).filter(Boolean).sort((a,b)=>String(b.start).localeCompare(String(a.start))||String(b.end).localeCompare(String(a.end)));
+ const p=periods[0];return p?`${p.start.replace(/-/g,'/')}～${p.end.replace(/-/g,'/')}`:'';
+}
 function disposalInterval(punish=[]){
  const t=(punish||[]).map(x=>x?.text||'').join(' ');
  const m=t.match(/(?:每|約每)\s*(\d+)\s*分鐘/);
@@ -146,7 +150,7 @@ export default async function handler(req,res){
   else if(todayAttention||pl?.tone==='bad'||pl?.tone==='watch')risk='中';
   const stateNote=state==='處置中'?disposalInterval(activePunish):state==='注意股票'?(src.warning?'官方已列累計次數異常預警':'若進入處置：2分盤'):state==='資料不足'?'官方處置資料暫時無法取得':state==='未處置'?'官方處置公告已核對；注意資料暫缺':'目前未列為注意股票';
   const riskNote=state==='處置中'?'已進入處置期間':historyComplete?`近30個交易日納入計算 ${counts.d30} 次`:src.warning?'TPEx 官方已發布累計次數異常資訊':attentionAvailable?'TPEx 每日快照正常；歷史次數不以單日資料推算':'官方注意資料暫時無法取得';
-  const riskDistance=state==='處置中'?'請依官方處置期間交易':state==='資料不足'?'待官方處置資料恢復後更新':state==='未處置'?'目前未處置；注意風險待資料恢復':src.warning?'最快下一交易日可能處置':historyComplete?(fast.days===0?'已達核心門檻，待官方公告':fast.days===1?'最快下一交易日可能處置':Number.isFinite(fast.days)?`最快 ${fast.days} 個交易日後可能處置`:'目前無近期處置路徑'):'官方未發布累計次數異常預警';
+  const riskDistance=state==='處置中'?(disposalPeriodLabel(activePunish)||'請依官方處置期間交易'):state==='資料不足'?'待官方處置資料恢復後更新':state==='未處置'?'目前未處置；注意風險待資料恢復':src.warning?'最快下一交易日可能處置':historyComplete?(fast.days===0?'已達核心門檻，待官方公告':fast.days===1?'最快下一交易日可能處置':Number.isFinite(fast.days)?`最快 ${fast.days} 個交易日後可能處置`:'目前無近期處置路徑'):'官方未發布累計次數異常預警';
   let summary=state==='處置中'?'官方已公告處置，請直接以處置起訖日與措施為準。':state==='資料不足'?'TPEx／TWSE 官方處置資料本次未取得；本次不把缺資料誤判為未處置。':state==='未處置'?'TPEx 官方處置公告已成功核對，目前未列為處置股票；但注意股／累計預警來源本次未取得，因此風險進度暫不判讀。':src.warning?'TPEx 官方已發布「公布注意累計次數異常」資訊；若下一交易日再次符合注意條件，可能進入處置。':todayAttention?(historyComplete?`今日為注意股；近3日第一款 ${counts.d3}/3、近10日第一至八款 ${counts.d10}/6、近30日 ${counts.d30}/12。${fast.path}。`:'今日為注意股。TPEx OpenAPI 的注意股資料屬每日快照，因此本版不再用單日快照假算近 3／10／30 日次數；是否接近處置以 TPEx 官方累計次數異常資訊為優先。'):(historyComplete?`目前未列為今日注意股；近10日納入計算 ${counts.d10}/6、近30日 ${counts.d30}/12。${fast.path}。`:'目前未列為今日注意股，且 TPEx 官方未發布累計次數異常預警；歷史 3／10／30 日次數在沒有完整官方歷史資料時顯示為「--」，不再誤報 0 次。');
   if(pl.value)summary+=` 價格異常款保守警戒線約 ${pl.value} 元；低於此線只能排除該價格條件，不能保證其他注意條件不成立。`;
   res.setHeader('Cache-Control','s-maxage=300, stale-while-revalidate=600');
