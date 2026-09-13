@@ -932,7 +932,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           <small class="valuation-note" id="valuationNote">估值只判斷相對昂貴程度，不直接作為買賣價。</small>
         </article>
         <article class="card detail-panel valuation-scenario-card" id="valuationScenario" data-view-panel="valuation">
-          <div class="card-title">九情境估值判讀 <span class="badge" id="valuationScenarioConsensus">--</span></div>
+          <div class="card-title">九情境估值判讀 <button class="formula-info definition-info" type="button" data-formula="scenariodef" aria-label="查看九情境代號說明">i</button></div>
           <div class="scenario-grid" aria-label="九情境">
             <div class="scenario-cell" data-scenario="1"><b>低估偏多</b><span>P &lt; F &lt; T；O ≈ B</span><small class="scenario-weight">估值 70%｜目標價 30%</small></div>
             <div class="scenario-cell" data-scenario="2"><b>合理偏多</b><span>P ≈ F &lt; T；O ≈ B</span><small class="scenario-weight">估值 60%｜目標價 40%</small></div>
@@ -1252,6 +1252,21 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 @media(max-width:720px){#valuation .card-title{font-size:17px!important}.scenario-cell{min-height:88px;padding:9px 5px}.scenario-cell b{font-size:11px}.scenario-cell span{font-size:7px}.scenario-cell small{font-size:6.5px}}
 </style>
 
+
+<style id="v2543-scenario-polish">
+/* v2.5.4.3 — 系統判讀視覺置中微調；九宮格亮燈修角；代號說明 */
+/* 不改欄寬，只把左側燈泡＋標題這個群組視覺往右校正 */
+.disposal-summary-card .disposal-summary-head{transform:translateX(8px)!important}
+#valuationScenario .scenario-cell.is-active:before{content:none!important;display:none!important}
+#valuationScenario .scenario-cell.is-active{z-index:2!important;box-shadow:inset 0 0 0 2px #13e0aa!important}
+#valuationScenario .scenario-cell:nth-child(1){border-top-left-radius:12px!important}
+#valuationScenario .scenario-cell:nth-child(3){border-top-right-radius:12px!important}
+#valuationScenario .scenario-cell:nth-child(7){border-bottom-left-radius:12px!important}
+#valuationScenario .scenario-cell:nth-child(9){border-bottom-right-radius:12px!important}
+#valuationScenario>.card-title{display:flex!important;align-items:center!important;gap:7px!important}
+#valuationScenario>.card-title .formula-info{flex:0 0 auto!important}
+@media(max-width:720px){.disposal-summary-card .disposal-summary-head{transform:translateX(6px)!important}}
+</style>
 </body>
 </html>
 <style>

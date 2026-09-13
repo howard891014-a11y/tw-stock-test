@@ -194,7 +194,6 @@ function renderValuationScenario(){
   const x=latestValuationScenario;if(!x)return;
   const T=currentTargetPrice(),r=scenarioClassify(x.P,x.O,x.B,x.F,T),card=$("valuationScenario");
   card?.classList.remove("scenario-tone-watch","scenario-tone-danger");if(r.tone==="watch")card?.classList.add("scenario-tone-watch");if(r.tone==="danger")card?.classList.add("scenario-tone-danger");
-  setText("valuationScenarioConsensus",r.consensus);
   setText("valuationScenarioSummary",`估值可信度：${r.confidence}｜${r.summary}${r.hasTarget===false?" 無券商目標價，本次以內部估值判讀。":""}`);
   document.querySelectorAll("#valuationScenario .scenario-cell").forEach(el=>el.classList.toggle("is-active",Number(el.dataset.scenario)===r.n));
   const active=document.querySelector(`#valuationScenario .scenario-cell[data-scenario="${r.n}"]`);if(active){const w=active.querySelector(".scenario-weight");if(w)w.textContent=`估值 ${r.valuationWeight}%｜目標價 ${r.targetWeight}%${r.hasTarget===false?"（無資料）":""}`;}
@@ -861,7 +860,8 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
   epsdef:{title:"EPS 獲利能力",text:"EPS 是每股盈餘，代表公司每一股普通股能分配到多少獲利；數值越高，代表每股獲利能力越強。"},
   pedef:{title:"本益比",text:"本益比＝股價 ÷ 每股盈餘（EPS），代表市場願意用多少倍的價格購買公司目前的每股獲利。"},
   psdef:{title:"股價營收比",text:"股價營收比（PS）＝股價 ÷ 每股營收，代表市場願意用多少倍的價格購買公司每股所創造的營收；當近四季 EPS 為負、PE 不適用時，用 PS 作為營運估值的替代指標。"},
-  pbdef:{title:"股價淨值比",text:"股價淨值比＝股價 ÷ 每股淨值（BPS），代表股價相對公司每股帳面淨資產價值的倍數。"}
+  pbdef:{title:"股價淨值比",text:"股價淨值比＝股價 ÷ 每股淨值（BPS），代表股價相對公司每股帳面淨資產價值的倍數。"},
+  scenariodef:{title:"九情境代號說明",text:"P＝現價；O＝營運合理價（獲利公司使用 PE 合理價，虧損公司使用 PS 合理價）；B＝PB 合理價；F＝綜合合理價；T＝券商目標價；≈＝兩者接近（目前以差距 ±5% 判定）；＜、＞代表價格大小關係。沒有券商目標價時，T 不納入該次判定，目標價權重也不扣分。"}
  };
  const pop=$("valuationFormulaPopover"), title=$("valuationFormulaTitle"), text=$("valuationFormulaText");
  document.addEventListener("click",e=>{
