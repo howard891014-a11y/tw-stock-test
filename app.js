@@ -24,6 +24,13 @@ async function readJson(res,label){
   if(!res.ok || data?.ok===false) throw new Error(data?.error||`${label}查詢失敗（HTTP ${res.status}）`);
   return data;
 }
+const LOCAL_STOCK_META={
+  "1595":{code:"1595",name:"川寶",market:"上櫃",symbol:"1595.TWO"},"川寶":{code:"1595",name:"川寶",market:"上櫃",symbol:"1595.TWO"},
+  "6187":{code:"6187",name:"萬潤",market:"上櫃",symbol:"6187.TWO"},"萬潤":{code:"6187",name:"萬潤",market:"上櫃",symbol:"6187.TWO"},
+  "8064":{code:"8064",name:"東捷",market:"上櫃",symbol:"8064.TWO"},"東捷":{code:"8064",name:"東捷",market:"上櫃",symbol:"8064.TWO"},
+  "2330":{code:"2330",name:"台積電",market:"上市",symbol:"2330.TW"},"台積電":{code:"2330",name:"台積電",market:"上市",symbol:"2330.TW"}
+};
+function localStockMeta(query){return LOCAL_STOCK_META[String(query||"").trim()]||null}
 async function stockMeta(query){
   let lastError=null;
   for(let i=0;i<2;i++){
@@ -34,6 +41,8 @@ async function stockMeta(query){
       if(i<1)await new Promise(r=>setTimeout(r,260));
     }
   }
+  const local=localStockMeta(query);
+  if(local)return local;
   throw lastError||new Error("TWSE／TPEx 股票基本資料暫時無法取得");
 }
 function mergeStockMeta(data,meta){
@@ -308,10 +317,18 @@ async function search(){
   btn.disabled=true;
   setStatus("搜尋股票…");
   try{
-    // 股票身分（代號／中文名／市場別）一律由 TWSE／TPEx 官方主檔決定。
-    // Yahoo 僅負責行情，不再有權限覆蓋公司中文名稱或市場別。
-    const meta=await stockMeta(q);
-    let data=await quote(meta.code);
+    // 官方主檔優先，但官方任一來源暫時失敗時不可讓整個搜尋功能停擺。
+    // 退回既有 Yahoo 查價流程只負責「找得到股票與行情」；若已有官方/本地身分資料，仍由它覆蓋中文名與市場別。
+    let meta=null;
+    try{meta=await stockMeta(q)}catch(e){console.warn("官方股票主檔暫時不可用，改用既有查價流程",e)}
+    let data=await quote(meta?.code||q);
+    if(!meta&&(data?.code||data?.symbol)){
+      try{meta=await stockMeta(data.code||data.symbol)}catch(e){console.warn("股票身分補查失敗，保留查價結果",e)}
+    }
+    if(!meta)meta=localStockMeta(q)||localStockMeta(data?.code||data?.symbol);
+    if(!meta&&/[\u3400-\u9fff]/.test(q)&&data){
+      meta={code:data.code||String(data.symbol||"").split(".")[0],name:q,market:data.market||data.marketLabel||"",symbol:data.symbol};
+    }
     data=mergeStockMeta(data,meta);
     renderStock(data);
     loadValuation(data);
