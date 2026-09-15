@@ -1,8 +1,8 @@
 {
-  "name": "tw-stock-target-v2",
-  "version": "2.5.2",
+  "name": "tw-stock-test",
+  "version": "2.5.5.0",
   "private": true,
-  "engines": {
-    "node": "22.x"
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0"
   }
 }
