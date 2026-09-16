@@ -796,6 +796,12 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
   .stage-summary small{font-size:9px}
 }
 </style>
+<style id="v2562-five-stage-overview">
+/* v2.5.6.2 — 總覽五階段主顯示改為階段名稱 */
+#overviewStageState{font-size:21px!important;line-height:1.18!important;word-break:keep-all;overflow-wrap:anywhere}
+#overviewStageNote{font-size:12px!important}
+@media(max-width:720px){#overviewStageState{font-size:20px!important}#overviewStageNote{font-size:11px!important}}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -823,7 +829,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.6.1</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.6.2</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1000,7 +1006,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
     <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title">近期精選 <span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="simulation"><div class="card-title">模擬交易 <span class="badge">待接功能</span></div><div class="hero-value"><span>模擬交易績效</span><strong>◎</strong><small>之後接入智慧選股模擬交易與績效回饋</small></div></article>
     <article class="card stage-card detail-panel" data-view-panel="analysis" id="stagePositionCard">
-          <div class="card-title">五階段位置 <span class="badge" id="stageBadge">待判讀</span></div>
+          <div class="card-title">五階段位置</div>
           <div class="stage-progress" id="stageSteps">
             <div class="stage-progress-line" aria-hidden="true"><span class="stage-progress-fill" id="stageProgressFill"></span></div>
             <div class="stage-step" data-stage="1"><i>1</i><span>線下整理</span></div><div class="stage-step" data-stage="2"><i>2</i><span>剛站回</span></div>
@@ -1159,7 +1165,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.6.1"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.6.2"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
