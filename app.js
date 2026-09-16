@@ -162,8 +162,81 @@ function technicalVolumeFmt(n){const x=Number(n);if(!Number.isFinite(x))return "
 function technicalMetrics(id,items){const el=$(id);if(!el)return;el.classList.add("tech-metrics");el.style.setProperty("--cols",String(items.length));el.innerHTML=items.map(([label,value])=>`<span class="tech-metric"><span>${label}</span><b>${value}</b></span>`).join("")}
 function techTone(el,tone){if(!el)return;el.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral","tone-info","tone-cyan");el.classList.add(`tone-${tone||"neutral"}`)}
 function techSet(id,text,tone){const el=$(id);if(el){el.textContent=text||"--";if(tone)techTone(el,tone)}}
+
+// v2.5.6.0 — 五階段位置
+// 只使用既有 /api/technical 回傳的 MA、Bollinger、乖離、RSI/MACD、量比與技術總分；不改動既有技術分析計分。
+function stageNum(v){const n=Number(v);return Number.isFinite(n)?n:null}
+function stagePct(price,base){const p=stageNum(price),b=stageNum(base);return p!==null&&b!==null&&b!==0?(p/b-1)*100:null}
+function stageFmtPct(v){const n=stageNum(v);return n===null?"--":`${n>=0?"+":""}${n.toFixed(1)}%`}
+function calculateFiveStage(t,currentPrice){
+  const p=[currentPrice,t?.price,t?.last,t?.close].map(stageNum).find(x=>x!==null)??null;
+  const ma5=stageNum(t?.ma?.ma5),ma10=stageNum(t?.ma?.ma10),ma20=stageNum(t?.ma?.ma20),ma60=stageNum(t?.ma?.ma60);
+  if(p===null||ma20===null)return null;
+  const upper=stageNum(t?.bollinger?.upper),rsi=stageNum(t?.momentum?.rsi14),hist=stageNum(t?.momentum?.histogram),macd=stageNum(t?.momentum?.macd),signal=stageNum(t?.momentum?.signal);
+  const ratio20=stageNum(t?.volume?.ratio20),score=stageNum(t?.analysis?.overall?.score);
+  const bias20=stageNum(t?.bias?.ma20)??stagePct(p,ma20),bias5=stageNum(t?.bias?.ma5)??stagePct(p,ma5);
+  const above20=p>=ma20,above60=ma60===null||p>=ma60;
+  const shortBull=ma5!==null&&ma10!==null&&ma5>=ma10;
+  const bullOrder=shortBull&&ma10!==null&&ma20!==null&&ma10>=ma20;
+  const macdBull=hist!==null?hist>=0:(macd!==null&&signal!==null?macd>=signal:false);
+  const nearUpper=upper!==null&&p>=upper*.985,aboveUpper=upper!==null&&p>=upper;
+  let stage=1;
+  if(
+    bias20>=15 ||
+    (bias5!==null&&bias5>=8&&bias20>=10&&(rsi===null||rsi>=75)) ||
+    (aboveUpper&&bias20>=10&&(rsi===null||rsi>=72))
+  ) stage=5;
+  else if(
+    above20&&above60&&(
+      (nearUpper&&bias20>=5) ||
+      (bullOrder&&bias20>=8) ||
+      (rsi!==null&&rsi>=68&&bias20>=5) ||
+      (score!==null&&score>=80&&bias20>=6)
+    )
+  ) stage=4;
+  else if(
+    above20&&above60&&bias20>1.5&&(
+      bullOrder||shortBull||macdBull||(score!==null&&score>=65)
+    )
+  ) stage=3;
+  else if(
+    above20&&bias20>=-1&&(
+      (bias20<=5&&(shortBull||macdBull||(score!==null&&score>=50))) ||
+      (ma5!==null&&p>=ma5)
+    )
+  ) stage=2;
+
+  const names={1:"線下整理",2:"剛站回",3:"爬坡中",4:"噴出中",5:"噴太遠"};
+  const summaries={
+    1:"股價仍在 20 日線下方，或多頭結構尚未建立，先視為整理／修復區。",
+    2:"股價已回到 20 日線附近上方，但均線與動能尚未完全展開，屬轉強初期。",
+    3:"股價站穩中期均線，短中期結構偏多，屬正常爬坡段。",
+    4:"股價進入強勢加速區，已靠近布林上軌或乖離明顯放大。",
+    5:"股價與 20 日線距離過大，或同時出現高 RSI／突破上軌，追價風險明顯升高。"
+  };
+  const signals=[];
+  signals.push(`20MA乖離 ${stageFmtPct(bias20)}`);
+  if(ma5!==null&&ma10!==null)signals.push(bullOrder?"均線多頭排列":shortBull?"短均線轉多":"均線尚未轉多");
+  if(upper!==null)signals.push(aboveUpper?"已越布林上軌":nearUpper?"接近布林上軌":"仍在布林通道內");
+  if(rsi!==null)signals.push(`RSI ${rsi.toFixed(1)}`);
+  if(ratio20!==null)signals.push(`20日量比 ${ratio20.toFixed(2)}`);
+  return {stage,name:names[stage],summary:summaries[stage],signals:signals.slice(0,4),bias20,price:p};
+}
+function resetFiveStage(note="搜尋股票後判讀"){
+  const card=$("stagePositionCard");if(card){card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");card.querySelectorAll("[data-stage]").forEach(x=>x.classList.remove("active"));}
+  const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.textContent="--"}
+  setText("overviewStageNote",note);setText("stageBadge","待判讀");setText("stageTitle","--");setText("stageSummary",note);setText("stageSignals","--");
+}
+function renderFiveStage(t,currentPrice){
+  const r=calculateFiveStage(t,currentPrice);if(!r){resetFiveStage("技術資料不足，暫無法判讀");return}
+  const card=$("stagePositionCard");if(card){card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");card.classList.add(`stage-${r.stage}`);card.querySelectorAll("[data-stage]").forEach(x=>x.classList.toggle("active",Number(x.dataset.stage)===r.stage));}
+  const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.classList.add(`stage-${r.stage}`);ov.textContent=`第${r.stage}階段`;}
+  setText("overviewStageNote",r.name);setText("stageBadge",`第 ${r.stage} 階段`);setText("stageTitle",`${r.stage}. ${r.name}`);setText("stageSummary",r.summary);setText("stageSignals",r.signals.join("｜"));
+}
+
 async function loadTechnical(data){
   const code=data?.code||data?.symbol||"",market=data?.market||data?.marketLabel||"";
+  resetFiveStage("讀取技術資料中…");
   try{
     const t=await technical(code,market),a=t.analysis||{};
     setText("technicalSource",`Yahoo｜${t.updatedAt||"--"}`);
@@ -182,7 +255,8 @@ async function loadTechnical(data){
     const keyHost=$("techKeyPoints"); if(keyHost)keyHost.innerHTML=keyPoints.slice(0,5).map(x=>`<li>${String(x)}</li>`).join("");
     const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${a.overall?.tone||"neutral"}`);}
     setText("techSummary",a.overall?.summary||"--");
-  }catch(e){console.warn("技術資料更新失敗",e);setText("technicalSource","Yahoo｜取得失敗")}
+    renderFiveStage(t,Number(data?.last??data?.price??data?.regularMarketPrice));
+  }catch(e){console.warn("技術資料更新失敗",e);setText("technicalSource","Yahoo｜取得失敗");resetFiveStage("技術資料取得失敗")}
 }
 async function valuation(query,market,price){
   const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});
