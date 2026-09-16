@@ -1,15 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/sync-*.js": {
+    "api/sync-status.js": {
       "regions": ["sin1"],
       "maxDuration": 60
     }
   },
   "crons": [
-    { "path": "/api/sync-price", "schedule": "30 5 * * 1-5" },
-    { "path": "/api/sync-price", "schedule": "0 6 * * 1-5" },
-    { "path": "/api/sync-twse-disposal", "schedule": "0 11 * * 1-5" },
-    { "path": "/api/sync-tpex-disposal", "schedule": "0 14 * * 1-5" }
+    { "path": "/api/sync-status", "schedule": "30 5 * * 1-5" },
+    { "path": "/api/sync-status", "schedule": "0 6 * * 1-5" },
+    { "path": "/api/sync-status", "schedule": "0 11 * * 1-5" },
+    { "path": "/api/sync-status", "schedule": "0 14 * * 1-5" }
   ]
 }
