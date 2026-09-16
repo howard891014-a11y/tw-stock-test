@@ -802,6 +802,42 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #overviewStageNote{font-size:12px!important}
 @media(max-width:720px){#overviewStageState{font-size:20px!important}#overviewStageNote{font-size:11px!important}}
 </style>
+<style id="v2563-playstyle">
+/* v2.5.6.3 — 建議玩法 v1：短期／波段／長期適配度 */
+.playstyle-card{--play-accent:#b879ff;min-width:0;overflow:hidden}
+.playstyle-hero{padding:15px 16px;border:1px solid #2b3f58;border-radius:13px;background:linear-gradient(145deg,#101f30,#0a1724);min-width:0}
+.playstyle-hero>span{display:block;color:#8fa2b6;font-size:12px}
+.playstyle-hero>strong{display:block;margin-top:6px;color:var(--play-accent);font-size:25px;line-height:1.2;overflow-wrap:anywhere}
+.playstyle-hero>b{display:block;margin-top:7px;color:#eef5fb;font-size:14px;line-height:1.4}
+.playstyle-hero>p{margin:8px 0 0;color:#aebdca;font-size:12px;line-height:1.55}
+.playstyle-fit{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px;min-width:0}
+.playstyle-fit-row{position:relative;min-width:0;padding:11px 10px 10px;border:1px solid #20394f;border-radius:11px;background:#091826}
+.playstyle-fit-row.is-main{border-color:var(--play-accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--play-accent) 35%,transparent)}
+.playstyle-fit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:5px;min-width:0}
+.playstyle-fit-head span{min-width:0;color:#dce7ef;font-weight:800;font-size:13px;line-height:1.25}
+.playstyle-fit-head small{display:block;margin-top:2px;color:#758ca0;font-size:9px;font-weight:400;white-space:nowrap}
+.playstyle-fit-head b{flex:0 0 auto;color:#9db0c0;font-size:11px}
+.playstyle-bar{height:7px;margin:10px 0 6px;border-radius:999px;background:#153047;overflow:hidden}
+.playstyle-bar i{display:block;width:0;height:100%;border-radius:999px;background:linear-gradient(90deg,#5ba7ff,var(--play-accent));transition:width .22s ease}
+.playstyle-fit-row em{display:block;color:#7f95a8;font-size:9px;font-style:normal;text-align:right}
+.playstyle-note{display:block;margin-top:10px;color:#71899d;font-size:10px;line-height:1.45}
+#overviewPlayStyle{overflow-wrap:anywhere}
+@media(max-width:720px){
+ .playstyle-card{width:100%;max-width:100%;min-width:0;overflow:hidden}
+ .playstyle-hero{padding:13px 12px}
+ .playstyle-hero>strong{font-size:21px}
+ .playstyle-hero>b{font-size:12px}
+ .playstyle-hero>p{font-size:11px}
+ .playstyle-fit{grid-template-columns:1fr;gap:7px;width:100%;max-width:100%}
+ .playstyle-fit-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(70px,1.2fr) 38px;align-items:center;gap:8px;padding:9px 10px;max-width:100%;overflow:hidden}
+ .playstyle-fit-head{display:block;min-width:0}
+ .playstyle-fit-head b{display:block;margin-top:3px;font-size:10px}
+ .playstyle-fit-head small{white-space:normal}
+ .playstyle-bar{margin:0;min-width:0}
+ .playstyle-fit-row em{text-align:right;white-space:nowrap}
+ .playstyle-note{font-size:9px}
+}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -829,7 +865,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.6.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.6.3</span></button>
   </aside>
 
   <div class="main-shell">
@@ -880,7 +916,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 
       <section class="overview-outline" data-view-panel="overview">
       <article class="card outline-card" data-view-open="analysis"><span>五階段位置</span><strong class="orange" id="overviewStageState">--</strong><small id="overviewStageNote">查看目前位置</small></article>
-      <article class="card outline-card" data-view-open="analysis"><span>建議玩法</span><strong class="purple">--</strong><small>查看建議策略</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>建議玩法</span><strong class="purple" id="overviewPlayStyle">--</strong><small id="overviewPlayStyleNote">查看建議策略</small></article>
       <article class="card outline-card" data-view-open="analysis"><span>預期上漲空間</span><strong class="blue">--%</strong><small>查看預期空間</small></article>
       <article class="card outline-card" data-view-open="analysis"><span>技術分析</span><strong id="overviewTechnicalState">--</strong><small id="overviewTechnicalNote">--</small></article>
       <article class="card outline-card" data-view-open="valuation"><span>估值分析</span><strong id="overviewCompositeFair">--</strong><small>綜合合理價</small></article>
@@ -999,7 +1035,21 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           </div>
         </article>
 
-        <article class="card detail-panel simple-detail" data-view-panel="analysis"><div class="card-title">建議玩法 <span class="badge">待接功能</span></div><div class="hero-value"><span>目前建議</span><strong class="purple">--</strong><small>之後接入判定邏輯</small></div></article>
+        <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
+      <div class="card-title">建議玩法 <span class="badge">v1</span></div>
+      <div class="playstyle-hero">
+        <span>主建議週期</span>
+        <strong id="playMainPeriod">--</strong>
+        <b id="playMainAction">搜尋股票後判讀</b>
+        <p id="playReason">系統會比較短期、波段、長期三種玩法的適配度。</p>
+      </div>
+      <div class="playstyle-fit" aria-label="三週期適配度">
+        <div class="playstyle-fit-row" data-play="short"><div class="playstyle-fit-head"><span>短期 <small>3～5交易日</small></span><b id="playShortLabel">--</b></div><div class="playstyle-bar"><i id="playShortBar"></i></div><em id="playShortScore">--</em></div>
+        <div class="playstyle-fit-row" data-play="swing"><div class="playstyle-fit-head"><span>波段 <small>2～4週</small></span><b id="playSwingLabel">--</b></div><div class="playstyle-bar"><i id="playSwingBar"></i></div><em id="playSwingScore">--</em></div>
+        <div class="playstyle-fit-row" data-play="long"><div class="playstyle-fit-head"><span>長期 <small>半年以上</small></span><b id="playLongLabel">--</b></div><div class="playstyle-bar"><i id="playLongBar"></i></div><em id="playLongScore">--</em></div>
+      </div>
+      <small class="playstyle-note" id="playStyleNote">長期 v1 目前使用既有估值＋技術位置；題材／成長模組尚未接入。</small>
+    </article>
     <article class="card detail-panel simple-detail" data-view-panel="analysis"><div class="card-title">預期上漲空間 <span class="badge">待接功能</span></div><div class="hero-value"><span>預期空間</span><strong class="blue">--%</strong><small>之後接入計算邏輯</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="screening"><div class="card-title">智慧選股 <span class="badge">待接功能</span></div><div class="hero-value"><span>全市場自動篩選</span><strong>✦</strong><small>之後加入低點／剛站回／接近買點篩選</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="fundflow"><div class="card-title">資金流向 <span class="badge">待接功能</span></div><div class="hero-value"><span>市場資金流向</span><strong>↔</strong><small>之後接入零股、法人與族群資金流向</small></div></article>
@@ -1165,7 +1215,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.6.2"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.6.3"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

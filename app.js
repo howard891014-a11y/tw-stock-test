@@ -163,7 +163,7 @@ function technicalMetrics(id,items){const el=$(id);if(!el)return;el.classList.ad
 function techTone(el,tone){if(!el)return;el.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral","tone-info","tone-cyan");el.classList.add(`tone-${tone||"neutral"}`)}
 function techSet(id,text,tone){const el=$(id);if(el){el.textContent=text||"--";if(tone)techTone(el,tone)}}
 
-// v2.5.6.2 — 五階段位置
+// v2.5.6.3 — 五階段位置
 // 只使用既有 /api/technical 回傳的 MA、Bollinger、乖離、RSI/MACD、量比與技術總分；不改動既有技術分析計分。
 function stageNum(v){const n=Number(v);return Number.isFinite(n)?n:null}
 function stagePct(price,base){const p=stageNum(price),b=stageNum(base);return p!==null&&b!==null&&b!==0?(p/b-1)*100:null}
@@ -232,6 +232,7 @@ function resetFiveStage(note="搜尋股票後判讀"){
   const fill=$("stageProgressFill"); if(fill)fill.style.width="0%";
   const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.textContent="--"}
   setText("overviewStageNote","查看目前位置");setText("stageTitle","--");setText("stageSummary",note);setText("stageSignals","--");
+  latestFiveStageResult=null;latestTechnicalForPlay=null;resetPlayStyle(note);
 }
 function renderFiveStage(t,currentPrice){
   const r=calculateFiveStage(t,currentPrice);if(!r){resetFiveStage("技術資料不足，暫無法判讀");return}
@@ -250,6 +251,80 @@ function renderFiveStage(t,currentPrice){
   const fill=$("stageProgressFill"); if(fill)fill.style.width=pct;
   const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.classList.add(`stage-${r.stage}`);ov.textContent=r.name;}
   setText("overviewStageNote",`第${r.stage}階段`); setText("stageTitle",`${r.stage}. ${r.name}`); setText("stageSummary",r.summary); setText("stageSignals",r.signals.join("｜"));
+  latestFiveStageResult=r;latestTechnicalForPlay=t;renderPlayStyle();
+}
+
+
+// v2.5.6.3 — 建議玩法 v1
+// 主週期由五階段＋既有技術資料判斷；長期適配再參考九情境估值。
+// 題材／成長模組尚未完成，因此長期分數刻意不把題材當成已知資料。
+let latestFiveStageResult=null;
+let latestTechnicalForPlay=null;
+function playClamp(n,min=0,max=100){return Math.max(min,Math.min(max,Number(n)||0))}
+function playFitLabel(n){return n>=78?"高":n>=58?"中高":n>=42?"中":"低"}
+function playValuationResult(){
+  const x=latestValuationScenario;if(!x)return null;
+  return scenarioClassify(x.P,x.O,x.B,x.F,currentTargetPrice());
+}
+function calculatePlayStyle(r,t){
+  if(!r)return null;
+  const stage=r.stage,score=stageNum(t?.analysis?.overall?.score)??50,rsi=stageNum(t?.momentum?.rsi14),ratio20=stageNum(t?.volume?.ratio20);
+  const baseShort={1:30,2:78,3:82,4:68,5:35}[stage]??40;
+  const baseSwing={1:35,2:76,3:90,4:78,5:40}[stage]??45;
+  const baseLong={1:55,2:62,3:68,4:62,5:48}[stage]??55;
+  let short=baseShort+playClamp((score-50)*.35,-15,18);
+  let swing=baseSwing+playClamp((score-50)*.30,-15,15);
+  let long=baseLong+playClamp((score-50)*.12,-6,6);
+  if(rsi!==null){
+    if(rsi>=50&&rsi<=70){short+=8;swing+=5}
+    else if(rsi>78){short-=12;swing-=8}
+    else if(rsi<40){short-=8;swing-=5}
+  }
+  if(ratio20!==null){
+    if(ratio20>=1&&ratio20<=2.2){short+=4;swing+=4}
+    else if(ratio20>=3){short-=5;swing-=3}
+  }
+  const vr=playValuationResult();
+  const longValAdj={1:18,2:12,3:4,4:-5,5:-18,6:20,7:5,8:2,9:-20};
+  if(vr?.n){long+=longValAdj[vr.n]??0;if([1,2,6].includes(vr.n))swing+=3;if([5,9].includes(vr.n))swing-=5}
+  else long-=10;
+  short=Math.round(playClamp(short));swing=Math.round(playClamp(swing));long=Math.round(playClamp(long));
+  const scores={short,swing,long};
+  const labels={short:"短期",swing:"波段",long:"長期"};
+  const periods={short:"3～5交易日",swing:"2～4週",long:"半年以上"};
+  let candidates=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  if(!vr&&candidates[0]?.[0]==="long")candidates=candidates.sort((a,b)=>(a[0]==="long"?1:0)-(b[0]==="long"?1:0)||b[1]-a[1]);
+  const [key,best]=candidates[0]||["swing",0];
+  if(best<52){
+    return {key:"observe",period:"先觀察",action:"等待位置或動能改善",reason:`目前第${stage}階段「${r.name}」，三種週期適配度都不足以形成明確優勢。`,scores,vr};
+  }
+  let action="";
+  if(key==="short") action=stage===2?"轉強確認型操作":stage>=4?"只做強勢短打，不追高":"順勢短打";
+  if(key==="swing") action=stage===2?"小部位試單，確認後再加":"順勢波段／回測承接";
+  if(key==="long") action=stage===5?"長線續抱優先，等拉回再評估":"以估值與中長期結構持有";
+  const techText=`技術分 ${Math.round(score)} 分`;
+  const valText=vr?.state?`，估值為「${vr.state}」`:"，長期估值資料尚未完整";
+  let reason="";
+  if(key==="short") reason=`第${stage}階段「${r.name}」＋${techText}，短線動能與位置的適配度最高，較適合 ${periods.short}。`;
+  if(key==="swing") reason=`第${stage}階段「${r.name}」＋${techText}，中短期趨勢結構較完整，較適合 ${periods.swing} 的順勢波段。`;
+  if(key==="long") reason=`目前位置為第${stage}階段「${r.name}」${valText}，長期適配度高於短線／波段；v1 尚未納入題材與成長模組。`;
+  return {key,period:`${labels[key]}｜${periods[key]}`,action,reason,scores,vr};
+}
+function resetPlayStyle(note="搜尋股票後判讀"){
+  setText("overviewPlayStyle","--");setText("overviewPlayStyleNote","查看建議策略");
+  setText("playMainPeriod","--");setText("playMainAction",note);setText("playReason","系統會比較短期、波段、長期三種玩法的適配度。");
+  for(const k of ["Short","Swing","Long"]){setText(`play${k}Label`,"--");setText(`play${k}Score`,"--");const bar=$(`play${k}Bar`);if(bar)bar.style.width="0%";}
+  document.querySelectorAll("#playStyleCard .playstyle-fit-row").forEach(x=>x.classList.remove("is-main"));
+}
+function renderPlayStyle(){
+  const x=calculatePlayStyle(latestFiveStageResult,latestTechnicalForPlay);if(!x){resetPlayStyle("等待技術資料");return}
+  const map={short:"Short",swing:"Swing",long:"Long"};
+  for(const [key,id] of Object.entries(map)){
+    const n=x.scores[key];setText(`play${id}Label`,playFitLabel(n));setText(`play${id}Score`,`${n}分`);const bar=$(`play${id}Bar`);if(bar)bar.style.width=`${n}%`;
+  }
+  document.querySelectorAll("#playStyleCard .playstyle-fit-row").forEach(el=>el.classList.toggle("is-main",el.dataset.play===x.key));
+  setText("playMainPeriod",x.period);setText("playMainAction",x.action);setText("playReason",x.reason);
+  setText("overviewPlayStyle",x.period.replace("｜"," "));setText("overviewPlayStyleNote",x.action);
 }
 
 async function loadTechnical(data){
@@ -351,7 +426,7 @@ function renderValuationScenario(){
   setText("valuationScenarioSummary",`估值可信度：${r.confidence}｜${r.summary}${r.hasTarget===false?" 無券商目標價，本次以內部估值判讀。":""}`);
   document.querySelectorAll("#valuationScenario .scenario-cell").forEach(el=>el.classList.toggle("is-active",Number(el.dataset.scenario)===r.n));
   const active=document.querySelector(`#valuationScenario .scenario-cell[data-scenario="${r.n}"]`);if(active){const w=active.querySelector(".scenario-weight");if(w)w.textContent=`估值 ${r.valuationWeight}%｜目標價 ${r.targetWeight}%${r.hasTarget===false?"（無資料）":""}`;}
-  setText("overviewValuationScenario",r.state);setText("overviewValuationScenarioNote",`${r.consensus}｜可信度${r.confidence}`);
+  setText("overviewValuationScenario",r.state);setText("overviewValuationScenarioNote",`${r.consensus}｜可信度${r.confidence}`);renderPlayStyle();
 }
 function renderValuation(v){
   const profitable=v.profitable===true || Number(v.ttm)>0;
@@ -405,7 +480,7 @@ async function loadValuation(stock){
 }
 
 function renderStock(x){
-  currentStock=x;
+  currentStock=x;resetPlayStyle("讀取分析資料中…");
   const last=Number(x.last ?? x.price ?? x.regularMarketPrice);
   const change=Number(x.change ?? x.regularMarketChange);
   const pct=Number(x.changePct ?? x.changePercent ?? x.regularMarketChangePercent);
