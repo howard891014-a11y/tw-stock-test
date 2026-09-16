@@ -163,7 +163,7 @@ function technicalMetrics(id,items){const el=$(id);if(!el)return;el.classList.ad
 function techTone(el,tone){if(!el)return;el.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral","tone-info","tone-cyan");el.classList.add(`tone-${tone||"neutral"}`)}
 function techSet(id,text,tone){const el=$(id);if(el){el.textContent=text||"--";if(tone)techTone(el,tone)}}
 
-// v2.5.6.0 — 五階段位置
+// v2.5.6.1 — 五階段位置
 // 只使用既有 /api/technical 回傳的 MA、Bollinger、乖離、RSI/MACD、量比與技術總分；不改動既有技術分析計分。
 function stageNum(v){const n=Number(v);return Number.isFinite(n)?n:null}
 function stagePct(price,base){const p=stageNum(price),b=stageNum(base);return p!==null&&b!==null&&b!==0?(p/b-1)*100:null}
@@ -223,13 +223,31 @@ function calculateFiveStage(t,currentPrice){
   return {stage,name:names[stage],summary:summaries[stage],signals:signals.slice(0,4),bias20,price:p};
 }
 function resetFiveStage(note="搜尋股票後判讀"){
-  const card=$("stagePositionCard");if(card){card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");card.querySelectorAll("[data-stage]").forEach(x=>x.classList.remove("active"));}
+  const card=$("stagePositionCard");
+  if(card){
+    card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");
+    card.style.setProperty("--stage-progress","0%");
+    card.querySelectorAll("[data-stage]").forEach(x=>{x.classList.remove("active","done")});
+  }
+  const fill=$("stageProgressFill"); if(fill)fill.style.width="0%";
   const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.textContent="--"}
   setText("overviewStageNote",note);setText("stageBadge","待判讀");setText("stageTitle","--");setText("stageSummary",note);setText("stageSignals","--");
 }
 function renderFiveStage(t,currentPrice){
   const r=calculateFiveStage(t,currentPrice);if(!r){resetFiveStage("技術資料不足，暫無法判讀");return}
-  const card=$("stagePositionCard");if(card){card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");card.classList.add(`stage-${r.stage}`);card.querySelectorAll("[data-stage]").forEach(x=>x.classList.toggle("active",Number(x.dataset.stage)===r.stage));}
+  const pct=`${Math.max(0,Math.min(100,(r.stage-1)*25))}%`;
+  const card=$("stagePositionCard");
+  if(card){
+    card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");
+    card.classList.add(`stage-${r.stage}`);
+    card.style.setProperty("--stage-progress",pct);
+    card.querySelectorAll("[data-stage]").forEach(x=>{
+      const n=Number(x.dataset.stage);
+      x.classList.toggle("active",n===r.stage);
+      x.classList.toggle("done",n<=r.stage);
+    });
+  }
+  const fill=$("stageProgressFill"); if(fill)fill.style.width=pct;
   const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.classList.add(`stage-${r.stage}`);ov.textContent=`第${r.stage}階段`;}
   setText("overviewStageNote",r.name);setText("stageBadge",`第 ${r.stage} 階段`);setText("stageTitle",`${r.stage}. ${r.name}`);setText("stageSummary",r.summary);setText("stageSignals",r.signals.join("｜"));
 }

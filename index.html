@@ -760,25 +760,41 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 
 
 
-<style id="v2560-five-stage">
-/* v2.5.6.0 — 五階段位置：只讀既有技術資料，不改技術分數邏輯 */
-.stages div:nth-child(3){color:#94a3b5}
-.stages div:nth-child(3) i{background:transparent;border-color:#53657b;color:#fff}
-.stages div{transition:color .18s ease,transform .18s ease}
-.stages div i{transition:background .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease}
-.stages div.active{font-weight:800;transform:translateY(-1px)}
-.stages div.active i{color:#07131f;box-shadow:0 0 0 3px rgba(255,255,255,.05)}
-.stage-card.stage-1 .stages div.active{color:#72bfff}.stage-card.stage-1 .stages div.active i{background:#72bfff;border-color:#72bfff}
-.stage-card.stage-2 .stages div.active{color:#37d7ff}.stage-card.stage-2 .stages div.active i{background:#37d7ff;border-color:#37d7ff}
-.stage-card.stage-3 .stages div.active{color:#13e0aa}.stage-card.stage-3 .stages div.active i{background:#13e0aa;border-color:#13e0aa}
-.stage-card.stage-4 .stages div.active{color:#ffb04a}.stage-card.stage-4 .stages div.active i{background:#ffb04a;border-color:#ffb04a}
-.stage-card.stage-5 .stages div.active{color:#ff6574}.stage-card.stage-5 .stages div.active i{background:#ff6574;border-color:#ff6574}
+<style id="v2561-five-stage">
+/* v2.5.6.1 — 五階段位置改為進度條感，手機版不可超寬 */
+#stagePositionCard{--stage-color:#72bfff;--stage-progress:0%}
+#stagePositionCard.stage-1{--stage-color:#72bfff;--stage-progress:0%}
+#stagePositionCard.stage-2{--stage-color:#37d7ff;--stage-progress:25%}
+#stagePositionCard.stage-3{--stage-color:#13e0aa;--stage-progress:50%}
+#stagePositionCard.stage-4{--stage-color:#ffb04a;--stage-progress:75%}
+#stagePositionCard.stage-5{--stage-color:#ff6574;--stage-progress:100%}
+#stagePositionCard.stage-card{overflow:hidden!important}
+.stage-progress{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:start;padding-top:6px;width:100%;max-width:100%;min-width:0;overflow:hidden}
+.stage-progress-line{position:absolute;left:calc(10% + 18px);right:calc(10% + 18px);top:24px;height:6px;border-radius:999px;background:#163047;overflow:hidden}
+.stage-progress-fill{display:block;height:100%;width:var(--stage-progress);border-radius:999px;background:linear-gradient(90deg,#69b7ff,var(--stage-color));transition:width .22s ease,background .22s ease}
+.stage-step{position:relative;z-index:1;min-width:0;text-align:center;color:#8ea0b4;transition:color .18s ease,transform .18s ease}
+.stage-step i{width:36px;height:36px;margin:0 auto 8px;display:grid;place-items:center;border:2px solid #47627b;border-radius:50%;font-style:normal;font-weight:800;color:#dce7f0;background:#0c1927;transition:all .18s ease}
+.stage-step span{display:block;font-size:12px;line-height:1.28;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+.stage-step.done{color:#d6e1ea}
+.stage-step.done i{border-color:var(--stage-color);background:rgba(255,255,255,.06);color:#f4fbff}
+.stage-step.active{color:var(--stage-color);font-weight:800;transform:translateY(-1px)}
+.stage-step.active i{border-color:var(--stage-color);background:var(--stage-color);color:#07131f;box-shadow:0 0 0 4px rgba(255,255,255,.04)}
 .stage-summary{margin-top:16px;padding:13px 14px;border:1px solid #203e55;border-radius:12px;background:#091b2a}
 .stage-summary strong{display:block;font-size:16px;margin-bottom:6px;color:#edf5fb}
 .stage-summary p{margin:0;color:#bdcad5;font-size:12px;line-height:1.55}
 .stage-summary small{display:block;margin-top:8px;color:#7f97aa;font-size:10px;line-height:1.45}
 #overviewStageState.stage-1{color:#72bfff!important}#overviewStageState.stage-2{color:#37d7ff!important}#overviewStageState.stage-3{color:#13e0aa!important}#overviewStageState.stage-4{color:#ffb04a!important}#overviewStageState.stage-5{color:#ff6574!important}
-@media(max-width:720px){.stage-summary{margin-top:12px;padding:11px 12px}.stage-summary strong{font-size:14px}.stage-summary p{font-size:11px}.stage-summary small{font-size:9px}}
+@media(max-width:720px){
+  .stage-card{overflow:hidden!important}
+  .stage-progress{gap:4px;padding-top:4px}
+  .stage-progress-line{left:calc(10% + 14px);right:calc(10% + 14px);top:20px;height:5px}
+  .stage-step i{width:28px;height:28px;margin-bottom:6px;font-size:13px}
+  .stage-step span{font-size:10px;line-height:1.2}
+  .stage-summary{margin-top:12px;padding:11px 12px}
+  .stage-summary strong{font-size:14px}
+  .stage-summary p{font-size:11px}
+  .stage-summary small{font-size:9px}
+}
 </style>
 </head>
 <body>
@@ -807,7 +823,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.6.0</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.6.1</span></button>
   </aside>
 
   <div class="main-shell">
@@ -985,9 +1001,10 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
     <article class="card detail-panel simple-detail" data-view-panel="simulation"><div class="card-title">模擬交易 <span class="badge">待接功能</span></div><div class="hero-value"><span>模擬交易績效</span><strong>◎</strong><small>之後接入智慧選股模擬交易與績效回饋</small></div></article>
     <article class="card stage-card detail-panel" data-view-panel="analysis" id="stagePositionCard">
           <div class="card-title">五階段位置 <span class="badge" id="stageBadge">待判讀</span></div>
-          <div class="stages" id="stageSteps">
-            <div data-stage="1"><i>1</i><span>線下整理</span></div><div data-stage="2"><i>2</i><span>剛站回</span></div>
-            <div data-stage="3"><i>3</i><span>爬坡中</span></div><div data-stage="4"><i>4</i><span>噴出中</span></div><div data-stage="5"><i>5</i><span>噴太遠</span></div>
+          <div class="stage-progress" id="stageSteps">
+            <div class="stage-progress-line" aria-hidden="true"><span class="stage-progress-fill" id="stageProgressFill"></span></div>
+            <div class="stage-step" data-stage="1"><i>1</i><span>線下整理</span></div><div class="stage-step" data-stage="2"><i>2</i><span>剛站回</span></div>
+            <div class="stage-step" data-stage="3"><i>3</i><span>爬坡中</span></div><div class="stage-step" data-stage="4"><i>4</i><span>噴出中</span></div><div class="stage-step" data-stage="5"><i>5</i><span>噴太遠</span></div>
           </div>
           <div class="stage-summary" id="stageSummaryBox">
             <strong id="stageTitle">--</strong>
@@ -1142,7 +1159,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.6.0"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.6.1"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
