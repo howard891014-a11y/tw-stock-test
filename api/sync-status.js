@@ -3,8 +3,7 @@ const { isCronAuthorized } = require('../lib/sync-common');
 const { runPriceSync, runTwseDisposalSync, runTpexDisposalSync } = require('../lib/sync-service');
 
 const CRON_ACTIONS = {
-  '30 5 * * 1-5': 'price',
-  '0 6 * * 1-5': 'price',
+  '0 7 * * 1-5': 'price',
   '0 11 * * 1-5': 'twse',
   '0 14 * * 1-5': 'tpex'
 };
