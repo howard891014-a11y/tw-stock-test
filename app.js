@@ -163,168 +163,148 @@ function technicalMetrics(id,items){const el=$(id);if(!el)return;el.classList.ad
 function techTone(el,tone){if(!el)return;el.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral","tone-info","tone-cyan");el.classList.add(`tone-${tone||"neutral"}`)}
 function techSet(id,text,tone){const el=$(id);if(el){el.textContent=text||"--";if(tone)techTone(el,tone)}}
 
-// v2.5.6.3 — 五階段位置
-// 只使用既有 /api/technical 回傳的 MA、Bollinger、乖離、RSI/MACD、量比與技術總分；不改動既有技術分析計分。
+// v2.5.6.4 — 五階段位置 v2 + 建議玩法 v2
+// 五階段 v2 會讀取 /api/technical 已回傳的歷史日 K（history），把「生命週期」與「當下狀態」分開。
+// 原有技術分析 MA/Bollinger/Volume/Momentum 計分完全不改；這裡只新增路徑判讀。
+let latestFiveStageResult=null;
+let latestTechnicalForPlay=null;
 function stageNum(v){const n=Number(v);return Number.isFinite(n)?n:null}
 function stagePct(price,base){const p=stageNum(price),b=stageNum(base);return p!==null&&b!==null&&b!==0?(p/b-1)*100:null}
 function stageFmtPct(v){const n=stageNum(v);return n===null?"--":`${n>=0?"+":""}${n.toFixed(1)}%`}
+function stageClamp(n,min,max){return Math.max(min,Math.min(max,n))}
+function stageHistory(t){return (Array.isArray(t?.history)?t.history:[]).filter(x=>stageNum(x?.close)!==null).slice(-180)}
+function stageSmaAt(rows,n,end=rows.length){if(end<n)return null;let s=0,c=0;for(let i=end-n;i<end;i++){const v=stageNum(rows[i]?.close);if(v===null)return null;s+=v;c++}return c===n?s/n:null}
+function stageRet(rows,n,current=null){if(rows.length<=n)return null;const p=current??stageNum(rows.at(-1)?.close),b=stageNum(rows.at(-1-n)?.close);return stagePct(p,b)}
+function stageHigh(rows,n){const a=rows.slice(-n).map(x=>stageNum(x?.high)??stageNum(x?.close)).filter(Number.isFinite);return a.length?Math.max(...a):null}
+function stageLow(rows,n){const a=rows.slice(-n).map(x=>stageNum(x?.low)??stageNum(x?.close)).filter(Number.isFinite);return a.length?Math.min(...a):null}
+function stageMaSlope(rows,n,lookback){const now=stageSmaAt(rows,n),before=stageSmaAt(rows,n,Math.max(n,rows.length-lookback));return now!==null&&before!==null?stagePct(now,before):null}
+function stageAboveMaRatio(rows,window=60,n=20){const a=rows.slice(-window);let hit=0,total=0;const offset=rows.length-a.length;for(let j=0;j<a.length;j++){const i=offset+j,end=i+1;if(end<n)continue;const ma=stageSmaAt(rows,n,end),c=stageNum(rows[i]?.close);if(ma===null||c===null)continue;total++;if(c>=ma)hit++}return total?hit/total:null}
+function stageMaxRollingBias(rows,window=60,n=20){let best=null;const from=Math.max(n-1,rows.length-window);for(let i=from;i<rows.length;i++){const ma=stageSmaAt(rows,n,i+1),c=stageNum(rows[i]?.close);const x=stagePct(c,ma);if(x!==null&&(best===null||x>best))best=x}return best}
+function stageMaxRollingReturn(rows,window=60,n=20){let best=null;const from=Math.max(n,rows.length-window);for(let i=from;i<rows.length;i++){const c=stageNum(rows[i]?.close),b=stageNum(rows[i-n]?.close),x=stagePct(c,b);if(x!==null&&(best===null||x>best))best=x}return best}
+function buildStagePath(t,p,ma5,ma10,ma20,ma60){
+  const rows=stageHistory(t),high60=stageHigh(rows,60),low60=stageLow(rows,60),high120=stageHigh(rows,120),low120=stageLow(rows,120);
+  const ret20=stageRet(rows,20,p),ret60=stageRet(rows,60,p),ret120=stageRet(rows,Math.min(119,rows.length-1),p);
+  const ma20Slope10=stageMaSlope(rows,20,10),ma20Slope20=stageMaSlope(rows,20,20),ma60Slope20=stageMaSlope(rows,60,20);
+  const maVals=[ma5,ma10,ma20].filter(Number.isFinite),maSpreadPct=maVals.length>=2&&ma20?stagePct(Math.max(...maVals),Math.min(...maVals)):null;
+  return {rows,ret20,ret60,ret120,high60,low60,high120,low120,fromHigh60:stagePct(p,high60),fromHigh120:stagePct(p,high120),fromLow60:stagePct(p,low60),fromLow120:stagePct(p,low120),ma20Slope10,ma20Slope20,ma60Slope20,maSpreadPct:maSpreadPct===null?null:Math.abs(maSpreadPct),above20Ratio20:stageAboveMaRatio(rows,20,20),above20Ratio60:stageAboveMaRatio(rows,60,20),maxBias20_60:stageMaxRollingBias(rows,60,20),maxRet20_60:stageMaxRollingReturn(rows,60,20)};
+}
 function calculateFiveStage(t,currentPrice){
-  const p=[currentPrice,t?.price,t?.last,t?.close].map(stageNum).find(x=>x!==null)??null;
+  const p=[currentPrice,t?.price,t?.last,t?.close,t?.latest?.close].map(stageNum).find(x=>x!==null)??null;
   const ma5=stageNum(t?.ma?.ma5),ma10=stageNum(t?.ma?.ma10),ma20=stageNum(t?.ma?.ma20),ma60=stageNum(t?.ma?.ma60);
   if(p===null||ma20===null)return null;
-  const upper=stageNum(t?.bollinger?.upper),rsi=stageNum(t?.momentum?.rsi14),hist=stageNum(t?.momentum?.histogram),macd=stageNum(t?.momentum?.macd),signal=stageNum(t?.momentum?.signal);
-  const ratio20=stageNum(t?.volume?.ratio20),score=stageNum(t?.analysis?.overall?.score);
-  const bias20=stageNum(t?.bias?.ma20)??stagePct(p,ma20),bias5=stageNum(t?.bias?.ma5)??stagePct(p,ma5);
-  const above20=p>=ma20,above60=ma60===null||p>=ma60;
-  const shortBull=ma5!==null&&ma10!==null&&ma5>=ma10;
-  const bullOrder=shortBull&&ma10!==null&&ma20!==null&&ma10>=ma20;
-  const macdBull=hist!==null?hist>=0:(macd!==null&&signal!==null?macd>=signal:false);
-  const nearUpper=upper!==null&&p>=upper*.985,aboveUpper=upper!==null&&p>=upper;
-  let stage=1;
-  if(
-    bias20>=15 ||
-    (bias5!==null&&bias5>=8&&bias20>=10&&(rsi===null||rsi>=75)) ||
-    (aboveUpper&&bias20>=10&&(rsi===null||rsi>=72))
-  ) stage=5;
-  else if(
-    above20&&above60&&(
-      (nearUpper&&bias20>=5) ||
-      (bullOrder&&bias20>=8) ||
-      (rsi!==null&&rsi>=68&&bias20>=5) ||
-      (score!==null&&score>=80&&bias20>=6)
-    )
-  ) stage=4;
-  else if(
-    above20&&above60&&bias20>1.5&&(
-      bullOrder||shortBull||macdBull||(score!==null&&score>=65)
-    )
-  ) stage=3;
-  else if(
-    above20&&bias20>=-1&&(
-      (bias20<=5&&(shortBull||macdBull||(score!==null&&score>=50))) ||
-      (ma5!==null&&p>=ma5)
-    )
-  ) stage=2;
+  const upper=stageNum(t?.bollinger?.upper),lower=stageNum(t?.bollinger?.lower),bandwidth=stageNum(t?.bollinger?.bandwidth),rsi=stageNum(t?.momentum?.rsi14),hist=stageNum(t?.momentum?.histogram),macd=stageNum(t?.momentum?.macd),signal=stageNum(t?.momentum?.signal);
+  const ratio20=stageNum(t?.volume?.ratio20),score=stageNum(t?.analysis?.overall?.score),bias20=stageNum(t?.bias?.ma20)??stagePct(p,ma20),bias5=stageNum(t?.bias?.ma5)??stagePct(p,ma5);
+  const path=buildStagePath(t,p,ma5,ma10,ma20,ma60),above20=p>=ma20,above60=ma60===null?null:p>=ma60,shortBull=ma5!==null&&ma10!==null&&ma5>=ma10,bullOrder=shortBull&&ma10!==null&&ma10>=ma20&&(ma60===null||ma20>=ma60),macdBull=hist!==null?hist>=0:(macd!==null&&signal!==null?macd>=signal:false),nearUpper=upper!==null&&p>=upper*.985,aboveUpper=upper!==null&&p>=upper;
 
-  const names={1:"線下整理",2:"剛站回",3:"爬坡中",4:"噴出中",5:"噴太遠"};
-  const summaries={
-    1:"股價仍在 20 日線下方，或多頭結構尚未建立，先視為整理／修復區。",
-    2:"股價已回到 20 日線附近上方，但均線與動能尚未完全展開，屬轉強初期。",
-    3:"股價站穩中期均線，短中期結構偏多，屬正常爬坡段。",
-    4:"股價進入強勢加速區，已靠近布林上軌或乖離明顯放大。",
-    5:"股價與 20 日線距離過大，或同時出現高 RSI／突破上軌，追價風險明顯升高。"
-  };
+  // 「生命週期重置」：曾經主升過不代表永遠保留高階段。大幅回撤＋中長均線轉弱＋長期在線下，才重新視為築底。
+  let resetScore=0;
+  if(ma60!==null&&p<ma60*.98)resetScore++;
+  if(path.ma60Slope20!==null&&path.ma60Slope20<=-2)resetScore++;
+  if(path.fromHigh120!==null&&path.fromHigh120<=-35)resetScore++;
+  if(path.above20Ratio60!==null&&path.above20Ratio60<=.35)resetScore++;
+  if(ma60!==null&&ma20<ma60&&(path.ma20Slope10??0)<=0)resetScore++;
+  const lifecycleReset=resetScore>=3&&(path.fromHigh120===null||path.fromHigh120<=-20);
+
+  // 近期是否曾經真正發動：用歷史最大乖離／20日漲幅記住「走過的路」，避免回測時瞬間掉回第1階段。
+  const priorAcceleration=(path.maxBias20_60!==null&&path.maxBias20_60>=10)||(path.maxRet20_60!==null&&path.maxRet20_60>=15)||(path.ret60!==null&&path.ret60>=15);
+  const longTrendUp=(path.ma60Slope20!==null?path.ma60Slope20>0.5:(ma60!==null&&p>=ma60));
+  const midTrendUp=(path.ma20Slope10!==null?path.ma20Slope10>0.5:above20);
+  const tangled=(path.maSpreadPct!==null&&path.maSpreadPct<=4)&&Math.abs(path.ma20Slope10??0)<=1.5;
+
+  // 第5階段必須是「多個過熱證據共振」，不再因單一 20MA 乖離 >15% 就直接判噴太遠。
+  const heatFlags=[bias20!==null&&bias20>=15,rsi!==null&&rsi>=78,aboveUpper||(nearUpper&&bias20!==null&&bias20>=10),path.fromHigh60!==null&&path.fromHigh60>=-2,path.ret20!==null&&path.ret20>=20,ratio20!==null&&ratio20>=1.5].filter(Boolean).length;
+  const extremeHeat=(rsi!==null&&rsi>=80&&heatFlags>=3)||(bias20!==null&&bias20>=25&&heatFlags>=3)||heatFlags>=5;
+
+  const accelerationFlags=[path.ret20!==null&&path.ret20>=10,bias20!==null&&bias20>=6,nearUpper,bullOrder,score!==null&&score>=70,rsi!==null&&rsi>=60].filter(Boolean).length;
+  const acceleratingNow=above20&&(above60!==false)&&midTrendUp&&accelerationFlags>=3;
+  const recentAccelerationPullback=priorAcceleration&&(path.fromHigh60===null||path.fromHigh60>=-15)&&(above60!==false)&&p>=ma20*.98&&longTrendUp&&((path.maxRet20_60??0)>=22||(path.maxBias20_60??0)>=14);
+  const trendPullback=priorAcceleration&&!lifecycleReset&&(above60!==false)&&longTrendUp&&(path.fromHigh60===null||(path.fromHigh60<=-6&&path.fromHigh60>=-28))&&(ma60===null||p>=ma60*.98);
+  const normalTrend=above20&&(above60!==false)&&midTrendUp&&(longTrendUp||bullOrder)&&(bullOrder||shortBull||macdBull||(score!==null&&score>=60));
+  const repairState=!lifecycleReset&&((p>=ma20*.97&&(macdBull||(rsi!==null&&rsi>=45)))||(priorAcceleration&&(path.fromHigh120===null||path.fromHigh120>-35)&&(ma60===null||p>=ma60*.94||(path.ma60Slope20??-99)>=-1.5)));
+
+  let stage=1;
+  if(extremeHeat&&!lifecycleReset)stage=5;
+  else if((acceleratingNow||recentAccelerationPullback)&&!lifecycleReset)stage=4;
+  else if((normalTrend||trendPullback)&&!lifecycleReset)stage=3;
+  else if(repairState)stage=2;
+
+  let name,substate,summary;
+  if(stage===1){name="築底整理";substate=lifecycleReset&&tangled?"築底修復":bandwidth!==null&&bandwidth<=14?"低檔收斂":"線下整理";summary=lifecycleReset?"先前趨勢已明顯重置，目前屬低檔整理／修復，等待重新站回中期均線與突破整理區。":"中期趨勢尚未建立，先以築底整理看待。"}
+  if(stage===2){name="轉強修復";substate=above20&&tangled?"箱型轉強確認":!above20&&priorAcceleration?"回測修復":above20&&macdBull?"剛站回確認":"轉強確認";summary=substate==="箱型轉強確認"?"股價回到中期均線上方，但均線仍糾結／斜率不足，先等箱型壓力突破。":substate==="回測修復"?"先前有發動紀錄，但目前仍在中期均線下方修復，需重新站回後才算真正轉強。":"結構正在修復，已接近轉強，但仍需均線與動能進一步確認。"}
+  if(stage===3){name="趨勢爬坡";substate=!above20||((path.fromHigh60??0)<=-8&&priorAcceleration)?"主升後回測":bullOrder?"穩定爬坡":"趨勢爬坡";summary=substate==="主升後回測"?"中長期趨勢仍保留，但短線正在消化前一段漲幅；回測完成前不視為新的加速段。":"中短期趨勢向上，屬正常爬坡結構。"}
+  if(stage===4){name="主升加速";const pullback=(path.fromHigh60??0)<=-6&&(rsi===null||rsi<60||!macdBull);substate=pullback?"加速後回測":priorAcceleration&&(path.ret20??0)>=8?"再發動":"主升加速";summary=substate==="加速後回測"?"先前已進入明顯加速段，目前回到中期支撐附近消化過熱，主結構尚未被破壞。":substate==="再發動"?"先前已有發動紀錄，整理後再次轉強，屬主升段中的再發動。":"趨勢進入加速區，追價風險同步提高。"}
+  if(stage===5){name="高檔過熱";substate=(rsi!==null&&rsi>=85)||(bias20!==null&&bias20>=25)?"極度過熱":"噴太遠";summary="乖離、動能、布林位置與近期漲幅出現多項過熱共振，優先等回測，不把『短線太熱』直接改判成長期。"}
+
   const signals=[];
-  signals.push(`20MA乖離 ${stageFmtPct(bias20)}`);
-  if(ma5!==null&&ma10!==null)signals.push(bullOrder?"均線多頭排列":shortBull?"短均線轉多":"均線尚未轉多");
-  if(upper!==null)signals.push(aboveUpper?"已越布林上軌":nearUpper?"接近布林上軌":"仍在布林通道內");
+  if(bias20!==null)signals.push(`20MA乖離 ${stageFmtPct(bias20)}`);
+  if(path.fromHigh60!==null)signals.push(`距60日高 ${stageFmtPct(path.fromHigh60)}`);
+  if(path.ma60Slope20!==null)signals.push(`MA60斜率 ${stageFmtPct(path.ma60Slope20)}`);
+  if(path.ret20!==null)signals.push(`20日 ${stageFmtPct(path.ret20)}`);
   if(rsi!==null)signals.push(`RSI ${rsi.toFixed(1)}`);
-  if(ratio20!==null)signals.push(`20日量比 ${ratio20.toFixed(2)}`);
-  return {stage,name:names[stage],summary:summaries[stage],signals:signals.slice(0,4),bias20,price:p};
+  return {stage,name,substate,summary,signals:signals.slice(0,4),bias20,bias5,price:p,path,flags:{lifecycleReset,priorAcceleration,tangled,extremeHeat,macdBull,bullOrder,above20,above60}};
 }
 function resetFiveStage(note="搜尋股票後判讀"){
   const card=$("stagePositionCard");
-  if(card){
-    card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");
-    card.style.setProperty("--stage-progress","0%");
-    card.querySelectorAll("[data-stage]").forEach(x=>{x.classList.remove("active","done")});
-  }
-  const fill=$("stageProgressFill"); if(fill)fill.style.width="0%";
+  if(card){card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");card.style.setProperty("--stage-progress","0%");card.querySelectorAll("[data-stage]").forEach(x=>x.classList.remove("active","done"));}
+  const fill=$("stageProgressFill");if(fill)fill.style.width="0%";
   const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.textContent="--"}
   setText("overviewStageNote","查看目前位置");setText("stageTitle","--");setText("stageSummary",note);setText("stageSignals","--");
   latestFiveStageResult=null;latestTechnicalForPlay=null;resetPlayStyle(note);
 }
 function renderFiveStage(t,currentPrice){
   const r=calculateFiveStage(t,currentPrice);if(!r){resetFiveStage("技術資料不足，暫無法判讀");return}
-  const pct=`${Math.max(0,Math.min(100,(r.stage-1)*25))}%`;
-  const card=$("stagePositionCard");
-  if(card){
-    card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");
-    card.classList.add(`stage-${r.stage}`);
-    card.style.setProperty("--stage-progress",pct);
-    card.querySelectorAll("[data-stage]").forEach(x=>{
-      const n=Number(x.dataset.stage);
-      x.classList.toggle("active",n===r.stage);
-      x.classList.toggle("done",n<=r.stage);
-    });
-  }
-  const fill=$("stageProgressFill"); if(fill)fill.style.width=pct;
+  const pct=`${Math.max(0,Math.min(100,(r.stage-1)*25))}%`,card=$("stagePositionCard");
+  if(card){card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");card.classList.add(`stage-${r.stage}`);card.style.setProperty("--stage-progress",pct);card.querySelectorAll("[data-stage]").forEach(x=>{const n=Number(x.dataset.stage);x.classList.toggle("active",n===r.stage);x.classList.toggle("done",n<=r.stage);});}
+  const fill=$("stageProgressFill");if(fill)fill.style.width=pct;
   const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.classList.add(`stage-${r.stage}`);ov.textContent=r.name;}
-  setText("overviewStageNote",`第${r.stage}階段`); setText("stageTitle",`${r.stage}. ${r.name}`); setText("stageSummary",r.summary); setText("stageSignals",r.signals.join("｜"));
+  setText("overviewStageNote",`第${r.stage}階段｜${r.substate}`);setText("stageTitle",`${r.stage}. ${r.name}｜${r.substate}`);setText("stageSummary",r.summary);setText("stageSignals",r.signals.join("｜"));
   latestFiveStageResult=r;latestTechnicalForPlay=t;renderPlayStyle();
 }
 
-
-// v2.5.6.3 — 建議玩法 v1
-// 主週期由五階段＋既有技術資料判斷；長期適配再參考九情境估值。
-// 題材／成長模組尚未完成，因此長期分數刻意不把題材當成已知資料。
-let latestFiveStageResult=null;
-let latestTechnicalForPlay=null;
+// 建議玩法 v2：先判斷「現在能不能做」，再決定短期／波段；長期不再當短線分數不足時的 fallback。
+// 長期仍顯示為待資料，等題材／成長模組完成後才開放成主建議。
 function playClamp(n,min=0,max=100){return Math.max(min,Math.min(max,Number(n)||0))}
 function playFitLabel(n){return n>=78?"高":n>=58?"中高":n>=42?"中":"低"}
-function playValuationResult(){
-  const x=latestValuationScenario;if(!x)return null;
-  return scenarioClassify(x.P,x.O,x.B,x.F,currentTargetPrice());
-}
+function playValuationResult(){const x=latestValuationScenario;if(!x)return null;return scenarioClassify(x.P,x.O,x.B,x.F,currentTargetPrice())}
 function calculatePlayStyle(r,t){
   if(!r)return null;
-  const stage=r.stage,score=stageNum(t?.analysis?.overall?.score)??50,rsi=stageNum(t?.momentum?.rsi14),ratio20=stageNum(t?.volume?.ratio20);
-  const baseShort={1:30,2:78,3:82,4:68,5:35}[stage]??40;
-  const baseSwing={1:35,2:76,3:90,4:78,5:40}[stage]??45;
-  const baseLong={1:55,2:62,3:68,4:62,5:48}[stage]??55;
-  let short=baseShort+playClamp((score-50)*.35,-15,18);
-  let swing=baseSwing+playClamp((score-50)*.30,-15,15);
-  let long=baseLong+playClamp((score-50)*.12,-6,6);
-  if(rsi!==null){
-    if(rsi>=50&&rsi<=70){short+=8;swing+=5}
-    else if(rsi>78){short-=12;swing-=8}
-    else if(rsi<40){short-=8;swing-=5}
-  }
-  if(ratio20!==null){
-    if(ratio20>=1&&ratio20<=2.2){short+=4;swing+=4}
-    else if(ratio20>=3){short-=5;swing-=3}
-  }
-  const vr=playValuationResult();
-  const longValAdj={1:18,2:12,3:4,4:-5,5:-18,6:20,7:5,8:2,9:-20};
-  if(vr?.n){long+=longValAdj[vr.n]??0;if([1,2,6].includes(vr.n))swing+=3;if([5,9].includes(vr.n))swing-=5}
-  else long-=10;
-  short=Math.round(playClamp(short));swing=Math.round(playClamp(swing));long=Math.round(playClamp(long));
-  const scores={short,swing,long};
-  const labels={short:"短期",swing:"波段",long:"長期"};
-  const periods={short:"3～5交易日",swing:"2～4週",long:"半年以上"};
-  let candidates=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
-  if(!vr&&candidates[0]?.[0]==="long")candidates=candidates.sort((a,b)=>(a[0]==="long"?1:0)-(b[0]==="long"?1:0)||b[1]-a[1]);
-  const [key,best]=candidates[0]||["swing",0];
-  if(best<52){
-    return {key:"observe",period:"先觀察",action:"等待位置或動能改善",reason:`目前第${stage}階段「${r.name}」，三種週期適配度都不足以形成明確優勢。`,scores,vr};
-  }
-  let action="";
-  if(key==="short") action=stage===2?"轉強確認型操作":stage>=4?"只做強勢短打，不追高":"順勢短打";
-  if(key==="swing") action=stage===2?"小部位試單，確認後再加":"順勢波段／回測承接";
-  if(key==="long") action=stage===5?"長線續抱優先，等拉回再評估":"以估值與中長期結構持有";
-  const techText=`技術分 ${Math.round(score)} 分`;
-  const valText=vr?.state?`，估值為「${vr.state}」`:"，長期估值資料尚未完整";
-  let reason="";
-  if(key==="short") reason=`第${stage}階段「${r.name}」＋${techText}，短線動能與位置的適配度最高，較適合 ${periods.short}。`;
-  if(key==="swing") reason=`第${stage}階段「${r.name}」＋${techText}，中短期趨勢結構較完整，較適合 ${periods.swing} 的順勢波段。`;
-  if(key==="long") reason=`目前位置為第${stage}階段「${r.name}」${valText}，長期適配度高於短線／波段；v1 尚未納入題材與成長模組。`;
-  return {key,period:`${labels[key]}｜${periods[key]}`,action,reason,scores,vr};
+  const stage=r.stage,sub=r.substate||"",score=stageNum(t?.analysis?.overall?.score)??50,rsi=stageNum(t?.momentum?.rsi14),ratio20=stageNum(t?.volume?.ratio20),vr=playValuationResult();
+  let short=35,swing=45;
+  if(stage===1){short=24;swing=32}
+  if(stage===2){short=55;swing=68;if(sub.includes("剛站回")){short=70;swing=76}else if(sub.includes("箱型")){short=52;swing=72}else if(sub.includes("回測修復")){short=38;swing=61}}
+  if(stage===3){short=62;swing=86;if(sub.includes("回測")){short=42;swing=76}else if(sub.includes("穩定")){short=66;swing=90}}
+  if(stage===4){short=70;swing=84;if(sub.includes("再發動")){short=78;swing=91}else if(sub.includes("回測")){short=45;swing=80}}
+  if(stage===5){short=18;swing=30}
+  short+=playClamp((score-50)*.22,-10,12);swing+=playClamp((score-50)*.18,-9,10);
+  if(rsi!==null){if(rsi>=52&&rsi<=70){short+=4;swing+=3}else if(rsi>=78){short-=10;swing-=6}else if(rsi<38){short-=6;swing-=3}}
+  if(ratio20!==null&&ratio20>=1&&ratio20<=2.2){short+=3;swing+=3}
+  short=Math.round(playClamp(short));swing=Math.round(playClamp(swing));
+  const scores={short,swing,long:null},eligible={short:true,swing:true,long:false};
+
+  if(stage===1){return {key:"observe",period:"先觀察",action:sub.includes("築底")?"築底修復，等突破確認":"等待轉強確認",reason:`目前為第1階段「${r.name}｜${sub}」。先等站回中期均線與整理區突破；長期策略尚缺題材／成長資料，不會自動拿長期當替代答案。`,scores,eligible,vr}}
+  if(stage===5){return {key:"observe",period:"先觀察",action:"過熱，等回測再評估",reason:`目前為第5階段「${r.name}｜${sub}」，多項過熱訊號共振。短期／波段先等回測，且不會因追價不適合就改判成長期。`,scores,eligible,vr}}
+
+  let key=swing>=short?"swing":"short";
+  if(Math.max(short,swing)<48)key="observe";
+  let period=key==="short"?"短期｜3～5交易日":key==="swing"?"波段｜2～4週":"先觀察",action="",reason="";
+  if(key==="observe"){action="等待位置或動能改善";reason=`第${stage}階段「${r.name}｜${sub}」目前尚未形成足夠的短期／波段優勢。`;}
+  else if(stage===2){action=sub.includes("箱型")?"箱型轉強確認，突破壓力再加":sub.includes("回測")?"修復回測，等站回中期均線":"轉強確認，小部位試單後再加";reason=`目前是第2階段「${sub}」，主策略以波段確認為主；技術分 ${Math.round(score)} 分，尚未把未確認的轉強當成主升。`;}
+  else if(stage===3){action=sub.includes("回測")?"回測確認，暫等重新轉強":"順勢波段／回測承接";reason=`目前是第3階段「${r.name}｜${sub}」，中長期趨勢仍在；技術分 ${Math.round(score)} 分，較適合以 2～4 週節奏處理。`;}
+  else if(stage===4){action=sub.includes("再發動")?"再發動中，不追價，等首次回測":sub.includes("回測")?"加速後回測，守中期支撐":"主升加速，續抱優先／不追高";reason=`目前是第4階段「${r.name}｜${sub}」。保留主升生命週期，同時用子狀態區分再發動與回測，不因單日跌破均線就降回底部。`;}
+  if(key==="short"&&stage===2)action="轉強短打，未確認前不追";
+  return {key,period,action,reason,scores,eligible,vr};
 }
 function resetPlayStyle(note="搜尋股票後判讀"){
-  setText("overviewPlayStyle","--");setText("overviewPlayStyleNote","查看建議策略");
-  setText("playMainPeriod","--");setText("playMainAction",note);setText("playReason","系統會比較短期、波段、長期三種玩法的適配度。");
-  for(const k of ["Short","Swing","Long"]){setText(`play${k}Label`,"--");setText(`play${k}Score`,"--");const bar=$(`play${k}Bar`);if(bar)bar.style.width="0%";}
+  setText("overviewPlayStyle","--");setText("overviewPlayStyleNote","查看建議策略");setText("playMainPeriod","--");setText("playMainAction",note);setText("playReason","系統會先判斷現在是否適合操作，再比較短期與波段；適配分不是勝率。");
+  for(const k of ["Short","Swing","Long"]){setText(`play${k}Label`,k==="Long"?"待資料":"--");setText(`play${k}Score`,"--");const bar=$(`play${k}Bar`);if(bar)bar.style.width="0%";}
   document.querySelectorAll("#playStyleCard .playstyle-fit-row").forEach(x=>x.classList.remove("is-main"));
 }
 function renderPlayStyle(){
   const x=calculatePlayStyle(latestFiveStageResult,latestTechnicalForPlay);if(!x){resetPlayStyle("等待技術資料");return}
   const map={short:"Short",swing:"Swing",long:"Long"};
-  for(const [key,id] of Object.entries(map)){
-    const n=x.scores[key];setText(`play${id}Label`,playFitLabel(n));setText(`play${id}Score`,`${n}分`);const bar=$(`play${id}Bar`);if(bar)bar.style.width=`${n}%`;
-  }
+  for(const [key,id] of Object.entries(map)){const n=x.scores[key],ok=x.eligible?.[key]!==false;if(!ok||n===null){setText(`play${id}Label`,"待資料");setText(`play${id}Score`,"--");const bar=$(`play${id}Bar`);if(bar)bar.style.width="0%";continue}setText(`play${id}Label`,playFitLabel(n));setText(`play${id}Score`,`${n}分`);const bar=$(`play${id}Bar`);if(bar)bar.style.width=`${n}%`;}
   document.querySelectorAll("#playStyleCard .playstyle-fit-row").forEach(el=>el.classList.toggle("is-main",el.dataset.play===x.key));
-  setText("playMainPeriod",x.period);setText("playMainAction",x.action);setText("playReason",x.reason);
-  setText("overviewPlayStyle",x.period.replace("｜"," "));setText("overviewPlayStyleNote",x.action);
+  setText("playMainPeriod",x.period);setText("playMainAction",x.action);setText("playReason",x.reason);setText("overviewPlayStyle",x.period.replace("｜"," "));setText("overviewPlayStyleNote",x.action);
 }
 
 async function loadTechnical(data){

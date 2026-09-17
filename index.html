@@ -803,7 +803,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 @media(max-width:720px){#overviewStageState{font-size:20px!important}#overviewStageNote{font-size:11px!important}}
 </style>
 <style id="v2563-playstyle">
-/* v2.5.6.3 — 建議玩法 v1：短期／波段／長期適配度 */
+/* v2.5.6.4 — 建議玩法 v2：先判斷可操作性，再比較短期／波段 */
 .playstyle-card{--play-accent:#b879ff;min-width:0;overflow:hidden}
 .playstyle-hero{padding:15px 16px;border:1px solid #2b3f58;border-radius:13px;background:linear-gradient(145deg,#101f30,#0a1724);min-width:0}
 .playstyle-hero>span{display:block;color:#8fa2b6;font-size:12px}
@@ -838,6 +838,15 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
  .playstyle-note{font-size:9px}
 }
 </style>
+
+<style id="v2564-stage-play-polish">
+/* v2.5.6.4 — v2 子狀態與長期待資料提示 */
+#stageTitle{overflow-wrap:anywhere}
+#overviewStageNote{line-height:1.35}
+#playStyleCard .playstyle-fit-row[data-play="long"] .playstyle-bar{opacity:.45}
+#playStyleCard .playstyle-fit-row[data-play="long"] .playstyle-fit-head b{color:#71899d}
+@media(max-width:720px){#stageTitle{font-size:13px!important}#overviewStageNote{font-size:10px!important}}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -865,7 +874,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.6.3</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.6.4</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1036,19 +1045,19 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         </article>
 
         <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
-      <div class="card-title">建議玩法 <span class="badge">v1</span></div>
+      <div class="card-title">建議玩法 <span class="badge">v2</span></div>
       <div class="playstyle-hero">
         <span>主建議週期</span>
         <strong id="playMainPeriod">--</strong>
         <b id="playMainAction">搜尋股票後判讀</b>
-        <p id="playReason">系統會比較短期、波段、長期三種玩法的適配度。</p>
+        <p id="playReason">系統會先判斷現在是否適合操作，再比較短期與波段；適配分不是勝率。</p>
       </div>
       <div class="playstyle-fit" aria-label="三週期適配度">
         <div class="playstyle-fit-row" data-play="short"><div class="playstyle-fit-head"><span>短期 <small>3～5交易日</small></span><b id="playShortLabel">--</b></div><div class="playstyle-bar"><i id="playShortBar"></i></div><em id="playShortScore">--</em></div>
         <div class="playstyle-fit-row" data-play="swing"><div class="playstyle-fit-head"><span>波段 <small>2～4週</small></span><b id="playSwingLabel">--</b></div><div class="playstyle-bar"><i id="playSwingBar"></i></div><em id="playSwingScore">--</em></div>
         <div class="playstyle-fit-row" data-play="long"><div class="playstyle-fit-head"><span>長期 <small>半年以上</small></span><b id="playLongLabel">--</b></div><div class="playstyle-bar"><i id="playLongBar"></i></div><em id="playLongScore">--</em></div>
       </div>
-      <small class="playstyle-note" id="playStyleNote">長期 v1 目前使用既有估值＋技術位置；題材／成長模組尚未接入。</small>
+      <small class="playstyle-note" id="playStyleNote">長期需等題材／成長模組補齊後才開放主建議；不再把短線不適合自動改判長期。</small>
     </article>
     <article class="card detail-panel simple-detail" data-view-panel="analysis"><div class="card-title">預期上漲空間 <span class="badge">待接功能</span></div><div class="hero-value"><span>預期空間</span><strong class="blue">--%</strong><small>之後接入計算邏輯</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="screening"><div class="card-title">智慧選股 <span class="badge">待接功能</span></div><div class="hero-value"><span>全市場自動篩選</span><strong>✦</strong><small>之後加入低點／剛站回／接近買點篩選</small></div></article>
@@ -1059,8 +1068,8 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           <div class="card-title">五階段位置</div>
           <div class="stage-progress" id="stageSteps">
             <div class="stage-progress-line" aria-hidden="true"><span class="stage-progress-fill" id="stageProgressFill"></span></div>
-            <div class="stage-step" data-stage="1"><i>1</i><span>線下整理</span></div><div class="stage-step" data-stage="2"><i>2</i><span>剛站回</span></div>
-            <div class="stage-step" data-stage="3"><i>3</i><span>爬坡中</span></div><div class="stage-step" data-stage="4"><i>4</i><span>噴出中</span></div><div class="stage-step" data-stage="5"><i>5</i><span>噴太遠</span></div>
+            <div class="stage-step" data-stage="1"><i>1</i><span>築底整理</span></div><div class="stage-step" data-stage="2"><i>2</i><span>轉強修復</span></div>
+            <div class="stage-step" data-stage="3"><i>3</i><span>趨勢爬坡</span></div><div class="stage-step" data-stage="4"><i>4</i><span>主升加速</span></div><div class="stage-step" data-stage="5"><i>5</i><span>高檔過熱</span></div>
           </div>
           <div class="stage-summary" id="stageSummaryBox">
             <strong id="stageTitle">--</strong>
@@ -1215,7 +1224,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.6.3"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.6.4"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
