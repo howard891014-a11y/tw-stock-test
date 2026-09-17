@@ -50,7 +50,70 @@ function mergeStockMeta(data,meta){
   return {...data,code:meta.code||data?.code||data?.symbol,symbol:data?.symbol||meta.symbol||meta.code,name:meta.name||data?.name||data?.shortName,shortName:meta.name||data?.shortName||data?.name,market:meta.market||data?.market||data?.marketLabel,marketLabel:meta.market||data?.marketLabel||data?.market};
 }
 
-async function quote(query){
+function taipeiMarketClock(now=new Date()){
+  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Taipei",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(now).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
+  return{weekday:parts.weekday||"",minutes:Number(parts.hour||0)*60+Number(parts.minute||0)};
+}
+function isTaiwanIntraday(now=new Date()){
+  const {weekday,minutes}=taipeiMarketClock(now);
+  return !["Sat","Sun"].includes(weekday)&&minutes>=9*60&&minutes<13*60+30;
+}
+function dayKey(v){
+  const m=String(v||"").match(/(20\d{2})[-\/]?(\d{2})[-\/]?(\d{2})/);
+  return m?`${m[1]}-${m[2]}-${m[3]}`:"";
+}
+function numeric(v){const n=Number(v);return Number.isFinite(n)?n:null}
+function snapshotRow(root){
+  const queue=[root],seen=new Set();
+  while(queue.length){
+    const x=queue.shift();
+    if(!x||typeof x!=="object"||seen.has(x))continue;seen.add(x);
+    const close=numeric(x.close_price??x.closePrice);
+    const date=dayKey(x.trade_date??x.tradeDate);
+    if(close!==null&&date)return x;
+    for(const v of Object.values(x))if(v&&typeof v==="object")queue.push(v);
+  }
+  return null;
+}
+function normalizeSnapshot(payload,code){
+  if(payload?.found===false)return null;
+  const row=snapshotRow(payload);if(!row)return null;
+  const last=numeric(row.close_price??row.closePrice),previousClose=numeric(row.previous_close??row.previousClose),change=previousClose!==null&&last!==null?last-previousClose:null;
+  if(last===null)return null;
+  return{source:"Neon price_snapshot",code:String((row.stock_code??row.stockCode??code)||""),name:row.stock_name??row.stockName??"",market:row.market??"",last,previousClose,change,changePct:previousClose&&change!==null?(change/previousClose)*100:null,open:numeric(row.open_price??row.openPrice),high:numeric(row.high_price??row.highPrice),low:numeric(row.low_price??row.lowPrice),quoteTime:row.quote_time??row.quoteTime??row.updated_at??row.updatedAt??null,tradeDate:dayKey(row.trade_date??row.tradeDate),officialClose:true};
+}
+async function dbCloseQuote(code){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);
+  try{
+    const res=await fetch(`/api/sync-status?code=${encodeURIComponent(code)}`,{cache:"no-store",signal:controller.signal});
+    if(!res.ok)return null;
+    const payload=await res.json();
+    return normalizeSnapshot(payload,code);
+  }catch{return null}finally{clearTimeout(timer)}
+}
+async function misCloseQuote(code,market){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),7000);
+  try{
+    const params=new URLSearchParams({q:String(code||"")});if(market)params.set("market",String(market));
+    const res=await fetch(`/api/official-close?${params}`,{cache:"no-store",signal:controller.signal});
+    if(!res.ok)return null;
+    const payload=await res.json();
+    return payload?.ok===false?null:(payload?.result||payload);
+  }catch{return null}finally{clearTimeout(timer)}
+}
+function pickAfterCloseQuote(yahoo,db,mis){
+  const candidates=[db,mis].filter(Boolean);
+  if(!candidates.length)return yahoo;
+  candidates.sort((a,b)=>{
+    const da=dayKey(a.tradeDate),dbk=dayKey(b.tradeDate);
+    if(da!==dbk)return da>dbk?-1:1;
+    const pa=/Neon/i.test(String(a.source||""))?1:0,pb=/Neon/i.test(String(b.source||""))?1:0;
+    return pb-pa;
+  });
+  const best=candidates[0];
+  return{...yahoo,...best,code:best.code||yahoo?.code,symbol:best.symbol||yahoo?.symbol,name:best.name||yahoo?.name,shortName:best.name||yahoo?.shortName,market:best.market||yahoo?.market,marketLabel:best.market||yahoo?.marketLabel};
+}
+async function yahooQuote(query){
   async function once(timeoutMs){
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),timeoutMs);
@@ -63,19 +126,21 @@ async function quote(query){
       );
     }finally{clearTimeout(timer)}
   }
-  try{
-    return await once(15000);
-  }catch(e){
+  try{return await once(15000)}catch(e){
     const retryable=e?.name==="AbortError"||/逾時|Failed to fetch|network|fetch/i.test(String(e?.message||""));
     if(!retryable)throw e;
     await new Promise(r=>setTimeout(r,350));
-    try{
-      return await once(20000);
-    }catch(e2){
-      if(e2?.name==="AbortError")throw new Error("股價查詢逾時");
-      throw e2;
-    }
+    try{return await once(20000)}catch(e2){if(e2?.name==="AbortError")throw new Error("股價查詢逾時");throw e2}
   }
+}
+async function quote(query,market=""){
+  const yahoo=await yahooQuote(query);
+  // v2.5.6.6：盤中維持 Yahoo；13:30 後/開盤前/休市日，以「最新交易日」在 Neon 與 MIS 間擇新者，同日優先 Neon。
+  if(isTaiwanIntraday())return yahoo;
+  const code=String(yahoo?.code||String(yahoo?.symbol||"").split(".")[0]||query||"").trim();
+  if(!/^\d{4,6}$/.test(code))return yahoo;
+  const [db,mis]=await Promise.all([dbCloseQuote(code),misCloseQuote(code,market||yahoo?.market||yahoo?.marketLabel||"")]);
+  return pickAfterCloseQuote(yahoo,db,mis);
 }
 
 function shortStockName(name){
@@ -163,7 +228,7 @@ function technicalMetrics(id,items){const el=$(id);if(!el)return;el.classList.ad
 function techTone(el,tone){if(!el)return;el.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral","tone-info","tone-cyan");el.classList.add(`tone-${tone||"neutral"}`)}
 function techSet(id,text,tone){const el=$(id);if(el){el.textContent=text||"--";if(tone)techTone(el,tone)}}
 
-// v2.5.6.4 — 五階段位置 v2 + 建議玩法 v2
+// v2.5.6.5 — 五階段位置 v2 + 建議玩法 v3
 // 五階段 v2 會讀取 /api/technical 已回傳的歷史日 K（history），把「生命週期」與「當下狀態」分開。
 // 原有技術分析 MA/Bollinger/Volume/Momentum 計分完全不改；這裡只新增路徑判讀。
 let latestFiveStageResult=null;
@@ -261,48 +326,104 @@ function renderFiveStage(t,currentPrice){
   latestFiveStageResult=r;latestTechnicalForPlay=t;renderPlayStyle();
 }
 
-// 建議玩法 v2：先判斷「現在能不能做」，再決定短期／波段；長期不再當短線分數不足時的 fallback。
-// 長期仍顯示為待資料，等題材／成長模組完成後才開放成主建議。
+// 建議玩法 v3：先做「資格判斷」，再比較短期／波段。
+// 這版補兩個防呆：① 假突破確認 ② 箱型反覆濾網；避免單日突破就判短線，也避免盤整區來回切玩法。
 function playClamp(n,min=0,max=100){return Math.max(min,Math.min(max,Number(n)||0))}
 function playFitLabel(n){return n>=78?"高":n>=58?"中高":n>=42?"中":"低"}
 function playValuationResult(){const x=latestValuationScenario;if(!x)return null;return scenarioClassify(x.P,x.O,x.B,x.F,currentTargetPrice())}
+function playRowClose(x){return stageNum(x?.close)}
+function playRowHigh(x){return stageNum(x?.high)??playRowClose(x)}
+function playRowVolume(x){return stageNum(x?.volume)}
+function playPriorHigh(rows,index,lookback=20){const a=rows.slice(Math.max(0,index-lookback),index).map(playRowHigh).filter(Number.isFinite);return a.length?Math.max(...a):null}
+function playAvgVolume(rows,index,lookback=20){const a=rows.slice(Math.max(0,index-lookback),index).map(playRowVolume).filter(x=>Number.isFinite(x)&&x>0);return a.length>=Math.min(10,lookback)?a.reduce((x,y)=>x+y,0)/a.length:null}
+function playMaCrossCount(rows,window=20,n=20){
+  const from=Math.max(n-1,rows.length-window),states=[];
+  for(let i=from;i<rows.length;i++){
+    const ma=stageSmaAt(rows,n,i+1),c=playRowClose(rows[i]);if(ma===null||c===null)continue;
+    const d=stagePct(c,ma);if(d===null||Math.abs(d)<.6)states.push(0);else states.push(d>0?1:-1);
+  }
+  let prev=0,count=0;for(const x of states){if(!x)continue;if(prev&&x!==prev)count++;prev=x}return count;
+}
+function playBreakoutState(r,t){
+  const rows=r?.path?.rows||[];if(rows.length<25)return {fresh:false,confirmed:false,failed:false,age:null,level:null,volumeRatio:null,margin:null};
+  const from=Math.max(20,rows.length-5);let hit=null;
+  for(let i=from;i<rows.length;i++){
+    const c=playRowClose(rows[i]),level=playPriorHigh(rows,i,20);if(c===null||level===null)continue;
+    const margin=stagePct(c,level);if(margin!==null&&margin>=.3){hit={i,c,level,margin};break}
+  }
+  if(!hit)return {fresh:false,confirmed:false,failed:false,age:null,level:null,volumeRatio:null,margin:null};
+  const after=rows.slice(hit.i).map(playRowClose).filter(Number.isFinite),current=after.at(-1),avgV=playAvgVolume(rows,hit.i,20),v=playRowVolume(rows[hit.i]);
+  const volumeRatio=avgV&&v? v/avgV : stageNum(t?.volume?.ratio20),age=rows.length-1-hit.i;
+  const held=after.every(x=>x>=hit.level*.98),twoCloses=after.filter(x=>x>=hit.level*.995).length>=2;
+  const strongDay=hit.margin>=1.5&&(volumeRatio===null||volumeRatio>=1.3)&&current>=hit.level*1.005;
+  const confirmed=!((current??0)<hit.level*.985)&&held&&(twoCloses||strongDay);
+  const failed=(current??0)<hit.level*.985||after.slice(1).some(x=>x<hit.level*.97);
+  return {fresh:true,confirmed,failed,age,level:hit.level,volumeRatio,margin:hit.margin};
+}
 function calculatePlayStyle(r,t){
   if(!r)return null;
   const stage=r.stage,sub=r.substate||"",score=stageNum(t?.analysis?.overall?.score)??50,rsi=stageNum(t?.momentum?.rsi14),ratio20=stageNum(t?.volume?.ratio20),vr=playValuationResult();
-  let short=35,swing=45;
-  if(stage===1){short=24;swing=32}
-  if(stage===2){short=55;swing=68;if(sub.includes("剛站回")){short=70;swing=76}else if(sub.includes("箱型")){short=52;swing=72}else if(sub.includes("回測修復")){short=38;swing=61}}
-  if(stage===3){short=62;swing=86;if(sub.includes("回測")){short=42;swing=76}else if(sub.includes("穩定")){short=66;swing=90}}
-  if(stage===4){short=70;swing=84;if(sub.includes("再發動")){short=78;swing=91}else if(sub.includes("回測")){short=45;swing=80}}
-  if(stage===5){short=18;swing=30}
-  short+=playClamp((score-50)*.22,-10,12);swing+=playClamp((score-50)*.18,-9,10);
-  if(rsi!==null){if(rsi>=52&&rsi<=70){short+=4;swing+=3}else if(rsi>=78){short-=10;swing-=6}else if(rsi<38){short-=6;swing-=3}}
-  if(ratio20!==null&&ratio20>=1&&ratio20<=2.2){short+=3;swing+=3}
+  const breakout=playBreakoutState(r,t),path=r.path||{},crosses=playMaCrossCount(path.rows||[],20,20);
+  const rangeNoise=!!(r.flags?.tangled&&crosses>=3&&Math.abs(path.ret20??0)<=10);
+  const overheated=stage===5||r.flags?.extremeHeat||(rsi!==null&&rsi>=80)||((r.bias20??0)>=18&&(rsi??0)>=74);
+  const falseBreakout=breakout.fresh&&breakout.failed;
+  const breakoutPending=breakout.fresh&&!breakout.confirmed&&!breakout.failed;
+  const ma20Up=(path.ma20Slope10??-99)>.3,ma60Up=(path.ma60Slope20??-99)>0;
+  const healthyTrend=(stage>=3&&stage<=4)&&(r.flags?.above60!==false)&&(ma20Up||ma60Up)&&!rangeNoise;
+  const momentumBurst=!rangeNoise&&!overheated&&score>=68&&(rsi===null||(rsi>=52&&rsi<=76))&&(ratio20===null||ratio20>=1.05)&&(path.ret20??0)>=6;
+
+  // 資格制：短期必須有「新鮮突破已確認」或非常明確的短線加速；波段必須有中期趨勢，箱型未突破不得硬判波段。
+  let shortEligible=!overheated&&!falseBreakout&&stage>=2&&stage<=4&&((breakout.fresh&&breakout.confirmed&&breakout.age<=4)||momentumBurst);
+  let swingEligible=!overheated&&!falseBreakout&&stage>=2&&stage<=4&&(healthyTrend||(stage===2&&breakout.fresh&&breakout.confirmed&&ma20Up));
+  if(rangeNoise&&!breakout.confirmed){shortEligible=false;swingEligible=false}
+  if(breakoutPending){shortEligible=false;if(stage===2||rangeNoise)swingEligible=false}
+
+  let short=38,swing=40;
+  short+=playClamp((score-50)*.28,-12,14);swing+=playClamp((score-50)*.18,-9,10);
+  if(breakout.fresh){short+=breakout.confirmed?24:-5;swing+=breakout.confirmed?8:0;if((breakout.age??9)<=2)short+=6;if((breakout.volumeRatio??ratio20??0)>=1.3)short+=5}
+  if(momentumBurst)short+=10;
+  if(stage===4&&!sub.includes("回測"))short+=5;
+  if(rsi!==null){if(rsi>=55&&rsi<=72)short+=5;if(rsi>=78)short-=12;if(rsi<40)short-=6}
+  if(healthyTrend)swing+=20;
+  if(stage===3)swing+=6;if(stage===4)swing+=8;
+  if(sub.includes("回測")&&!rangeNoise)swing+=5;
+  if(ma20Up)swing+=5;if(ma60Up)swing+=4;
+  if(rangeNoise){short-=22;swing-=24}
+  if(falseBreakout){short-=35;swing-=25}
+  if(overheated){short-=30;swing-=20}
   short=Math.round(playClamp(short));swing=Math.round(playClamp(swing));
-  const scores={short,swing,long:null},eligible={short:true,swing:true,long:false};
+  const scores={short,swing,long:null},eligible={short:shortEligible,swing:swingEligible,long:false};
 
-  if(stage===1){return {key:"observe",period:"先觀察",action:sub.includes("築底")?"築底修復，等突破確認":"等待轉強確認",reason:`目前為第1階段「${r.name}｜${sub}」。先等站回中期均線與整理區突破；長期策略尚缺題材／成長資料，不會自動拿長期當替代答案。`,scores,eligible,vr}}
-  if(stage===5){return {key:"observe",period:"先觀察",action:"過熱，等回測再評估",reason:`目前為第5階段「${r.name}｜${sub}」，多項過熱訊號共振。短期／波段先等回測，且不會因追價不適合就改判成長期。`,scores,eligible,vr}}
+  if(stage===1)return {key:"observe",period:"先觀察",action:sub.includes("築底")?"築底修復，等突破確認":"等待轉強確認",reason:`目前為第1階段「${r.name}｜${sub}」，先等中期結構轉強。`,scores,eligible,vr};
+  if(overheated)return {key:"observe",period:"先觀察",action:"過熱，等回測再評估",reason:"短線過熱訊號共振，先不追價。",scores,eligible,vr};
+  if(falseBreakout)return {key:"observe",period:"先觀察",action:"疑似假突破，等重新站回突破位",reason:"近期突破後未能守住突破區，先過濾假突破。",scores,eligible,vr};
+  if(rangeNoise&&!breakout.confirmed)return {key:"observe",period:"先觀察",action:"箱型反覆，等有效突破",reason:`近20日反覆穿越MA20 ${crosses} 次，均線仍糾結，先避免玩法來回切換。`,scores,eligible,vr};
+  if(breakoutPending)return {key:"observe",period:"先觀察",action:"突破待確認，先看1～2日",reason:"剛突破但尚未形成有效守穩，避免單日假突破。",scores,eligible,vr};
 
-  let key=swing>=short?"swing":"short";
-  if(Math.max(short,swing)<48)key="observe";
-  let period=key==="short"?"短期｜3～5交易日":key==="swing"?"波段｜2～4週":"先觀察",action="",reason="";
-  if(key==="observe"){action="等待位置或動能改善";reason=`第${stage}階段「${r.name}｜${sub}」目前尚未形成足夠的短期／波段優勢。`;}
-  else if(stage===2){action=sub.includes("箱型")?"箱型轉強確認，突破壓力再加":sub.includes("回測")?"修復回測，等站回中期均線":"轉強確認，小部位試單後再加";reason=`目前是第2階段「${sub}」，主策略以波段確認為主；技術分 ${Math.round(score)} 分，尚未把未確認的轉強當成主升。`;}
-  else if(stage===3){action=sub.includes("回測")?"回測確認，暫等重新轉強":"順勢波段／回測承接";reason=`目前是第3階段「${r.name}｜${sub}」，中長期趨勢仍在；技術分 ${Math.round(score)} 分，較適合以 2～4 週節奏處理。`;}
-  else if(stage===4){action=sub.includes("再發動")?"再發動中，不追價，等首次回測":sub.includes("回測")?"加速後回測，守中期支撐":"主升加速，續抱優先／不追高";reason=`目前是第4階段「${r.name}｜${sub}」。保留主升生命週期，同時用子狀態區分再發動與回測，不因單日跌破均線就降回底部。`;}
-  if(key==="short"&&stage===2)action="轉強短打，未確認前不追";
-  return {key,period,action,reason,scores,eligible,vr};
+  let key="observe";
+  if(shortEligible||swingEligible){
+    if(shortEligible&&swingEligible)key=short>=swing?"short":"swing";else key=shortEligible?"short":"swing";
+  }
+  const period=key==="short"?"短期｜3～5交易日":key==="swing"?"波段｜2～4週":"先觀察";
+  let action="等待位置或動能改善",reason=`第${stage}階段「${r.name}｜${sub}」目前尚未通過短期或波段資格。`;
+  if(key==="short"){
+    action=breakout.fresh?"突破確認，短線3～5日":"短線動能加速，嚴守轉弱";
+    reason=`近期動能與突破條件通過短期資格；短期適配 ${short} 分、波段 ${swing} 分。`;
+  }else if(key==="swing"){
+    action=sub.includes("回測")?"回測確認，守中期趨勢":"趨勢完整，採2～4週波段";
+    reason=`MA20/60與歷史路徑通過波段資格；短期適配 ${short} 分、波段 ${swing} 分。`;
+  }
+  return {key,period,action,reason,scores,eligible,vr,diagnostics:{breakout,rangeNoise,crosses,falseBreakout,breakoutPending,healthyTrend,momentumBurst}};
 }
 function resetPlayStyle(note="搜尋股票後判讀"){
-  setText("overviewPlayStyle","--");setText("overviewPlayStyleNote","查看建議策略");setText("playMainPeriod","--");setText("playMainAction",note);setText("playReason","系統會先判斷現在是否適合操作，再比較短期與波段；適配分不是勝率。");
+  setText("overviewPlayStyle","--");setText("overviewPlayStyleNote","查看建議策略");setText("playMainPeriod","--");setText("playMainAction",note);setText("playReason","先過濾假突破與箱型反覆，再比較短期／波段；適配分不是勝率。");
   for(const k of ["Short","Swing","Long"]){setText(`play${k}Label`,k==="Long"?"待資料":"--");setText(`play${k}Score`,"--");const bar=$(`play${k}Bar`);if(bar)bar.style.width="0%";}
   document.querySelectorAll("#playStyleCard .playstyle-fit-row").forEach(x=>x.classList.remove("is-main"));
 }
 function renderPlayStyle(){
   const x=calculatePlayStyle(latestFiveStageResult,latestTechnicalForPlay);if(!x){resetPlayStyle("等待技術資料");return}
   const map={short:"Short",swing:"Swing",long:"Long"};
-  for(const [key,id] of Object.entries(map)){const n=x.scores[key],ok=x.eligible?.[key]!==false;if(!ok||n===null){setText(`play${id}Label`,"待資料");setText(`play${id}Score`,"--");const bar=$(`play${id}Bar`);if(bar)bar.style.width="0%";continue}setText(`play${id}Label`,playFitLabel(n));setText(`play${id}Score`,`${n}分`);const bar=$(`play${id}Bar`);if(bar)bar.style.width=`${n}%`;}
+  for(const [key,id] of Object.entries(map)){const n=x.scores[key],ok=x.eligible?.[key]!==false;if(n===null){setText(`play${id}Label`,"待資料");setText(`play${id}Score`,"--");const bar=$(`play${id}Bar`);if(bar)bar.style.width="0%";continue}if(!ok){setText(`play${id}Label`,"不符合");setText(`play${id}Score`,"--");const bar=$(`play${id}Bar`);if(bar)bar.style.width="0%";continue}setText(`play${id}Label`,playFitLabel(n));setText(`play${id}Score`,`${n}分`);const bar=$(`play${id}Bar`);if(bar)bar.style.width=`${n}%`;}
   document.querySelectorAll("#playStyleCard .playstyle-fit-row").forEach(el=>el.classList.toggle("is-main",el.dataset.play===x.key));
   setText("playMainPeriod",x.period);setText("playMainAction",x.action);setText("playReason",x.reason);setText("overviewPlayStyle",x.period.replace("｜"," "));setText("overviewPlayStyleNote",x.action);
 }
@@ -500,7 +621,7 @@ async function search(){
     // 退回既有 Yahoo 查價流程只負責「找得到股票與行情」；若已有官方/本地身分資料，仍由它覆蓋中文名與市場別。
     let meta=null;
     try{meta=await stockMeta(q)}catch(e){console.warn("官方股票主檔暫時不可用，改用既有查價流程",e)}
-    let data=await quote(meta?.code||q);
+    let data=await quote(meta?.code||q,meta?.market||"");
     if(!meta&&(data?.code||data?.symbol)){
       try{meta=await stockMeta(data.code||data.symbol)}catch(e){console.warn("股票身分補查失敗，保留查價結果",e)}
     }
@@ -1046,7 +1167,7 @@ async function autoRefreshQuotes(force=false){
   const due=autoListStocks().filter(([,base])=>force||!base.quoteUpdatedAt||Date.now()-new Date(base.quoteUpdatedAt).getTime()>=AUTO_QUOTE_MS);
   await autoPool(due,3,async([code,base])=>{
    try{
-    const d=await quote(code),last=Number(d.last??d.price??d.regularMarketPrice);
+    const d=await quote(code,base.market||""),last=Number(d.last??d.price??d.regularMarketPrice);
     const patch={quoteUpdatedAt:new Date().toISOString()};
     if(Number.isFinite(last))patch.last=last;
     const name=shortStockName(d.name||d.shortName||base.name);if(name)patch.name=name;
