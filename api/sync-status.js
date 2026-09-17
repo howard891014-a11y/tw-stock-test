@@ -2,6 +2,66 @@ const { getSql } = require('../lib/db');
 const { isCronAuthorized } = require('../lib/sync-common');
 const { runPriceSync, runTwseDisposalSync, runTpexDisposalSync } = require('../lib/sync-service');
 
+
+// v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
+const MIS_HEADERS = {
+  'User-Agent':'Mozilla/5.0',
+  'Accept':'application/json,text/plain,*/*',
+  'Referer':'https://mis.twse.com.tw/stock/index.jsp'
+};
+function misNumber(v){
+  if(v===null||v===undefined)return null;
+  const s=String(v).replace(/,/g,'').trim();
+  if(!s||s==='-'||s==='--')return null;
+  const n=Number(s);return Number.isFinite(n)?n:null;
+}
+function misTradeDate(v){
+  const s=String(v||'').replace(/\D/g,'');
+  return s.length>=8?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`:'';
+}
+function misQuoteTime(row){
+  const t=misNumber(row?.tlong);
+  if(t!==null&&t>1e12)return new Date(t).toISOString();
+  const d=String(row?.d||'').replace(/\D/g,''),tm=String(row?.t||'').trim();
+  if(d.length>=8&&/^\d{1,2}:\d{2}:\d{2}$/.test(tm)){
+    const [hh,mm,ss]=tm.split(':').map(Number);
+    return new Date(Date.UTC(Number(d.slice(0,4)),Number(d.slice(4,6))-1,Number(d.slice(6,8)),hh-8,mm,ss)).toISOString();
+  }
+  return new Date().toISOString();
+}
+async function fetchMisChannel(code,channel){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),7000);
+  try{
+    const exCh=`${channel}_${code}.tw`;
+    const url=`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${encodeURIComponent(exCh)}&json=1&delay=0`;
+    const r=await fetch(url,{headers:MIS_HEADERS,signal:controller.signal});
+    if(!r.ok)throw new Error(`MIS HTTP ${r.status}`);
+    const j=await r.json();
+    const row=(Array.isArray(j?.msgArray)?j.msgArray:[]).find(x=>String(x?.c||'').trim()===code)||j?.msgArray?.[0];
+    const last=misNumber(row?.z);if(!row||last===null)return null;
+    const previousClose=misNumber(row?.y),change=previousClose!==null?last-previousClose:null;
+    return{
+      source:'官方 MIS',code,name:String(row?.nf||row?.n||'').trim(),
+      market:channel==='otc'?'上櫃':'上市',symbol:`${code}.${channel==='otc'?'TWO':'TW'}`,
+      last,previousClose,change,changePct:previousClose&&change!==null?(change/previousClose)*100:null,
+      open:misNumber(row?.o),high:misNumber(row?.h),low:misNumber(row?.l),
+      quoteTime:misQuoteTime(row),tradeDate:misTradeDate(row?.d),officialClose:true
+    };
+  }finally{clearTimeout(timer)}
+}
+async function officialCloseResponse(req,res){
+  const raw=String(req.query.q||req.query.code||'').trim().toUpperCase(),code=raw.replace(/\.(?:TW|TWO)$/i,'');
+  if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
+  const market=String(req.query.market||'');
+  const channels=/上櫃|OTC/i.test(market)?['otc']:/上市|TSE/i.test(market)?['tse']:['tse','otc'];
+  let lastError=null;
+  for(const channel of channels){
+    try{const result=await fetchMisChannel(code,channel);if(result)return res.status(200).json({ok:true,result,fetchedAt:new Date().toISOString()})}
+    catch(e){lastError=e}
+  }
+  return res.status(404).json({ok:false,error:'MIS 暫無可用收盤價',detail:lastError?.message||'no valid last price'});
+}
+
 const CRON_ACTIONS = {
   '0 7 * * 1-5': 'price',
   '0 11 * * 1-5': 'twse',
@@ -65,6 +125,11 @@ async function statusResponse(req, res) {
 module.exports=async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
   try{
+    const mode=String(req.query.mode||'').trim().toLowerCase();
+    if(mode==='official-close'){
+      res.setHeader('Access-Control-Allow-Origin','*');
+      return await officialCloseResponse(req,res);
+    }
     const schedule=String(req.headers?.['x-vercel-cron-schedule']||'').trim();
     const action=requestedAction(req);
 
@@ -83,4 +148,4 @@ module.exports=async function handler(req,res){
   }catch(e){return res.status(500).json({ok:false,error:String(e?.message||e)})}
 };
 
-module.exports._test={requestedAction,CRON_ACTIONS};
+module.exports._test={requestedAction,CRON_ACTIONS,misNumber,misTradeDate};
