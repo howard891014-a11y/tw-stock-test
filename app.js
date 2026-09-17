@@ -362,8 +362,8 @@ function playBreakoutState(r,t){
   return {fresh:true,confirmed,failed,age,level:hit.level,volumeRatio,margin:hit.margin};
 }
 
-// v2.5.7.0 — 波段分析 v1：只在「波段玩法」啟用。
-// 用最近完成的推進波（低點 -> 第一波高點）計算 X / 1.5X / 2X / 2.5X，並以低權重回饋波段適配分。
+// v2.5.7.1 — 波段分析 v2：只在「波段玩法」啟用。
+// 保留第一波 X 延伸，同時辨識第一波後的回測低點，讓第二波才發現標的時有可用的進場／防守參考。
 function swingLow(x){return stageNum(x?.low)??playRowClose(x)}
 function swingHigh(x){return stageNum(x?.high)??playRowClose(x)}
 function swingDate(x){return String(x?.date||x?.tradeDate||x?.datetime||"").slice(0,10)}
@@ -401,10 +401,11 @@ function calculateSwingWave(r,t){
     const low=lowInfo.value;if(low===null||lowInfo.index<0)continue;
     const gain=stagePct(high,low);
     if(gain===null||gain<6||gain>120)continue;
-    const afterLow=swingRangeMin(rows,hi+1,rows.length,swingLow).value;
+    const afterInfo=swingRangeMin(rows,hi+1,rows.length,swingLow);
+    const afterLow=afterInfo.value;
     const pullback=afterLow===null?null:stagePct(afterLow,high);
     if(pullback!==null&&pullback<=-2.5){
-      chosen={low,lowIndex:lowInfo.index,high,highIndex:hi,gain,pullback,completed:true};
+      chosen={low,lowIndex:lowInfo.index,high,highIndex:hi,gain,pullback,completed:true,pullbackLow:afterLow,pullbackIndex:afterInfo.index};
       break;
     }
   }
@@ -426,14 +427,19 @@ function calculateSwingWave(r,t){
   if(!(amplitude>0))return {valid:false,reason:"波段振幅不足"};
   const target=m=>chosen.low+amplitude*m;
   const currentMultiple=(price-chosen.low)/amplitude;
-  let state="第一波形成中";
+  let state="第一波形成中",phase="第一波形成中",nextTarget=chosen.high;
   if(chosen.completed){
-    if(currentMultiple<.7)state="深度回測";
-    else if(currentMultiple<1.05)state="第一波回測／整理";
-    else if(currentMultiple<1.5)state="波段延伸前段";
-    else if(currentMultiple<2)state="1.5X～2X 延伸";
-    else if(currentMultiple<2.5)state="2X～2.5X 延伸";
-    else state="延伸過熱區";
+    if(price<chosen.high*.985){
+      state=currentMultiple<.7?"深度回測":"第一波後回測";
+      phase="第一波後回測";
+      nextTarget=chosen.high;
+    }else if(price<target(1.5)){
+      state="第二波啟動／前高確認";phase="第二波啟動";nextTarget=target(1.5);
+    }else if(price<target(2)){
+      state="1.5X～2X 延伸";phase="第二波延伸";nextTarget=target(2);
+    }else if(price<target(2.5)){
+      state="2X～2.5X 延伸";phase="第二波延伸";nextTarget=target(2.5);
+    }else{state="延伸過熱區";phase="高檔延伸";nextTarget=null}
   }
   let quality=50;
   if(chosen.gain>=10&&chosen.gain<=60)quality+=12;
@@ -447,13 +453,14 @@ function calculateSwingWave(r,t){
   quality=Math.round(playClamp(quality));
 
   return{
-    valid:true,state,quality,currentMultiple,
-    baseLow:chosen.low,firstWave:chosen.high,
+    valid:true,state,phase,quality,currentMultiple,nextTarget,
+    baseLow:chosen.low,firstWave:chosen.high,pullbackLow:chosen.pullbackLow??null,
     ext15:target(1.5),ext20:target(2),ext25:target(2.5),
     gainPct:chosen.gain,pullbackPct:chosen.pullback,
     completed:chosen.completed,
     baseDate:swingDate(rows[chosen.lowIndex]),waveDate:swingDate(rows[chosen.highIndex]),
-    reason:chosen.completed?"以最近完成的推進波低點→第一波高點估算延伸位。":"第一波尚在形成，延伸位會隨近期高點更新。"
+    pullbackDate:chosen.pullbackIndex>=0?swingDate(rows[chosen.pullbackIndex]):"",
+    reason:chosen.completed?"第一波完成後，以回測低點判斷第二波位置；延伸目標仍用第一波振幅估算。":"第一波尚在形成，延伸位會隨近期高點更新。"
   };
 }
 
@@ -514,31 +521,95 @@ function calculatePlayStyle(r,t){
   }
   return {key,period,action,reason,scores,eligible,vr,swingWave,diagnostics:{breakout,rangeNoise,crosses,falseBreakout,breakoutPending,healthyTrend,momentumBurst}};
 }
+function swingWaveSvg(tag,attrs={},text=""){
+  const el=document.createElementNS("http://www.w3.org/2000/svg",tag);
+  for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));
+  if(text!=="")el.textContent=text;
+  return el;
+}
+function swingWaveFmt(v){return Number.isFinite(v)?technicalFmt(v):"--"}
+function swingWaveLabel(svg,x,y,title,value,color,anchor="middle",extra=""){
+  const g=swingWaveSvg("g");
+  const t1=swingWaveSvg("text",{x,y,fill:color,class:"swing-wave-label","text-anchor":anchor},title);
+  const t2=swingWaveSvg("text",{x,y:y+15,fill:"#eef6fb",class:"swing-wave-value","text-anchor":anchor},value);
+  g.append(t1,t2);
+  if(extra){g.append(swingWaveSvg("text",{x,y:y+28,fill:color,class:"swing-wave-multiple","text-anchor":anchor},extra))}
+  svg.append(g);
+}
+function drawSwingWave(w,price){
+  const svg=$("playSwingSvg");if(!svg)return;
+  svg.replaceChildren();
+  if(!w?.valid)return;
+  const pull=Number.isFinite(w.pullbackLow)?w.pullbackLow:Math.min(price,w.firstWave*.9);
+  const vals=[w.baseLow,w.firstWave,pull,price,w.firstWave,w.ext15,w.ext20,w.ext25].filter(Number.isFinite);
+  const lo=Math.min(...vals),hi=Math.max(...vals),pad=Math.max((hi-lo)*.14,1),vmin=lo-pad,vmax=hi+pad;
+  const y=v=>305-((v-vmin)/(vmax-vmin))*245;
+  const xs=[68,215,342,430,510,605,685,758];
+  const pts=[w.baseLow,w.firstWave,pull,price,w.firstWave,w.ext15,w.ext20,w.ext25].map((v,i)=>({x:xs[i],y:y(v),v}));
+  for(let i=0;i<4;i++){
+    const yy=70+i*68;
+    svg.append(swingWaveSvg("line",{x1:45,y1:yy,x2:775,y2:yy,class:"swing-wave-grid"}));
+    const val=vmax-(vmax-vmin)*((yy-60)/245);
+    svg.append(swingWaveSvg("text",{x:38,y:yy+3,class:"swing-wave-axis","text-anchor":"end"},swingWaveFmt(val)));
+  }
+  svg.append(swingWaveSvg("text",{x:16,y:48,class:"swing-wave-axis"},"股價"));
+  svg.append(swingWaveSvg("text",{x:742,y:330,class:"swing-wave-axis"},"時間 →"));
+  const d1=`M ${pts[0].x} ${pts[0].y} C 120 ${pts[0].y-18}, 160 ${pts[1].y+28}, ${pts[1].x} ${pts[1].y} S 286 ${pts[2].y-8}, ${pts[2].x} ${pts[2].y} S 392 ${pts[3].y+6}, ${pts[3].x} ${pts[3].y}`;
+  svg.append(swingWaveSvg("path",{d:d1,class:"swing-wave-path-actual"}));
+  const d2=`M ${pts[3].x} ${pts[3].y} C 462 ${pts[3].y+8}, 480 ${pts[4].y+8}, ${pts[4].x} ${pts[4].y} S 563 ${pts[5].y+12}, ${pts[5].x} ${pts[5].y} S 650 ${pts[6].y+10}, ${pts[6].x} ${pts[6].y} S 730 ${pts[7].y+8}, ${pts[7].x} ${pts[7].y}`;
+  svg.append(swingWaveSvg("path",{d:d2,class:"swing-wave-path-proj"}));
+  svg.append(swingWaveSvg("line",{x1:pts[1].x+12,y1:pts[1].y,x2:pts[4].x-12,y2:pts[4].y,class:"swing-wave-guide"}));
+  const colors=["#35e5e7","#c46cff","#63a9ff","#34dbe6","#c46cff","#c46cff","#c46cff","#c46cff"];
+  pts.forEach((p,i)=>svg.append(swingWaveSvg("circle",{cx:p.x,cy:p.y,r:i===3?7:6,fill:colors[i],class:"swing-wave-dot"})));
+  swingWaveLabel(svg,pts[0].x,Math.min(286,pts[0].y+31),"起漲低點",swingWaveFmt(w.baseLow),"#35e5e7");
+  swingWaveLabel(svg,pts[1].x,Math.max(34,pts[1].y-38),"第一波高點",swingWaveFmt(w.firstWave),"#c46cff");
+  swingWaveLabel(svg,pts[2].x,Math.min(292,pts[2].y+32),"回測低點",swingWaveFmt(pull),"#63a9ff");
+  swingWaveLabel(svg,pts[3].x,Math.min(290,pts[3].y+34),"目前位置",swingWaveFmt(price),"#34dbe6","middle",Number.isFinite(w.currentMultiple)?`(${w.currentMultiple.toFixed(2)}X)`:"");
+  swingWaveLabel(svg,pts[4].x,Math.max(32,pts[4].y-35),"前高確認",swingWaveFmt(w.firstWave),"#c46cff");
+  swingWaveLabel(svg,pts[5].x,Math.max(28,pts[5].y-31),"1.5X",swingWaveFmt(w.ext15),"#c46cff");
+  swingWaveLabel(svg,pts[6].x,Math.max(28,pts[6].y-31),"2X",swingWaveFmt(w.ext20),"#c46cff");
+  swingWaveLabel(svg,pts[7].x,Math.max(28,pts[7].y-31),"2.5X",swingWaveFmt(w.ext25),"#c46cff");
+}
 function resetSwingWave(){
   const box=$("playSwingAnalysis");if(box)box.hidden=true;
-  for(const id of ["playSwingBase","playSwingX","playSwing15","playSwing20","playSwing25","playSwingMultiple"])setText(id,"--");
-  setText("playSwingState","--");setText("playSwingNote","只在系統主玩法判定為波段時啟用。");
+  const svg=$("playSwingSvg");if(svg)svg.replaceChildren();
+  const legend=$("playSwingLegend");if(legend)legend.replaceChildren();
+  setText("playSwingState","--");setText("playSwingGoal","第一目標：--");setText("playSwingNote","只在系統主玩法判定為波段時啟用。");
 }
 function renderSwingWave(x){
   const box=$("playSwingAnalysis");if(!box)return;
   if(x?.key!=="swing"){resetSwingWave();return}
   box.hidden=false;
-  const w=x?.swingWave;
-  if(!w?.valid){
-    setText("playSwingState","資料不足");
-    for(const id of ["playSwingBase","playSwingX","playSwing15","playSwing20","playSwing25","playSwingMultiple"])setText(id,"--");
-    setText("playSwingNote",w?.reason||"近期波段結構不足");
-    return;
+  const w=x?.swingWave,price=stageNum(latestFiveStageResult?.price);
+  if(!w?.valid||price===null){
+    setText("playSwingState","資料不足");setText("playSwingGoal","第一目標：--");setText("playSwingNote",w?.reason||"近期波段結構不足");
+    const svg=$("playSwingSvg");if(svg)svg.replaceChildren();return;
   }
-  setText("playSwingState",`${w.state}｜結構 ${w.quality}分`);
-  setText("playSwingBase",technicalFmt(w.baseLow));
-  setText("playSwingX",technicalFmt(w.firstWave));
-  setText("playSwing15",technicalFmt(w.ext15));
-  setText("playSwing20",technicalFmt(w.ext20));
-  setText("playSwing25",technicalFmt(w.ext25));
-  setText("playSwingMultiple",Number.isFinite(w.currentMultiple)?`${w.currentMultiple.toFixed(2)}X`:"--");
-  const dates=w.baseDate&&w.waveDate?`${w.baseDate} → ${w.waveDate}；`:"";
-  setText("playSwingNote",`${dates}${w.reason} 延伸位是結構參考，不等同券商目標價。`);
+  setText("playSwingState",`目前階段：${w.phase||w.state}｜結構 ${w.quality}分`);
+  let goal="--";
+  if(price<w.firstWave*.985)goal=`先回到前高 ${technicalFmt(w.firstWave)}，突破後看 1.5X / 2X / 2.5X`;
+  else if(price<w.ext15)goal=`前高已確認，下一目標 1.5X ${technicalFmt(w.ext15)}`;
+  else if(price<w.ext20)goal=`下一目標 2X ${technicalFmt(w.ext20)}`;
+  else if(price<w.ext25)goal=`下一目標 2.5X ${technicalFmt(w.ext25)}`;
+  else goal="已進入高檔延伸區，留意過熱與轉弱";
+  setText("playSwingGoal",`第一目標：${goal}`);
+  drawSwingWave(w,price);
+  const legend=$("playSwingLegend");
+  if(legend){
+    const pull=Number.isFinite(w.pullbackLow)?w.pullbackLow:null;
+    const items=[
+      ["#35e5e7",`起漲低點 <b>${swingWaveFmt(w.baseLow)}</b> — 本波段起點`],
+      ["#c46cff",`第一波高點 <b>${swingWaveFmt(w.firstWave)}</b> — 第一波完成`],
+      ["#63a9ff",`回測低點 <b>${swingWaveFmt(pull)}</b> — 第二波進場／防守參考`],
+      ["#34dbe6",`目前位置 <b>${swingWaveFmt(price)}</b> (${w.currentMultiple.toFixed(2)}X)`],
+      ["#c46cff",`前高確認 <b>${swingWaveFmt(w.firstWave)}</b> — 突破後進入第二波`],
+      ["#c46cff",`1.5X <b>${swingWaveFmt(w.ext15)}</b> ｜ 2X <b>${swingWaveFmt(w.ext20)}</b> ｜ 2.5X <b>${swingWaveFmt(w.ext25)}</b>`]
+    ];
+    legend.innerHTML=items.map(([c,t])=>`<div style="color:${c}"><i></i><span style="color:#9fb1c0">${t}</span></div>`).join("");
+  }
+  const dates=w.baseDate&&w.waveDate?`${w.baseDate} → ${w.waveDate}`:"";
+  const pb=w.pullbackDate?`；回測低點 ${w.pullbackDate}`:"";
+  setText("playSwingNote",`${dates}${pb}。${w.reason} 延伸位是結構參考，不等同券商目標價。`);
 }
 function resetPlayStyle(note="搜尋股票後判讀"){
   setText("overviewPlayStyle","--");setText("overviewPlayStyleNote","查看建議策略");setText("playMainPeriod","--");setText("playMainAction",note);setText("playReason","先過濾假突破與箱型反覆，再比較短期／波段；適配分不是勝率。");
