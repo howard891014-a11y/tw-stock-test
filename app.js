@@ -1,4 +1,4 @@
-// v2.5.8.3 — 股性節奏 v2：回檔深度＋週期速度＋恢復能力，歷史股性50%／階段30%／當前動能20% 分流短線與波段
+// v2.5.8.4 — 股性節奏 v3：回吐前波比例＋實際跌幅＋節奏速度＋恢復能力；玩法權重改為股性40%／趨勢40%／動能20%
 const $=id=>document.getElementById(id);
 
 function setText(id,value){
@@ -537,7 +537,7 @@ function calculateSwingWave(r,t){
 }
 
 
-// v2.5.8.3 — 股性節奏引擎 v2：深回檔不是單一開關；反覆 10%+ 回檔且能再發動，才升級為「高波動短週期」。
+// v2.5.8.4 — 股性節奏引擎 v3：先看「回吐前波多少」，再看實際跌幅；深回超過 70% 視為結構重置，不直接當短線。
 function rhythmMedian(values){
   const a=(values||[]).filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;
 }
@@ -580,81 +580,118 @@ function rhythmZigZag(rows,thresholdPct){
   if(trend===-1&&extI>pivots.at(-1)?.i)pivots.push({i:extI,p:extP,type:'low',open:true});
   return pivots;
 }
+function rhythmRetraceShortScore(v){
+  if(!Number.isFinite(v))return 50;
+  if(v<25)return 15;if(v<35)return 28;if(v<45)return 45;if(v<=60)return 88;if(v<=70)return 68;return 15;
+}
+function rhythmActualDropShortScore(v){
+  if(!Number.isFinite(v))return 50;
+  if(v<5)return 18;if(v<8)return 32;if(v<10)return 48;if(v<=15)return 92;if(v<=20)return 72;return 25;
+}
+function rhythmDurationShortScore(upDays,restDays){
+  if(!Number.isFinite(upDays)||!Number.isFinite(restDays))return 50;
+  if(upDays<=10&&restDays<=10)return 92;if(upDays<=12&&restDays<=12)return 76;if(upDays<=15&&restDays<=15)return 55;return 24;
+}
+function rhythmRecoveryShortScore(recovered,recoveryDays){
+  if(!recovered)return 15;if(!Number.isFinite(recoveryDays))return 35;
+  if(recoveryDays<=8)return 95;if(recoveryDays<=12)return 82;if(recoveryDays<=18)return 55;return 34;
+}
 function calculateStockPersonality(rows){
   const a=(rows||[]).filter(x=>playRowClose(x)!==null).slice(-160);
   if(a.length<60)return {valid:false,label:'股性資料不足',kind:'unknown',shortBias:0,swingBias:0,shortFit:50,swingFit:50};
 
   const ranges=rhythmRangePct(a),medianRange=rhythmMedian(ranges)??2.2,
         threshold=stageClamp(medianRange*1.35,2.5,6.0),pivots=rhythmZigZag(a,threshold),
-        momentumRuns=rhythmMomentumRuns(a),upLegs=[],restLegs=[];
+        momentumRuns=rhythmMomentumRuns(a),upLegs=[],restLegs=[],cycleRows=[];
   for(let i=1;i<pivots.length;i++){
     const x=pivots[i-1],y=pivots[i],days=Math.max(1,y.i-x.i),ret=stagePct(y.p,x.p);if(ret===null)continue;
     if(x.type==='low'&&y.type==='high'&&ret>0)upLegs.push({days,ret,from:x,to:y});
     if(x.type==='high'&&y.type==='low'&&ret<0)restLegs.push({days,ret,from:x,to:y});
   }
 
-  // 只有「深回檔後又能重新發動」才算規律高波動；單次崩跌不直接貼短線標籤。
-  let deepPullbacks=0,recoveredDeep=0;
-  for(let i=1;i<pivots.length-1;i++){
-    const h=pivots[i-1],l=pivots[i],n=pivots[i+1];
-    if(h.type!=='high'||l.type!=='low'||n.type!=='high')continue;
-    const dd=Math.abs(stagePct(l.p,h.p)??0),rebound=stagePct(n.p,l.p)??0,recoverToPrior=stagePct(n.p,h.p)??-99;
-    if(dd>=10){deepPullbacks++;if(rebound>=8||recoverToPrior>=-3)recoveredDeep++}
+  // 完整週期：起漲低點 A → 高點 B → 回測低點 C → 下一個高點 D。
+  // 回吐比例 = (B-C)/(B-A)。這是本版最核心的股性判斷，不再只看 C 相對 B 跌了幾%。
+  for(let i=0;i+3<pivots.length;i++){
+    const A=pivots[i],B=pivots[i+1],C=pivots[i+2],D=pivots[i+3];
+    if(A.type!=='low'||B.type!=='high'||C.type!=='low'||D.type!=='high')continue;
+    const amplitude=B.p-A.p;if(!(amplitude>0))continue;
+    const risePct=stagePct(B.p,A.p),actualDrop=Math.abs(stagePct(C.p,B.p)??0),retracePct=(B.p-C.p)/amplitude*100,
+          upDays=Math.max(1,B.i-A.i),restDays=Math.max(1,C.i-B.i),recovered=D.p>=B.p*.97,
+          recoveryDays=recovered?Math.max(1,D.i-C.i):null;
+    const cycleScore=.40*rhythmRetraceShortScore(retracePct)+.25*rhythmActualDropShortScore(actualDrop)+.20*rhythmDurationShortScore(upDays,restDays)+.15*rhythmRecoveryShortScore(recovered,recoveryDays);
+    cycleRows.push({risePct,actualDrop,retracePct,upDays,restDays,recovered,recoveryDays,cycleScore,A,B,C,D});
   }
 
   const zigUpDays=rhythmMedian(upLegs.map(x=>x.days)),zigRestDays=rhythmMedian(restLegs.map(x=>x.days)),
-        upDays=momentumRuns.upDays??zigUpDays,restDays=momentumRuns.restDays??zigRestDays,
-        upGain=rhythmMedian(upLegs.map(x=>x.ret)),pullback=rhythmMedian(restLegs.map(x=>Math.abs(x.ret)));
+        upDays=rhythmMedian(cycleRows.map(x=>x.upDays))??momentumRuns.upDays??zigUpDays,
+        restDays=rhythmMedian(cycleRows.map(x=>x.restDays))??momentumRuns.restDays??zigRestDays,
+        upGain=rhythmMedian(upLegs.map(x=>x.ret)),pullback=rhythmMedian(cycleRows.map(x=>x.actualDrop))??rhythmMedian(restLegs.map(x=>Math.abs(x.ret))),
+        retrace=rhythmMedian(cycleRows.map(x=>x.retracePct)),recoveryDays=rhythmMedian(cycleRows.filter(x=>x.recovered).map(x=>x.recoveryDays)),
+        shortRhythmScore=rhythmMedian(cycleRows.map(x=>x.cycleScore));
   const ret60=stageRet(a,Math.min(60,a.length-1)),ret120=stageRet(a,Math.min(120,a.length-1)),
         above20=stageAboveMaRatio(a,60,20),cross20=playMaCrossCount(a,60,20),five=rhythmFiveDayReturns(a),
         max5=five.length?Math.max(...five):null;
-  const completedCycles=Math.max(momentumRuns.cycles,Math.min(upLegs.length,restLegs.length)),
+  const completedCycles=cycleRows.length||Math.max(momentumRuns.cycles,Math.min(upLegs.length,restLegs.length)),
         rising=(ret60??0)>=3||(ret120??0)>=8,
-        highVol=medianRange>=3.0||(pullback??0)>=10||(max5??0)>=12,
         fastCycle=(upDays??99)>=2&&(upDays??99)<=10&&(restDays??99)>=2&&(restDays??99)<=11,
-        deepRhythm=completedCycles>=2&&deepPullbacks>=2&&recoveredDeep>=1&&(upDays??99)<=12&&(restDays??99)<=12,
-        burst=((zigUpDays??upDays??99)<=6&&(upGain??0)>=14)||(completedCycles>=2&&fastCycle&&(max5??0)>=12),
-        shortCycle=completedCycles>=2&&rising&&fastCycle&&(upGain??0)>=3,
-        range=!deepRhythm&&((cross20>=7&&Math.abs(ret60??0)<=12)||(completedCycles>=3&&!rising&&Math.abs(ret120??0)<=15)),
-        swingTrend=!range&&!deepRhythm&&!shortCycle&&(((upDays??0)>=11&&(upGain??0)>=8)||((above20??0)>=.68&&cross20<=4&&(ret60??0)>=8));
+        stableTrend=(above20??0)>=.68&&cross20<=4&&(ret60??0)>=8;
+
+  const qualifyingShortCycles=cycleRows.filter(x=>x.cycleScore>=68&&x.actualDrop>=10&&x.retracePct>=45&&x.retracePct<=70&&x.upDays<=12&&x.restDays<=12&&x.recovered&&(x.recoveryDays??99)<=12).length,
+        shortLikeCycles=cycleRows.filter(x=>x.cycleScore>=60&&x.retracePct<=70&&x.upDays<=11&&x.restDays<=12).length,
+        deepPullbacks=cycleRows.filter(x=>x.actualDrop>=10).length,
+        recoveredDeep=cycleRows.filter(x=>x.actualDrop>=10&&x.recovered&&(x.recoveryDays??99)<=12).length,
+        resetCycles=cycleRows.filter(x=>x.retracePct>70).length,
+        shallowSwingCycles=cycleRows.filter(x=>x.retracePct<45&&x.actualDrop<10).length;
+  const structuralReset=cycleRows.length>=2&&resetCycles>=Math.max(2,Math.ceil(cycleRows.length*.5));
+  const deepRhythm=cycleRows.length>=2&&qualifyingShortCycles>=2&&qualifyingShortCycles>=Math.ceil(cycleRows.length*.5);
+  const burst=!structuralReset&&(((zigUpDays??upDays??99)<=6&&(upGain??0)>=14)||(completedCycles>=2&&fastCycle&&(max5??0)>=12&&(shortRhythmScore??0)>=58));
+  const shortCycle=!structuralReset&&!deepRhythm&&completedCycles>=2&&rising&&fastCycle&&(shortRhythmScore??0)>=58&&shortLikeCycles>=2;
+  const range=!deepRhythm&&!structuralReset&&((cross20>=7&&Math.abs(ret60??0)<=12)||(completedCycles>=3&&!rising&&Math.abs(ret120??0)<=15));
+  const swingTrend=!range&&!deepRhythm&&!shortCycle&&!structuralReset&&(
+    (stableTrend&&((retrace??0)<50||shallowSwingCycles>=Math.max(1,Math.floor(cycleRows.length/2))))||
+    ((upDays??0)>=12&&(upGain??0)>=8&&(retrace===null||retrace<50))
+  );
 
   let kind='mixed',label='混合節奏',shortBias=0,swingBias=0;
-  if(deepRhythm){kind='high-vol-short';label='高波動短週期';shortBias=30;swingBias=-20}
+  if(structuralReset){kind='reset';label='深回重置';shortBias=-10;swingBias=-12}
+  else if(deepRhythm){kind='high-vol-short';label='高波動短週期';shortBias=24;swingBias=-16}
   else if(range){kind='range';label='箱型震盪';shortBias=-7;swingBias=-10}
-  else if(burst){kind='burst';label='爆發短線';shortBias=18;swingBias=-8}
-  else if(shortCycle){kind='short-cycle';label='短週期墊高';shortBias=22;swingBias=-14}
-  else if(swingTrend){kind='swing-trend';label='波段趨勢';shortBias=-5;swingBias=16}
+  else if(burst){kind='burst';label='爆發短線';shortBias=16;swingBias=-8}
+  else if(shortCycle){kind='short-cycle';label='短週期墊高';shortBias=16;swingBias=-9}
+  else if(swingTrend){kind='swing-trend';label='波段趨勢';shortBias=-6;swingBias=18}
   else{
-    if((upDays??99)<=9){shortBias+=7;swingBias-=3}
-    if((upDays??0)>=12){swingBias+=7;shortBias-=2}
-    if(highVol&&completedCycles>=2){shortBias+=7;swingBias-=4}
-    if((pullback??0)>=10){shortBias+=6;swingBias-=5}
+    if(cycleRows.length>=2&&(shortRhythmScore??0)>=62&&fastCycle){shortBias+=7;swingBias-=3}
+    if(stableTrend&&(retrace===null||retrace<45)){swingBias+=10;shortBias-=3}
+    if((upDays??0)>=13){swingBias+=6;shortBias-=2}
+    // 單看 10%+ 跌幅只能小幅影響，避免又把大多數高波動股全部吸成短線。
+    if((pullback??0)>=10&&cycleRows.length>=2)shortBias+=2;
     if(cross20>=6){shortBias-=2;swingBias-=5}
   }
 
-  // 歷史股性本身先形成 0~100 的短線／波段適配分，後面占最終玩法 50%。
   let shortFit=50+shortBias,swingFit=50+swingBias;
-  // 依最終股性類型套一次主偏好，避免同時符合 burst / swingTrend 時互相覆蓋。
-  if(kind==='high-vol-short'){shortFit=Math.max(shortFit,86);swingFit=Math.min(swingFit,34)}
-  else if(kind==='short-cycle'){shortFit=Math.max(shortFit,76);swingFit=Math.min(swingFit,46)}
-  else if(kind==='burst'){shortFit=Math.max(shortFit,78);swingFit=Math.min(swingFit,44)}
-  else if(kind==='swing-trend'){swingFit=Math.max(swingFit,82);shortFit=Math.min(shortFit,44)}
+  if(kind==='high-vol-short'){shortFit=Math.max(shortFit,82);swingFit=Math.min(swingFit,40)}
+  else if(kind==='short-cycle'){shortFit=Math.max(shortFit,72);swingFit=Math.min(swingFit,50)}
+  else if(kind==='burst'){shortFit=Math.max(shortFit,76);swingFit=Math.min(swingFit,45)}
+  else if(kind==='swing-trend'){swingFit=Math.max(swingFit,82);shortFit=Math.min(shortFit,42)}
   else if(kind==='range'){shortFit=Math.min(shortFit,42);swingFit=Math.min(swingFit,40)}
-  if(highVol&&completedCycles>=2&&!range&&kind!=='swing-trend'){shortFit+=5;swingFit-=3}
+  else if(kind==='reset'){shortFit=Math.min(shortFit,40);swingFit=Math.min(swingFit,38)}
   shortFit=Math.round(playClamp(shortFit));swingFit=Math.round(playClamp(swingFit));
 
-  const strongShort=shortFit>=75&&shortFit-swingFit>=22,
-        strongSwing=swingFit>=75&&swingFit-shortFit>=22;
+  // strongShort 只允許「反覆深回＋快速恢復」的高可信股性觸發，避免再次全部變短線。
+  const strongShort=kind==='high-vol-short'&&qualifyingShortCycles>=2&&shortFit-swingFit>=28,
+        strongSwing=kind==='swing-trend'&&swingFit-shortFit>=25;
   const parts=[];
   if(upDays!==null)parts.push(`典型上漲 ${Math.round(upDays)}日`);
   if(restDays!==null)parts.push(`整理 ${Math.round(restDays)}日`);
-  if(completedCycles)parts.push(`近半年 ${completedCycles} 個循環`);
-  if(pullback!==null)parts.push(`回檔中位 ${pullback.toFixed(1)}%`);
-  if(deepPullbacks)parts.push(`10%+深回 ${deepPullbacks}次／再發動 ${recoveredDeep}次`);
+  if(retrace!==null)parts.push(`回吐前波 ${retrace.toFixed(0)}%`);
+  if(pullback!==null)parts.push(`實際回檔 ${pullback.toFixed(1)}%`);
+  if(recoveryDays!==null)parts.push(`恢復約 ${Math.round(recoveryDays)}日`);
+  if(cycleRows.length)parts.push(`完整循環 ${cycleRows.length}次`);
+  if(resetCycles)parts.push(`>70%重置 ${resetCycles}次`);
 
   return {valid:true,kind,label,detail:parts.join('｜')||'歷史節奏已分析',shortBias,swingBias,shortFit,swingFit,
-    upDays,restDays,upGain,pullback,cycles:completedCycles,ret60,ret120,above20,cross20,max5,medianRange,threshold,
-    shortCycle,swingTrend,range,burst,highVol,deepRhythm,deepPullbacks,recoveredDeep,strongShort,strongSwing};
+    upDays,restDays,upGain,pullback,retrace,recoveryDays,cycles:completedCycles,ret60,ret120,above20,cross20,max5,medianRange,threshold,
+    shortRhythmScore,shortCycle,swingTrend,range,burst,deepRhythm,structuralReset,deepPullbacks,recoveredDeep,qualifyingShortCycles,shortLikeCycles,resetCycles,strongShort,strongSwing};
 }
 
 // v2.5.8.1 — 短線玩法專屬引擎。新聞只做低權重修正，核心資格仍由技術／突破決定。
@@ -762,7 +799,11 @@ function calculatePlayStyle(r,t){
   const momentumBurst=!rangeNoise&&!overheated&&score>=68&&(rsi===null||(rsi>=52&&rsi<=76))&&(ratio20===null||ratio20>=1.05)&&(path.ret20??0)>=6;
   const strongShortPersonality=!!personality?.strongShort;
   const strongSwingPersonality=!!personality?.strongSwing;
-  const rhythmShortTrigger=!!(personality?.valid&&(personality.shortCycle||personality.burst||personality.deepRhythm)&&shortEngine?.valid&&shortEngine?.tradeable!==false&&(shortEngine.score??0)>=52&&((path.ret20??0)>=0||(shortEngine.ret5??0)>=0||breakout.confirmed));
+  const rhythmShortTrigger=!!(personality?.valid&&!personality.structuralReset&&(
+    (personality.deepRhythm&&(personality.qualifyingShortCycles??0)>=2)||
+    (personality.shortCycle&&(personality.cycles??0)>=2&&(personality.shortRhythmScore??0)>=60)||
+    personality.burst
+  )&&shortEngine?.valid&&shortEngine?.tradeable!==false&&(shortEngine.score??0)>=55&&((path.ret20??0)>=0||(shortEngine.ret5??0)>=0||breakout.confirmed));
 
   // 先做資格：強短線股性若當下沒有短線進場條件，就寧可「觀察」，不硬塞成 2~4 週波段。
   let shortEligible=!overheated&&!falseBreakout&&stage>=2&&stage<=4&&shortEngine?.tradeable!==false&&((breakout.fresh&&breakout.confirmed&&breakout.age<=4)||momentumBurst||rhythmShortTrigger);
@@ -772,7 +813,7 @@ function calculatePlayStyle(r,t){
   if(rangeNoise&&!breakout.confirmed){shortEligible=false;swingEligible=false}
   if(breakoutPending){shortEligible=false;if(stage===2||rangeNoise)swingEligible=false}
 
-  // v2.5.8.3：玩法適配 = 歷史股性 50% + 當前階段/趨勢 30% + 現在動能 20%。
+  // v2.5.8.4：玩法適配 = 歷史股性 40% + 當前階段/趨勢 40% + 現在動能 20%；降低股性單獨把玩法吸成短線的機率。
   const histShort=personality?.valid?(personality.shortFit??50):50,
         histSwing=personality?.valid?(personality.swingFit??50):50;
   let stageShort=50,stageSwing=50;
@@ -795,8 +836,8 @@ function calculatePlayStyle(r,t){
   if(overheated){nowShort-=20;nowSwing-=12}
   nowShort=playClamp(nowShort);nowSwing=playClamp(nowSwing);
 
-  let short=Math.round(playClamp(histShort*.50+stageShort*.30+nowShort*.20)),
-      swing=Math.round(playClamp(histSwing*.50+stageSwing*.30+nowSwing*.20));
+  let short=Math.round(playClamp(histShort*.40+stageShort*.40+nowShort*.20)),
+      swing=Math.round(playClamp(histSwing*.40+stageSwing*.40+nowSwing*.20));
   const scores={short,swing,long:null},eligible={short:shortEligible,swing:swingEligible,long:false};
 
   if(stage===1)return {key:"observe",period:"先觀察",action:sub.includes("築底")?"築底修復，等突破確認":"等待轉強確認",reason:`目前為第1階段「${r.name}｜${sub}」，先等中期結構轉強。`,scores,eligible,vr,swingWave,shortEngine,personality};
@@ -821,7 +862,7 @@ function calculatePlayStyle(r,t){
     action="短週期股性，等下一次短線發動";
     reason=`股性：${personality?.label||"短週期"}${personality?.detail?`（${personality.detail}）`:""}；這類股不強行改判波段，等短線引擎重新通過。`;
   }
-  return {key,period,action,reason,scores,eligible,vr,swingWave,shortEngine,personality,diagnostics:{breakout,rangeNoise,crosses,falseBreakout,breakoutPending,healthyTrend,momentumBurst,rhythmShortTrigger,strongShortPersonality,strongSwingPersonality,weights:{personality:.5,stage:.3,current:.2},shortEngine,personality}};
+  return {key,period,action,reason,scores,eligible,vr,swingWave,shortEngine,personality,diagnostics:{breakout,rangeNoise,crosses,falseBreakout,breakoutPending,healthyTrend,momentumBurst,rhythmShortTrigger,strongShortPersonality,strongSwingPersonality,weights:{personality:.4,stage:.4,current:.2},shortEngine,personality}};
 }
 function swingWaveSvg(tag,attrs={},text=""){
   const el=document.createElementNS("http://www.w3.org/2000/svg",tag);
