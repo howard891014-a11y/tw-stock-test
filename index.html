@@ -1148,26 +1148,25 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         </article>
 
         <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
-      <div class="card-title">建議玩法 <span class="badge">v7</span></div>
+      <div class="card-title">建議玩法 <span class="badge">v8</span></div>
       <div class="playstyle-hero">
-        <span>主建議週期</span>
+        <span>主建議玩法</span>
         <strong id="playMainPeriod">--</strong>
         <b id="playMainAction">搜尋股票後判讀</b>
-        <p id="playReason">系統會先判斷現在是否適合操作，再比較短期與波段；適配分不是勝率。</p>
+        <p id="playReason">短期、波段、長期各自獨立計分；最高分為主玩法，進場時機另外判斷。</p>
         <div class="playstyle-personality"><span>股性節奏</span><b id="playPersonality">--</b><small id="playPersonalityNote">等待歷史日K分析</small></div>
-        <div class="playstyle-position-mode"><span>操作型態</span><b id="playPositionMode">--</b><small id="playPositionModeNote">等待短線／波段股性分流</small></div>
+        <div class="playstyle-position-mode"><span>操作型態</span><b id="playPositionMode">--</b><small id="playPositionModeNote">等待部位策略分流</small></div>
       </div>
       <div class="playstyle-fit" aria-label="三週期適配度">
-        <div class="playstyle-fit-row" data-play="short"><div class="playstyle-fit-head"><span>短期 <small>3～5交易日</small></span><b id="playShortLabel">--</b></div><div class="playstyle-bar"><i id="playShortBar"></i></div><em id="playShortScore">--</em></div>
-        <div class="playstyle-fit-row" data-play="swing"><div class="playstyle-fit-head"><span>波段 <small>2～4週</small></span><b id="playSwingLabel">--</b></div><div class="playstyle-bar"><i id="playSwingBar"></i></div><em id="playSwingScore">--</em></div>
-        <div class="playstyle-fit-row" data-play="long"><div class="playstyle-fit-head"><span>長期 <small>半年以上</small></span><b id="playLongLabel">--</b></div><div class="playstyle-bar"><i id="playLongBar"></i></div><em id="playLongScore">--</em></div>
+        <div class="playstyle-fit-row" data-play="short"><div class="playstyle-fit-head"><span>短期</span><b id="playShortLabel">--</b></div><div class="playstyle-bar"><i id="playShortBar"></i></div><em id="playShortScore">--</em></div>
+        <div class="playstyle-fit-row" data-play="swing"><div class="playstyle-fit-head"><span>波段</span><b id="playSwingLabel">--</b></div><div class="playstyle-bar"><i id="playSwingBar"></i></div><em id="playSwingScore">--</em></div>
+        <div class="playstyle-fit-row" data-play="long"><div class="playstyle-fit-head"><span>長期</span><b id="playLongLabel">--</b></div><div class="playstyle-bar"><i id="playLongBar"></i></div><em id="playLongScore">--</em></div>
       </div>
       <section class="playstyle-short-analysis" id="playShortAnalysis" hidden>
         <div class="playstyle-short-head">
           <div>
             <span>短線分析</span>
             <strong id="playShortState">--</strong>
-            <small id="playShortHold">預計持有：3～5交易日</small>
           </div>
           <em>短線玩法專屬</em>
         </div>
