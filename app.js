@@ -1,4 +1,4 @@
-// v2.5.8.1 — 短線玩法專屬引擎 v1：1～5日動能／均線加速／量價／MACD-KD-RSI／K線／新聞催化／短壓力
+// v2.5.8.2 — 股性節奏 v1：近160日日K辨識短週期墊高／爆發短線／波段趨勢／箱型震盪，參與短線/波段分流
 const $=id=>document.getElementById(id);
 
 function setText(id,value){
@@ -343,7 +343,7 @@ function renderFiveStage(t,currentPrice){
   latestFiveStageResult=r;latestTechnicalForPlay=t;renderPlayStyle();
 }
 
-// 建議玩法 v4：資格制＋短線專屬引擎，再比較短期／波段。
+// 建議玩法 v5：先辨識股性節奏，再用資格制＋短線專屬引擎比較短期／波段。
 // 這版補兩個防呆：① 假突破確認 ② 箱型反覆濾網；避免單日突破就判短線，也避免盤整區來回切玩法。
 function playClamp(n,min=0,max=100){return Math.max(min,Math.min(max,Number(n)||0))}
 function playFitLabel(n){return n>=78?"高":n>=58?"中高":n>=42?"中":"低"}
@@ -537,6 +537,78 @@ function calculateSwingWave(r,t){
 }
 
 
+// v2.5.8.2 — 股性節奏引擎：用近 160 日日 K 自動辨識「短週期墊高／爆發短線／波段趨勢／箱型震盪／混合節奏」。
+function rhythmMedian(values){
+  const a=(values||[]).filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+function rhythmFiveDayReturns(rows){
+  const out=[];for(let i=5;i<(rows||[]).length;i++){const c=playRowClose(rows[i]),b=playRowClose(rows[i-5]),v=stagePct(c,b);if(v!==null)out.push(v)}return out;
+}
+function rhythmRangePct(rows){
+  const out=[];for(let i=1;i<(rows||[]).length;i++){const h=playRowHigh(rows[i]),l=swingLow(rows[i]),pc=playRowClose(rows[i-1]);if(h===null||l===null||pc===null||pc===0)continue;out.push((h-l)/pc*100)}return out;
+}
+function rhythmMomentumRuns(rows){
+  const states=[];for(let i=5;i<(rows||[]).length;i++){
+    const c=playRowClose(rows[i]),b3=playRowClose(rows[i-3]),b5=playRowClose(rows[i-5]);if(c===null||b3===null||b5===null)continue;
+    const r3=stagePct(c,b3),r5=stagePct(c,b5),up=(r3??-99)>=1.2||(r5??-99)>=2.4;states.push(up?'up':'rest');
+  }
+  const runs=[];for(const st of states){const last=runs.at(-1);if(last&&last.type===st)last.days++;else runs.push({type:st,days:1})}
+  const core=runs.slice(1,-1),upRuns=core.filter(x=>x.type==='up').map(x=>x.days),restRuns=core.filter(x=>x.type==='rest').map(x=>x.days);let cycles=0;
+  for(let i=1;i<runs.length-1;i++)if(runs[i-1].type==='up'&&runs[i].type==='rest'&&runs[i+1]?.type==='up')cycles++;
+  return {upDays:rhythmMedian(upRuns),restDays:rhythmMedian(restRuns),cycles,runs};
+}
+function rhythmZigZag(rows,thresholdPct){
+  const a=(rows||[]).filter(x=>playRowClose(x)!==null);if(a.length<12)return [];
+  const closes=a.map(playRowClose);let trend=0,pivotI=0,pivotP=closes[0],extI=0,extP=closes[0],scanMinI=0,scanMin=closes[0],scanMaxI=0,scanMax=closes[0];const pivots=[];
+  for(let i=1;i<closes.length;i++){
+    const c=closes[i];if(c<scanMin){scanMin=c;scanMinI=i}if(c>scanMax){scanMax=c;scanMaxI=i}
+    if(trend===0){
+      const up=stagePct(c,scanMin),down=stagePct(c,scanMax);
+      if(up!==null&&up>=thresholdPct){pivotI=scanMinI;pivotP=scanMin;pivots.push({i:pivotI,p:pivotP,type:'low'});trend=1;extI=i;extP=c;scanMax=c;scanMaxI=i}
+      else if(down!==null&&down<=-thresholdPct){pivotI=scanMaxI;pivotP=scanMax;pivots.push({i:pivotI,p:pivotP,type:'high'});trend=-1;extI=i;extP=c;scanMin=c;scanMinI=i}
+      continue;
+    }
+    if(trend===1){
+      if(c>=extP){extP=c;extI=i}
+      const rev=stagePct(c,extP);if(rev!==null&&rev<=-thresholdPct){pivots.push({i:extI,p:extP,type:'high'});trend=-1;extI=i;extP=c;scanMin=c;scanMinI=i}
+    }else{
+      if(c<=extP){extP=c;extI=i}
+      const rev=stagePct(c,extP);if(rev!==null&&rev>=thresholdPct){pivots.push({i:extI,p:extP,type:'low'});trend=1;extI=i;extP=c;scanMax=c;scanMaxI=i}
+    }
+  }
+  if(trend===1&&extI>pivots.at(-1)?.i)pivots.push({i:extI,p:extP,type:'high',open:true});
+  if(trend===-1&&extI>pivots.at(-1)?.i)pivots.push({i:extI,p:extP,type:'low',open:true});
+  return pivots;
+}
+function calculateStockPersonality(rows){
+  const a=(rows||[]).filter(x=>playRowClose(x)!==null).slice(-160);if(a.length<60)return {valid:false,label:'股性資料不足',kind:'unknown',shortBias:0,swingBias:0};
+  const ranges=rhythmRangePct(a),medianRange=rhythmMedian(ranges)??2.2,threshold=stageClamp(medianRange*1.35,2.5,6.0),pivots=rhythmZigZag(a,threshold),momentumRuns=rhythmMomentumRuns(a),upLegs=[],restLegs=[];
+  for(let i=1;i<pivots.length;i++){
+    const x=pivots[i-1],y=pivots[i],days=Math.max(1,y.i-x.i),ret=stagePct(y.p,x.p);if(ret===null)continue;
+    if(x.type==='low'&&y.type==='high'&&ret>0)upLegs.push({days,ret});
+    if(x.type==='high'&&y.type==='low'&&ret<0)restLegs.push({days,ret});
+  }
+  const zigUpDays=rhythmMedian(upLegs.map(x=>x.days)),zigRestDays=rhythmMedian(restLegs.map(x=>x.days)),upDays=momentumRuns.upDays??zigUpDays,restDays=momentumRuns.restDays??zigRestDays,upGain=rhythmMedian(upLegs.map(x=>x.ret)),pullback=rhythmMedian(restLegs.map(x=>Math.abs(x.ret)));
+  const ret60=stageRet(a,Math.min(60,a.length-1)),ret120=stageRet(a,Math.min(120,a.length-1)),above20=stageAboveMaRatio(a,60,20),cross20=playMaCrossCount(a,60,20),five=rhythmFiveDayReturns(a),max5=five.length?Math.max(...five):null;
+  const completedCycles=Math.max(momentumRuns.cycles,Math.min(upLegs.length,restLegs.length)),rising=(ret60??0)>=3||(ret120??0)>=8;
+  const burst=(max5??0)>=12||((zigUpDays??99)<=6&&(upGain??0)>=14);
+  const shortCycle=completedCycles>=2&&rising&&(upDays??99)>=2&&(upDays??99)<=10&&(restDays??99)>=2&&(restDays??99)<=11&&(upGain??0)>=3;
+  const range=((cross20>=7&&Math.abs(ret60??0)<=12)||(completedCycles>=3&&!rising&&Math.abs(ret120??0)<=15));
+  const swingTrend=!range&&!shortCycle&&(((upDays??0)>=11&&(upGain??0)>=8)||((above20??0)>=.68&&cross20<=4&&(ret60??0)>=8));
+  let kind='mixed',label='混合節奏',shortBias=0,swingBias=0;
+  if(range){kind='range';label='箱型震盪';shortBias=-7;swingBias=-10}
+  else if(burst){kind='burst';label='爆發短線';shortBias=16;swingBias=-7}
+  else if(shortCycle){kind='short-cycle';label='短週期墊高';shortBias=20;swingBias=-14}
+  else if(swingTrend){kind='swing-trend';label='波段趨勢';shortBias=-4;swingBias=14}
+  else{
+    if((upDays??99)<=9){shortBias+=7;swingBias-=3}
+    if((upDays??0)>=12){swingBias+=7;shortBias-=2}
+    if(cross20>=6){shortBias-=3;swingBias-=5}
+  }
+  const parts=[];if(upDays!==null)parts.push(`典型上漲 ${Math.round(upDays)}日`);if(restDays!==null)parts.push(`整理 ${Math.round(restDays)}日`);if(completedCycles)parts.push(`近半年 ${completedCycles} 個循環`);if(pullback!==null)parts.push(`回檔中位 ${pullback.toFixed(1)}%`);
+  return {valid:true,kind,label,detail:parts.join('｜')||'歷史節奏已分析',shortBias,swingBias,upDays,restDays,upGain,pullback,cycles:completedCycles,ret60,ret120,above20,cross20,max5,threshold,shortCycle,swingTrend,range,burst};
+}
+
 // v2.5.8.1 — 短線玩法專屬引擎。新聞只做低權重修正，核心資格仍由技術／突破決定。
 function shortCurrentDate(){return dayKey(currentStock?.tradeDate||currentStock?.quoteTime||new Date().toISOString())}
 function shortReturnN(rows,n,price){
@@ -630,7 +702,7 @@ function calculateShortEngine(r,t,breakout=playBreakoutState(r,t)){
 function calculatePlayStyle(r,t){
   if(!r)return null;
   const stage=r.stage,sub=r.substate||"",score=stageNum(t?.analysis?.overall?.score)??50,rsi=stageNum(t?.momentum?.rsi14),ratio20=stageNum(t?.volume?.ratio20),vr=playValuationResult();
-  const breakout=playBreakoutState(r,t),path=r.path||{},crosses=playMaCrossCount(path.rows||[],20,20),swingWave=calculateSwingWave(r,t),shortEngine=calculateShortEngine(r,t,breakout);
+  const breakout=playBreakoutState(r,t),path=r.path||{},crosses=playMaCrossCount(path.rows||[],20,20),swingWave=calculateSwingWave(r,t),shortEngine=calculateShortEngine(r,t,breakout),personality=calculateStockPersonality(path.rows||[]);
   const rangeNoise=!!(r.flags?.tangled&&crosses>=3&&Math.abs(path.ret20??0)<=10);
   const overheated=stage===5||r.flags?.extremeHeat||(rsi!==null&&rsi>=80)||((r.bias20??0)>=18&&(rsi??0)>=74);
   const falseBreakout=breakout.fresh&&breakout.failed;
@@ -638,15 +710,18 @@ function calculatePlayStyle(r,t){
   const ma20Up=(path.ma20Slope10??-99)>.3,ma60Up=(path.ma60Slope20??-99)>0;
   const healthyTrend=(stage>=3&&stage<=4)&&(r.flags?.above60!==false)&&(ma20Up||ma60Up)&&!rangeNoise;
   const momentumBurst=!rangeNoise&&!overheated&&score>=68&&(rsi===null||(rsi>=52&&rsi<=76))&&(ratio20===null||ratio20>=1.05)&&(path.ret20??0)>=6;
+  // 股性可讓「漲幾天、整理幾天」的短週期股票直接進入短線候選，不再被漂亮的 MA20/60 自動吸到波段。
+  const rhythmShortTrigger=!!(personality?.valid&&(personality.shortCycle||personality.burst)&&shortEngine?.valid&&shortEngine?.tradeable!==false&&(shortEngine.score??0)>=54&&((path.ret20??0)>=1||(shortEngine.ret5??0)>=1||breakout.confirmed));
 
-  // 資格制：短期必須有「新鮮突破已確認」或非常明確的短線加速；波段必須有中期趨勢，箱型未突破不得硬判波段。
-  let shortEligible=!overheated&&!falseBreakout&&stage>=2&&stage<=4&&shortEngine?.tradeable!==false&&((breakout.fresh&&breakout.confirmed&&breakout.age<=4)||momentumBurst);
+  // 資格制：短期可由新鮮突破、動能加速或歷史短週期股性觸發；波段仍要求中期趨勢。
+  let shortEligible=!overheated&&!falseBreakout&&stage>=2&&stage<=4&&shortEngine?.tradeable!==false&&((breakout.fresh&&breakout.confirmed&&breakout.age<=4)||momentumBurst||rhythmShortTrigger);
   let swingEligible=!overheated&&!falseBreakout&&stage>=2&&stage<=4&&(healthyTrend||(stage===2&&breakout.fresh&&breakout.confirmed&&ma20Up));
   if(rangeNoise&&!breakout.confirmed){shortEligible=false;swingEligible=false}
   if(breakoutPending){shortEligible=false;if(stage===2||rangeNoise)swingEligible=false}
 
   let short=38,swing=40;
   short+=playClamp((score-50)*.28,-12,14);swing+=playClamp((score-50)*.18,-9,10);
+  if(personality?.valid){short+=personality.shortBias||0;swing+=personality.swingBias||0}
   if(breakout.fresh){short+=breakout.confirmed?24:-5;swing+=breakout.confirmed?8:0;if((breakout.age??9)<=2)short+=6;if((breakout.volumeRatio??ratio20??0)>=1.3)short+=5}
   if(momentumBurst)short+=10;
   if(shortEngine?.valid)short+=Math.round(stageClamp((shortEngine.score-50)*.24,-10,12));
@@ -664,11 +739,11 @@ function calculatePlayStyle(r,t){
   short=Math.round(playClamp(short));swing=Math.round(playClamp(swing));
   const scores={short,swing,long:null},eligible={short:shortEligible,swing:swingEligible,long:false};
 
-  if(stage===1)return {key:"observe",period:"先觀察",action:sub.includes("築底")?"築底修復，等突破確認":"等待轉強確認",reason:`目前為第1階段「${r.name}｜${sub}」，先等中期結構轉強。`,scores,eligible,vr,swingWave,shortEngine};
-  if(overheated)return {key:"observe",period:"先觀察",action:"過熱，等回測再評估",reason:"短線過熱訊號共振，先不追價。",scores,eligible,vr,swingWave,shortEngine};
-  if(falseBreakout)return {key:"observe",period:"先觀察",action:"疑似假突破，等重新站回突破位",reason:"近期突破後未能守住突破區，先過濾假突破。",scores,eligible,vr,swingWave,shortEngine};
-  if(rangeNoise&&!breakout.confirmed)return {key:"observe",period:"先觀察",action:"箱型反覆，等有效突破",reason:`近20日反覆穿越MA20 ${crosses} 次，均線仍糾結，先避免玩法來回切換。`,scores,eligible,vr,swingWave,shortEngine};
-  if(breakoutPending)return {key:"observe",period:"先觀察",action:"突破待確認，先看1～2日",reason:"剛突破但尚未形成有效守穩，避免單日假突破。",scores,eligible,vr,swingWave,shortEngine};
+  if(stage===1)return {key:"observe",period:"先觀察",action:sub.includes("築底")?"築底修復，等突破確認":"等待轉強確認",reason:`目前為第1階段「${r.name}｜${sub}」，先等中期結構轉強。`,scores,eligible,vr,swingWave,shortEngine,personality};
+  if(overheated)return {key:"observe",period:"先觀察",action:"過熱，等回測再評估",reason:"短線過熱訊號共振，先不追價。",scores,eligible,vr,swingWave,shortEngine,personality};
+  if(falseBreakout)return {key:"observe",period:"先觀察",action:"疑似假突破，等重新站回突破位",reason:"近期突破後未能守住突破區，先過濾假突破。",scores,eligible,vr,swingWave,shortEngine,personality};
+  if(rangeNoise&&!breakout.confirmed)return {key:"observe",period:"先觀察",action:"箱型反覆，等有效突破",reason:`近20日反覆穿越MA20 ${crosses} 次，均線仍糾結，先避免玩法來回切換。`,scores,eligible,vr,swingWave,shortEngine,personality};
+  if(breakoutPending)return {key:"observe",period:"先觀察",action:"突破待確認，先看1～2日",reason:"剛突破但尚未形成有效守穩，避免單日假突破。",scores,eligible,vr,swingWave,shortEngine,personality};
 
   let key="observe";
   if(shortEligible||swingEligible){
@@ -678,12 +753,12 @@ function calculatePlayStyle(r,t){
   let action="等待位置或動能改善",reason=`第${stage}階段「${r.name}｜${sub}」目前尚未通過短期或波段資格。`;
   if(key==="short"){
     action=shortEngine?.state==="剛發動"?"剛發動，短線3～5日":shortEngine?.state==="動能加速"?"動能加速，短線3～5日":breakout.fresh?"突破確認，短線3～5日":"短線偏強，嚴守轉弱";
-    reason=`短線專屬引擎 ${shortEngine?.score??short} 分｜${shortEngine?.state||"技術通過"}；新聞只做低權重修正，不會單獨觸發買進。`;
+    reason=`股性：${personality?.label||"節奏待判"}${personality?.detail?`（${personality.detail}）`:""}；短線專屬引擎 ${shortEngine?.score??short} 分｜${shortEngine?.state||"技術通過"}。`;
   }else if(key==="swing"){
     action=sub.includes("回測")?"回測確認，守中期趨勢":"趨勢完整，採2～4週波段";
-    reason=`MA20/60與歷史路徑通過波段資格；短期適配 ${short} 分、波段 ${swing} 分。`;
+    reason=`股性：${personality?.label||"節奏待判"}${personality?.detail?`（${personality.detail}）`:""}；MA20/60與歷史路徑通過波段資格，短期 ${short} 分、波段 ${swing} 分。`;
   }
-  return {key,period,action,reason,scores,eligible,vr,swingWave,shortEngine,diagnostics:{breakout,rangeNoise,crosses,falseBreakout,breakoutPending,healthyTrend,momentumBurst,shortEngine}};
+  return {key,period,action,reason,scores,eligible,vr,swingWave,shortEngine,personality,diagnostics:{breakout,rangeNoise,crosses,falseBreakout,breakoutPending,healthyTrend,momentumBurst,rhythmShortTrigger,shortEngine,personality}};
 }
 function swingWaveSvg(tag,attrs={},text=""){
   const el=document.createElementNS("http://www.w3.org/2000/svg",tag);
@@ -845,7 +920,7 @@ function renderSwingWave(x){
   setText("playSwingNote",`${dates}${p1}${p2}。${w.reason} 第二次回測只作結構／防守參考，暫不重新套固定倍率。`);
 }
 function resetPlayStyle(note="搜尋股票後判讀"){
-  setText("overviewPlayStyle","--");setText("overviewPlayStyleNote","查看建議策略");setText("playMainPeriod","--");setText("playMainAction",note);setText("playReason","先過濾假突破與箱型反覆，再比較短期／波段；適配分不是勝率。");
+  setText("overviewPlayStyle","--");setText("overviewPlayStyleNote","查看建議策略");setText("playMainPeriod","--");setText("playMainAction",note);setText("playReason","先看股性節奏，再過濾假突破與箱型反覆；適配分不是勝率。");setText("playPersonality","--");setText("playPersonalityNote","等待歷史日K分析");
   for(const k of ["Short","Swing","Long"]){setText(`play${k}Label`,k==="Long"?"待資料":"--");setText(`play${k}Score`,"--");const bar=$(`play${k}Bar`);if(bar)bar.style.width="0%";}
   document.querySelectorAll("#playStyleCard .playstyle-fit-row").forEach(x=>x.classList.remove("is-main"));
   latestPlayStyleResult=null;resetShortAnalysis();resetSwingWave();resetTradeOutputs(note);
@@ -855,6 +930,7 @@ function renderPlayStyle(){
   const map={short:"Short",swing:"Swing",long:"Long"};
   for(const [key,id] of Object.entries(map)){const n=x.scores[key],ok=x.eligible?.[key]!==false;if(n===null){setText(`play${id}Label`,"待資料");setText(`play${id}Score`,"--");const bar=$(`play${id}Bar`);if(bar)bar.style.width="0%";continue}if(!ok){setText(`play${id}Label`,"不符合");setText(`play${id}Score`,"--");const bar=$(`play${id}Bar`);if(bar)bar.style.width="0%";continue}setText(`play${id}Label`,playFitLabel(n));setText(`play${id}Score`,`${n}分`);const bar=$(`play${id}Bar`);if(bar)bar.style.width=`${n}%`;}
   document.querySelectorAll("#playStyleCard .playstyle-fit-row").forEach(el=>el.classList.toggle("is-main",el.dataset.play===x.key));
+  setText("playPersonality",x.personality?.label||"股性資料不足");setText("playPersonalityNote",x.personality?.detail||"歷史樣本不足，暫不調整玩法分流");
   setText("playMainPeriod",x.period);setText("playMainAction",x.action);setText("playReason",x.reason);setText("overviewPlayStyle",x.period.replace("｜"," "));setText("overviewPlayStyleNote",x.action);
   latestPlayStyleResult=x;renderShortAnalysis(x);renderSwingWave(x);renderTradeOutputs();
 }
