@@ -1,5 +1,5 @@
-// v2.5.8.6 — 三玩法分數校準＋長波混合＋預計成長空間／下跌空間／歷史相似勝率
-// 三玩法使用不同核心資料重新校準；新增長波混合、具體待確認原因，並用同檔歷史相似訊號估算上／下空間與回測勝率。
+// v2.5.8.9 — 三年共用歷史資料：一年加權股性＋季節性＋成長空間／勝率＋極端市場風險
+// 三年日K只抓一次並快取；正常市場樣本用於股性與成長估算，系統性崩壞獨立做壓力測試。
 const $=id=>document.getElementById(id);
 
 function setText(id,value){
@@ -239,6 +239,24 @@ async function technical(query,market){
   const params=new URLSearchParams({q:String(query||""),market:String(market||"")});
   return await readJson(await fetch(`/api/technical?${params.toString()}`,{cache:"no-store"}),"技術資料");
 }
+const HISTORY3Y_CACHE_KEY="stockzone_history3y_v2589",HISTORY3Y_CACHE_MS=12*60*60*1000;
+function readHistory3YCache(){try{return JSON.parse(localStorage.getItem(HISTORY3Y_CACHE_KEY)||"{}")||{}}catch{return{}}}
+function writeHistory3YCache(x){try{localStorage.setItem(HISTORY3Y_CACHE_KEY,JSON.stringify(x))}catch{}}
+async function history3Y(query,market){
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`${code}|${String(market||"")}`,all=readHistory3YCache(),cached=all[key];
+  if(cached&&Date.now()-Number(cached.savedAt||0)<HISTORY3Y_CACHE_MS&&Array.isArray(cached.data?.history)&&cached.data.history.length>400)return cached.data;
+  const params=new URLSearchParams({q:code,market:String(market||"")}),data=await readJson(await fetch(`/api/history?${params.toString()}`,{cache:"default"}),"三年歷史資料");
+  all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory3YCache(all);return data;
+}
+function historyDateKey(x){if(x?.date)return dayKey(x.date);const ts=Number(x?.timestamp);return Number.isFinite(ts)?dayKey(new Date(ts*1000).toISOString()):""}
+function markSystemStress(data){
+  const stock=(Array.isArray(data?.history)?data.history:[]).filter(x=>stageNum(x?.close)!==null),bench=(Array.isArray(data?.benchmark?.history)?data.benchmark.history:[]).filter(x=>stageNum(x?.close)!==null);
+  if(!stock.length)return {...data,history:[]};
+  const bmap=new Map(),bclose=bench.map(x=>stageNum(x.close));
+  for(let i=0;i<bench.length;i++){const d=historyDateKey(bench[i]);if(!d)continue;const c=bclose[i],r1=i>0?stagePct(c,bclose[i-1]):null,r5=i>=5?stagePct(c,bclose[i-5]):null,r20=i>=20?stagePct(c,bclose[i-20]):null;const stress=(r1!==null&&r1<=-5.5)||(r5!==null&&r5<=-8)||(r20!==null&&r20<=-15);bmap.set(d,{stress,r1,r5,r20})}
+  const rows=stock.map(x=>{const m=bmap.get(historyDateKey(x));return {...x,systemStress:!!m?.stress,marketRet1:m?.r1??null,marketRet5:m?.r5??null,marketRet20:m?.r20??null}});
+  return {...data,history:rows,stressDays:rows.filter(x=>x.systemStress).length};
+}
 function technicalFmt(n,suffix=""){const x=Number(n);return Number.isFinite(x)?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:"--"}
 function technicalVolumeFmt(n){const x=Number(n);if(!Number.isFinite(x))return "--";if(Math.abs(x)>=10000){const w=x/10000;return `${w.toLocaleString("zh-TW",{maximumFractionDigits:w>=100?0:1})}萬`;}return x.toLocaleString("zh-TW",{maximumFractionDigits:0});}
 function technicalMetrics(id,items){const el=$(id);if(!el)return;el.classList.add("tech-metrics");el.style.setProperty("--cols",String(items.length));el.innerHTML=items.map(([label,value])=>`<span class="tech-metric"><span>${label}</span><b>${value}</b></span>`).join("")}
@@ -251,6 +269,7 @@ function techSet(id,text,tone){const el=$(id);if(el){el.textContent=text||"--";i
 let latestFiveStageResult=null;
 let latestTechnicalForPlay=null;
 let latestPlayStyleResult=null;
+let latestHistory3Y=null;
 function stageNum(v){const n=Number(v);return Number.isFinite(n)?n:null}
 function stagePct(price,base){const p=stageNum(price),b=stageNum(base);return p!==null&&b!==null&&b!==0?(p/b-1)*100:null}
 function stageFmtPct(v){const n=stageNum(v);return n===null?"--":`${n>=0?"+":""}${n.toFixed(1)}%`}
@@ -597,17 +616,18 @@ function rhythmRecoveryShortScore(recovered,recoveryDays){
   if(!recovered)return 15;if(!Number.isFinite(recoveryDays))return 35;
   if(recoveryDays<=8)return 95;if(recoveryDays<=12)return 82;if(recoveryDays<=18)return 55;return 34;
 }
-function calculateStockPersonality(rows){
+function calculateStockPersonalitySegment(rows){
   const a=(rows||[]).filter(x=>playRowClose(x)!==null).slice(-160);
   if(a.length<60)return {valid:false,label:'股性資料不足',kind:'unknown',shortBias:0,swingBias:0,shortFit:50,swingFit:50,longFit:50};
 
   const ranges=rhythmRangePct(a),medianRange=rhythmMedian(ranges)??2.2,
         threshold=stageClamp(medianRange*1.35,2.5,6.0),pivots=rhythmZigZag(a,threshold),
-        momentumRuns=rhythmMomentumRuns(a),upLegs=[],restLegs=[],cycleRows=[];
+        momentumRuns=rhythmMomentumRuns(a),upLegs=[],restLegs=[],cycleRows=[],stressCycleRows=[];
   for(let i=1;i<pivots.length;i++){
     const x=pivots[i-1],y=pivots[i],days=Math.max(1,y.i-x.i),ret=stagePct(y.p,x.p);if(ret===null)continue;
-    if(x.type==='low'&&y.type==='high'&&ret>0)upLegs.push({days,ret,from:x,to:y});
-    if(x.type==='high'&&y.type==='low'&&ret<0)restLegs.push({days,ret,from:x,to:y});
+    const stressLeg=a.slice(Math.max(0,x.i),Math.min(a.length,y.i+1)).some(r=>r?.systemStress);
+    if(x.type==='low'&&y.type==='high'&&ret>0&&!stressLeg)upLegs.push({days,ret,from:x,to:y});
+    if(x.type==='high'&&y.type==='low'&&ret<0&&!stressLeg)restLegs.push({days,ret,from:x,to:y});
   }
 
   // 完整週期：起漲低點 A → 高點 B → 回測低點 C → 下一個高點 D。
@@ -620,7 +640,9 @@ function calculateStockPersonality(rows){
           upDays=Math.max(1,B.i-A.i),restDays=Math.max(1,C.i-B.i),recovered=D.p>=B.p*.97,
           recoveryDays=recovered?Math.max(1,D.i-C.i):null;
     const cycleScore=.40*rhythmRetraceShortScore(retracePct)+.25*rhythmActualDropShortScore(actualDrop)+.20*rhythmDurationShortScore(upDays,restDays)+.15*rhythmRecoveryShortScore(recovered,recoveryDays);
-    cycleRows.push({risePct,actualDrop,retracePct,upDays,restDays,recovered,recoveryDays,cycleScore,A,B,C,D});
+    const row={risePct,actualDrop,retracePct,upDays,restDays,recovered,recoveryDays,cycleScore,A,B,C,D};
+    const stressPullback=a.slice(Math.max(0,B.i),Math.min(a.length,C.i+1)).some(x=>x?.systemStress);
+    if(stressPullback)stressCycleRows.push(row);else cycleRows.push(row);
   }
 
   const zigUpDays=rhythmMedian(upLegs.map(x=>x.days)),zigRestDays=rhythmMedian(restLegs.map(x=>x.days)),
@@ -709,10 +731,31 @@ function calculateStockPersonality(rows){
   if(recoveryDays!==null)parts.push(`恢復約 ${Math.round(recoveryDays)}日`);
   if(cycleRows.length)parts.push(`完整循環 ${cycleRows.length}次`);
   if(resetCycles)parts.push(`>70%重置 ${resetCycles}次`);
+  if(stressCycleRows.length)parts.push(`系統性回檔排除 ${stressCycleRows.length}次`);
 
   return {valid:true,kind,label,detail:parts.join('｜')||'歷史節奏已分析',shortBias,swingBias,shortFit,swingFit,longFit,
     upDays,restDays,upGain,pullback,retrace,recoveryDays,cycles:completedCycles,ret60,ret120,above20,cross20,max5,medianRange,threshold,
-    shortRhythmScore,shortCycle,hybridRhythm,swingTrend,range,burst,deepRhythm,structuralReset,deepPullbacks,recoveredDeep,qualifyingShortCycles,shortLikeCycles,resetCycles,strongShort,strongSwing};
+    shortRhythmScore,shortCycle,hybridRhythm,swingTrend,range,burst,deepRhythm,structuralReset,deepPullbacks,recoveredDeep,qualifyingShortCycles,shortLikeCycles,resetCycles,strongShort,strongSwing,stressCycles:stressCycleRows.length};
+}
+function calculateStockPersonality(rows){
+  const all=(rows||[]).filter(x=>playRowClose(x)!==null).slice(-240);
+  if(all.length<60)return calculateStockPersonalitySegment(all);
+  const recent=all.slice(-160),older=all.slice(Math.max(0,all.length-240),Math.max(0,all.length-160));
+  const pr=calculateStockPersonalitySegment(recent),po=older.length>=60?calculateStockPersonalitySegment(older):null;
+  if(!pr?.valid)return calculateStockPersonalitySegment(all);
+  const oldValid=!!po?.valid,wRecent=oldValid?70:100,wOld=oldValid?30:0;
+  const blend=(a,b)=>Math.round(playClamp((Number(a)||50)*(wRecent/100)+(Number(b)||50)*(wOld/100)));
+  const result={...pr,shortFit:blend(pr.shortFit,po?.shortFit),swingFit:blend(pr.swingFit,po?.swingFit),longFit:blend(pr.longFit,po?.longFit),windowDays:all.length,recentWeight:wRecent,olderWeight:wOld};
+  result.detail=`股性1年｜近160日 ${wRecent}%${wOld?`／前80日 ${wOld}%`:""}${pr.detail?`｜${pr.detail}`:""}`;
+  return result;
+}
+function seasonality3Y(rows,now=new Date()){
+  const a=(rows||[]).filter(x=>playRowClose(x)!==null),q=Math.floor(now.getMonth()/3)+1,byYear=new Map();
+  for(const r of a){const d=new Date(`${historyDateKey(r)}T00:00:00Z`);if(Number.isNaN(d.getTime())||Math.floor(d.getUTCMonth()/3)+1!==q)continue;const y=d.getUTCFullYear();if(!byYear.has(y))byYear.set(y,[]);byYear.get(y).push(r)}
+  const samples=[];for(const [year,x] of [...byYear.entries()].sort((a,b)=>a[0]-b[0]).slice(-3)){if(x.length<15||x.some(r=>r.systemStress))continue;const first=playRowClose(x[0]),last=playRowClose(x.at(-1)),ret=stagePct(last,first);if(ret!==null)samples.push({year,ret})}
+  if(!samples.length)return {valid:false,quarter:q,sample:0,label:`Q${q} 正常市場樣本不足`};
+  const positives=samples.filter(x=>x.ret>0).length,median=rhythmMedian(samples.map(x=>x.ret));
+  return {valid:true,quarter:q,sample:samples.length,positives,median,label:`近3年Q${q}正常市場 ${positives}/${samples.length} 上漲｜中位 ${stageFmtPct(median)}`};
 }
 
 // v2.5.8.1 — 短線玩法專屬引擎。新聞只做低權重修正，核心資格仍由技術／突破決定。
@@ -901,7 +944,7 @@ function calculatePlayStyle(r,t){
   const stage=r.stage,sub=r.substate||"",score=stageNum(t?.analysis?.overall?.score)??50,
         rsi=stageNum(t?.momentum?.rsi14),ratio20=stageNum(t?.volume?.ratio20),vr=playValuationResult(),price=stageNum(currentStock?.last??currentStock?.price??r?.price);
   const breakout=playBreakoutState(r,t),path=r.path||{},crosses=playMaCrossCount(path.rows||[],20,20),
-        swingWave=calculateSwingWave(r,t),shortEngine=calculateShortEngine(r,t,breakout),personality=calculateStockPersonality(path.rows||[]),
+        swingWave=calculateSwingWave(r,t),shortEngine=calculateShortEngine(r,t,breakout),personality=calculateStockPersonality((latestHistory3Y?.history?.length?latestHistory3Y.history:path.rows)||[]),
         targetSignal=targetPlaySignal(price),swingNews=swingNewsSignal(),longEngine=calculateLongEngine(r,t,personality,targetSignal);
   const rangeNoise=!!(r.flags?.tangled&&crosses>=3&&Math.abs(path.ret20??0)<=10);
   const overheated=stage===5||r.flags?.extremeHeat||(rsi!==null&&rsi>=80)||((r.bias20??0)>=18&&(rsi??0)>=74);
@@ -1278,24 +1321,40 @@ function buildDownsidePlan(play,price){
 function histCloseAt(rows,i){return stageNum(rows?.[i]?.close)}
 function histRetAt(rows,i,n){if(i-n<0)return null;const a=histCloseAt(rows,i),b=histCloseAt(rows,i-n);return a!==null&&b!==null?stagePct(a,b):null}
 function histMaAt(rows,i,n){if(i-n+1<0)return null;let s=0;for(let j=i-n+1;j<=i;j++){const v=histCloseAt(rows,j);if(v===null)return null;s+=v}return s/n}
+function histPercentile(values,q){
+  const a=(values||[]).filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;if(a.length===1)return a[0];
+  const pos=(a.length-1)*q,lo=Math.floor(pos),hi=Math.ceil(pos),w=pos-lo;return a[lo]*(1-w)+a[hi]*w;
+}
+function extremeMarketRisk(rows){
+  const a=(rows||[]).filter(x=>playRowClose(x)!==null);if(a.length<80)return {valid:false,sample:0};
+  const episodes=[];let i=1;
+  while(i<a.length){if(!a[i]?.systemStress){i++;continue}const start=i;while(i+1<a.length&&a[i+1]?.systemStress)i++;const end=i,entry=histCloseAt(a,Math.max(0,start-1));let worst=0;
+    if(entry!==null){for(let j=start;j<=Math.min(a.length-1,end+7);j++){const lo=swingLow(a[j])??histCloseAt(a,j),ret=lo===null?null:stagePct(lo,entry);if(ret!==null)worst=Math.min(worst,ret)}if(worst<0)episodes.push(worst)}i++}
+  if(!episodes.length)return {valid:false,sample:0};
+  return {valid:true,sample:episodes.length,near:histPercentile(episodes,.50),far:Math.min(...episodes),median:histPercentile(episodes,.50)};
+}
 function historicalSimilarWinRate(play,price,upsidePct,downsidePct){
-  const rows=(latestFiveStageResult?.path?.rows||[]).filter(x=>playRowClose(x)!==null),p=positionNumber(price);if(rows.length<90||p===null||!Number.isFinite(upsidePct)||!Number.isFinite(downsidePct))return {valid:false,label:"樣本不足",sample:0};
-  const mode=play?.key||"observe",cfg=mode==="short"?{h:5,step:4,min:2,max:14}:mode==="swing"?{h:20,step:8,min:4,max:24}:mode==="mixed"?{h:15,step:6,min:4,max:22}:mode==="long-swing"?{h:40,step:10,min:6,max:28}:mode==="long"?{h:60,step:12,min:8,max:30}:{h:10,step:5,min:3,max:18};
-  const cur=[shortReturnN(rows,5,p),stageRet(rows,20,p),stageRet(rows,60,p)];const ma20=stageSmaAt(rows,20),ma60=stageSmaAt(rows,60),curAbove20=ma20? p>=ma20:null,curAbove60=ma60? p>=ma60:null;
-  const candidates=[];
+  const rows=((latestHistory3Y?.history?.length?latestHistory3Y.history:latestFiveStageResult?.path?.rows)||[]).filter(x=>playRowClose(x)!==null),p=positionNumber(price);
+  const seasonality=seasonality3Y(rows),extreme=extremeMarketRisk(rows);
+  if(rows.length<180||p===null||!Number.isFinite(upsidePct)||!Number.isFinite(downsidePct))return {valid:false,label:"樣本不足",sample:0,seasonality,extreme};
+  const mode=play?.key||"observe",cfg=mode==="short"?{h:5,step:3,min:2,max:14}:mode==="swing"?{h:20,step:6,min:4,max:24}:mode==="mixed"?{h:15,step:5,min:4,max:22}:mode==="long-swing"?{h:40,step:8,min:6,max:28}:mode==="long"?{h:60,step:10,min:8,max:30}:{h:10,step:4,min:3,max:18};
+  const cur=[shortReturnN(rows,5,p),stageRet(rows,20,p),stageRet(rows,60,p)],ma20=stageSmaAt(rows,20),ma60=stageSmaAt(rows,60),curAbove20=ma20?p>=ma20:null,curAbove60=ma60?p>=ma60:null,currentQuarter=Math.floor(new Date().getMonth()/3)+1,candidates=[];
   for(let i=60;i<rows.length-cfg.h;i+=cfg.step){const r5=histRetAt(rows,i,5),r20=histRetAt(rows,i,20),r60=histRetAt(rows,i,60),m20=histMaAt(rows,i,20),m60=histMaAt(rows,i,60),entry=histCloseAt(rows,i);if([r5,r20,r60,m20,m60,entry].some(v=>v===null))continue;
-    const a20=entry>=m20,a60=entry>=m60;let dist=0;
-    const weights=mode==="short"?[1.2,.7,.25]:mode==="long"||mode==="long-swing"?[.25,.7,1.2]:[.45,1.0,.8];
+    if(rows.slice(Math.max(0,i-5),i+1).some(x=>x?.systemStress))continue;const forward=rows.slice(i+1,Math.min(rows.length,i+cfg.h+1));if(forward.some(x=>x?.systemStress))continue;
+    const a20=entry>=m20,a60=entry>=m60;let dist=0,weights=mode==="short"?[1.2,.7,.25]:mode==="long"||mode==="long-swing"?[.25,.7,1.2]:[.45,1.0,.8];
     dist+=Math.abs(r5-(cur[0]??0))/8*weights[0]+Math.abs(r20-(cur[1]??0))/16*weights[1]+Math.abs(r60-(cur[2]??0))/32*weights[2];
-    if(curAbove20!==null&&a20!==curAbove20)dist+=.65;if(curAbove60!==null&&a60!==curAbove60)dist+=.75;candidates.push({i,entry,dist});
+    if(curAbove20!==null&&a20!==curAbove20)dist+=.65;if(curAbove60!==null&&a60!==curAbove60)dist+=.75;
+    const dk=historyDateKey(rows[i]),d=dk?new Date(`${dk}T00:00:00Z`):null,q=d&&!Number.isNaN(d.getTime())?Math.floor(d.getUTCMonth()/3)+1:null;if(q!==null&&q!==currentQuarter)dist+=.18;
+    candidates.push({i,entry,dist});
   }
-  candidates.sort((a,b)=>a.dist-b.dist);const sample=candidates.filter(x=>x.dist<=2.15).slice(0,20);if(sample.length<5)return {valid:false,label:"樣本不足",sample:sample.length};
-  const up=stageClamp(upsidePct,cfg.min,cfg.max),down=stageClamp(Math.abs(downsidePct),2,22);let wins=0;
-  for(const c of sample){let outcome=0;for(let j=c.i+1;j<=Math.min(rows.length-1,c.i+cfg.h);j++){const hi=playRowHigh(rows[j])??histCloseAt(rows,j),lo=swingLow(rows[j])??histCloseAt(rows,j);if(hi!==null&&hi>=c.entry*(1+up/100)){outcome=1;break}if(lo!==null&&lo<=c.entry*(1-down/100)){outcome=-1;break}}if(outcome===1)wins++}
-  const rate=Math.round(wins/sample.length*100),confidence=sample.length>=12?"樣本中等":sample.length>=8?"樣本偏少":"樣本少";return {valid:true,rate,sample:sample.length,wins,horizon:cfg.h,up,down,confidence};
+  candidates.sort((a,b)=>a.dist-b.dist);const sample=candidates.filter(x=>x.dist<=2.2).slice(0,30);if(sample.length<5)return {valid:false,label:"樣本不足",sample:sample.length,seasonality,extreme};
+  const up=stageClamp(upsidePct,cfg.min,cfg.max),down=stageClamp(Math.abs(downsidePct),2,22),mfes=[],maes=[];let wins=0;
+  for(const c of sample){let outcome=0,mfe=0,mae=0;for(let j=c.i+1;j<=Math.min(rows.length-1,c.i+cfg.h);j++){const hi=playRowHigh(rows[j])??histCloseAt(rows,j),lo=swingLow(rows[j])??histCloseAt(rows,j),ur=hi===null?null:stagePct(hi,c.entry),dr=lo===null?null:stagePct(lo,c.entry);if(ur!==null)mfe=Math.max(mfe,ur);if(dr!==null)mae=Math.min(mae,dr);if(outcome===0&&hi!==null&&hi>=c.entry*(1+up/100))outcome=1;else if(outcome===0&&lo!==null&&lo<=c.entry*(1-down/100))outcome=-1}mfes.push(mfe);maes.push(mae);if(outcome===1)wins++}
+  const rate=Math.round(wins/sample.length*100),confidence=sample.length>=16?"樣本中等":sample.length>=10?"樣本偏少":"樣本少";
+  return {valid:true,rate,sample:sample.length,wins,horizon:cfg.h,up,down,confidence,upNear:histPercentile(mfes,.25),upFar:histPercentile(mfes,.75),downNear:histPercentile(maes,.75),downFar:histPercentile(maes,.25),seasonality,extreme};
 }
 function resetTradeOutputs(note="等待分析資料"){
-  setText("overviewExpectedUpside","--%");setText("overviewExpectedUpsideNote",note);setText("expectedModeBadge","依玩法");setText("expectedBasisLabel","現價基準");setText("expectedRange","--%");setText("expectedDownsideRange","--%");setText("expectedWinRate","--");setText("expectedWinRateNote","樣本不足");setText("expectedBasisNote",note);setText("expectedFoot","持股會改用均價計算報酬與預估損益；觀察股維持現價基準。勝率是同檔歷史相似訊號回測，不代表未來機率。");
+  setText("overviewExpectedUpside","--%");setText("overviewExpectedUpsideNote",note);setText("expectedModeBadge","依玩法");setText("expectedBasisLabel","現價基準");setText("expectedRange","--%");setText("expectedDownsideRange","--%");setText("expectedWinRate","--");setText("expectedWinRateNote","樣本不足");setText("expectedExtremeRisk","--%");setText("expectedExtremeRiskNote","系統性崩壞壓力測試");setText("expectedSeasonalityNote","季節性：等待三年資料");setText("expectedBasisNote",note);setText("expectedFoot","持股會改用均價計算報酬與預估損益；觀察股維持現價基準。勝率是同檔歷史相似訊號回測，不代表未來機率。");
   const pos=$("expectedPositionSummary");if(pos)pos.hidden=true;
   for(let i=1;i<=3;i++){const box=$(`expectedTarget${i}`);if(box)box.hidden=i>1;setText(`expectedT${i}Label`,i===1?"第一目標":i===2?"主要目標":"樂觀目標");setText(`expectedT${i}Price`,"--");setText(`expectedT${i}Return`,"--");setText(`expectedT${i}Profit`,"")}
   setText("decisionModeBadge","依玩法");setText("decisionPositionNote",note);for(const id of ["decisionTrialPrice","decisionEntryPrice","decisionTrimPrice","decisionExitPrice"])setText(id,"--");for(const id of ["decisionTrialNote","decisionEntryNote","decisionTrimNote","decisionExitNote"])setText(id,"--");
@@ -1303,21 +1362,30 @@ function resetTradeOutputs(note="等待分析資料"){
 function renderExpectedUpside(play=latestPlayStyleResult){
   const price=positionNumber(currentStock?.last??currentStock?.price??latestFiveStageResult?.price);if(price===null){resetTradeOutputs("等待股價資料");return null}
   const position=currentHoldingPosition(),base=position?.avgCost||price,plan=buildExpectedPlan(play,price),downside=buildDownsidePlan(play,price);
-  const returns=plan.levels.map(x=>positionReturn(x.value,base)).filter(Number.isFinite),downReturns=downside.levels.map(x=>positionReturn(x.value,price)).filter(Number.isFinite);
+  const structuralReturns=plan.levels.map(x=>positionReturn(x.value,base)).filter(Number.isFinite),structuralDown=downside.levels.map(x=>positionReturn(x.value,price)).filter(Number.isFinite);
+  const firstUp=plan.levels.length?positionReturn(plan.levels[0].value,price):null,nearestDown=downside.levels.length?positionReturn(downside.levels[0].value,price):null;
+  const fallbackUp=play?.key==="short"?5:play?.key==="long"?15:10,fallbackDown=play?.key==="short"?-5:play?.key==="long"?-12:-8;
+  const wr=historicalSimilarWinRate(play,price,Number.isFinite(firstUp)?firstUp:fallbackUp,Number.isFinite(nearestDown)?nearestDown:fallbackDown);
+  const histUpPrices=wr.valid&&Number.isFinite(wr.upNear)&&Number.isFinite(wr.upFar)?[price*(1+Math.max(0,wr.upNear)/100),price*(1+Math.max(0,wr.upFar)/100)]:[];
+  const returns=histUpPrices.length?histUpPrices.map(x=>positionReturn(x,base)).filter(Number.isFinite):structuralReturns;
+  const downReturns=wr.valid&&Number.isFinite(wr.downNear)&&Number.isFinite(wr.downFar)?[wr.downNear,wr.downFar]:structuralDown;
   const modeName=plan.mode==="swing"?"波段":plan.mode==="short"?"短期":plan.mode==="mixed"?"短波混合":plan.mode==="long-swing"?"長波混合":plan.mode==="long"?"長期":"觀察";
   setText("expectedModeBadge",`${position?.avgCost?"持股｜":""}${modeName}`);setText("expectedBasisLabel",position?.avgCost?"上漲看均價｜下跌看現價":"現價基準");
   const range=returns.length?(returns.length===1?signedPercent(returns[0]):`${signedPercent(Math.min(...returns))} ～ ${signedPercent(Math.max(...returns))}`):"--%";
   const downRange=downReturns.length?(downReturns.length===1?signedPercent(downReturns[0]):`${signedPercent(Math.max(...downReturns))} ～ ${signedPercent(Math.min(...downReturns))}`):"--%";
-  setText("expectedRange",range);setText("expectedDownsideRange",downRange);setText("overviewExpectedUpside",range);setText("overviewExpectedUpsideNote",position?.avgCost?`均價報酬 ${range}｜現價風險 ${downRange}`:`${modeName}｜上 ${range} / 下 ${downRange}`);
-  setText("expectedBasisNote",position?.avgCost?`上漲目標報酬以你的均價 ${technicalFmt(position.avgCost)} 計算；下跌空間固定以目前股價計算，避免成本價扭曲風險。`:`${plan.note} ${downside.note}`);
-  const firstUp=plan.levels.length?positionReturn(plan.levels[0].value,price):null,nearestDown=downside.levels.length?positionReturn(downside.levels[0].value,price):null,wr=historicalSimilarWinRate(play,price,firstUp,nearestDown);
+  setText("expectedRange",range);setText("expectedDownsideRange",downRange);setText("overviewExpectedUpside",range);setText("overviewExpectedUpsideNote",position?.avgCost?`均價成長 ${range}｜正常風險 ${downRange}`:`${modeName}｜上 ${range} / 下 ${downRange}`);
+  const basisLead=wr.valid?"上／下空間以近3年正常市場的同檔相似訊號估算；系統性崩壞樣本已從正常統計排除。":"三年相似樣本不足，暫以目前市場結構估算。";
+  setText("expectedBasisNote",position?.avgCost?`${basisLead} 上漲換算以你的均價 ${technicalFmt(position.avgCost)} 為基準；下跌風險固定以現價計算。`:`${basisLead} ${plan.note}`);
   setText("expectedWinRate",wr.valid?`${wr.rate}%`:"--");setText("expectedWinRateNote",wr.valid?`${wr.confidence}｜${wr.sample}次｜${wr.horizon}日內先達目標`:`樣本不足（${wr.sample||0}次）`);
+  const ex=wr.extreme||{};let exText="--%";if(ex.valid){exText=ex.sample===1?signedPercent(ex.far):`${signedPercent(ex.near)} ～ ${signedPercent(ex.far)}`}
+  setText("expectedExtremeRisk",exText);setText("expectedExtremeRiskNote",ex.valid?`近3年系統性壓力 ${ex.sample} 次｜正常空間不含此樣本`:"近3年未形成足夠系統性崩壞樣本");
+  const season=wr.seasonality||seasonality3Y(latestHistory3Y?.history||[]);setText("expectedSeasonalityNote",`季節性：${season?.label||"三年樣本不足"}`);
 
   const posBox=$("expectedPositionSummary");if(posBox){posBox.hidden=!position;if(position){setText("expectedAvgCost",position.avgCost?technicalFmt(position.avgCost):"未填");setText("expectedShares",position.shares?`${position.shares.toLocaleString("zh-TW")} 股`:"未填");const pnl=position.avgCost&&position.shares?(price-position.avgCost)*position.shares:null,pct=position.avgCost?positionReturn(price,position.avgCost):null;setText("expectedCurrentPnl",pnl===null?"待補資料":`${signedMoney(pnl)}${pct===null?"":`（${signedPercent(pct)}）`}`)}}
   for(let i=1;i<=3;i++){const item=plan.levels[i-1],box=$(`expectedTarget${i}`);if(box)box.hidden=!item;if(!item)continue;setText(`expectedT${i}Label`,item.label);setText(`expectedT${i}Price`,technicalFmt(item.value));const ret=positionReturn(item.value,base);setText(`expectedT${i}Return`,`${position?.avgCost?"對均價":"對現價"} ${signedPercent(ret)}`);const profit=position?.avgCost&&position?.shares?(item.value-position.avgCost)*position.shares:null;setText(`expectedT${i}Profit`,profit===null?"":`預估損益 ${signedMoney(profit)}`)}
-  const longCaveat=["long","long-swing"].includes(play?.key)?" 長期勝率目前只回測歷史價格結構，不含歷史基本面快照。":"";
-  const winNote=wr.valid?`歷史相似訊號勝率 ${wr.rate}%（${wr.sample}次樣本）；勝率只代表同檔歷史回測，不代表未來機率。${longCaveat}`:`歷史相似訊號樣本不足，暫不顯示勝率。${longCaveat}`;
-  setText("expectedFoot",`${plan.note} ${downside.note} ${winNote}${position?.shares?` 目前持有 ${position.shares.toLocaleString("zh-TW")} 股。`:""}`);
+  const longCaveat=["long","long-swing"].includes(play?.key)?" 長期勝率仍只回測歷史價格結構，不含歷史基本面快照。":"";
+  const winNote=wr.valid?`近3年正常市場相似訊號勝率 ${wr.rate}%（${wr.sample}次）；系統性崩壞另外列為極端市場風險。${longCaveat}`:`近3年正常市場相似訊號樣本不足。${longCaveat}`;
+  setText("expectedFoot",`${plan.note} 目標價位仍依目前玩法結構；成長／正常下跌空間與勝率使用三年歷史樣本。${winNote}${position?.shares?` 目前持有 ${position.shares.toLocaleString("zh-TW")} 股。`:""}`);
   return {price,position,base,plan,downside,winRate:wr};
 }
 
@@ -1375,8 +1443,10 @@ async function loadTechnical(data){
   const code=data?.code||data?.symbol||"",market=data?.market||data?.marketLabel||"";
   resetFiveStage("讀取技術資料中…");
   try{
-    const t=await technical(code,market),a=t.analysis||{};
-    setText("technicalSource",`Yahoo｜${t.updatedAt||"--"}`);
+    const [t,hraw]=await Promise.all([technical(code,market),history3Y(code,market).catch(e=>{console.warn("三年歷史資料更新失敗",e);return null})]);
+    const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(code)!==curCode)return;
+    latestHistory3Y=hraw?markSystemStress(hraw):null;const a=t.analysis||{};
+    setText("technicalSource",`Yahoo｜${t.updatedAt||"--"}${latestHistory3Y?.history?.length?`｜3年 ${latestHistory3Y.history.length}筆`:""}`);
     techSet("techState",a.overall?.state||"--",a.overall?.tone); setText("techScore",a.overall?.score??"--"); setText("techHeadline",a.overall?.headline||"--");
     const overviewState=a.overall?.state||"--", overviewScore=a.overall?.score;
     setText("overviewTechnicalState",`${overviewState}${Number.isFinite(Number(overviewScore))?` ${overviewScore}分`:""}`);
@@ -1537,7 +1607,7 @@ function patchCurrentQuote(x){
   currentStock={...currentStock,...x,name:currentStock.name||x.name,shortName:currentStock.shortName||x.shortName,market:currentStock.market||x.market};renderQuoteFields(currentStock);updateListButtons();renderTradeOutputs();if(["swing","mixed"].includes(latestPlayStyleResult?.key))renderSwingWave(latestPlayStyleResult);return true;
 }
 function renderStock(x){
-  currentStock=x;resetPlayStyle("讀取分析資料中…");
+  currentStock=x;latestHistory3Y=null;resetPlayStyle("讀取分析資料中…");
   setText("stockName",shortStockName(x.name||x.shortName)||"—");
   setText("stockCodeLabel",`${x.code||x.symbol||"—"} | ${x.market||"台股"}`);
   setText("marketLabel","");

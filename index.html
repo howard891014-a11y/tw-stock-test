@@ -957,8 +957,8 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .long-engine-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}.long-engine-grid>div{padding:10px;border:1px solid #343b59;border-radius:10px;background:#0a1524}.long-engine-grid span{display:block;color:#8593ac;font-size:10px;margin-bottom:5px}.long-engine-grid b{display:block;color:#edf2ff;font-size:12px;line-height:1.45;overflow-wrap:anywhere}.playstyle-long-foot{display:block;margin-top:9px;color:#76849b;font-size:10px;line-height:1.5}
 @media(max-width:720px){.playstyle-position-mode{grid-template-columns:auto 1fr;gap:5px 8px;padding:8px}.playstyle-position-mode>small{grid-column:1/-1;font-size:9px}.playstyle-long-analysis{padding:12px 10px}.playstyle-long-head>div strong{font-size:15px}.long-engine-grid{grid-template-columns:1fr}.long-engine-grid b{font-size:11px}}
 
-.expected-growth-hero{gap:8px}.expected-growth-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;margin:4px 0 2px}.expected-growth-grid>div{min-width:0;padding:10px 8px;border:1px solid #29445c;border-radius:10px;background:#091725;text-align:center}.expected-growth-grid small{display:block;color:#8297aa;font-size:10px;margin-bottom:5px}.expected-growth-grid strong{display:block;font-size:18px;line-height:1.2}.expected-growth-grid .risk{color:#ff9b8f}.expected-growth-grid .win{color:#64e7b5}.expected-growth-grid em{display:block;margin-top:4px;color:#8194a5;font-size:9px;font-style:normal;line-height:1.35}.playstyle-fit-head b{max-width:58%;text-align:right;white-space:normal;line-height:1.25}
-@media(max-width:720px){.expected-growth-grid{grid-template-columns:1fr 1fr}.expected-growth-grid>div:nth-child(3){grid-column:1/-1}.expected-growth-grid strong{font-size:16px}.playstyle-fit-head b{max-width:62%;font-size:9px}}
+.expected-growth-hero{gap:8px}.expected-growth-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin:4px 0 2px}.expected-growth-grid>div{min-width:0;padding:10px 8px;border:1px solid #29445c;border-radius:10px;background:#091725;text-align:center}.expected-growth-grid small{display:block;color:#8297aa;font-size:10px;margin-bottom:5px}.expected-growth-grid strong{display:block;font-size:18px;line-height:1.2}.expected-growth-grid .risk{color:#ff9b8f}.expected-growth-grid .win{color:#64e7b5}.expected-growth-grid .extreme-risk{color:#ffbe73}.expected-seasonality{display:block;color:#71899d;font-size:9px;line-height:1.4}.expected-growth-grid em{display:block;margin-top:4px;color:#8194a5;font-size:9px;font-style:normal;line-height:1.35}.playstyle-fit-head b{max-width:58%;text-align:right;white-space:normal;line-height:1.25}
+@media(max-width:720px){.expected-growth-grid{grid-template-columns:1fr 1fr}.expected-growth-grid strong{font-size:16px}.playstyle-fit-head b{max-width:62%;font-size:9px}}
 </style>
 </head>
 <body>
@@ -987,7 +987,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.8.8</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.8.9</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1148,7 +1148,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         </article>
 
         <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
-      <div class="card-title">建議玩法 <span class="badge">v8</span></div>
+      <div class="card-title">建議玩法 <span class="badge">v9</span></div>
       <div class="playstyle-hero">
         <span>主建議玩法</span>
         <strong id="playMainPeriod">--</strong>
@@ -1216,8 +1216,10 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           <div><small>上漲空間</small><strong class="blue" id="expectedRange">--%</strong></div>
           <div><small>下跌空間</small><strong class="risk" id="expectedDownsideRange">--%</strong></div>
           <div><small>歷史相似勝率</small><strong class="win" id="expectedWinRate">--</strong><em id="expectedWinRateNote">樣本不足</em></div>
+          <div><small>極端市場風險</small><strong class="extreme-risk" id="expectedExtremeRisk">--%</strong><em id="expectedExtremeRiskNote">系統性崩壞壓力測試</em></div>
         </div>
         <small id="expectedBasisNote">等待玩法與目標／支撐資料</small>
+        <small class="expected-seasonality" id="expectedSeasonalityNote">季節性：等待三年資料</small>
       </div>
       <div class="expected-position" id="expectedPositionSummary" hidden>
         <span>持股均價 <b id="expectedAvgCost">--</b></span>
@@ -1397,7 +1399,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.8.8"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.8.9"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
