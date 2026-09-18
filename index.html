@@ -946,6 +946,17 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
  .holding-profile{grid-template-columns:1fr 1fr 58px!important;gap:5px!important}.holding-profile input{height:32px;padding:0 6px}.holding-profile button{height:32px;padding:0 7px;font-size:11px}
 }
 </style>
+
+<style id="v2585-three-playstyle-long-mixed">
+/* v2.5.8.5 — 三玩法全分數、短波混合部位、長期引擎 */
+.playstyle-position-mode{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:8px;margin-top:7px;padding:8px 10px;border:1px solid #33415a;border-radius:10px;background:#0a1725;min-width:0}
+.playstyle-position-mode>span{color:#8398aa;font-size:10px;white-space:nowrap}.playstyle-position-mode>b{color:#d2a0ff;font-size:12px;white-space:nowrap}.playstyle-position-mode>small{color:#a4b4c1;font-size:10px;line-height:1.4;overflow-wrap:anywhere}
+#playStyleCard .playstyle-fit-row[data-play="long"] .playstyle-bar{opacity:1}#playStyleCard .playstyle-fit-row[data-play="long"] .playstyle-fit-head b{color:#9db0c0}
+.playstyle-long-analysis{margin-top:12px;padding:13px 14px;border:1px solid #4b476c;border-radius:14px;background:linear-gradient(145deg,#141629,#0a1523);min-width:0;overflow:hidden}.playstyle-long-analysis[hidden]{display:none!important}
+.playstyle-long-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.playstyle-long-head>div span{display:block;color:#eef4ff;font-size:15px;font-weight:800}.playstyle-long-head>div strong{display:block;margin-top:6px;color:#d2a0ff;font-size:16px;line-height:1.35}.playstyle-long-head>div small{display:block;margin-top:4px;color:#a6b3c7;font-size:11px}.playstyle-long-head>em{font-style:normal;color:#bea6de;font-size:10px;border:1px solid #5c4f7a;border-radius:999px;padding:5px 8px}
+.long-engine-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}.long-engine-grid>div{padding:10px;border:1px solid #343b59;border-radius:10px;background:#0a1524}.long-engine-grid span{display:block;color:#8593ac;font-size:10px;margin-bottom:5px}.long-engine-grid b{display:block;color:#edf2ff;font-size:12px;line-height:1.45;overflow-wrap:anywhere}.playstyle-long-foot{display:block;margin-top:9px;color:#76849b;font-size:10px;line-height:1.5}
+@media(max-width:720px){.playstyle-position-mode{grid-template-columns:auto 1fr;gap:5px 8px;padding:8px}.playstyle-position-mode>small{grid-column:1/-1;font-size:9px}.playstyle-long-analysis{padding:12px 10px}.playstyle-long-head>div strong{font-size:15px}.long-engine-grid{grid-template-columns:1fr}.long-engine-grid b{font-size:11px}}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -973,7 +984,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.8.4</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.8.5</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1134,13 +1145,14 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         </article>
 
         <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
-      <div class="card-title">建議玩法 <span class="badge">v5</span></div>
+      <div class="card-title">建議玩法 <span class="badge">v6</span></div>
       <div class="playstyle-hero">
         <span>主建議週期</span>
         <strong id="playMainPeriod">--</strong>
         <b id="playMainAction">搜尋股票後判讀</b>
         <p id="playReason">系統會先判斷現在是否適合操作，再比較短期與波段；適配分不是勝率。</p>
         <div class="playstyle-personality"><span>股性節奏</span><b id="playPersonality">--</b><small id="playPersonalityNote">等待歷史日K分析</small></div>
+        <div class="playstyle-position-mode"><span>操作型態</span><b id="playPositionMode">--</b><small id="playPositionModeNote">等待短線／波段股性分流</small></div>
       </div>
       <div class="playstyle-fit" aria-label="三週期適配度">
         <div class="playstyle-fit-row" data-play="short"><div class="playstyle-fit-head"><span>短期 <small>3～5交易日</small></span><b id="playShortLabel">--</b></div><div class="playstyle-bar"><i id="playShortBar"></i></div><em id="playShortScore">--</em></div>
@@ -1180,9 +1192,19 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           <svg id="playSwingSvg" viewBox="0 0 800 350" role="img" aria-label="波段結構與可能目標區波浪圖"></svg>
           <div class="swing-wave-legend" id="playSwingLegend"></div>
         </div>
-        <small class="swing-wave-foot" id="playSwingNote">只在系統主玩法判定為波段時啟用。</small>
+        <small class="swing-wave-foot" id="playSwingNote">波段或短波混合時啟用。</small>
       </section>
-      <small class="playstyle-note" id="playStyleNote">長期需等題材／成長模組補齊後才開放主建議；不再把短線不適合自動改判長期。</small>
+      <section class="playstyle-long-analysis" id="playLongAnalysis" hidden>
+        <div class="playstyle-long-head"><div><span>長期分析</span><strong id="playLongState">--</strong><small id="playLongData">資料完整度 --</small></div><em>長期玩法 v1</em></div>
+        <div class="long-engine-grid">
+          <div><span>EPS／獲利</span><b id="longEarnings">--</b></div>
+          <div><span>估值位置</span><b id="longValuation">--</b></div>
+          <div><span>中長趨勢</span><b id="longTrend">--</b></div>
+          <div><span>基本面新聞</span><b id="longNews">--</b></div>
+        </div>
+        <small class="playstyle-long-foot" id="playLongNote">長期分數只使用目前可取得的資料，資料不足會直接標示。</small>
+      </section>
+      <small class="playstyle-note" id="playStyleNote">三玩法永遠同時計分；分數是適配度，不是勝率。當下不適合進場時仍保留分數供比較。</small>
     </article>
     <article class="card detail-panel expected-card" data-view-panel="analysis" id="expectedUpsideCard">
       <div class="card-title">預期上漲空間 <span class="badge" id="expectedModeBadge">依玩法</span></div>
