@@ -51,18 +51,18 @@ async function handleHistory(req,res){
   const code=codeOf(req.query.q||req.query.code||req.query.symbol),market=String(req.query.market||'');
   if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
   try{
-    const now=Math.floor(Date.now()/1000),period2=now+86400,period1=now-Math.round(3.35*365.25*86400);
+    const now=Math.floor(Date.now()/1000),period2=now+86400,period1=now-Math.round(5.35*365.25*86400);
     const stockPromise=firstChart(marketSymbols(code,market),period1,period2);
     const benchmarkSymbols=market.includes('上櫃')?['^TWOII','^TWII']:['^TWII'];
     const benchmarkPromise=firstChart(benchmarkSymbols,period1,period2).catch(()=>null);
     const [stock,benchmark]=await Promise.all([stockPromise,benchmarkPromise]);
-    const cutoff=now-Math.round(3*365.25*86400);
+    const cutoff=now-Math.round(5*365.25*86400);
     const stockRows=stock.rows.filter(x=>Number(x.timestamp)>=cutoff);
     const benchmarkRows=benchmark?.rows?.filter(x=>Number(x.timestamp)>=cutoff)||[];
     res.setHeader('Cache-Control','public, s-maxage=21600, stale-while-revalidate=86400');
-    return res.status(200).json({ok:true,source:'Yahoo Finance',code,market,symbol:stock.symbol,updatedAt:new Date().toISOString(),history:stockRows,benchmark:benchmark?{symbol:benchmark.symbol,history:benchmarkRows}:null});
+    return res.status(200).json({ok:true,source:'Yahoo Finance',code,market,symbol:stock.symbol,windowYears:5,updatedAt:new Date().toISOString(),history:stockRows,benchmark:benchmark?{symbol:benchmark.symbol,history:benchmarkRows}:null});
   }catch(e){
-    return res.status(502).json({ok:false,error:e?.message||'三年歷史資料取得失敗'});
+    return res.status(502).json({ok:false,error:e?.message||'五年歷史資料取得失敗'});
   }
 }
 
