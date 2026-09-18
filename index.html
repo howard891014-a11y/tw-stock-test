@@ -960,6 +960,26 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .expected-growth-hero{gap:8px}.expected-growth-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin:4px 0 2px}.expected-growth-grid>div{min-width:0;padding:10px 8px;border:1px solid #29445c;border-radius:10px;background:#091725;text-align:center}.expected-growth-grid small{display:block;color:#8297aa;font-size:10px;margin-bottom:5px}.expected-growth-grid strong{display:block;font-size:18px;line-height:1.2}.expected-growth-grid .risk{color:#ff9b8f}.expected-growth-grid .win{color:#64e7b5}.expected-growth-grid .extreme-risk{color:#ffbe73}.expected-seasonality{display:block;color:#71899d;font-size:9px;line-height:1.4}.expected-growth-grid em{display:block;margin-top:4px;color:#8194a5;font-size:9px;font-style:normal;line-height:1.35}.playstyle-fit-head b{max-width:58%;text-align:right;white-space:normal;line-height:1.25}
 @media(max-width:720px){.expected-growth-grid{grid-template-columns:1fr 1fr}.expected-growth-grid strong{font-size:16px}.playstyle-fit-head b{max-width:62%;font-size:9px}}
 </style>
+
+<style id="v2591-resonance-overview">
+/* v2.5.9.1 — 總覽只保留結論、價格、路徑與操作；上半部股票 header/tabs 完全不動 */
+.overview-outline[data-view-panel="overview"].active-view{grid-template-columns:minmax(0,1fr)!important}
+.overview-resonance-card{position:relative;overflow:hidden;padding:18px;border-color:#27496a;background:radial-gradient(circle at 74% 18%,rgba(150,82,255,.13),transparent 34%),radial-gradient(circle at 18% 20%,rgba(58,158,255,.12),transparent 32%),linear-gradient(155deg,#0b1a2b,#081421 72%);box-shadow:inset 0 0 0 1px rgba(102,178,255,.03)}
+.overview-resonance-card:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(97,178,255,.025),transparent)}
+.overview-resonance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;position:relative;z-index:1}.overview-resonance-head span{display:block;color:#7f9cb5;font-size:10px;font-weight:700;letter-spacing:.08em}.overview-resonance-head h2{margin:4px 0 3px;font-size:23px;line-height:1.15}.overview-resonance-head small{color:#718aa1;font-size:10px}.overview-resonance-head>b{flex:0 0 auto;max-width:45%;padding:7px 10px;border:1px solid #7555b8;border-radius:999px;background:#181d37;color:#cf9cff;font-size:11px;line-height:1.25;text-align:center}
+.overview-resonance-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}.overview-resonance-metrics>div{min-width:0;padding:10px 11px;border:1px solid #203d56;border-radius:11px;background:rgba(5,17,30,.62)}.overview-resonance-metrics span{display:block;color:#7890a5;font-size:9px}.overview-resonance-metrics strong{display:block;margin-top:5px;color:#f3f8ff;font-size:17px;overflow-wrap:anywhere}.overview-resonance-metrics>div:nth-child(1) strong{color:#bf8cff}.overview-resonance-metrics>div:nth-child(2) strong{color:#69d9ff}.overview-resonance-metrics>div:nth-child(3) strong{color:#ffb06a}.overview-resonance-metrics>div:nth-child(4) strong{color:#d49aff}.overview-resonance-metrics small{display:block;margin-top:4px;color:#667f95;font-size:8px;line-height:1.35}
+.overview-wave-shell{margin-top:12px;padding:8px 6px 2px;border:1px solid #1e3d55;border-radius:14px;background:linear-gradient(180deg,rgba(4,15,26,.85),rgba(7,24,38,.6));overflow:hidden}.overview-wave-shell svg{display:block;width:100%;height:auto;min-height:235px}.overview-wave-grid{stroke:#163047;stroke-width:1;stroke-dasharray:3 6}.overview-wave-label{font-size:10px;font-weight:700}.overview-wave-price{font-size:12px;font-weight:800}
+.overview-source-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.overview-source-chips span{padding:5px 8px;border:1px solid #294861;border-radius:999px;background:#081827;color:#91aec3;font-size:9px;line-height:1.2}
+.overview-decision-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.overview-decision-row>div{min-width:0;padding:10px;border:1px solid #29435a;border-radius:10px;background:#091725}.overview-decision-row span{display:block;color:#7f98ad;font-size:9px}.overview-decision-row strong{display:block;margin-top:6px;font-size:12px;line-height:1.35;color:#eaf5ff;overflow-wrap:anywhere}.overview-decision-row>div:nth-child(1){border-color:#265576}.overview-decision-row>div:nth-child(2){border-color:#2c6b68}.overview-decision-row>div:nth-child(3){border-color:#685982}.overview-decision-row>div:nth-child(4){border-color:#74475d}
+.overview-final-line{display:grid;grid-template-columns:.8fr 1.5fr 1.15fr 1.1fr;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #1e3447}.overview-final-line>div{min-width:0}.overview-final-line span{display:block;color:#607b91;font-size:8px}.overview-final-line b{display:block;margin-top:3px;color:#aebfd0;font-size:9px;line-height:1.4;overflow-wrap:anywhere}
+.short-wave-mini{margin-top:9px;padding:9px;border:1px solid #234d68;border-radius:11px;background:#071724;overflow:hidden}.short-wave-mini-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 8px;align-items:center}.short-wave-mini-head>span{color:#61d6ff;font-size:11px;font-weight:800}.short-wave-mini-head>b{color:#e9f7ff;font-size:10px;overflow-wrap:anywhere}.short-wave-mini-head>small{grid-column:1/-1;color:#7f9ab0;font-size:9px;line-height:1.4}.short-wave-mini svg{display:block;width:100%;height:auto;min-height:150px;margin-top:5px}.short-wave-grid{stroke:#183247;stroke-width:1;stroke-dasharray:2 5}.short-wave-label{fill:#bdd7e8;font-size:10px;font-weight:700}.short-wave-target-line{stroke:#76569a;stroke-width:1;stroke-dasharray:4 5}.short-wave-target-label{fill:#caa0ff;font-size:9px;font-weight:700}
+@media(max-width:720px){
+ .overview-resonance-card{padding:12px 9px}.overview-resonance-head{gap:8px}.overview-resonance-head h2{font-size:20px}.overview-resonance-head small{font-size:9px}.overview-resonance-head>b{max-width:48%;font-size:9px;padding:6px 7px}
+ .overview-resonance-metrics{grid-template-columns:1fr 1fr;gap:6px}.overview-resonance-metrics>div{padding:8px}.overview-resonance-metrics strong{font-size:14px}.overview-wave-shell{padding:4px 0 0}.overview-wave-shell svg{min-height:205px}.overview-wave-label{font-size:9px}.overview-wave-price{font-size:10px}
+ .overview-decision-row{grid-template-columns:1fr 1fr;gap:6px}.overview-decision-row>div{padding:8px}.overview-decision-row strong{font-size:10px}.overview-final-line{grid-template-columns:1fr 1fr;gap:7px}.overview-source-chips span{font-size:8px}
+ .short-wave-mini{padding:7px}.short-wave-mini svg{min-height:130px}.short-wave-label{font-size:9px}.short-wave-target-label{font-size:8px}
+}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -987,7 +1007,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.8.9</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.9.1</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1037,20 +1057,33 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
       </nav>
 
       <section class="overview-outline" data-view-panel="overview">
-      <article class="card outline-card" data-view-open="analysis"><span>五階段位置</span><strong class="orange" id="overviewStageState">--</strong><small id="overviewStageNote">查看目前位置</small></article>
-      <article class="card outline-card" data-view-open="analysis"><span>建議玩法</span><strong class="purple" id="overviewPlayStyle">--</strong><small id="overviewPlayStyleNote">查看建議策略</small></article>
-      <article class="card outline-card" data-view-open="analysis"><span>預計成長空間</span><strong class="blue" id="overviewExpectedUpside">--%</strong><small id="overviewExpectedUpsideNote">查看上漲／下跌空間與勝率</small></article>
-      <article class="card outline-card" data-view-open="analysis"><span>技術分析</span><strong id="overviewTechnicalState">--</strong><small id="overviewTechnicalNote">--</small></article>
-      <article class="card outline-card" data-view-open="valuation"><span>估值分析</span><strong id="overviewCompositeFair">--</strong><small>綜合合理價</small></article>
-      <article class="card outline-card" data-view-open="valuation"><span>九情境</span><strong id="overviewValuationScenario">--</strong><small id="overviewValuationScenarioNote">估值情境判讀</small></article>
-      <article class="card outline-card" data-view-open="disposal"><span>處置</span><strong id="overviewDisposalState">--</strong><small id="overviewDisposalRisk">處置風險 --</small></article>
-      <article class="card outline-card" data-view-open="analysis"><span>買賣決策</span><strong>→</strong><small>買進／減碼／賣出區</small></article>
-      <article class="card outline-card target-outline-card" data-view-open="targets">
-      <span>目標價</span>
-      <div class="overview-target-line"><strong id="overviewNearestPrice">--</strong><small id="overviewNearestRate">倍率--</small></div>
-      <small id="overviewMainBrokerLine">目標券商：--</small>
-    </article>
-    </section>
+        <article class="card overview-resonance-card" id="overviewResonanceCard">
+          <header class="overview-resonance-head">
+            <div><span>總覽最終路徑</span><h2>共振波浪圖</h2><small>價格看共振，技術／五階段決定路徑與達成條件</small></div>
+            <b id="overviewResonancePlay">等待資料</b>
+          </header>
+          <div class="overview-resonance-metrics">
+            <div><span>共振強度</span><strong id="overviewResonanceStrength">-- / 100</strong><small id="overviewResonanceStrengthNote">等待分析資料</small></div>
+            <div><span>預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要共振對現價</small></div>
+            <div><span>正常下跌空間</span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
+            <div><span>主要共振區</span><strong id="overviewTargetZone">--</strong><small>來源群聚後的價格區</small></div>
+          </div>
+          <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 340" role="img" aria-label="共振價格路徑"></svg></div>
+          <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
+          <div class="overview-decision-row">
+            <div><span>① 小量試單</span><strong id="overviewTrialPrice">--</strong></div>
+            <div><span>② 大量進場</span><strong id="overviewEntryPrice">--</strong></div>
+            <div><span>③ 減碼／止盈</span><strong id="overviewTrimPrice">--</strong></div>
+            <div><span>④ 出場／獲利</span><strong id="overviewExitPrice">--</strong></div>
+          </div>
+          <footer class="overview-final-line">
+            <div><span>方向</span><b id="overviewFinalDirection">--</b></div>
+            <div><span>策略</span><b id="overviewFinalStrategy">等待分析資料</b></div>
+            <div><span>主要風險</span><b id="overviewFinalRisk">--</b></div>
+            <div><span>下一步</span><b id="overviewFinalNext">--</b></div>
+          </footer>
+        </article>
+      </section>
 
       <section class="dashboard-grid">
         <article class="card detail-panel technical-card" id="technical" data-view-panel="analysis">
@@ -1179,6 +1212,10 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           <div><span>新聞催化</span><b id="shortNews">--</b></div>
           <div class="short-engine-wide"><span>最近短壓力</span><b id="shortResistance">--</b></div>
         </div>
+        <div class="short-wave-mini">
+          <div class="short-wave-mini-head"><span>短波段分析</span><b id="shortWaveStructure">--</b><small id="shortWaveGoal">--</small></div>
+          <svg id="shortWaveSvg" viewBox="0 0 700 210" role="img" aria-label="短波段價格結構"></svg>
+        </div>
         <small class="playstyle-short-foot" id="playShortNote">只有技術資格通過後才會啟用；新聞只做低權重加減分，不會單獨觸發短線建議。</small>
       </section>
       <section class="playstyle-swing-analysis" id="playSwingAnalysis" hidden>
@@ -1219,7 +1256,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           <div><small>極端市場風險</small><strong class="extreme-risk" id="expectedExtremeRisk">--%</strong><em id="expectedExtremeRiskNote">系統性崩壞壓力測試</em></div>
         </div>
         <small id="expectedBasisNote">等待玩法與目標／支撐資料</small>
-        <small class="expected-seasonality" id="expectedSeasonalityNote">季節性：等待三年資料</small>
+        <small class="expected-seasonality" id="expectedSeasonalityNote">季節性：等待五年資料</small>
       </div>
       <div class="expected-position" id="expectedPositionSummary" hidden>
         <span>持股均價 <b id="expectedAvgCost">--</b></span>
@@ -1399,7 +1436,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.8.9"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.9.1"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
