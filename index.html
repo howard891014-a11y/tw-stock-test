@@ -847,8 +847,8 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #playStyleCard .playstyle-fit-row[data-play="long"] .playstyle-fit-head b{color:#71899d}
 @media(max-width:720px){#stageTitle{font-size:13px!important}#overviewStageNote{font-size:10px!important}}
 </style>
-<style id="v2571-swing-wave">
-/* v2.5.7.1 — 波段玩法改成波浪圖；轉折點直接標示起漲、第一波、回測、目前與延伸目標 */
+<style id="v2572-swing-wave">
+/* v2.5.7.2 — 波段目標改由第一回測低點起算；補第二回測，倍率以可能目標區呈現 */
 .playstyle-swing-analysis{margin-top:12px;padding:13px 14px;border:1px solid #31506a;border-radius:14px;background:linear-gradient(145deg,#0b1d2c,#091622);min-width:0;overflow:hidden}
 .playstyle-swing-analysis[hidden]{display:none!important}
 .playstyle-swing-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
@@ -862,6 +862,9 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .swing-wave-axis{fill:#7690a5;font-size:10px}
 .swing-wave-path-actual{fill:none;stroke:#55c9ff;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(85,201,255,.24))}
 .swing-wave-path-proj{fill:none;stroke:#b866ff;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:8 7;filter:drop-shadow(0 0 5px rgba(184,102,255,.22))}
+.swing-wave-target-zone{fill:rgba(184,102,255,.07);stroke:#7046a0;stroke-width:1;stroke-dasharray:4 5}
+.swing-wave-target-ray{fill:none;stroke:#b866ff;stroke-width:2.5;stroke-linecap:round;stroke-dasharray:7 7;opacity:.82}
+.swing-wave-target-title{fill:#b78bd7;font-size:9.5px;font-weight:800}
 .swing-wave-guide{stroke:#91a6b8;stroke-width:1.5;stroke-dasharray:3 5;opacity:.7}
 .swing-wave-dot{stroke:#dff6ff;stroke-width:2.5}
 .swing-wave-label{font-size:10.5px;font-weight:700;text-anchor:middle}
@@ -909,7 +912,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.7.1</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.7.2</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1092,7 +1095,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
           <em>波段玩法專屬</em>
         </div>
         <div class="swing-wave-chart">
-          <svg id="playSwingSvg" viewBox="0 0 800 350" role="img" aria-label="波段結構波浪圖"></svg>
+          <svg id="playSwingSvg" viewBox="0 0 800 350" role="img" aria-label="波段結構與可能目標區波浪圖"></svg>
           <div class="swing-wave-legend" id="playSwingLegend"></div>
         </div>
         <small class="swing-wave-foot" id="playSwingNote">只在系統主玩法判定為波段時啟用。</small>
@@ -1264,7 +1267,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.7.1"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.7.2"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
