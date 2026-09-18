@@ -1,4 +1,4 @@
-// v2.5.8.9 — 三年共用歷史資料：一年加權股性＋季節性＋成長空間／勝率＋極端市場風險
+// v2.5.9.0 — 合併 history.js 進 technical.js（history 模式）
 // 三年日K只抓一次並快取；正常市場樣本用於股性與成長估算，系統性崩壞獨立做壓力測試。
 const $=id=>document.getElementById(id);
 
@@ -239,13 +239,13 @@ async function technical(query,market){
   const params=new URLSearchParams({q:String(query||""),market:String(market||"")});
   return await readJson(await fetch(`/api/technical?${params.toString()}`,{cache:"no-store"}),"技術資料");
 }
-const HISTORY3Y_CACHE_KEY="stockzone_history3y_v2589",HISTORY3Y_CACHE_MS=12*60*60*1000;
+const HISTORY3Y_CACHE_KEY="stockzone_history3y_v2590",HISTORY3Y_CACHE_MS=12*60*60*1000;
 function readHistory3YCache(){try{return JSON.parse(localStorage.getItem(HISTORY3Y_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeHistory3YCache(x){try{localStorage.setItem(HISTORY3Y_CACHE_KEY,JSON.stringify(x))}catch{}}
 async function history3Y(query,market){
   const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`${code}|${String(market||"")}`,all=readHistory3YCache(),cached=all[key];
   if(cached&&Date.now()-Number(cached.savedAt||0)<HISTORY3Y_CACHE_MS&&Array.isArray(cached.data?.history)&&cached.data.history.length>400)return cached.data;
-  const params=new URLSearchParams({q:code,market:String(market||"")}),data=await readJson(await fetch(`/api/history?${params.toString()}`,{cache:"default"}),"三年歷史資料");
+  const params=new URLSearchParams({q:code,market:String(market||"")}),data=await readJson(await fetch(`/api/technical?mode=history&${params.toString()}`,{cache:"default"}),"歷史資料");
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory3YCache(all);return data;
 }
 function historyDateKey(x){if(x?.date)return dayKey(x.date);const ts=Number(x?.timestamp);return Number.isFinite(ts)?dayKey(new Date(ts*1000).toISOString()):""}
