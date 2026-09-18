@@ -848,7 +848,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 @media(max-width:720px){#stageTitle{font-size:13px!important}#overviewStageNote{font-size:10px!important}}
 </style>
 <style id="v2572-swing-wave">
-/* v2.5.7.3 — 波段目標改由第一回測低點起算；補第二回測，倍率以可能目標區呈現 */
+/* v2.5.8.0 — 波段目標改由第一回測低點起算；補第二回測，倍率以可能目標區呈現 */
 .playstyle-swing-analysis{margin-top:12px;padding:13px 14px;border:1px solid #31506a;border-radius:14px;background:linear-gradient(145deg,#0b1d2c,#091622);min-width:0;overflow:hidden}
 .playstyle-swing-analysis[hidden]{display:none!important}
 .playstyle-swing-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
@@ -884,6 +884,38 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
  .swing-wave-legend{grid-template-columns:1fr 1fr;gap:5px 8px;padding:8px}
  .swing-wave-legend div{font-size:8.5px}
 }
+
+/* v2.5.8.0 — 持股均價/股數、預期上漲空間與個人化買賣決策 */
+.expected-card{overflow:hidden}
+.expected-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 0 12px}
+.expected-hero>span,.expected-hero>small{color:var(--muted)}
+.expected-hero>strong{font-size:34px;margin:10px 0 5px}
+.expected-position{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 12px;padding:10px;border:1px solid #25435e;border-radius:10px;background:#0a1927}
+.expected-position span{display:flex;flex-direction:column;gap:4px;color:#8195a8;font-size:11px;text-align:center}
+.expected-position b{color:#edf6ff;font-size:14px}
+.expected-target-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.expected-target{padding:13px 10px;border:1px solid var(--line);border-radius:10px;background:#0a1826;text-align:center;min-width:0}
+.expected-target>span{display:block;color:#91a5b8;font-size:11px}
+.expected-target>strong{display:block;margin:7px 0 4px;color:#5bbcff;font-size:20px}
+.expected-target>small{display:block;color:#c8d5e1;font-size:11px}
+.expected-target>em{display:block;margin-top:5px;color:#75d9a6;font-size:10px;font-style:normal;min-height:1.2em}
+.expected-foot,.decision-foot{display:block;margin-top:9px;color:#71899d;font-size:10px;line-height:1.45}
+.decision-position-note{margin:-4px 0 10px;padding:8px 10px;border:1px solid #233e55;border-radius:9px;background:#0a1826;color:#95a9bc;font-size:11px;line-height:1.45}
+.decision-grid-v2>div{min-height:95px;justify-content:center}
+.decision-grid-v2 small{color:#8fa3b7;font-size:10px;line-height:1.35}
+.holding-profile{grid-column:1/-1!important;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:7px;align-items:end;padding-top:9px;margin-top:1px;border-top:1px solid #1d3449}
+.holding-profile label{display:flex;flex-direction:column;gap:4px;color:#7f93a6;font-size:10px}
+.holding-profile input{width:100%;min-width:0;height:34px;border:1px solid #29465f;border-radius:7px;background:#071522;color:#eef7ff;padding:0 8px;font:inherit}
+.holding-profile button{height:34px;border:1px solid #2d6b9b;border-radius:7px;background:#0d2940;color:#72c5ff;padding:0 12px;font-weight:700}
+.holding-profile-note{grid-column:1/-1;color:#62788b;font-size:9px}
+.swing-wave-cost-line{stroke:#ffb44b;stroke-width:1.6;stroke-dasharray:6 5;opacity:.9}
+.swing-wave-cost-text{fill:#ffb44b;font-size:9.5px;font-weight:800}
+@media(max-width:720px){
+ .expected-position{grid-template-columns:1fr 1fr 1fr;gap:5px;padding:8px 5px}.expected-position span{font-size:9px}.expected-position b{font-size:12px}
+ .expected-target-grid{grid-template-columns:1fr;gap:7px}.expected-target{display:grid;grid-template-columns:minmax(84px,.8fr) 1fr 1fr;align-items:center;text-align:left;padding:10px}.expected-target>span,.expected-target>strong,.expected-target>small{margin:0}.expected-target>strong{text-align:center;font-size:18px}.expected-target>small{text-align:right}.expected-target>em{grid-column:1/-1;text-align:right;margin-top:3px}
+ .decision-grid-v2{grid-template-columns:1fr 1fr!important}.decision-grid-v2>div{min-height:92px;padding:11px 8px}.decision-grid-v2 strong{font-size:15px}.decision-grid-v2 small{font-size:9px}
+ .holding-profile{grid-template-columns:1fr 1fr 58px!important;gap:5px!important}.holding-profile input{height:32px;padding:0 6px}.holding-profile button{height:32px;padding:0 7px;font-size:11px}
+}
 </style>
 </head>
 <body>
@@ -912,7 +944,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.7.3</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.8.0</span></button>
   </aside>
 
   <div class="main-shell">
@@ -964,7 +996,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
       <section class="overview-outline" data-view-panel="overview">
       <article class="card outline-card" data-view-open="analysis"><span>五階段位置</span><strong class="orange" id="overviewStageState">--</strong><small id="overviewStageNote">查看目前位置</small></article>
       <article class="card outline-card" data-view-open="analysis"><span>建議玩法</span><strong class="purple" id="overviewPlayStyle">--</strong><small id="overviewPlayStyleNote">查看建議策略</small></article>
-      <article class="card outline-card" data-view-open="analysis"><span>預期上漲空間</span><strong class="blue">--%</strong><small>查看預期空間</small></article>
+      <article class="card outline-card" data-view-open="analysis"><span>預期上漲空間</span><strong class="blue" id="overviewExpectedUpside">--%</strong><small id="overviewExpectedUpsideNote">查看預期空間</small></article>
       <article class="card outline-card" data-view-open="analysis"><span>技術分析</span><strong id="overviewTechnicalState">--</strong><small id="overviewTechnicalNote">--</small></article>
       <article class="card outline-card" data-view-open="valuation"><span>估值分析</span><strong id="overviewCompositeFair">--</strong><small>綜合合理價</small></article>
       <article class="card outline-card" data-view-open="valuation"><span>九情境</span><strong id="overviewValuationScenario">--</strong><small id="overviewValuationScenarioNote">估值情境判讀</small></article>
@@ -1102,7 +1134,25 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
       </section>
       <small class="playstyle-note" id="playStyleNote">長期需等題材／成長模組補齊後才開放主建議；不再把短線不適合自動改判長期。</small>
     </article>
-    <article class="card detail-panel simple-detail" data-view-panel="analysis"><div class="card-title">預期上漲空間 <span class="badge">待接功能</span></div><div class="hero-value"><span>預期空間</span><strong class="blue">--%</strong><small>之後接入計算邏輯</small></div></article>
+    <article class="card detail-panel expected-card" data-view-panel="analysis" id="expectedUpsideCard">
+      <div class="card-title">預期上漲空間 <span class="badge" id="expectedModeBadge">依玩法</span></div>
+      <div class="expected-hero">
+        <span id="expectedBasisLabel">現價基準</span>
+        <strong class="blue" id="expectedRange">--%</strong>
+        <small id="expectedBasisNote">等待玩法與目標區資料</small>
+      </div>
+      <div class="expected-position" id="expectedPositionSummary" hidden>
+        <span>持股均價 <b id="expectedAvgCost">--</b></span>
+        <span>股數 <b id="expectedShares">--</b></span>
+        <span>目前損益 <b id="expectedCurrentPnl">--</b></span>
+      </div>
+      <div class="expected-target-grid">
+        <div class="expected-target" id="expectedTarget1"><span id="expectedT1Label">第一目標</span><strong id="expectedT1Price">--</strong><small id="expectedT1Return">--</small><em id="expectedT1Profit"></em></div>
+        <div class="expected-target" id="expectedTarget2"><span id="expectedT2Label">主要目標</span><strong id="expectedT2Price">--</strong><small id="expectedT2Return">--</small><em id="expectedT2Profit"></em></div>
+        <div class="expected-target" id="expectedTarget3"><span id="expectedT3Label">樂觀目標</span><strong id="expectedT3Price">--</strong><small id="expectedT3Return">--</small><em id="expectedT3Profit"></em></div>
+      </div>
+      <small class="expected-foot" id="expectedFoot">持股會改用均價計算報酬與預估損益；觀察股維持現價基準。</small>
+    </article>
     <article class="card detail-panel simple-detail" data-view-panel="screening"><div class="card-title">智慧選股 <span class="badge">待接功能</span></div><div class="hero-value"><span>全市場自動篩選</span><strong>✦</strong><small>之後加入低點／剛站回／接近買點篩選</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="fundflow"><div class="card-title">資金流向 <span class="badge">待接功能</span></div><div class="hero-value"><span>市場資金流向</span><strong>↔</strong><small>之後接入零股、法人與族群資金流向</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title">近期精選 <span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
@@ -1122,13 +1172,15 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         </article>
 
         <article class="card decision-card detail-panel" id="decision" data-view-panel="analysis">
-          <div class="card-title">買賣決策 <span class="badge">待接功能</span></div>
-          <div class="decision-grid">
-            <div class="buy"><span>建議買進區</span><strong>-- ～ --</strong></div>
-            <div class="hold"><span>目前股價</span><strong id="decisionPrice">--</strong></div>
-            <div class="trim"><span>建議減碼區</span><strong>-- ～ --</strong></div>
-            <div class="sell"><span>建議賣出區</span><strong>-- ～ --</strong></div>
+          <div class="card-title">買賣決策 <span class="badge" id="decisionModeBadge">依玩法</span></div>
+          <div class="decision-position-note" id="decisionPositionNote">等待玩法與持股資料</div>
+          <div class="decision-grid decision-grid-v2">
+            <div class="buy"><span>小量試單</span><strong id="decisionTrialPrice">--</strong><small id="decisionTrialNote">--</small></div>
+            <div class="buy"><span>大量進場</span><strong id="decisionEntryPrice">--</strong><small id="decisionEntryNote">--</small></div>
+            <div class="trim"><span>小量止盈</span><strong id="decisionTrimPrice">--</strong><small id="decisionTrimNote">--</small></div>
+            <div class="sell"><span>全數獲利</span><strong id="decisionExitPrice">--</strong><small id="decisionExitNote">--</small></div>
           </div>
+          <small class="decision-foot" id="decisionFoot">價格來自目前玩法的結構與目標區；持股股數只用來換算分批數量，不改變市場目標價。</small>
         </article>
 
         <section class="detail-panel disposal-panel" id="disposal" data-view-panel="disposal">
@@ -1267,7 +1319,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.7.3"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.8.0"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
