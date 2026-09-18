@@ -1,3 +1,4 @@
+// v2.5.7.3 — 盤中報價新鮮度、搜尋非阻塞、目標價刪除持久化
 const $=id=>document.getElementById(id);
 
 function setText(id,value){
@@ -31,6 +32,20 @@ const LOCAL_STOCK_META={
   "2330":{code:"2330",name:"台積電",market:"上市",symbol:"2330.TW"},"台積電":{code:"2330",name:"台積電",market:"上市",symbol:"2330.TW"}
 };
 function localStockMeta(query){return LOCAL_STOCK_META[String(query||"").trim()]||null}
+const STOCK_META_CACHE_KEY="stockzone_stock_meta_cache_v2573";
+function readStockMetaCache(){try{return JSON.parse(localStorage.getItem(STOCK_META_CACHE_KEY)||"{}")||{}}catch{return{}}}
+function cachedStockMeta(query){
+  const q=String(query||"").trim(),all=readStockMetaCache(),hit=all[q];
+  if(!hit)return null;
+  const age=Date.now()-Number(hit.savedAt||0);if(!Number.isFinite(age)||age>30*24*60*60*1000)return null;
+  return hit;
+}
+function rememberStockMeta(stock){
+  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"").trim(),name=shortStockName(stock?.name||stock?.shortName||""),market=stock?.market||stock?.marketLabel||"";
+  if(!/^\d{4,6}$/.test(code))return;
+  const row={code,name,market,symbol:stock?.symbol||`${code}${market==="上櫃"?".TWO":".TW"}`,savedAt:Date.now()},all=readStockMetaCache();
+  all[code]=row;if(name)all[name]=row;localStorage.setItem(STOCK_META_CACHE_KEY,JSON.stringify(all));
+}
 async function stockMeta(query){
   let lastError=null;
   for(let i=0;i<2;i++){
@@ -114,13 +129,13 @@ function pickAfterCloseQuote(yahoo,db,mis){
   const best=candidates[0];
   return{...yahoo,...best,code:best.code||yahoo?.code,symbol:best.symbol||yahoo?.symbol,name:best.name||yahoo?.name,shortName:best.name||yahoo?.shortName,market:best.market||yahoo?.market,marketLabel:best.market||yahoo?.marketLabel};
 }
-async function yahooQuote(query){
+async function yahooQuote(query,market=""){
   async function once(timeoutMs){
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),timeoutMs);
     try{
       return await readJson(
-        await fetch(`/api/quote?q=${encodeURIComponent(query)}`,{
+        await fetch(`/api/quote?q=${encodeURIComponent(query)}${market?`&market=${encodeURIComponent(market)}`:""}`,{
           cache:"no-store",signal:controller.signal
         }),
         "股價"
@@ -135,7 +150,7 @@ async function yahooQuote(query){
   }
 }
 async function quote(query,market=""){
-  const yahoo=await yahooQuote(query);
+  const yahoo=await yahooQuote(query,market);
   // v2.5.7.0：盤中維持 Yahoo；盤後 MIS 已合併到 /api/sync-status，Neon 與 MIS 依最新交易日擇新者，同日優先 Neon。
   if(isTaiwanIntraday())return yahoo;
   const code=String(yahoo?.code||String(yahoo?.symbol||"").split(".")[0]||query||"").trim();
@@ -873,73 +888,55 @@ async function loadValuation(stock){
   }finally{card?.classList.remove("is-loading")}
 }
 
+function renderQuoteFields(x){
+  const last=Number(x?.last ?? x?.price ?? x?.regularMarketPrice),change=Number(x?.change ?? x?.regularMarketChange),pct=Number(x?.changePct ?? x?.changePercent ?? x?.regularMarketChangePercent);
+  setText("currentPrice",fmt(last));setText("metricPrice",fmt(last));setText("decisionPrice",fmt(last));
+  const ch=Number.isFinite(change)?`${change>0?"+":""}${fmt(change)}${Number.isFinite(pct)?`(${pct>0?"+":""}${fmt(pct)}%)`:""}`:"—";
+  setText("priceChange",ch);setText("metricChange",ch);setText("updateTime","剛剛更新");if($("updateRow"))$("updateRow").hidden=false;
+  const cls=change>0?"up":change<0?"down":"";["currentPrice","priceChange","metricChange"].forEach(id=>{const el=$(id);if(el)el.className=cls});
+}
+function patchCurrentQuote(x){
+  const incoming=String(x?.code||String(x?.symbol||"").split(".")[0]||""),current=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");
+  if(!currentStock||!incoming||incoming!==current)return false;
+  currentStock={...currentStock,...x,name:currentStock.name||x.name,shortName:currentStock.shortName||x.shortName,market:currentStock.market||x.market};renderQuoteFields(currentStock);updateListButtons();return true;
+}
 function renderStock(x){
   currentStock=x;resetPlayStyle("讀取分析資料中…");
-  const last=Number(x.last ?? x.price ?? x.regularMarketPrice);
-  const change=Number(x.change ?? x.regularMarketChange);
-  const pct=Number(x.changePct ?? x.changePercent ?? x.regularMarketChangePercent);
-
   setText("stockName",shortStockName(x.name||x.shortName)||"—");
   setText("stockCodeLabel",`${x.code||x.symbol||"—"} | ${x.market||"台股"}`);
   setText("marketLabel","");
-  setText("currentPrice",fmt(last));
-  setText("metricPrice",fmt(last));
-  setText("decisionPrice",fmt(last));
-
-  const ch=Number.isFinite(change)
-    ? `${change>0?"+":""}${fmt(change)}${Number.isFinite(pct)?`(${pct>0?"+":""}${fmt(pct)}%)`:""}`
-    : "—";
-  setText("priceChange",ch);
-  setText("metricChange",ch);
-  setText("updateTime","剛剛更新");
-  if($("updateRow"))$("updateRow").hidden=false;
-
-  const cls=change>0?"up":change<0?"down":"";
-  updateListButtons();
-  beginNews();
-  ["currentPrice","priceChange","metricChange"].forEach(id=>{
-    const el=$(id); if(el) el.className=cls;
-  });
+  renderQuoteFields(x);updateListButtons();beginNews();rememberStockMeta(x);
 }
+let activeSearchSeq=0;
 async function search(){
-  const input=$("stockCode");
-  const btn=$("searchButton");
-  const q=input?.value.trim();
+  const input=$("stockCode"),btn=$("searchButton"),q=input?.value.trim();
   if(!q){setStatus("請輸入股票名稱或代碼",true);return}
-
-  btn.disabled=true;
-  setStatus("搜尋股票…");
+  const seq=++activeSearchSeq;btn.disabled=true;setStatus("搜尋股票…");
   try{
-    // 官方主檔優先，但官方任一來源暫時失敗時不可讓整個搜尋功能停擺。
-    // 退回既有 Yahoo 查價流程只負責「找得到股票與行情」；若已有官方/本地身分資料，仍由它覆蓋中文名與市場別。
-    let meta=null;
-    try{meta=await stockMeta(q)}catch(e){console.warn("官方股票主檔暫時不可用，改用既有查價流程",e)}
+    // v2.5.7.3：主畫面只等待行情。股票身分、目標價、新聞改背景補齊，避免第一次搜尋被 20～30 秒的外部來源卡住。
+    let meta=localStockMeta(q)||cachedStockMeta(q);
+    const metaPromise=meta?Promise.resolve(meta):stockMeta(q).catch(e=>{console.warn("股票身分背景補查失敗",e);return null});
     let data=await quote(meta?.code||q,meta?.market||"");
-    if(!meta&&(data?.code||data?.symbol)){
-      try{meta=await stockMeta(data.code||data.symbol)}catch(e){console.warn("股票身分補查失敗，保留查價結果",e)}
+    if(seq!==activeSearchSeq)return;
+    if(!meta){
+      // 只給身分補查很短的機會；逾時就先顯示行情，之後再無感更新中文名／市場別。
+      meta=await Promise.race([metaPromise,new Promise(r=>setTimeout(()=>r(null),450))]);
     }
-    if(!meta)meta=localStockMeta(q)||localStockMeta(data?.code||data?.symbol);
-    if(!meta&&/[\u3400-\u9fff]/.test(q)&&data){
-      meta={code:data.code||String(data.symbol||"").split(".")[0],name:q,market:data.market||data.marketLabel||"",symbol:data.symbol};
-    }
-    data=mergeStockMeta(data,meta);
-    renderStock(data);
-    loadValuation(data);
-    loadTechnical(data);
-    loadDisposal(data);
-    setView("overview");
-    beginTargetSearch();
-    setStatus("搜尋目標價…");
-    try{await loadTargetPlay(data.code||data.symbol||q,data.name||data.shortName||"")}catch(e){console.warn("目標價更新失敗，保留其他搜尋",e)}
-    setStatus("搜尋新聞…");
-    try{await loadNews(data.code||data.symbol||q,data.name||data.shortName||"")}catch(e){console.warn("新聞更新失敗",e)}
-    setStatus(`搜尋成功：${shortStockName(data.name)||data.code||q}`);
+    if(!meta)meta=localStockMeta(data?.code||data?.symbol)||cachedStockMeta(data?.code||data?.symbol);
+    if(!meta&&/[\u3400-\u9fff]/.test(q)&&data)meta={code:data.code||String(data.symbol||"").split(".")[0],name:q,market:data.market||data.marketLabel||"",symbol:data.symbol};
+    data=mergeStockMeta(data,meta);renderStock(data);setView("overview");
+    loadValuation(data);loadTechnical(data);loadDisposal(data);beginTargetSearch(data.code||data.symbol||q);
+    setStatus(`搜尋成功：${shortStockName(data.name)||data.code||q}`);btn.disabled=false;
+
+    const code=String(data.code||String(data.symbol||"").split(".")[0]||q),name=data.name||data.shortName||"";
+    // 身分資料晚到時，只修正標題／市場，不重跑整頁。
+    void metaPromise.then(m=>{if(!m||seq!==activeSearchSeq)return;const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(m.code||"")!==curCode)return;currentStock=mergeStockMeta(currentStock,m);rememberStockMeta(currentStock);setText("stockName",shortStockName(currentStock.name||currentStock.shortName)||"—");setText("stockCodeLabel",`${currentStock.code||currentStock.symbol||"—"} | ${currentStock.market||"台股"}`)});
+    // 慢來源並行刷新；舊快取已先顯示，不再阻塞搜尋按鈕與主畫面。
+    void loadTargetPlay(code,name).catch(e=>console.warn("目標價背景更新失敗",e));
+    void loadNews(code,name).catch(e=>console.warn("新聞背景更新失敗",e));
   }catch(e){
-    console.error(e);
-    setStatus(`搜尋失敗：${e.message}`,true);
-  }finally{
-    btn.disabled=false;
-  }
+    if(seq!==activeSearchSeq)return;console.error(e);setStatus(`搜尋失敗：${e.message}`,true);
+  }finally{if(seq===activeSearchSeq)btn.disabled=false}
 }
 
 $("searchButton")?.addEventListener("click",search);
@@ -1079,24 +1076,24 @@ function renderMainTarget(main){
 const TARGET_CORR_KEY="stockzone_target_corrections_v239"; let editingTarget=null;
 function readCorr(){try{return JSON.parse(localStorage.getItem(TARGET_CORR_KEY)||"{}")||{}}catch{return{}}}
 function writeCorr(x){localStorage.setItem(TARGET_CORR_KEY,JSON.stringify(x))}
-function corrStableId(row){
+function corrStableId(row,code=currentStock?.code||""){
  if(row?._corrId)return row._corrId;
  const latest=targetHistoryOf(row).slice().sort((a,b)=>targetDateValue(b)-targetDateValue(a))[0]||row||{};
- return [currentStock?.code||"",row?.originalBroker||targetBrokerName(row),String(latest?.date||latest?.publishedAt||latest?.published||"").slice(0,10),String(targetPriceValue(latest)||"")].join("|");
+ return [code,row?.originalBroker||targetBrokerName(row),String(latest?.date||latest?.publishedAt||latest?.published||"").slice(0,10),String(targetPriceValue(latest)||"")].join("|");
 }
-function historyCorrId(row,item){
+function historyCorrId(row,item,code=currentStock?.code||""){
  const broker=row?.originalBroker||targetBrokerName(row),d=String(item?.date||item?.publishedAt||item?.published||"").slice(0,10);
- return `history|${currentStock?.code||""}|${broker}|${d}|${targetPriceValue(item)}`;
+ return `history|${code}|${broker}|${d}|${targetPriceValue(item)}`;
 }
-function applyCorr(rows){
+function applyCorr(rows,code=currentStock?.code||""){
  const c=readCorr();
  return rows.map(row=>{
-  const id=corrStableId(row),fix=c[id],r={...row,_corrId:id};
+  const id=corrStableId(row,code),fix=c[id],r={...row,_corrId:id};
   if(fix?.deleted)return null;
   if(fix?.broker){r.broker=fix.broker;r.brokerType=fix.brokerType||inferredBrokerType(fix.broker,"未知");}
   let h=targetHistoryOf(r).slice().sort((a,b)=>targetDateValue(b)-targetDateValue(a));
   h=h.map((x,i)=>{
-    const hf=c[historyCorrId(row,x)];
+    const hf=c[historyCorrId(row,x,code)];
     if(hf?.deleted)return null;
     let y={...x};
     if(hf?.broker)y.broker=hf.broker;
@@ -1127,9 +1124,15 @@ $("closeTargetEdit")?.addEventListener("click",closeEdit);
 $("cancelTargetEdit")?.addEventListener("click",closeEdit);
 
 $("deleteTargetEdit")?.addEventListener("click",()=>{
- if(!editingTarget)return; const {row,item}=editingTarget,c=readCorr(),id=item?historyCorrId(row,item):corrStableId(row);
- c[id]={...(c[id]||{}),deleted:true};writeCorr(c);targetRowsCache=applyCorr(targetRowsCache);
- closeEdit();renderBrokerRows();fillMainBrokerSelect();renderMainTarget(preferredMainTarget());setStatus("已刪除");
+ if(!editingTarget)return;
+ const {row,item}=editingTarget,c=readCorr(),code=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||""),latest=item||targetHistoryOf(row).slice().sort((a,b)=>targetDateValue(b)-targetDateValue(a))[0]||row;
+ const id=item?historyCorrId(row,item,code):corrStableId(row,code);
+ c[id]={...(c[id]||{}),deleted:true};
+ // 同時留下「股票＋券商＋日期＋目標價」紀錄級 tombstone；API 之後再抓到同一筆也不會復活。
+ if(latest)c[historyCorrId(row,latest,code)]={...(c[historyCorrId(row,latest,code)]||{}),deleted:true};
+ writeCorr(c);targetRowsCache=applyCorr(targetRowsCache,code);
+ const all=readTargetCache();if(code){all[code]={...(all[code]||{}),rows:targetRowsCache,updatedAt:all[code]?.updatedAt||new Date().toISOString()};writeTargetCache(all)}
+ closeEdit();renderBrokerRows();fillMainBrokerSelect();renderMainTarget(preferredMainTarget());setStatus("已刪除，此筆之後不再自動復原");
 });
 $("saveTargetEdit")?.addEventListener("click",()=>{
  if(!editingTarget)return;
@@ -1184,17 +1187,16 @@ function filterBadKnownTarget(rows){
   return rows.filter(row=>!(targetBrokerName(row).includes("高盛") && Number(targetPriceValue(row))===22000));
 }
 
-function beginTargetSearch(){
-  targetRowsCache=[];
-  renderMainTarget(null);
-  const host=$("brokerRows");if(host)host.innerHTML="<p>搜尋目標價…</p>";
-  $("targetPlay")?.classList.add("hidden");
+function beginTargetSearch(code=String(currentStock?.code||currentStock?.symbol||"")){
+  const cached=applyCorr(readTargetCache()[String(code)]?.rows||[],String(code));targetNewKeys=targetUnreadFor(code);targetRowsCache=cached;
+  if(cached.length){renderBrokerRows();fillMainBrokerSelect();renderMainTarget(preferredMainTarget())}
+  else{renderMainTarget(null);const host=$("brokerRows");if(host)host.innerHTML="<p>搜尋目標價…</p>";$("targetPlay")?.classList.add("hidden")}
 }
-function renderTargetPlay(payload){
-  const code=String(currentStock?.code||currentStock?.symbol||"");
-  const fresh=filterBadKnownTarget(applyCorr(normalizeTargetRows(payload)));
-  const cached=readTargetCache()[code]?.rows||[];
-  targetRowsCache=mergeTargetRows(cached,fresh);
+function renderTargetPlay(payload,code=String(currentStock?.code||currentStock?.symbol||"")){
+  code=String(code||"");
+  const fresh=filterBadKnownTarget(applyCorr(normalizeTargetRows(payload),code));
+  const cached=applyCorr(readTargetCache()[code]?.rows||[],code);
+  targetRowsCache=applyCorr(mergeTargetRows(cached,fresh),code);
   cacheTargetsForStock(code,targetRowsCache);
   renderBrokerRows(); fillMainBrokerSelect(); if(targetTypeFilter==="目標")renderMainTarget(preferredMainTarget());
 }
@@ -1205,7 +1207,11 @@ async function fetchTargetPayload(code,name){
   try{const res=await fetch(`/api/targets?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}${recent}`,{cache:"no-store",signal:controller.signal});return await readJson(res,"目標價")}finally{clearTimeout(timer)}
 }
 async function loadTargetPlay(code,name){
-  try{renderTargetPlay(await fetchTargetPayload(code,name));return true}catch(e){console.warn("目標價載入失敗",e);if($("brokerRows"))$("brokerRows").innerHTML="<p>目標價暫時無法載入。</p>";$("targetPlay")?.classList.add("hidden");if(e?.name==="AbortError")throw new Error("目標價查詢逾時");throw e}
+  const expected=String(code||"");
+  try{
+    const payload=await fetchTargetPayload(code,name),current=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");
+    if(current!==expected)return false;renderTargetPlay(payload,expected);return true;
+  }catch(e){console.warn("目標價載入失敗",e);const current=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(current===expected&&!targetRowsCache.length){if($("brokerRows"))$("brokerRows").innerHTML="<p>目標價暫時無法載入。</p>";$("targetPlay")?.classList.add("hidden")}if(e?.name==="AbortError")throw new Error("目標價查詢逾時");throw e}
 }
 // target tabs: 外資 / 本土 / 未知
 document.querySelectorAll(".target-tabs button").forEach(btn=>{
@@ -1358,8 +1364,9 @@ async function fetchNewsMode(code,name,mode,forceReset=false){
    const data=await readJson(r,"新聞"),incoming=(data.items||[]).filter(x=>!blockedNewsItem(x)),oldKeys=new Set(cached.map(newsMergeKey)),unread=newsSet(NEWS_UNREAD_KEY,code);
    if(cached.length)for(const x of incoming)if(x?.title&&!oldKeys.has(newsMergeKey(x)))unread.add(newsKey(x));saveNewsSet(NEWS_UNREAD_KEY,unread,code);
    const merged=mergeNews(cached,incoming);all[String(code)]={rows:merged,query:terms,updatedAt:new Date().toISOString()};writeNewsStore(key,all);
-   if(mode==="match")newsMatchRowsCache=merged;else{newsRowsCache=merged;updateDigestNewState(beforeRows,merged,code)}
-   renderNews();return true;
+   const stillCurrent=String(newsCode())===String(code);
+   if(mode==="match"){if(stillCurrent)newsMatchRowsCache=merged}else{updateDigestNewState(beforeRows,merged,code);if(stillCurrent)newsRowsCache=merged}
+   if(stillCurrent)renderNews();return true;
  }finally{clearTimeout(timer)}
 }
 async function loadNews(code,name){return fetchNewsMode(code,name,"all")}
@@ -1436,8 +1443,14 @@ document.querySelectorAll("[data-search-jump]").forEach(btn=>btn.addEventListene
   $("stockCode")?.focus();window.scrollTo({top:0,behavior:"smooth"});
 }));
 
-const AUTO_QUOTE_MS=5*60*1000,AUTO_TARGET_MS=2*60*60*1000;
-let autoQuoteRefreshing=false,autoTargetRefreshing=false;
+const CURRENT_QUOTE_MS=30*1000,AUTO_QUOTE_MS=5*60*1000,AUTO_TARGET_MS=2*60*60*1000;
+let currentQuoteRefreshing=false,autoQuoteRefreshing=false,autoTargetRefreshing=false;
+async function refreshCurrentQuote(){
+  if(currentQuoteRefreshing||!currentStock||!isTaiwanIntraday())return;
+  const code=String(currentStock.code||String(currentStock.symbol||"").split(".")[0]||"");if(!/^\d{4,6}$/.test(code))return;
+  const market=currentStock.market||currentStock.marketLabel||"";currentQuoteRefreshing=true;
+  try{const d=await quote(code,market);patchCurrentQuote(d)}catch(e){console.warn("個股盤中報價更新失敗",code,e)}finally{currentQuoteRefreshing=false}
+}
 function autoListStocks(){
  const byCode=new Map();
  for(const type of ["holdings","watchlist"])for(const x of readList(type))if(x.code)byCode.set(String(x.code),x);
@@ -1476,7 +1489,7 @@ async function autoRefreshTargets(force=false){
    const targetDue=force||!base.targetUpdatedAt||Date.now()-new Date(base.targetUpdatedAt).getTime()>=AUTO_TARGET_MS;
    if(!targetDue)continue;
    try{
-    const payload=await fetchTargetPayload(code,base.name||""),fresh=normalizeTargetRows(payload),cache=readTargetCache(),old=cache[code]?.rows||[],merged=mergeTargetRows(old,fresh),main=pickMainTarget(merged);
+    const payload=await fetchTargetPayload(code,base.name||""),fresh=applyCorr(normalizeTargetRows(payload),code),cache=readTargetCache(),old=applyCorr(cache[code]?.rows||[],code),merged=applyCorr(mergeTargetRows(old,fresh),code),main=pickMainTarget(merged);
     cache[code]={rows:merged,updatedAt:new Date().toISOString()};writeTargetCache(cache);
     const patch={targetUpdatedAt:new Date().toISOString()};
     if(main){patch.target=targetPriceValue(main.latest);patch.targetBroker=targetBrokerName(main.row)}
@@ -1485,10 +1498,11 @@ async function autoRefreshTargets(force=false){
   }
  }finally{autoTargetRefreshing=false}
 }
-setTimeout(()=>{autoRefreshQuotes(true);autoRefreshTargets(true)},800);
+setTimeout(()=>{autoRefreshQuotes(true);autoRefreshTargets(true);refreshCurrentQuote()},800);
+setInterval(()=>refreshCurrentQuote(),CURRENT_QUOTE_MS);
 setInterval(()=>autoRefreshQuotes(false),AUTO_QUOTE_MS);
 setInterval(()=>autoRefreshTargets(false),AUTO_TARGET_MS);
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){autoRefreshQuotes(false);autoRefreshTargets(false)}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){refreshCurrentQuote();autoRefreshQuotes(false);autoRefreshTargets(false)}});
 
 renderLists();
 
