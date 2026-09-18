@@ -803,7 +803,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 @media(max-width:720px){#overviewStageState{font-size:20px!important}#overviewStageNote{font-size:11px!important}}
 </style>
 <style id="v2563-playstyle">
-/* v2.5.6.6 — 建議玩法 v3：資格制＋假突破／箱型反覆濾網 */
+/* 建議玩法共用框架：資格制＋假突破／箱型反覆濾網 */
 .playstyle-card{--play-accent:#b879ff;min-width:0;overflow:hidden}
 .playstyle-hero{padding:15px 16px;border:1px solid #2b3f58;border-radius:13px;background:linear-gradient(145deg,#101f30,#0a1724);min-width:0}
 .playstyle-hero>span{display:block;color:#8fa2b6;font-size:12px}
@@ -846,6 +846,29 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 #playStyleCard .playstyle-fit-row[data-play="long"] .playstyle-bar{opacity:.45}
 #playStyleCard .playstyle-fit-row[data-play="long"] .playstyle-fit-head b{color:#71899d}
 @media(max-width:720px){#stageTitle{font-size:13px!important}#overviewStageNote{font-size:10px!important}}
+</style>
+<style id="v2581-short-engine">
+/* v2.5.8.1 — 短線玩法專屬引擎 */
+.playstyle-short-analysis{margin-top:12px;padding:13px 14px;border:1px solid #275776;border-radius:14px;background:linear-gradient(145deg,#0a1d2d,#081623);min-width:0;overflow:hidden}
+.playstyle-short-analysis[hidden]{display:none!important}
+.playstyle-short-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.playstyle-short-head>div span{display:block;color:#eef7ff;font-size:15px;font-weight:800}
+.playstyle-short-head>div strong{display:block;margin-top:6px;color:#56d7ff;font-size:16px;line-height:1.35}
+.playstyle-short-head>div small{display:block;margin-top:4px;color:#a5b7c6;font-size:11px;line-height:1.4}
+.playstyle-short-head>em{flex:0 0 auto;font-style:normal;color:#8fc8e8;font-size:10px;border:1px solid #2e6485;border-radius:999px;padding:5px 8px}
+.short-engine-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:11px}
+.short-engine-grid>div{min-width:0;padding:10px;border:1px solid #1f4057;border-radius:10px;background:#071725}
+.short-engine-grid span{display:block;color:#718da1;font-size:10px;margin-bottom:5px}
+.short-engine-grid b{display:block;color:#eaf6ff;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.short-engine-wide{grid-column:span 3}
+.playstyle-short-foot{display:block;margin-top:9px;color:#71899d;font-size:10px;line-height:1.5}
+@media(max-width:720px){
+ .playstyle-short-analysis{padding:12px 10px}
+ .playstyle-short-head>div span{font-size:15px}.playstyle-short-head>div strong{font-size:15px}.playstyle-short-head>div small{font-size:11px}.playstyle-short-head>em{font-size:9px}
+ .short-engine-grid{grid-template-columns:1fr 1fr;gap:7px}
+ .short-engine-grid>div{padding:9px}.short-engine-grid span{font-size:10px}.short-engine-grid b{font-size:11px}
+ .short-engine-wide{grid-column:span 2}.playstyle-short-foot{font-size:10px}
+}
 </style>
 <style id="v2572-swing-wave">
 /* v2.5.8.0 — 波段目標改由第一回測低點起算；補第二回測，倍率以可能目標區呈現 */
@@ -944,7 +967,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.8.0</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.8.1</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1105,7 +1128,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         </article>
 
         <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
-      <div class="card-title">建議玩法 <span class="badge">v3</span></div>
+      <div class="card-title">建議玩法 <span class="badge">v4</span></div>
       <div class="playstyle-hero">
         <span>主建議週期</span>
         <strong id="playMainPeriod">--</strong>
@@ -1117,6 +1140,26 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <div class="playstyle-fit-row" data-play="swing"><div class="playstyle-fit-head"><span>波段 <small>2～4週</small></span><b id="playSwingLabel">--</b></div><div class="playstyle-bar"><i id="playSwingBar"></i></div><em id="playSwingScore">--</em></div>
         <div class="playstyle-fit-row" data-play="long"><div class="playstyle-fit-head"><span>長期 <small>半年以上</small></span><b id="playLongLabel">--</b></div><div class="playstyle-bar"><i id="playLongBar"></i></div><em id="playLongScore">--</em></div>
       </div>
+      <section class="playstyle-short-analysis" id="playShortAnalysis" hidden>
+        <div class="playstyle-short-head">
+          <div>
+            <span>短線分析</span>
+            <strong id="playShortState">--</strong>
+            <small id="playShortHold">預計持有：3～5交易日</small>
+          </div>
+          <em>短線玩法專屬</em>
+        </div>
+        <div class="short-engine-grid">
+          <div><span>1～5日動能</span><b id="shortMomentum">--</b></div>
+          <div><span>均線加速度</span><b id="shortMaAccel">--</b></div>
+          <div><span>成交量</span><b id="shortVolume">--</b></div>
+          <div><span>RSI／MACD／KD</span><b id="shortIndicators">--</b></div>
+          <div><span>最近K線</span><b id="shortCandle">--</b></div>
+          <div><span>新聞催化</span><b id="shortNews">--</b></div>
+          <div class="short-engine-wide"><span>最近短壓力</span><b id="shortResistance">--</b></div>
+        </div>
+        <small class="playstyle-short-foot" id="playShortNote">只有技術資格通過後才會啟用；新聞只做低權重加減分，不會單獨觸發短線建議。</small>
+      </section>
       <section class="playstyle-swing-analysis" id="playSwingAnalysis" hidden>
         <div class="playstyle-swing-head">
           <div>
@@ -1319,7 +1362,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.8.0"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.5.8.1"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
