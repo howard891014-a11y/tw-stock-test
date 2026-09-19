@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f6f8fc">
+  <meta name="theme-color" content="#07111f">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -989,77 +989,6 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .adaptive-stop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.adaptive-stop-grid>div{padding:10px;border:1px solid #37506a;border-radius:10px;background:#081522}.adaptive-stop-grid>div:first-child{border-color:#49654f}.adaptive-stop-grid>div:last-child{border-color:#4b5576}.adaptive-stop-grid span{display:block;color:#a8bac8;font-size:10px}.adaptive-stop-grid b{display:block;margin:5px 0;color:#f5fbff;font-size:16px}.adaptive-stop-grid small{display:block;color:#879caf;font-size:9px;line-height:1.5}.adaptive-stop-grid em{font-style:normal;color:#ffb66d;font-weight:800}.adaptive-stop-note{display:block;margin-top:9px;color:#73899c;font-size:9px;line-height:1.45}
 @media(max-width:720px){.adaptive-stop-panel{padding:10px 8px}.adaptive-stop-head{display:block}.adaptive-stop-head small{display:block;max-width:none;margin-top:5px;text-align:left}.adaptive-stop-grid{grid-template-columns:1fr}.adaptive-stop-grid b{font-size:15px}}
 </style>
-
-<style id="v2605-minimal-light">
-/* v2.6.0.5 — StockZone 極簡淺色視覺。只改視覺層，不改分析核心。 */
-:root{--bg:#f5f7fb;--side:#ffffff;--card:#ffffff;--line:#e5ebf3;--text:#14233a;--muted:#8190a5;--blue:#2f8df4;--green:#10a978;--red:#ef5264;--orange:#f3a33b;--purple:#7658df;--soft-blue:#edf5ff;--soft-green:#ecfaf5;--soft-red:#fff0f2;--soft-orange:#fff7e9;--soft-purple:#f4efff}
-html,body{background:var(--bg)!important;color:var(--text)!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei",sans-serif!important}
-body{letter-spacing:0!important}
-.app-shell,.main-shell{background:var(--bg)!important}
-.sidebar{background:#fff!important;border-color:#e9eef5!important;box-shadow:8px 0 30px rgba(35,58,87,.04)!important}
-.brand,.brand strong,.mobile-brand,.mobile-brand strong{color:#10223c!important}.brand-logo{filter:none!important}
-.side-title{background:#f5f8fc!important;color:#287fd7!important}.side-item,.side-group button{color:#63758d!important}.side-item.active,.side-group button.active{background:#edf5ff!important;color:#2079dc!important}.sidebar-foot{border-color:#eef2f7!important;color:#8493a6!important;background:#fff!important}
-.topbar{background:rgba(245,247,251,.92)!important;border:0!important;backdrop-filter:blur(16px);box-shadow:none!important}
-.menu-btn{color:#29415f!important}.mobile-brand{font-weight:800!important}
-.searchbox{background:#fff!important;border:1px solid #e7edf5!important;border-radius:18px!important;box-shadow:0 8px 26px rgba(46,78,114,.07)!important;overflow:hidden!important}
-.searchbox input{color:#17263b!important;background:transparent!important}.searchbox input::placeholder{color:#9aa7b9!important}.searchbox button{background:#eef5ff!important;color:#257edb!important;border-left:1px solid #e8eef6!important;font-weight:800!important}
-.content{max-width:1100px!important}
-.stock-head{background:#fff!important;border:1px solid #edf1f6!important;border-radius:22px!important;padding:24px 28px!important;margin-bottom:16px!important;box-shadow:0 12px 34px rgba(51,77,110,.06)!important;align-items:center!important}
-.eyebrow{color:#8291a6!important;letter-spacing:.02em!important;font-size:12px!important}.stock-head h1{color:#10213b!important;font-weight:850!important}.stock-head h1 small{color:#6f7f94!important}.muted{color:#8291a6!important}
-.price-block strong{color:#ef5264!important;font-weight:800!important}.price-block span{font-weight:700!important}.price-block small{color:#8d99aa!important}
-.stock-list-actions button{background:#f4f7fb!important;color:#48617f!important;border:1px solid #e1e8f1!important;border-radius:14px!important}.stock-list-actions button.in-list{background:#eaf9f3!important;color:#11805e!important;border-color:#cfeee2!important}
-.section-tabs{background:transparent!important;border:0!important;border-bottom:1px solid #e2e8f0!important;border-radius:0!important;margin:0 4px 18px!important;overflow:visible!important}.section-tabs button{color:#607087!important;background:transparent!important;border:0!important;border-bottom:3px solid transparent!important;font-weight:600!important}.section-tabs button.active{color:#15263e!important;border-bottom-color:#2f8df4!important;background:transparent!important}
-.card,.overview-resonance-card,.valuation-card,.valuation-scenario-card,.expected-card,.playstyle-card,.stage-card,.decision-card,.targets-card,.news-analysis-card,.manage-card{background:#fff!important;border:1px solid #e7edf5!important;border-radius:22px!important;box-shadow:0 10px 30px rgba(45,72,105,.055)!important;color:#14233a!important}
-.card-title{color:#17263b!important;font-size:19px!important}.badge{background:#f4f7fb!important;border-color:#e0e7f0!important;color:#5e7189!important}
-.overview-resonance-card{padding:24px!important;background:#fff!important;box-shadow:0 12px 34px rgba(45,72,105,.06)!important}
-.overview-resonance-card:before{display:none!important}.overview-resonance-head span{color:#8997aa!important}.overview-resonance-head h2{color:#11243e!important;font-size:28px!important}.overview-resonance-head small{color:#94a0b1!important}.overview-resonance-head>b{background:#f3efff!important;border-color:#e6dbff!important;color:#6c50d7!important;border-radius:999px!important}
-.overview-resonance-metrics{gap:12px!important}.overview-resonance-metrics>div{background:#f8fafc!important;border:0!important;border-radius:18px!important;padding:16px!important}.overview-resonance-metrics>div:nth-child(1){background:#eef6ff!important}.overview-resonance-metrics>div:nth-child(2){background:#ecfaf5!important}.overview-resonance-metrics>div:nth-child(3){background:#fff0f2!important}.overview-resonance-metrics>div:nth-child(4){background:#f4efff!important}.overview-resonance-metrics span{color:#64758d!important;font-size:11px!important}.overview-resonance-metrics strong{font-size:20px!important}.overview-resonance-metrics small{color:#8d99aa!important;font-size:10px!important}
-.overview-wave-shell{background:#fff!important;border:1px solid #edf1f6!important;border-radius:20px!important;padding:14px 10px 6px!important;box-shadow:none!important}.overview-wave-grid{stroke:#e8eef5!important;stroke-dasharray:4 7!important}.overview-wave-tag-title,.overview-wave-zone-title{font-weight:800!important}.overview-wave-tag-price{fill:#17263b!important}.overview-wave-support-guide{stroke:#b9d8f5!important}.overview-source-chips span{background:#f5f8fc!important;border-color:#e6ecf3!important;color:#6c7d93!important}
-.overview-decision-row{gap:10px!important}.overview-decision-row>div{background:#f8fafc!important;border:0!important;border-radius:16px!important;padding:13px!important}.overview-decision-row span{color:#8290a4!important}.overview-decision-row strong{color:#1b2c44!important;font-size:13px!important}.overview-final-line{border-color:#e8edf4!important}.overview-final-line span{color:#8c98a9!important}.overview-final-line b{color:#53657c!important}
-.tech-overview,.tech-tile,.scenario-cell,.scenario-summary,.playstyle-hero,.playstyle-position-mode,.playstyle-short-analysis,.playstyle-swing-analysis,.playstyle-long-analysis,.expected-hero,.expected-position,.expected-target,.decision-position-note,.adaptive-stop-panel,.adaptive-stop-grid>div,.short-wave-mini,.long-engine-grid>div,.short-engine-grid>div,.stage-summary,.holding-profile,.manage-stock,.news-item,.target-b-card,.target-new,.valuation-section,.valuation-mini,.valuation-compare{background:#fff!important;border-color:#e7edf5!important;color:#14233a!important;box-shadow:none!important}
-.tech-tile,.short-engine-grid>div,.long-engine-grid>div,.expected-target,.adaptive-stop-grid>div{background:#f8fafc!important;border-radius:16px!important}.tech-tile span,.tech-metric span,.short-engine-grid span,.long-engine-grid span,.playstyle-personality span,.playstyle-position-mode>span,.expected-growth-grid small,.expected-position span,.adaptive-stop-grid span{color:#74849a!important}.tech-tile b,.tech-metric b,.short-engine-grid b,.long-engine-grid b,.playstyle-position-mode>b,.adaptive-stop-grid b{color:#192a42!important}
-.tech-overview-main{border-color:#e7edf5!important;background:linear-gradient(135deg,#edf6ff,#fff)!important}.tech-overview-points{border-color:#e9eef5!important}.tech-overview-points li{color:#52657d!important}
-.playstyle-hero{background:linear-gradient(145deg,#f7f9fd,#fff)!important}.playstyle-hero span,.playstyle-note,.playstyle-short-foot,.playstyle-swing-sub,.playstyle-long-foot,.expected-foot,.decision-foot,.holding-profile-note,.adaptive-stop-head small,.adaptive-stop-panel>small{color:#8593a6!important}.playstyle-hero strong,.playstyle-hero b,.playstyle-personality b,.playstyle-short-head strong,.playstyle-swing-head strong,.playstyle-long-head strong{color:#1b2c43!important}.playstyle-personality,.playstyle-position-mode{background:#f8fafc!important;border-color:#e7edf5!important}.playstyle-bar{background:#edf1f6!important}
-.expected-growth-grid>div{background:#f8fafc!important;border:0!important;border-radius:16px!important}.expected-growth-grid>div:nth-child(1){background:#edf6ff!important}.expected-growth-grid>div:nth-child(2){background:#fff0f2!important}.expected-growth-grid>div:nth-child(3){background:#ecfaf5!important}.expected-growth-grid>div:nth-child(4){background:#fff6e8!important}
-.decision-grid>div{background:#fbfcfe!important;border:1px solid #e7edf5!important;border-radius:18px!important}.decision-grid>div.buy{background:#effaf6!important;border-color:#d8f0e7!important}.decision-grid>div.trim{background:#fff7e9!important;border-color:#f5e2b9!important}.decision-grid>div.sell,.decision-grid>div.stop{background:#fff0f2!important;border-color:#f3d3d8!important}.decision-grid small{color:#78879b!important}
-.decision-risk-badge.risk-low{background:#ecfaf5!important;color:#12805e!important;border-color:#d7efe6!important}.decision-risk-badge.risk-medium{background:#fff7e9!important;color:#9b6a16!important;border-color:#f2e1bc!important}.decision-risk-badge.risk-high,.decision-risk-badge.risk-extreme{background:#fff0f2!important;color:#c64254!important;border-color:#f0cfd5!important;box-shadow:none!important}
-.stage-step{color:#8190a4!important}.stage-step i{background:#fff!important;color:#5d7088!important;border-color:#d9e2ec!important}.stage-step.active i,.stage-step.current i{background:#eaf5ff!important;color:#217dda!important;border-color:#8fc6f8!important}.stage-progress-line{background:#e9eef5!important}.stage-summary{background:#f8fafc!important}
-.data-list>div,.target-tabs,.manage-tabs{border-color:#e8edf4!important}.data-list span,.target-play-head span,.target-play-base span,.target-play-base small,.broker-row time,.broker-row .broker-type,.manage-stock-main small,.news-meta,.news-summary-row span{color:#7f8ea2!important}.target-tabs button,.manage-tabs button{color:#718197!important}.target-tabs button.active,.manage-tabs button.active{color:#247fdb!important;background:#eef6ff!important;border-color:#7bb8ef!important}
-.broker-row:hover,.broker-row.selected{background:#f2f7fd!important;border-color:#cfe3f7!important}.manage-stock{background:#fff!important}.manage-empty{color:#8b97a8!important}
-.news-item{border-color:#e7edf5!important}.news-title{color:#1c2d44!important}.news-summary{color:#607087!important}.news-filter-row button{background:#f6f8fb!important;color:#607087!important;border-color:#e2e8f0!important}
-.swing-wave-chart,.short-wave-mini{background:#fff!important}.swing-wave-grid,.short-wave-grid{stroke:#e7edf4!important}.swing-wave-axis{fill:#7b899c!important}.swing-wave-label,.short-wave-label{fill:#53657a!important}.swing-wave-value{fill:#182941!important}.swing-wave-target-zone{fill:#f5efff!important;stroke:#d9c7fb!important}.swing-wave-target-title,.short-wave-target-label{fill:#7557d8!important}.swing-wave-guide{stroke:#c7d2df!important}.swing-wave-cost-text{fill:#d28b26!important}
-.scenario-cell{background:#f8fafc!important}.scenario-cell.active{background:#edf6ff!important;border-color:#b8d8f7!important}.scenario-summary{background:#f8fafc!important}.valuation-section-title,.disposal-card-title{color:#1d2e45!important}
-.disposal-summary-card,.disposal-help,.disposal-risk-side{background:#f8fafc!important;border-color:#e7edf5!important}.disposal-summary-card p,.disposal-help,.disposal-risk-side{color:#5f7087!important}
-.modal-backdrop{background:rgba(40,57,78,.24)!important}.modal-backdrop>div{background:#fff!important;color:#17263b!important;border-color:#e6edf4!important}.settings-row{border-color:#e7edf5!important}
-.status-toast{background:#fff!important;color:#53657b!important;border-color:#e1e8f0!important;box-shadow:0 12px 28px rgba(38,61,88,.15)!important}.status-toast.error{color:#c84252!important;border-color:#f0ccd2!important}
-.bottom-nav{background:rgba(255,255,255,.96)!important;border-color:#e7edf5!important;box-shadow:0 -8px 24px rgba(42,65,92,.06)!important;backdrop-filter:blur(14px)}.bottom-nav button{color:#718197!important}.bottom-nav button.active{color:#2786e7!important}
-.up{color:#ef5264!important}.down{color:#11a978!important}.blue{color:#2f8df4!important}.purple{color:#7658df!important}.orange{color:#f2a13b!important}
-@media(max-width:720px){
- body{padding-bottom:74px!important;background:#f5f7fb!important}.topbar{padding:12px 16px 10px!important;gap:10px!important}.menu-btn{font-size:21px!important}.mobile-brand{display:flex!important;align-items:center;gap:8px;font-size:19px!important}.searchbox{display:flex!important;order:4!important;width:100%!important;height:50px!important;border-radius:17px!important}.searchbox input{font-size:15px!important;padding:0 16px!important}.searchbox button{padding:0 18px!important}.content{padding:10px 14px 22px!important}.stock-head{padding:20px 18px!important;border-radius:22px!important;align-items:flex-start!important;gap:12px!important}.stock-head h1{font-size:30px!important;margin:5px 0 6px!important}.stock-head h1 small{font-size:15px!important}.price-block strong{font-size:38px!important}.price-block span{font-size:15px!important}.stock-list-actions{gap:7px!important}.stock-list-actions button{padding:9px 12px!important}.section-tabs{height:52px!important;margin:0 2px 18px!important}.section-tabs button{min-width:68px!important;font-size:14px!important}.overview-resonance-card{padding:18px!important;border-radius:24px!important}.overview-resonance-head h2{font-size:26px!important}.overview-resonance-head>b{font-size:11px!important}.overview-resonance-metrics{grid-template-columns:1fr 1fr!important;gap:10px!important}.overview-resonance-metrics>div{padding:14px!important}.overview-resonance-metrics strong{font-size:18px!important}.overview-wave-shell svg{min-height:260px!important}.overview-source-chips{gap:5px!important}.overview-source-chips span{font-size:9px!important}.overview-decision-row{grid-template-columns:1fr 1fr!important}.overview-decision-row>div{padding:12px!important}.overview-decision-row strong{font-size:12px!important}.overview-final-line{grid-template-columns:1fr 1fr!important}.card{padding:16px!important;border-radius:20px!important}.decision-grid-v2{grid-template-columns:1fr 1fr!important}.decision-grid-v2>div{min-height:100px!important}.bottom-nav{height:68px!important}.bottom-nav button{font-size:20px!important}.bottom-nav button span{font-size:11px!important}.sidebar{background:#fff!important}.overlay.show{background:rgba(27,42,61,.22)!important;backdrop-filter:blur(2px)}
-}
-</style>
-
-
-<style id="v2606-reference-overview">
-.topbar-actions,.search-leading{display:none}.overview-hidden-data{display:none}.overview-keyprice-head{display:flex;align-items:center;justify-content:space-between}.overview-keyprice-head h3{margin:0}.overview-keyprice-head button{border:0;background:transparent;color:var(--muted)}
-:root{--ref-bg:#f5f7fb;--ref-ink:#12213b;--ref-muted:#7f8da3;--ref-line:#e7edf5;--ref-blue:#2687ed;--ref-red:#ff4857;--ref-green:#0e936d;--ref-purple:#6848dc}
-@media(max-width:720px){
- html,body{background:var(--ref-bg)!important;color:var(--ref-ink)!important;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif!important}
- body{padding-bottom:88px!important}.main-shell{background:var(--ref-bg)!important}.content{padding:14px 26px 30px!important;max-width:none!important}
- .topbar{position:relative!important;top:auto!important;z-index:30!important;display:grid!important;grid-template-columns:1fr auto!important;grid-template-rows:58px 64px!important;gap:12px 14px!important;padding:18px 34px 8px!important;background:var(--ref-bg)!important;border:0!important;box-shadow:none!important}
- .menu-btn{display:none!important}.mobile-brand{display:flex!important;align-items:center!important;gap:12px!important;font-size:27px!important;color:#0e1d35!important;font-weight:800!important;letter-spacing:-.7px!important}.mobile-brand .brand-logo{width:52px!important;height:32px!important;object-fit:contain!important;filter:brightness(0) saturate(100%) invert(11%) sepia(29%) saturate(1458%) hue-rotate(181deg) brightness(91%) contrast(96%)!important}.mobile-brand strong{font-weight:800!important}
- .topbar-actions{display:flex!important;align-items:center!important;gap:18px!important}.top-icon,.top-avatar{display:grid!important;place-items:center!important;border:0!important;background:transparent!important;padding:0!important;color:#10213b!important}.top-icon svg{width:31px;height:31px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.top-avatar{width:43px;height:43px;border-radius:50%!important;background:#eaf0f6!important;color:#8fa0b7!important}.top-avatar svg{width:27px;height:27px;fill:#8fa0b7;stroke:none}
- .searchbox{grid-column:1/-1!important;display:grid!important;grid-template-columns:44px minmax(0,1fr) 58px!important;align-items:center!important;width:100%!important;height:64px!important;margin:0!important;border:0!important;border-radius:24px!important;background:#fff!important;box-shadow:0 9px 28px rgba(53,82,120,.055)!important;overflow:hidden!important}.search-leading{display:grid!important;place-items:center!important;color:#8191a7!important}.search-leading svg{width:31px;height:31px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}.searchbox input{height:100%!important;padding:0!important;background:transparent!important;color:#192942!important;font-size:22px!important;font-weight:450!important;letter-spacing:.1px!important}.searchbox input::placeholder{color:#8f9caf!important}.searchbox button{height:100%!important;border:0!important;background:transparent!important;color:#8493a7!important;padding:0!important;display:grid!important;place-items:center!important}.searchbox button svg{width:31px;height:31px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
- .stock-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:18px!important;margin:18px 0 12px!important;padding:29px 32px 26px!important;background:#fff!important;border:0!important;border-radius:26px!important;box-shadow:0 11px 30px rgba(55,78,110,.05)!important}.stock-head-main{min-width:0}.stock-head .eyebrow{display:none!important}.stock-title-line{display:flex!important;align-items:baseline!important;gap:17px!important}.stock-code{font-size:25px!important;color:#6e7e95!important;font-weight:500!important;letter-spacing:.4px!important}.stock-head h1{margin:0!important;font-size:40px!important;line-height:1!important;color:#0d1d38!important;font-weight:800!important;letter-spacing:-1.5px!important}.stock-head .muted{margin-top:15px!important;color:#75869e!important;font-size:17px!important;min-height:20px!important}.stock-list-actions{display:flex!important;gap:11px!important;margin-top:19px!important}.stock-list-actions button{min-width:116px!important;height:48px!important;border-radius:17px!important;padding:0 16px!important;font-size:17px!important;font-weight:650!important;background:#f3f6fb!important;border:1px solid #e2e9f2!important;color:#4d607c!important}.stock-list-actions button.in-list{background:#e7f8f0!important;border-color:#d7f1e5!important;color:#0d8d68!important}.price-block{align-items:flex-end!important;text-align:right!important;min-width:235px!important}.price-block strong{font-size:56px!important;line-height:.95!important;color:var(--ref-red)!important;font-weight:780!important;letter-spacing:-2px!important}.price-block span{margin-top:19px!important;font-size:25px!important;font-weight:650!important;color:var(--ref-red)!important}.update-row{margin-top:18px!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important}.manual-refresh{border:0!important;background:transparent!important;color:#77879e!important;font-size:19px!important;padding:0!important}.update-row small{font-size:15px!important;color:#7b8aa0!important}
- .section-tabs{display:grid!important;grid-template-columns:repeat(6,1fr)!important;height:70px!important;margin:0 0 24px!important;padding:0!important;border:0!important;border-bottom:1px solid #dde4ed!important;border-radius:0!important;background:transparent!important;overflow:visible!important}.section-tabs button{position:relative!important;min-width:0!important;padding:0!important;border:0!important;background:transparent!important;color:#53657d!important;font-size:19px!important;font-weight:500!important}.section-tabs button.active{color:#13243e!important;font-weight:750!important}.section-tabs button.active:after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:4px;border-radius:4px;background:#2388f1}.mode-tabs{display:none!important}
- .overview-outline{display:flex!important;flex-direction:column!important;gap:18px!important;margin:0!important}.overview-resonance-card,.overview-keyprice-card{width:100%!important;background:#fff!important;border:0!important;border-radius:25px!important;box-shadow:0 11px 30px rgba(55,78,110,.045)!important;color:var(--ref-ink)!important}.overview-resonance-card{padding:28px 28px 26px!important}.overview-resonance-card:before{display:none!important}.overview-resonance-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:12px!important;align-items:start!important}.overview-resonance-head span{color:#8290a5!important;font-size:17px!important;font-weight:500!important;letter-spacing:0!important}.overview-resonance-head h2{margin:7px 0 6px!important;color:#101f39!important;font-size:34px!important;line-height:1.08!important;font-weight:820!important;letter-spacing:-1px!important}.overview-resonance-head small{font-size:16px!important;color:#8b99ac!important}.overview-resonance-head>b{align-self:start!important;max-width:none!important;margin-top:0!important;padding:11px 16px!important;border:0!important;border-radius:18px!important;background:#f4edff!important;color:#6f43d5!important;font-size:16px!important;font-weight:700!important;white-space:nowrap!important}.overview-resonance-head>b:after{content:"  ›";font-size:24px;vertical-align:-2px;color:#7d8ba0}
- .overview-resonance-metrics{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important;margin-top:25px!important}.overview-resonance-metrics>div{position:relative!important;display:grid!important;grid-template-columns:70px minmax(0,1fr)!important;grid-template-rows:auto auto auto!important;column-gap:13px!important;align-items:center!important;min-height:132px!important;padding:22px 20px!important;border:0!important;border-radius:22px!important;box-shadow:none!important}.metric-symbol{grid-row:1/4!important;display:grid!important;place-items:center!important;width:58px!important;height:58px!important;border-radius:50%!important}.metric-symbol svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.overview-resonance-metrics span:not(.metric-symbol){align-self:end!important;font-size:16px!important;color:#26374f!important}.overview-resonance-metrics strong{margin:4px 0 0!important;font-size:27px!important;line-height:1.12!important;font-weight:820!important;letter-spacing:-.5px!important}.overview-resonance-metrics small{margin-top:6px!important;font-size:14px!important;color:#8290a5!important;line-height:1.25!important}.metric-blue{background:#edf6ff!important}.metric-blue .metric-symbol{background:#ddecff;color:#187ee7}.metric-blue strong{color:#1475dc!important}.metric-green{background:#ebf9f3!important}.metric-green .metric-symbol{background:#d7f4e7;color:#0a9c73}.metric-green strong{color:#087f60!important}.metric-red{background:#fff0f2!important}.metric-red .metric-symbol{background:#ffdce1;color:#f03450}.metric-red strong{color:#ef324c!important}.metric-purple{background:#f5f0ff!important}.metric-purple .metric-symbol{background:#e8dcff;color:#7046dd}.metric-purple strong{color:#6844d4!important}
- .overview-keyprice-card{padding:24px 24px 19px!important}.overview-keyprice-head{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 4px 8px!important}.overview-keyprice-head h3{margin:0!important;font-size:21px!important;color:#172741!important;font-weight:760!important}.overview-keyprice-head button{border:0!important;background:transparent!important;color:#7e8da2!important;font-size:17px!important;padding:5px!important}.overview-keyprice-head button span{font-size:28px!important;vertical-align:-3px!important}.overview-wave-shell{margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:#fff!important;overflow:hidden!important}.overview-wave-shell svg{display:block!important;width:100%!important;height:auto!important;min-height:250px!important}.overview-wave-grid{stroke:#e9eef5!important;stroke-width:1!important;stroke-dasharray:4 7!important}.overview-wave-tag-box{fill:#fff!important;stroke-opacity:.38!important;filter:drop-shadow(0 4px 7px rgba(50,70,100,.055))}.overview-wave-tag-title{font-size:12px!important;font-weight:700!important}.overview-wave-tag-price{font-size:15px!important;font-weight:820!important;fill:#15233b!important}.overview-wave-zone{opacity:.035!important}.overview-wave-zone-title{font-size:10px!important}.overview-tip{display:flex!important;align-items:center!important;gap:11px!important;margin:3px 3px 0!important;padding:13px 18px!important;border-radius:16px!important;background:#f5f0ff!important;color:#7581a3!important}.overview-tip>span{font-size:25px;color:#7658df}.overview-tip b{font-size:15px!important;line-height:1.35!important;font-weight:500!important}.overview-hidden-data{display:none!important}
- .bottom-nav{height:83px!important;padding:6px 24px 8px!important;grid-template-columns:repeat(5,1fr)!important;background:rgba(255,255,255,.985)!important;border-top:1px solid #e2e8f0!important;box-shadow:0 -7px 24px rgba(50,70,95,.04)!important;backdrop-filter:blur(12px)!important}.bottom-nav button{gap:4px!important;color:#5e6f86!important;font-size:initial!important}.bottom-nav button svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.bottom-nav button span{font-size:15px!important}.bottom-nav button.active{color:#2388f1!important}.sidebar{background:#fff!important}.overlay.show{background:rgba(27,42,61,.18)!important}
- /* Keep other tabs functional but visually aligned */
- .dashboard-grid>.detail-panel.active-view,.mode-page-heading,.manage-card,.disposal-panel{color:#15253f!important}.card{border-color:#e7edf5!important}.status-toast{background:#fff!important;color:#52647c!important;border-color:#dfe6ef!important;box-shadow:0 8px 25px rgba(40,60,90,.09)!important}
-}
-</style>
 </head>
 <body>
 <div class="app-shell">
@@ -1087,34 +1016,29 @@ body{letter-spacing:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.6</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.4</span></button>
   </aside>
 
   <div class="main-shell">
     <header class="topbar">
       <button class="menu-btn" id="menuBtn" aria-label="選單">☰</button>
       <div class="mobile-brand"><img class="brand-logo" src="stockzone-mark.png" alt=""><strong>股域StockZone</strong></div>
-      <div class="topbar-actions" aria-hidden="true">
-        <button class="top-icon" type="button" tabindex="-1" aria-label="通知"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button>
-        <button class="top-avatar" type="button" tabindex="-1" aria-label="帳號"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg></button>
-      </div>
       <div class="searchbox">
-        <span class="search-leading" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>
-        <input id="stockCode" placeholder="搜尋股票代號或名稱" autocomplete="off">
-        <button id="searchButton" aria-label="搜尋"><svg viewBox="0 0 24 24"><path d="M5 7h14M8 12h8M10 17h4"/></svg></button>
+        <input id="stockCode" placeholder="搜尋股票名稱或代碼，例如 聯發科、2454" autocomplete="off">
+        <button id="searchButton">搜尋</button>
       </div>
     </header>
 
     <main class="content">
       <section class="stock-head" id="overview">
-        <div class="stock-head-main">
+        <div>
           <div class="eyebrow">個股分析</div>
-          <div class="stock-title-line"><span id="stockCodeLabel" class="stock-code">----</span><h1><span id="stockName">選擇股票</span></h1></div>
+          <h1><span id="stockName">選擇股票</span> <small id="stockCodeLabel">----</small></h1>
           <div class="muted" id="marketLabel"></div>
-          <div class="stock-list-actions" id="stockListActions">
-            <button id="addHoldingBtn" type="button">＋ 持股</button>
-            <button id="addWatchBtn" type="button">☆ 觀察</button>
-          </div>
+        <div class="stock-list-actions" id="stockListActions">
+          <button id="addHoldingBtn" type="button">＋ 持股</button>
+          <button id="addWatchBtn" type="button">☆ 觀察</button>
+        </div>
         </div>
         <div class="price-block">
           <strong id="currentPrice">--</strong>
@@ -1144,37 +1068,31 @@ body{letter-spacing:0!important}
       <section class="overview-outline" data-view-panel="overview">
         <article class="card overview-resonance-card" id="overviewResonanceCard">
           <header class="overview-resonance-head">
-            <div><span>個股分析</span><h2>共振波浪分析</h2><small>價格看共振，找出關鍵位置與潛在空間</small></div>
+            <div><span>總覽最終路徑</span><h2>共振波浪圖</h2><small>價格看共振，技術／五階段決定路徑與達成條件</small></div>
             <b id="overviewResonancePlay">等待資料</b>
           </header>
           <div class="overview-resonance-metrics">
-            <div class="metric-blue"><i class="metric-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 18V14M10 18V10M15 18V6M20 18V3"/></svg></i><span id="overviewResonanceStrengthLabel">共振強度</span><strong id="overviewResonanceStrength">--</strong><small id="overviewResonanceStrengthNote">等待分析資料</small></div>
-            <div class="metric-green"><i class="metric-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 17 6-6 4 4 6-8"/><path d="M15 7h5v5"/></svg></i><span>預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
-            <div class="metric-red"><i class="metric-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 7 6 6 4-4 6 8"/><path d="M15 17h5v-5"/></svg></i><span>正常下跌空間</span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
-            <div class="metric-purple"><i class="metric-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/><path d="m16 8 4-4M17 4h3v3"/></svg></i><span>主要目標區</span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
+            <div><span id="overviewResonanceStrengthLabel">共振強度</span><strong id="overviewResonanceStrength">--</strong><small id="overviewResonanceStrengthNote">等待分析資料</small></div>
+            <div><span>預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
+            <div><span>正常下跌空間</span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
+            <div><span>主要目標區</span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
           </div>
-        </article>
-
-        <article class="card overview-keyprice-card">
-          <header class="overview-keyprice-head"><h3>關鍵價格位置</h3><button type="button" data-view="analysis">查看詳情 <span>›</span></button></header>
           <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 340" role="img" aria-label="共振價格路徑"></svg></div>
-          <div class="overview-tip"><span aria-hidden="true">♧</span><b id="overviewFinalNext">等待分析資料</b></div>
-          <div class="overview-hidden-data" aria-hidden="true">
-            <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
-            <div class="overview-decision-row">
-              <div><span>① 小量試單</span><strong id="overviewTrialPrice">--</strong></div>
-              <div><span>② 大量進場</span><strong id="overviewEntryPrice">--</strong></div>
-              <div><span>③ 減碼／止盈</span><strong id="overviewTrimPrice">--</strong></div>
-              <div><span>④ 出場／獲利</span><strong id="overviewExitPrice">--</strong></div>
-              <div><span id="overviewTrimStopLabel">⑤ 減碼止損</span><strong id="overviewTrimStopPrice">--</strong></div>
-              <div><span id="overviewFullStopLabel">⑥ 全部止損</span><strong id="overviewFullStopPrice">--</strong></div>
-            </div>
-            <footer class="overview-final-line">
-              <div><span>方向</span><b id="overviewFinalDirection">--</b></div>
-              <div><span>策略</span><b id="overviewFinalStrategy">等待分析資料</b></div>
-              <div><span>主要風險</span><b id="overviewFinalRisk">--</b></div>
-            </footer>
+          <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
+          <div class="overview-decision-row">
+            <div><span>① 小量試單</span><strong id="overviewTrialPrice">--</strong></div>
+            <div><span>② 大量進場</span><strong id="overviewEntryPrice">--</strong></div>
+            <div><span>③ 減碼／止盈</span><strong id="overviewTrimPrice">--</strong></div>
+            <div><span>④ 出場／獲利</span><strong id="overviewExitPrice">--</strong></div>
+            <div><span id="overviewTrimStopLabel">⑤ 減碼止損</span><strong id="overviewTrimStopPrice">--</strong></div>
+            <div><span id="overviewFullStopLabel">⑥ 全部止損</span><strong id="overviewFullStopPrice">--</strong></div>
           </div>
+          <footer class="overview-final-line">
+            <div><span>方向</span><b id="overviewFinalDirection">--</b></div>
+            <div><span>策略</span><b id="overviewFinalStrategy">等待分析資料</b></div>
+            <div><span>主要風險</span><b id="overviewFinalRisk">--</b></div>
+            <div><span>下一步</span><b id="overviewFinalNext">--</b></div>
+          </footer>
         </article>
       </section>
 
@@ -1524,11 +1442,11 @@ body{letter-spacing:0!important}
     <p id="statusText" class="status status-toast">尚未查詢</p></main>
 
     <nav class="bottom-nav">
-      <button class="active" data-view="overview"><svg viewBox="0 0 24 24"><path d="m3 11 9-7 9 7v9H6v-9"/></svg><span>總覽</span></button>
-      <button data-manage-jump="holdings"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h8"/></svg><span>清單</span></button>
-      <button id="mobileSearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span>搜尋</span></button>
-      <button data-view="screening"><svg viewBox="0 0 24 24"><path d="m12 2 2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5z"/></svg><span>選股</span></button>
-      <button class="settings-open" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.7-1L14.5 3h-5l-.4 3.1a8 8 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 1.7 1l.4 3.1h5l.4-3.1a8 8 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5a7 7 0 0 0 .1-1z"/></svg><span>設定</span></button>
+      <button class="active" data-view="overview">⌂<span>總覽</span></button>
+      <button data-manage-jump="holdings">▤<span>清單</span></button>
+      <button id="mobileSearch">⌕<span>搜尋</span></button>
+      <button data-view="screening">✦<span>選股</span></button>
+      <button class="settings-open" type="button">⚙<span>設定</span></button>
     </nav>
   </div>
 </div>
