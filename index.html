@@ -636,6 +636,28 @@ body{padding-bottom:68px}
   #overviewResonanceCard .overview-wave-tag-price{font-size:24px!important}
 }
 
+
+/* v2.6.0.14 — icon emphasis + restore visible wave line */
+#overviewResonanceCard .metric-badge{width:26px!important;height:26px!important;flex-basis:26px!important}
+#overviewResonanceCard .metric-badge::before{width:14px!important;height:14px!important}
+#overviewResonanceCard .metric-badge-play{background:#dfe5ff!important;color:#6754f1!important}
+#overviewResonanceCard .metric-badge-up{background:#d8f4e5!important;color:#1aa765!important}
+#overviewResonanceCard .metric-badge-down{background:#fde0e5!important;color:#e15263!important}
+#overviewResonanceCard .metric-badge-target{background:#e7ddff!important;color:#7b50ec!important}
+#overviewPlayMetric{display:block!important;width:calc(100% - 34px)!important;margin-left:34px!important;text-align:left!important}
+#overviewResonanceCard .overview-wave-shell{background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%)!important}
+#overviewResonanceCard .overview-wave-shell svg{min-height:370px!important}
+#overviewResonanceCard .overview-wave-tag-title{font-size:15px!important}
+#overviewResonanceCard .overview-wave-tag-price{font-size:22px!important}
+@media(max-width:720px){
+  #overviewResonanceCard .metric-badge{width:24px!important;height:24px!important;flex-basis:24px!important}
+  #overviewResonanceCard .metric-badge::before{width:13px!important;height:13px!important}
+  #overviewPlayMetric{width:calc(100% - 31px)!important;margin-left:31px!important}
+  #overviewResonanceCard .overview-wave-shell svg{min-height:360px!important}
+  #overviewResonanceCard .overview-wave-tag-title{font-size:16px!important}
+  #overviewResonanceCard .overview-wave-tag-price{font-size:25px!important}
+}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -1264,7 +1286,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.13</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.14</span></button>
   </aside>
 
   <div class="main-shell">
