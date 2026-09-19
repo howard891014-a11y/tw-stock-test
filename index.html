@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07111f">
+  <meta name="theme-color" content="#f5f7fb">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -1042,6 +1042,136 @@ body.mode-analysis #analysisTabs button{
   }
 }
 </style>
+
+<style id="v2607-light-skin">
+/* v2.6.0.7 — light skin, high-similarity visual refresh, no structural changes */
+:root{
+  --bg:#f5f7fb!important;
+  --side:#ffffff!important;
+  --card:#ffffff!important;
+  --line:#e6edf5!important;
+  --text:#13233a!important;
+  --muted:#7d8ca0!important;
+  --blue:#2f80ff!important;
+  --green:#1fa86a!important;
+  --red:#ff5c67!important;
+  --orange:#f2a33b!important;
+  --purple:#8b5cf6!important;
+}
+html,body{background:var(--bg)!important;color:var(--text)!important}
+body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),transparent 22%),radial-gradient(circle at 100% 0%,rgba(186,124,255,.07),transparent 18%)!important}
+.topbar{background:rgba(245,247,251,.94)!important;border-bottom:1px solid #e7edf5!important;backdrop-filter:blur(12px)!important}
+.brand,.mobile-brand,.menu-btn,.star{color:#152640!important}
+.searchbox{background:#fff!important;border:1px solid #e7edf5!important;border-radius:16px!important;box-shadow:0 8px 18px rgba(20,35,58,.06)!important}
+.searchbox input{color:#13233a!important}
+.searchbox input::placeholder{color:#9aa8ba!important}
+.searchbox button{border-left:1px solid #eef2f7!important;background:#f7f9fc!important;color:#5f7390!important}
+.sidebar{background:linear-gradient(180deg,#ffffff,#f8fafc)!important;border-right:1px solid #e7edf5!important;box-shadow:8px 0 22px rgba(18,35,58,.04)!important}
+.side-item,.side-group button{color:#6c7d91!important}
+.side-item.active{background:#eef5ff!important;color:#163154!important}
+.side-title{background:#f4f7fb!important;color:#4b74b8!important}
+.sidebar-foot{color:#7f8ea1!important;border-top-color:#e8eef5!important}
+.content{padding-top:20px!important}
+.stock-head{background:#fff!important;border:1px solid #e8eef5!important;border-radius:24px!important;padding:18px 22px 20px!important;box-shadow:0 14px 32px rgba(17,34,61,.06)!important}
+.stock-head h1,.stock-head h1 span{color:#112543!important}
+.stock-head h1 small,#marketLabel,.muted{color:#7f8ea2!important}
+.eyebrow{color:#6f82a1!important;letter-spacing:0!important;font-size:15px!important}
+.stock-list-actions button{border:0!important;border-radius:16px!important;padding:10px 16px!important;box-shadow:none!important}
+#addHoldingBtn{background:#dff4ea!important;color:#11784e!important}
+#addHoldingBtn.in-list{background:#dff4ea!important;color:#11784e!important}
+#addWatchBtn{background:#edf2f8!important;color:#44546d!important}
+.price-block strong{color:var(--red)!important;font-weight:800!important}
+.price-block span{color:var(--red)!important;font-weight:700!important}
+.update-row small,.update-row{color:#7f8ea2!important}
+.manual-refresh{color:#7b8da4!important}
+.section-tabs.analysis-tabs{background:transparent!important;border:0!important;border-bottom:1px solid #e5ebf3!important;border-radius:0!important;box-shadow:none!important}
+.section-tabs.analysis-tabs button{color:#5d6f86!important;border-bottom-width:4px!important;font-weight:700!important}
+.section-tabs.analysis-tabs button.active{color:#17304d!important;border-bottom-color:var(--blue)!important}
+.card,.overview-resonance-card,.target-b-main,.news-item,.news-summary-editor,.disposal-status-card,.disposal-progress-card,.disposal-reason-card,.disposal-exempt-card,.disposal-summary-card{background:#fff!important;border:1px solid #e8eef5!important;box-shadow:0 12px 28px rgba(17,34,61,.05)!important}
+.card{border-radius:22px!important}
+.card-title,.disposal-card-title,.target-b-kicker{color:#13233a!important}
+.badge{background:#f4f1ff!important;border-color:#e6dbff!important;color:#7d57d8!important}
+.data-list>div{border-bottom-color:#edf2f7!important}
+.data-list span,.broker-placeholder>div,.news-summary-status{color:#7c8ea3!important}
+.overview-resonance-card{padding:22px!important;background:#fff!important;border-color:#e8eef5!important}
+#overviewResonancePlay{background:#f3eefe!important!important;border:1px solid #eadfff!important;color:#7b57db!important;border-radius:999px!important;padding:9px 14px!important;box-shadow:none!important}
+.overview-resonance-head h2{color:#13233a!important;font-size:26px!important}
+.overview-resonance-head span,.overview-resonance-head small,.overview-resonance-metrics span,.overview-final-line span,.overview-decision-row span,.overview-source-chips span{color:#7c8da2!important}
+.overview-resonance-metrics>div{border:1px solid #edf1f7!important;box-shadow:none!important}
+.overview-resonance-metrics>div:nth-child(1){background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important}
+.overview-resonance-metrics>div:nth-child(2){background:linear-gradient(180deg,#effaf5,#e7f7ee)!important}
+.overview-resonance-metrics>div:nth-child(3){background:linear-gradient(180deg,#fff3f5,#ffedf0)!important}
+.overview-resonance-metrics>div:nth-child(4){background:linear-gradient(180deg,#f6f0ff,#f1e9ff)!important}
+.overview-resonance-metrics>div:nth-child(1) strong{color:#2f80ff!important}
+.overview-resonance-metrics>div:nth-child(2) strong{color:#1fa86a!important}
+.overview-resonance-metrics>div:nth-child(3) strong{color:#e24c5b!important}
+.overview-resonance-metrics>div:nth-child(4) strong{color:#7d57d8!important}
+.overview-wave-shell{background:linear-gradient(180deg,#fbfdff,#f4f8fc)!important;border:1px solid #e7edf5!important;border-radius:18px!important}
+.overview-wave-grid{stroke:#dbe4ee!important}
+.overview-wave-label,.overview-wave-tag-title,.overview-wave-zone-title{fill:#76879c!important}
+.overview-wave-price,.overview-wave-tag-price{fill:#13233a!important}
+.overview-wave-support-guide{stroke:#c7d7e8!important;opacity:.9!important}
+.overview-source-chips span{background:#f6f8fb!important;border:1px solid #e8eef5!important;border-radius:999px!important}
+.overview-decision-row>div,.overview-final-line>div{background:#fbfcfe!important;border:1px solid #edf2f7!important;border-radius:14px!important}
+.overview-decision-row strong,.overview-final-line b{color:#13233a!important}
+.overview-final-line{border-top-color:#edf2f7!important}
+.tech-overview{border:1px solid #ebf0f6!important;border-radius:18px!important;overflow:hidden!important;background:#fff!important}
+.tech-overview-main{background:linear-gradient(180deg,#eef8f3,#e8f7f0)!important;border-right:1px solid #e0ece5!important}
+.tech-overview-main>span,.tech-score-line>span,.tech-overview-points p{color:#75889a!important}
+.tech-state-icon{background:#d9f3e4!important;color:#1b8a59!important}
+.tech-state-line strong{color:#1b8a59!important}
+.tech-overview-points{background:#fff!important}
+.tech-overview-points li{color:#24364c!important}
+.tech-tile,.tech-summary{background:#fff!important;border:1px solid #e8eef5!important;box-shadow:0 8px 20px rgba(17,34,61,.04)!important}
+.target-b-main{background:#fbfcfe!important}
+.target-b-main .target-play-head select,.news-summary-row textarea{background:#fff!important;color:#13233a!important;border:1px solid #e1e8f0!important}
+.target-b-list{border-left-color:#edf2f7!important}
+.target-b-columns{border-bottom-color:#edf2f7!important;color:#7d8ea2!important}
+.target-b-list .broker-row,.broker-row{border-bottom-color:#edf2f7!important}
+.broker-row:hover,.broker-row.selected{background:#f6f9fd!important;border-color:#d9e6f4!important}
+.broker-expand,.broker-menu-btn,.broker-actions a,.broker-actions button{background:#f8fbff!important;border:1px solid #dfe8f3!important;color:#587392!important}
+.broker-menu{background:#fff!important;border-color:#e7edf5!important;box-shadow:0 16px 36px rgba(17,34,61,.12)!important}
+.broker-menu a,.broker-menu button{color:#24364c!important}
+.news-summary-editor{background:#fbfcfe!important}
+.news-summary-editor label{color:#23354c!important}
+.news-summary-row button{border:0!important;background:#2f80ff!important;color:#fff!important;border-radius:12px!important}
+.news-item{background:#fff!important;border-color:#e8eef5!important}
+.news-summary{border-top-color:#edf2f7!important;color:#5c6f86!important}
+.disposal-status-card,.disposal-progress-card,.disposal-reason-card,.disposal-exempt-card,.disposal-summary-card{background:#fff!important}
+.disposal-status-side{border-right-color:#edf2f7!important}
+.disposal-shield{background:#e9f8ef!important;color:#1f8f5d!important}
+.disposal-status-main strong,.disposal-risk-side strong{color:#16304d!important}
+.disposal-status-main small,.disposal-risk-side small,.disposal-rule-note,.disposal-reason-note,.disposal-popover div{color:#7a8ea3!important}
+.disposal-progress-row{border-top-color:#edf2f7!important}
+.disposal-progress-row>span,.disposal-check-list>div,.disposal-exempt-list>div{color:#30435a!important}
+.disposal-dot{border-color:#c9d6e5!important;background:#eef3f9!important}
+.disposal-dot.on{background:#ffd778!important;border-color:#ffd778!important}
+.disposal-dot.danger{background:#ff8d95!important;border-color:#ff8d95!important}
+.disposal-reason-note{background:#f7f9fc!important}
+.disposal-price-line{border-top-color:#edf2f7!important;border-bottom-color:#edf2f7!important}
+.disposal-popover{background:#fff!important;border-color:#e8eef5!important;color:#13233a!important;box-shadow:0 18px 40px rgba(17,34,61,.16)!important}
+.bottom-nav{background:rgba(255,255,255,.96)!important;border-top:1px solid #e6edf5!important;backdrop-filter:blur(10px)!important}
+.bottom-nav button{color:#6d7e93!important}
+.bottom-nav button.active{color:#2f80ff!important}
+.status-toast{background:#fff!important;border-color:#e8eef5!important;color:#42556d!important;box-shadow:0 16px 40px rgba(17,34,61,.14)!important}
+.status-toast.error{color:#d84c5b!important;border-color:#f0c3c7!important}
+@media(max-width:720px){
+  .topbar{padding:10px 11px 8px!important}
+  .content{padding:14px 12px!important}
+  .stock-head{padding:16px 16px 18px!important;border-radius:22px!important}
+  .eyebrow{font-size:14px!important}
+  .stock-head h1{font-size:29px!important}
+  .stock-head h1 small{font-size:15px!important}
+  .price-block strong{font-size:28px!important}
+  .section-tabs.analysis-tabs{margin:4px 0 12px!important}
+  .card{border-radius:20px!important}
+  .overview-resonance-card{padding:16px 14px!important}
+  .overview-wave-shell{padding:8px 5px 4px!important}
+  .overview-decision-row>div,.overview-final-line>div{padding:9px!important}
+  .bottom-nav{box-shadow:0 -8px 24px rgba(17,34,61,.08)!important}
+}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
@@ -1069,7 +1199,7 @@ body.mode-analysis #analysisTabs button{
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.6</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.7</span></button>
   </aside>
 
   <div class="main-shell">
