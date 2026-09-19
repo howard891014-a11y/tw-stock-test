@@ -1316,7 +1316,7 @@ function swingWaveFmt(v){return Number.isFinite(v)?technicalFmt(v):"--"}
 function swingWaveLabel(svg,x,y,title,value,color,anchor="middle",extra=""){
   const g=swingWaveSvg("g");
   const t1=swingWaveSvg("text",{x,y,fill:color,class:"swing-wave-label","text-anchor":anchor},title);
-  const t2=swingWaveSvg("text",{x,y:y+15,fill:"#111111",class:"swing-wave-value","text-anchor":anchor},value);
+  const t2=swingWaveSvg("text",{x,y:y+15,fill:"#eef6fb",class:"swing-wave-value","text-anchor":anchor},value);
   g.append(t1,t2);
   if(extra){g.append(swingWaveSvg("text",{x,y:y+28,fill:color,class:"swing-wave-multiple","text-anchor":anchor},extra))}
   svg.append(g);
@@ -1702,9 +1702,9 @@ function overviewNodeBox(svg,x,pointY,title,value,color="#dcecff",anchor="middle
   const titleStr=String(title||""),valueStr=String(value||"--"),w=Math.max(98,Math.min(138,Math.max(titleStr.length*10+28,valueStr.length*11+30))),h=44;
   const boxY=preferBelow?Math.min(300,pointY+14):Math.max(16,pointY-58);let boxX=x-w/2;
   if(anchor==="start")boxX=x;else if(anchor==="end")boxX=x-w;
-  svg.append(swingWaveSvg("rect",{x:boxX,y:boxY,width:w,height:h,rx:12,class:"overview-wave-tag-box",fill:"rgba(255,255,255,.98)",stroke:color,"stroke-opacity":.58}));
+  svg.append(swingWaveSvg("rect",{x:boxX,y:boxY,width:w,height:h,rx:12,class:"overview-wave-tag-box",fill:"rgba(7,23,36,.94)",stroke:color,"stroke-opacity":.58}));
   svg.append(swingWaveSvg("text",{x:anchor==="start"?boxX+12:anchor==="end"?boxX+w-12:x,y:boxY+16,fill:color,class:"overview-wave-tag-title","text-anchor":anchor},titleStr));
-  svg.append(swingWaveSvg("text",{x:anchor==="start"?boxX+12:anchor==="end"?boxX+w-12:x,y:boxY+33,fill:"#111111",class:"overview-wave-tag-price","text-anchor":anchor},valueStr));
+  svg.append(swingWaveSvg("text",{x:anchor==="start"?boxX+12:anchor==="end"?boxX+w-12:x,y:boxY+33,fill:"#f7fbff",class:"overview-wave-tag-price","text-anchor":anchor},valueStr));
 }
 function drawOverviewResonance(play,expected){
   const svg=$("overviewResonanceSvg");if(!svg)return;svg.replaceChildren();const p=expected?.price;if(!(p>0))return;
@@ -1764,7 +1764,7 @@ function renderOverviewResonance(play,expected,decision,risk=null){
   setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?technicalFmt(main):"--"));
   setText("overviewTrialPrice",targetZoneText(decision?.trial));setText("overviewEntryPrice",decisionEntryText(decision));setText("overviewTrimPrice",targetZoneText(decision?.trim));setText("overviewExitPrice",targetZoneText(decision?.exit));setText("overviewTrimStopPrice",targetZoneText(decision?.trimStop));setText("overviewFullStopPrice",targetZoneText(decision?.fullStop));
   setText("overviewFinalDirection",`${play.period||"--"}｜${play.action||"等待訊號"}`);setText("overviewFinalStrategy",`${decision?.mode||play.period||"--"}｜依目標節點與確認條件分批`);
-  const ex=expected?.winRate?.extreme,setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",ex?.valid&&risk?.valid?`${riskText}｜極端壓力 ${signedPercent(ex.far)}`:(risk?.valid?riskText:setRisk));setText("overviewFinalNext",["triggered","breached"].includes(decision?.fullStopState?.key)?`全部止損${decision.fullStopState.label}，優先處理風險`:["triggered","breached"].includes(decision?.trimStopState?.key)?`減碼止損${decision.trimStopState.label}，先降部位`:risk?.exitTriggered?"結構高度警戒，但止損價尚未觸發":risk?.trimTriggered?"結構轉弱，留意減碼止損線":main?`先看 ${expected.plan.levels[0].label} ${technicalFmt(main)}`:"等待新目標來源");
+  const ex=expected?.winRate?.extreme,setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",ex?.valid&&risk?.valid?`${riskText}｜極端壓力 ${signedPercent(ex.far)}`:(risk?.valid?riskText:setRisk));setText("overviewFinalNext",risk?.exitTriggered?"走壞出場條件成立，先處理風險":risk?.trimTriggered?"走壞減碼條件成立，先降部位":main?`先看 ${expected.plan.levels[0].label} ${technicalFmt(main)}`:"等待新目標來源");
   const host=$("overviewResonanceSources");if(host){host.replaceChildren();const pts=mainCluster?.points||[];const families=new Map();for(const x of pts){if(!families.has(x.family))families.set(x.family,[]);families.get(x.family).push(x)}for(const [family,a] of families){const chip=document.createElement("span");const name={swing:"波段倍率",broker:"券商目標",valuation:"內部估值",shortwave:"短波倍率",pressure:"前高／壓力"}[family]||family;chip.textContent=`${name}｜${a.map(x=>x.label).join("・")}`;host.append(chip)}if(expected?.winRate?.valid){const chip=document.createElement("span");chip.textContent=`5年相似訊號｜${expected.winRate.rate}%・${expected.winRate.sample}次`;host.append(chip)}if(!families.size){const chip=document.createElement("span");chip.textContent="等待可用價格來源";host.append(chip)}}
   drawOverviewResonance(play,expected);
 }
@@ -1917,28 +1917,21 @@ function decisionStopZone(ref,level="trim"){
   const c=positionNumber(ref);if(c===null)return null;
   return level==="full"?targetZone(c,.992,1.002):targetZone(c,.995,1.005);
 }
-function decisionStopState(zone,price){
-  const p=positionNumber(price);if(p===null||!Array.isArray(zone)||zone.length!==2)return {key:"unknown",label:"待確認"};
-  const lo=Math.min(zone[0],zone[1]),hi=Math.max(zone[0],zone[1]);
-  if(p>hi)return {key:"armed",label:"未觸發"};
-  if(p>=lo)return {key:"triggered",label:"已觸發"};
-  return {key:"breached",label:"已失守"};
-}
 function applyDecisionRisk(base,risk,price,stopModel=null){
   if(!base)return base;const p=positionNumber(price);if(p===null)return {...base,risk,stopModel};
   const out={...base,risk,stopModel,profitTrim:base.trim,profitExit:base.exit},active=stopModel?.active;
   out.trimStop=active?.trimStop??decisionStopZone(risk?.trimRef??risk?.support??p,"trim");
   out.fullStop=active?.fullStop??decisionStopZone(risk?.exitRef??risk?.support??risk?.trimRef??p,"full");
   if(out.trimStop&&out.fullStop){const tm=(out.trimStop[0]+out.trimStop[1])/2,fm=(out.fullStop[0]+out.fullStop[1])/2;if(fm>=tm){const corrected=tm*Math.max(.94,1-Math.max(.012,(active?.noise?.pct??2)*.006));out.fullStop=targetZone(corrected,.997,1.003)}}
-  const trimState=decisionStopState(out.trimStop,p),fullState=decisionStopState(out.fullStop,p);out.trimStopState=trimState;out.fullStopState=fullState;
-  out.defenseMode=fullState.key!=="armed"&&fullState.key!=="unknown"?"exit":trimState.key!=="armed"&&trimState.key!=="unknown"?"trim":"normal";
-  const trimStopTxt=targetZoneText(out.trimStop),fullStopTxt=targetZoneText(out.fullStop),stopBasis=active?.quality?`｜${active.quality}`:"",structWarn=risk?.exitTriggered?"結構已明顯轉弱":risk?.trimTriggered?"結構風險已升高":"結構尚未觸發防守警報";
-  out.trimNote=`${base.trimNote}｜獲利端照原目標；止損另看 ${trimStopTxt}${risk?.trimTriggered?"｜結構已進入警戒":""}`;
-  out.exitNote=`${base.exitNote}｜獲利端照原目標；全部止損另看 ${fullStopTxt}${risk?.exitTriggered?"｜結構已進入高度警戒":""}`;
-  const trimAction=trimState.key==="breached"?`現價已跌破減碼止損區 ${trimStopTxt}`:trimState.key==="triggered"?`現價已進入減碼止損區 ${trimStopTxt}`:`減碼止損區 ${trimStopTxt}`;
-  const fullAction=fullState.key==="breached"?`現價已跌破全部止損區 ${fullStopTxt}`:fullState.key==="triggered"?`現價已進入全部止損區 ${fullStopTxt}`:`全部止損區 ${fullStopTxt}`;
-  out.trimStopNote=`${trimState.label}｜${trimAction}｜${active?.near?`${active.near.label} ${technicalFmt(active.near.value)}＋股性緩衝`:`股性／歷史回撤估算`}｜${structWarn}${stopBasis}`;
-  out.fullStopNote=`${fullState.label}｜${fullAction}｜${active?.deep?`${active.deep.label} ${technicalFmt(active.deep.value)}＋深層緩衝`:`深層結構／歷史回撤估算`}｜${structWarn}${stopBasis}`;
+  const trimLo=Array.isArray(out.trimStop)?positionNumber(out.trimStop[0]):null,trimHi=Array.isArray(out.trimStop)?positionNumber(out.trimStop[1]):null,trimTouched=trimHi!==null&&p<=trimHi,trimLost=trimLo!==null&&p<trimLo;
+  if(risk)risk.trimTriggered=trimTouched;
+  out.trimStopState=trimLost?"lost":trimTouched?"triggered":"waiting";
+  out.defenseMode=risk?.exitTriggered?"exit":trimTouched?"trim":"normal";
+  const trimStopTxt=targetZoneText(out.trimStop),fullStopTxt=targetZoneText(out.fullStop),stopBasis=active?.quality?`｜${active.quality}`:"";
+  out.trimNote=`${base.trimNote}${trimTouched?`｜減碼止損已碰價，優先看止損 ${trimStopTxt}`:`｜獲利端照原目標；止損另看 ${trimStopTxt}`}`;
+  out.exitNote=`${base.exitNote}${risk?.exitTriggered?`｜全面防守已觸發，優先看全部止損 ${fullStopTxt}`:`｜獲利端照原目標；全部止損另看 ${fullStopTxt}`}`;
+  out.trimStopNote=trimLost?`減碼止損已失守｜現價 ${technicalFmt(p)} 已跌破 ${trimStopTxt}${stopBasis}`:trimTouched?`減碼止損已觸發｜現價 ${technicalFmt(p)} 已進入 ${trimStopTxt}${stopBasis}`:`減碼止損未觸發｜${trimStopTxt}｜${active?.near?`${active.near.label} ${technicalFmt(active.near.value)}＋股性緩衝`:`股性／歷史回撤估算`}${stopBasis}`;
+  out.fullStopNote=risk?.exitTriggered?`全部止損已觸發｜${risk.summary}｜${fullStopTxt}${stopBasis}`:`全部止損 ${fullStopTxt}｜${active?.deep?`${active.deep.label} ${technicalFmt(active.deep.value)}＋深層緩衝`:`深層結構／歷史回撤估算`}${stopBasis}`;
   return out;
 }
 
