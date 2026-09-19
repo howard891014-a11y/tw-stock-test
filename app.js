@@ -1,4 +1,4 @@
-// v2.6.0.8 — light theme polish only; no stock-analysis logic changes.
+// v2.6.0.9 — light theme polish plus overview header/play placement adjustments.
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
@@ -1746,7 +1746,7 @@ function overviewZoneText(cluster){
   return lo!==null&&hi!==null&&Math.abs(hi/lo-1)>=.005?`${technicalFmt(lo)} ～ ${technicalFmt(hi)}`:technicalFmt(c);
 }
 function resetOverviewResonance(note="等待分析資料"){
-  setText("overviewResonancePlay","等待資料");setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength","--");setText("overviewResonanceStrengthNote",note);setText("overviewGrowthUp","--%");setText("overviewGrowthDown","--%");setText("overviewTargetZone","--");
+  setText("overviewResonancePlay","等待資料");setText("overviewPlayMetric","等待資料");setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength","--");setText("overviewResonanceStrengthNote",note);setText("overviewGrowthUp","--%");setText("overviewGrowthDown","--%");setText("overviewTargetZone","--");
   for(const id of ["overviewTrialPrice","overviewEntryPrice","overviewTrimPrice","overviewExitPrice","overviewTrimStopPrice","overviewFullStopPrice"])setText(id,"--");
   setText("overviewFinalDirection","--");setText("overviewFinalStrategy",note);setText("overviewFinalRisk","--");setText("overviewFinalNext","--");setText("overviewTrimStopLabel","⑤ 減碼止損");setText("overviewFullStopLabel","⑥ 全部止損");
   const svg=$("overviewResonanceSvg");if(svg)svg.replaceChildren();const src=$("overviewResonanceSources");if(src)src.replaceChildren();
@@ -1819,6 +1819,7 @@ function drawOverviewResonance(play,expected){
 function renderOverviewResonance(play,expected,decision,risk=null){
   if(!play||!expected){resetOverviewResonance();return}const res=expected?.plan?.resonance||{},mainCluster=res?.main||null,familyCount=mainCluster?.familyCount||0,resonanceStrength=res.adjustedStrength??res.strength??0;
   setText("overviewResonancePlay",`${play.period||"--"}｜${play.action||"等待訊號"}`);
+  setText("overviewPlayMetric",`${play.period||"--"}｜${play.action||"等待訊號"}`);
   if(familyCount>=2){setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength",`${resonanceStrengthLabel({...mainCluster,adjustedStrength:resonanceStrength})} ${resonanceStrength} / 100`);setText("overviewResonanceStrengthNote",`${familyCount} 類價格來源｜連續距離衰減 ${res.bandwidthPct?.toFixed?.(1)??"--"}%${res.historyValidation?`｜5年驗證 ${res.historyValidation}%`:""}`)}
   else if(mainCluster){setText("overviewResonanceStrengthLabel","目標依據");setText("overviewResonanceStrength","單一來源");setText("overviewResonanceStrengthNote",`${mainCluster.points?.[0]?.source||mainCluster.points?.[0]?.label||"單一價格來源"}主導；其他來源仍以距離衰減保留${res.historyValidation?`｜5年驗證 ${res.historyValidation}%`:""}`)}
   else{setText("overviewResonanceStrengthLabel","目標依據");setText("overviewResonanceStrength","等待目標");setText("overviewResonanceStrengthNote","目前沒有高於現價的可用價格來源")}
@@ -2261,7 +2262,7 @@ async function loadValuation(stock){
 function renderQuoteFields(x){
   const last=Number(x?.last ?? x?.price ?? x?.regularMarketPrice),change=Number(x?.change ?? x?.regularMarketChange),pct=Number(x?.changePct ?? x?.changePercent ?? x?.regularMarketChangePercent);
   setText("currentPrice",fmt(last));setText("metricPrice",fmt(last));setText("decisionPrice",fmt(last));
-  const ch=Number.isFinite(change)?`${change>0?"+":""}${fmt(change)}${Number.isFinite(pct)?`(${pct>0?"+":""}${fmt(pct)}%)`:""}`:"—";
+  const ch=Number.isFinite(change)?`${change>0?"+":""}${fmt(change)}${Number.isFinite(pct)?` (${pct>0?"+":""}${fmt(pct)}%)`:""}`:"—";
   setText("priceChange",ch);setText("metricChange",ch);setText("updateTime","剛剛更新");if($("updateRow"))$("updateRow").hidden=false;
   const cls=change>0?"up":change<0?"down":"";["currentPrice","priceChange","metricChange"].forEach(id=>{const el=$(id);if(el)el.className=cls});
 }
