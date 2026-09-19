@@ -1,9 +1,24 @@
-// v2.6.0.9 — light theme polish plus overview header/play placement adjustments.
+// v2.6.0.10 — light theme polish plus layout fixes while iterating the UI.
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
 function setText(id,value){
   const el=$(id); if(el) el.textContent=value ?? "—";
+}
+
+function overviewPlayMetricLabel(play){
+  if(!play) return "--";
+  const key=String(play.key||"");
+  if(key==="short") return "短波";
+  if(key==="mixed") return "短波混合";
+  if(key==="swing") return "長坡";
+  if(key==="long-swing") return "長坡混合";
+  if(key==="long") return "長期";
+  const p=String(play.period||"");
+  if(/短/.test(p)) return "短波";
+  if(/長/.test(p)) return "長期";
+  if(/波段/.test(p)) return "長坡";
+  return p||"觀察";
 }
 let statusTimer=null;
 function setStatus(msg,error=false){
@@ -1819,7 +1834,7 @@ function drawOverviewResonance(play,expected){
 function renderOverviewResonance(play,expected,decision,risk=null){
   if(!play||!expected){resetOverviewResonance();return}const res=expected?.plan?.resonance||{},mainCluster=res?.main||null,familyCount=mainCluster?.familyCount||0,resonanceStrength=res.adjustedStrength??res.strength??0;
   setText("overviewResonancePlay",`${play.period||"--"}｜${play.action||"等待訊號"}`);
-  setText("overviewPlayMetric",`${play.period||"--"}｜${play.action||"等待訊號"}`);
+  setText("overviewPlayMetric",overviewPlayMetricLabel(play));
   if(familyCount>=2){setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength",`${resonanceStrengthLabel({...mainCluster,adjustedStrength:resonanceStrength})} ${resonanceStrength} / 100`);setText("overviewResonanceStrengthNote",`${familyCount} 類價格來源｜連續距離衰減 ${res.bandwidthPct?.toFixed?.(1)??"--"}%${res.historyValidation?`｜5年驗證 ${res.historyValidation}%`:""}`)}
   else if(mainCluster){setText("overviewResonanceStrengthLabel","目標依據");setText("overviewResonanceStrength","單一來源");setText("overviewResonanceStrengthNote",`${mainCluster.points?.[0]?.source||mainCluster.points?.[0]?.label||"單一價格來源"}主導；其他來源仍以距離衰減保留${res.historyValidation?`｜5年驗證 ${res.historyValidation}%`:""}`)}
   else{setText("overviewResonanceStrengthLabel","目標依據");setText("overviewResonanceStrength","等待目標");setText("overviewResonanceStrengthNote","目前沒有高於現價的可用價格來源")}

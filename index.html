@@ -571,6 +571,30 @@ body{padding-bottom:68px}
 #valuation .formula-popover strong{display:block!important;margin-bottom:10px!important;font-size:17px!important;}
 #valuation .formula-popover div{font-size:14px!important;line-height:1.7!important;color:#bcd0df!important;}
 #valuation .formula-popover-close{position:absolute!important;right:10px!important;top:8px!important;border:0!important;background:transparent!important;color:#a9bfd1!important;font-size:25px!important;cursor:pointer!important;}
+
+
+/* v2.6.0.10 — final layout polish in progress */
+.stock-head{margin-top:44px!important}
+.stock-head .eyebrow{
+  left:0!important;
+  top:-36px!important;
+  font-size:15px!important;
+}
+@media(max-width:720px){
+  .stock-head{margin-top:44px!important}
+  .stock-head .eyebrow{left:0!important;top:-36px!important;font-size:15px!important}
+}
+.overview-resonance-metrics>div.metric-play{background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important}
+.overview-resonance-metrics>div.metric-target{background:linear-gradient(180deg,#f6f0ff,#f1e9ff)!important}
+.overview-resonance-metrics>div.metric-up{background:linear-gradient(180deg,#effaf5,#e7f7ee)!important}
+.overview-resonance-metrics>div.metric-down{background:linear-gradient(180deg,#fff3f5,#ffedf0)!important}
+.overview-resonance-metrics>div.metric-play strong{color:#2f80ff!important}
+.overview-resonance-metrics>div.metric-target strong{color:#7d57d8!important}
+.overview-resonance-metrics>div.metric-up strong{color:#1fa86a!important}
+.overview-resonance-metrics>div.metric-down strong{color:#e24c5b!important}
+#overviewPlayMetric{font-size:18px!important;line-height:1.3!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+@media(max-width:720px){#overviewPlayMetric{font-size:17px!important}}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -1199,7 +1223,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.9</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.10</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1255,10 +1279,10 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
             <b id="overviewResonancePlay" hidden aria-hidden="true">等待資料</b>
           </header>
           <div class="overview-resonance-metrics">
-            <div><span>建議玩法</span><strong id="overviewPlayMetric">--</strong></div>
-            <div><span>預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
-            <div><span>正常下跌空間</span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
-            <div><span>主要目標區</span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
+            <div class="metric-play"><span>建議玩法</span><strong id="overviewPlayMetric">--</strong></div>
+            <div class="metric-target"><span>主要目標區</span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
+            <div class="metric-up"><span>預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
+            <div class="metric-down"><span>正常下跌空間</span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
           </div>
           <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 340" role="img" aria-label="共振價格路徑"></svg></div>
           <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
