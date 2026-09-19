@@ -982,6 +982,13 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
  .short-wave-mini{padding:7px}.short-wave-mini svg{min-height:130px}.short-wave-label{font-size:9px}.short-wave-target-label{font-size:8px}
 }
 </style>
+
+<style id="v2604-adaptive-stop">
+.adaptive-stop-panel{margin-top:12px;padding:12px;border:1px solid #29455d;border-radius:12px;background:linear-gradient(145deg,#0a1725,#0b1c2b)}
+.adaptive-stop-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.adaptive-stop-head span{display:block;color:#7e9ab0;font-size:10px}.adaptive-stop-head b{display:block;margin-top:3px;color:#eaf5ff;font-size:13px}.adaptive-stop-head small{max-width:64%;color:#7e95a8;font-size:9px;line-height:1.4;text-align:right}
+.adaptive-stop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.adaptive-stop-grid>div{padding:10px;border:1px solid #37506a;border-radius:10px;background:#081522}.adaptive-stop-grid>div:first-child{border-color:#49654f}.adaptive-stop-grid>div:last-child{border-color:#4b5576}.adaptive-stop-grid span{display:block;color:#a8bac8;font-size:10px}.adaptive-stop-grid b{display:block;margin:5px 0;color:#f5fbff;font-size:16px}.adaptive-stop-grid small{display:block;color:#879caf;font-size:9px;line-height:1.5}.adaptive-stop-grid em{font-style:normal;color:#ffb66d;font-weight:800}.adaptive-stop-note{display:block;margin-top:9px;color:#73899c;font-size:9px;line-height:1.45}
+@media(max-width:720px){.adaptive-stop-panel{padding:10px 8px}.adaptive-stop-head{display:block}.adaptive-stop-head small{display:block;max-width:none;margin-top:5px;text-align:left}.adaptive-stop-grid{grid-template-columns:1fr}.adaptive-stop-grid b{font-size:15px}}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -1009,7 +1016,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.4</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1077,8 +1084,8 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             <div><span>② 大量進場</span><strong id="overviewEntryPrice">--</strong></div>
             <div><span>③ 減碼／止盈</span><strong id="overviewTrimPrice">--</strong></div>
             <div><span>④ 出場／獲利</span><strong id="overviewExitPrice">--</strong></div>
-            <div><span>⑤ 減碼止損</span><strong id="overviewTrimStopPrice">--</strong></div>
-            <div><span>⑥ 全部止損</span><strong id="overviewFullStopPrice">--</strong></div>
+            <div><span id="overviewTrimStopLabel">⑤ 減碼止損</span><strong id="overviewTrimStopPrice">--</strong></div>
+            <div><span id="overviewFullStopLabel">⑥ 全部止損</span><strong id="overviewFullStopPrice">--</strong></div>
           </div>
           <footer class="overview-final-line">
             <div><span>方向</span><b id="overviewFinalDirection">--</b></div>
@@ -1303,9 +1310,17 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             <div class="buy"><span>大量進場</span><strong id="decisionEntryPrice">--</strong><small id="decisionEntryNote">--</small></div>
             <div class="trim"><span>減碼／止盈</span><strong id="decisionTrimPrice">--</strong><small id="decisionTrimNote">--</small></div>
             <div class="sell"><span>出場／獲利</span><strong id="decisionExitPrice">--</strong><small id="decisionExitNote">--</small></div>
-            <div class="trim stop"><span>減碼止損</span><strong id="decisionTrimStopPrice">--</strong><small id="decisionTrimStopNote">--</small></div>
-            <div class="sell stop"><span>全部止損</span><strong id="decisionFullStopPrice">--</strong><small id="decisionFullStopNote">--</small></div>
+            <div class="trim stop"><span id="decisionTrimStopLabel">減碼止損</span><strong id="decisionTrimStopPrice">--</strong><small id="decisionTrimStopNote">--</small></div>
+            <div class="sell stop"><span id="decisionFullStopLabel">全部止損</span><strong id="decisionFullStopPrice">--</strong><small id="decisionFullStopNote">--</small></div>
           </div>
+          <section class="adaptive-stop-panel" id="adaptiveStopPanel">
+            <div class="adaptive-stop-head"><div><span>股性 × 勝率止損模型</span><b id="adaptiveStopMode">等待資料</b></div><small id="adaptiveStopStats">--</small></div>
+            <div class="adaptive-stop-grid">
+              <div id="adaptiveStopCurrentCard"><span id="adaptiveStopCurrentTitle">現價買</span><b id="adaptiveStopCurrentEntry">--</b><small>減碼 <em id="adaptiveStopCurrentTrim">--</em>｜全部 <em id="adaptiveStopCurrentFull">--</em></small><small id="adaptiveStopCurrentRisk">--</small></div>
+              <div id="adaptiveStopPullbackCard"><span>等回測買</span><b id="adaptiveStopPullbackEntry">--</b><small>減碼 <em id="adaptiveStopPullbackTrim">--</em>｜全部 <em id="adaptiveStopPullbackFull">--</em></small><small id="adaptiveStopPullbackRisk">--</small></div>
+            </div>
+            <small class="adaptive-stop-note" id="adaptiveStopNote">止損先看市場結構，再用股性正常波動與同檔歷史成功訊號 MAE 調整；勝率低不會放寬止損。</small>
+          </section>
           <small class="decision-foot" id="decisionFoot">價格來自目前玩法的結構與目標區；持股股數只用來換算分批數量，不改變市場目標價。</small>
         </article>
 
