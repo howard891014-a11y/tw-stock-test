@@ -1,4 +1,4 @@
-// v2.5.9.6 — 長期基本面 v3：TWSE／TPEx 官方財報＋月營收優先，Yahoo 僅補歷史季度；技術核心不變。
+// v2.5.9.7 — 技術鏈隔離修復：官方基本面移出 technical Function；技術核心恢復 v2.5.9.5。
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
@@ -249,13 +249,21 @@ async function history5Y(query,market){
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v2596",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v2597",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
 async function fundamentals(query,market){
   const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`${code}|${String(market||"")}`,all=readFundamentalsCache(),cached=all[key];
   if(cached&&Date.now()-Number(cached.savedAt||0)<FUNDAMENTALS_CACHE_MS&&Array.isArray(cached.data?.quarters))return cached.data;
-  const params=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")}),data=await readJson(await fetch(`/api/technical?${params.toString()}`,{cache:"default"}),"長期基本面");
+  const params=new URLSearchParams({q:code,market:String(market||"")});
+  let data;
+  try{
+    data=await readJson(await fetch(`/api/fundamentals?${params.toString()}`,{cache:"default"}),"長期基本面");
+  }catch(primaryError){
+    console.warn("官方基本面獨立路由失敗，改用 Yahoo 基本面 fallback",primaryError);
+    const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
+    data=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"default"}),"長期基本面 fallback");
+  }
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(12))delete all[k];writeFundamentalsCache(all);return data;
 }
 async function loadFundamentals(stock){
