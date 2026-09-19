@@ -1711,11 +1711,11 @@ function drawOverviewResonance(play,expected){
   const res=expected?.plan?.resonance||{},down=expected?.downside?.levels?.[0]?.value??null,w=play?.swingWave,se=play?.shortEngine||play?.diagnostics?.shortEngine,
         breakout=positionNumber(w?.referenceHigh??w?.firstWave??se?.resistance?.value??play?.diagnostics?.breakout?.level),
         main=positionNumber(res?.main?.center??expected?.plan?.levels?.[0]?.value),
-        secondary=positionNumber(res?.secondary?.center??expected?.plan?.levels?.[1]?.value),
-        fair=positionNumber(latestValuationScenario?.F),
+        optimisticCandidates=[res?.optimistic?.center,...(expected?.plan?.levels||[]).map(x=>x?.value),res?.secondary?.center].map(positionNumber).filter(x=>x!==null&&(!Number.isFinite(main)||x>main*1.002)),
+        secondary=optimisticCandidates.length?Math.max(...optimisticCandidates):null,
         breakoutPassed=Number.isFinite(breakout)&&p>=breakout*1.002,
-        mainTitle=(res?.main?.familyCount||0)>=2?"主要共振":"主要目標",
-        secondaryTitle=(res?.secondary?.familyCount||0)>=2?"次要共振":"樂觀目標";
+        mainTitle="主要目標",
+        secondaryTitle="樂觀目標";
   const nodes=[];
   if(Number.isFinite(down))nodes.push({x:64,v:down,title:"支撐",color:"#58b3ff"});
   if(breakoutPassed&&Number.isFinite(breakout)){
@@ -1728,7 +1728,6 @@ function drawOverviewResonance(play,expected){
   if(Number.isFinite(main))nodes.push({x:530,v:main,title:mainTitle,color:"#c38bff"});
   if(Number.isFinite(secondary))nodes.push({x:680,v:secondary,title:secondaryTitle,color:"#77e3ff"});
   const chartNodes=nodes.filter(x=>Number.isFinite(x.v));
-  if(Number.isFinite(fair)&&!chartNodes.some(x=>Math.abs(x.v/fair-1)<.008))chartNodes.push({x:720,v:fair,title:"估值",color:"#71e3a4",aux:true});
   const vals=chartNodes.map(x=>x.v);for(const c of [res?.main,res?.secondary])if(c){vals.push(c.min,c.max)}
   if(!vals.length)return;
   const mn=Math.min(...vals),mx=Math.max(...vals),pad=Math.max((mx-mn)*.17,mx*.03,1),lo=mn-pad,hi=mx+pad,y=v=>292-(v-lo)/(hi-lo)*220;
@@ -1764,7 +1763,10 @@ function renderOverviewResonance(play,expected,decision,risk=null){
   setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?technicalFmt(main):"--"));
   setText("overviewTrialPrice",targetZoneText(decision?.trial));setText("overviewEntryPrice",decisionEntryText(decision));setText("overviewTrimPrice",targetZoneText(decision?.trim));setText("overviewExitPrice",targetZoneText(decision?.exit));setText("overviewTrimStopPrice",targetZoneText(decision?.trimStop));setText("overviewFullStopPrice",targetZoneText(decision?.fullStop));
   setText("overviewFinalDirection",`${play.period||"--"}｜${play.action||"等待訊號"}`);setText("overviewFinalStrategy",`${decision?.mode||play.period||"--"}｜依目標節點與確認條件分批`);
-  const ex=expected?.winRate?.extreme,setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",ex?.valid&&risk?.valid?`${riskText}｜極端壓力 ${signedPercent(ex.far)}`:(risk?.valid?riskText:setRisk));setText("overviewFinalNext",["triggered","breached"].includes(decision?.fullStopState?.key)?`全部止損${decision.fullStopState.label}，優先處理風險`:["triggered","breached"].includes(decision?.trimStopState?.key)?`減碼止損${decision.trimStopState.label}，先降部位`:risk?.exitTriggered?"結構高度警戒，但止損價尚未觸發":risk?.trimTriggered?"結構轉弱，留意減碼止損線":main?`先看 ${expected.plan.levels[0].label} ${technicalFmt(main)}`:"等待新目標來源");
+  const ex=expected?.winRate?.extreme,setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",ex?.valid&&risk?.valid?`${riskText}｜極端壓力 ${signedPercent(ex.far)}`:(risk?.valid?riskText:setRisk));
+  const w2=play?.swingWave,se2=play?.shortEngine||play?.diagnostics?.shortEngine,breakout2=positionNumber(w2?.referenceHigh??w2?.firstWave??se2?.resistance?.value??play?.diagnostics?.breakout?.level),optimistic2=positionNumber(res?.optimistic?.center??res?.secondary?.center??expected?.plan?.levels?.[1]?.value);
+  const normalTip=main?(breakout2&&breakout2>expected.price*1.002?`若能站穩 ${technicalFmt(breakout2)}，將有機會挑戰 ${technicalFmt(main)}${optimistic2&&optimistic2>main?`，並進一步上看 ${technicalFmt(optimistic2)}`:""}。`:`目前先觀察 ${technicalFmt(main)} 主要目標${optimistic2&&optimistic2>main?`，延伸目標 ${technicalFmt(optimistic2)}`:""}。`):"等待新的有效價格結構。";
+  setText("overviewFinalNext",["triggered","breached"].includes(decision?.fullStopState?.key)?`全部止損${decision.fullStopState.label}；${normalTip}`:["triggered","breached"].includes(decision?.trimStopState?.key)?`減碼止損${decision.trimStopState.label}；${normalTip}`:normalTip);
   const host=$("overviewResonanceSources");if(host){host.replaceChildren();const pts=mainCluster?.points||[];const families=new Map();for(const x of pts){if(!families.has(x.family))families.set(x.family,[]);families.get(x.family).push(x)}for(const [family,a] of families){const chip=document.createElement("span");const name={swing:"波段倍率",broker:"券商目標",valuation:"內部估值",shortwave:"短波倍率",pressure:"前高／壓力"}[family]||family;chip.textContent=`${name}｜${a.map(x=>x.label).join("・")}`;host.append(chip)}if(expected?.winRate?.valid){const chip=document.createElement("span");chip.textContent=`5年相似訊號｜${expected.winRate.rate}%・${expected.winRate.sample}次`;host.append(chip)}if(!families.size){const chip=document.createElement("span");chip.textContent="等待可用價格來源";host.append(chip)}}
   drawOverviewResonance(play,expected);
 }
@@ -2218,8 +2220,8 @@ function patchCurrentQuote(x){
 function renderStock(x){
   currentStock=x;latestHistory5Y=null;latestFundamentalData=null;resetPlayStyle("讀取分析資料中…");
   setText("stockName",shortStockName(x.name||x.shortName)||"—");
-  setText("stockCodeLabel",`${x.code||x.symbol||"—"} | ${x.market||"台股"}`);
-  setText("marketLabel","");
+  setText("stockCodeLabel",`${x.code||String(x.symbol||"").split(".")[0]||"—"}`);
+  setText("marketLabel",x.market||x.marketLabel||"台股");
   renderQuoteFields(x);updateListButtons();beginNews();rememberStockMeta(x);
 }
 let activeSearchSeq=0;
@@ -2245,7 +2247,7 @@ async function search(){
 
     const code=String(data.code||String(data.symbol||"").split(".")[0]||q),name=data.name||data.shortName||"";
     // 身分資料晚到時，只修正標題／市場，不重跑整頁。
-    void metaPromise.then(m=>{if(!m||seq!==activeSearchSeq)return;const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(m.code||"")!==curCode)return;currentStock=mergeStockMeta(currentStock,m);rememberStockMeta(currentStock);setText("stockName",shortStockName(currentStock.name||currentStock.shortName)||"—");setText("stockCodeLabel",`${currentStock.code||currentStock.symbol||"—"} | ${currentStock.market||"台股"}`)});
+    void metaPromise.then(m=>{if(!m||seq!==activeSearchSeq)return;const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(m.code||"")!==curCode)return;currentStock=mergeStockMeta(currentStock,m);rememberStockMeta(currentStock);setText("stockName",shortStockName(currentStock.name||currentStock.shortName)||"—");setText("stockCodeLabel",`${currentStock.code||String(currentStock.symbol||"").split(".")[0]||"—"}`);setText("marketLabel",currentStock.market||currentStock.marketLabel||"台股")});
     // 慢來源並行刷新；舊快取已先顯示，不再阻塞搜尋按鈕與主畫面。
     void loadTargetPlay(code,name).catch(e=>console.warn("目標價背景更新失敗",e));
     void loadNews(code,name).catch(e=>console.warn("新聞背景更新失敗",e));
