@@ -1223,7 +1223,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.10</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.11</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1237,9 +1237,9 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
     </header>
 
     <main class="content">
+      <div class="stock-eyebrow-outside">個股分析</div>
       <section class="stock-head" id="overview">
         <div>
-          <div class="eyebrow">個股分析</div>
           <h1><span id="stockName">選擇股票</span> <small id="stockCodeLabel">----</small></h1>
           <div class="muted" id="marketLabel"></div>
         <div class="stock-list-actions" id="stockListActions">
@@ -2224,4 +2224,48 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
   #overviewPlayMetric{font-size:14px!important;line-height:1.35!important}
 }
 
+</style>
+<style id="v26011-final-overrides">
+/* v2.6.0.11 — hard final overrides for the two requested layout fixes */
+.stock-eyebrow-outside{
+  display:block!important;
+  margin:0 0 7px 0!important;
+  padding:0!important;
+  color:#62799a!important;
+  font-size:15px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  text-align:left!important;
+}
+.stock-head{
+  margin-top:0!important;
+}
+.stock-head .eyebrow{display:none!important}
+
+/* Keep semantic colors with the content after reordering. */
+#overviewResonanceCard .overview-resonance-metrics>div.metric-play{
+  background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important;
+}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-target{
+  background:linear-gradient(180deg,#f6f0ff,#f1e9ff)!important;
+}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-up{
+  background:linear-gradient(180deg,#effaf5,#e7f7ee)!important;
+}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-down{
+  background:linear-gradient(180deg,#fff3f5,#ffedf0)!important;
+}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-play strong{color:#2f80ff!important}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-target strong{color:#7d57d8!important}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-up strong{color:#1fa86a!important}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-down strong{color:#e24c5b!important}
+
+@media(max-width:720px){
+  .stock-eyebrow-outside{
+    margin:-2px 0 6px 0!important;
+    padding:0!important;
+    font-size:15px!important;
+  }
+  .stock-head{margin-top:0!important}
+}
 </style>

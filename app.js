@@ -1,4 +1,4 @@
-// v2.6.0.10 — light theme polish plus layout fixes while iterating the UI.
+// v2.6.0.11 — layout-only fixes; analysis logic unchanged.
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
