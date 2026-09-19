@@ -692,6 +692,29 @@ body{padding-bottom:68px}
   #overviewResonanceCard .overview-wave-tag-price{font-size:19px!important}
 }
 
+
+/* v2.6.0.16 — resonance icon swap, compact strength chip, enlarged wave chart */
+#overviewResonanceCard .overview-title-icon{background:none!important;color:#111827!important;-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 32' fill='none' stroke='black' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'><path d='M2 17c4 0 6-2 8-6 2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6'/><path d='M2 21c4 0 6-2 8-6 2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6' opacity='.92'/></svg>")!important;mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 32' fill='none' stroke='black' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'><path d='M2 17c4 0 6-2 8-6 2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6'/><path d='M2 21c4 0 6-2 8-6 2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6s6-2 8-6c2 4 4 6 8 6' opacity='.92'/></svg>")!important;width:1.2em!important;flex-basis:1.2em!important}
+#overviewResonanceCard .overview-strength-chip{padding:10px 14px!important;min-width:auto!important;white-space:nowrap!important}
+#overviewResonanceCard .overview-strength-chip strong{font-size:15px!important;line-height:1.1!important;white-space:nowrap!important}
+#overviewResonanceCard .metric-badge{width:30px!important;height:30px!important;flex-basis:30px!important}
+#overviewResonanceCard .metric-badge::before{width:16px!important;height:16px!important}
+#overviewResonanceCard .overview-wave-shell{padding:8px 2px 2px!important;border-radius:22px!important}
+#overviewResonanceCard .overview-wave-shell svg{min-height:250px!important}
+#overviewResonanceCard .overview-wave-grid{stroke:#e7edf5!important;stroke-width:1.25!important;stroke-dasharray:5 6!important}
+#overviewResonanceCard .overview-wave-vline{stroke:#dfe7f0!important;stroke-width:1.25!important;stroke-dasharray:5 6!important}
+#overviewResonanceCard .overview-wave-tag-title{font-size:14px!important;fill:#6b7d93!important;paint-order:stroke;stroke:#ffffff;stroke-width:5px;stroke-linejoin:round}
+#overviewResonanceCard .overview-wave-tag-price{font-size:22px!important;fill:#13233a!important;paint-order:stroke;stroke:#ffffff;stroke-width:6px;stroke-linejoin:round}
+@media(max-width:720px){
+  #overviewResonanceCard .overview-strength-chip{padding:8px 12px!important}
+  #overviewResonanceCard .overview-strength-chip strong{font-size:14px!important}
+  #overviewResonanceCard .metric-badge{width:28px!important;height:28px!important;flex-basis:28px!important}
+  #overviewResonanceCard .metric-badge::before{width:15px!important;height:15px!important}
+  #overviewResonanceCard .overview-wave-shell svg{min-height:235px!important}
+  #overviewResonanceCard .overview-wave-tag-title{font-size:13px!important}
+  #overviewResonanceCard .overview-wave-tag-price{font-size:20px!important}
+}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -1320,7 +1343,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.15</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.16</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1373,7 +1396,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <article class="card overview-resonance-card" id="overviewResonanceCard">
           <header class="overview-resonance-head">
             <div><span>總覽最終路徑</span><h2><i class="overview-title-icon" aria-hidden="true"></i>共振分析</h2><small>價格看共振，技術／五階段決定路徑與達成條件</small></div>
-            <div class="overview-head-side"><b id="overviewResonancePlay" hidden aria-hidden="true">等待資料</b><div class="overview-strength-chip"><span>共振強度</span><strong id="overviewStrengthMini">--</strong></div></div>
+            <div class="overview-head-side"><b id="overviewResonancePlay" hidden aria-hidden="true">等待資料</b><div class="overview-strength-chip"><strong id="overviewStrengthMini">共振強度：--/100</strong></div></div>
           </header>
           <div class="overview-resonance-metrics">
             <div class="metric-play"><span class="metric-title"><i class="metric-badge metric-badge-play" aria-hidden="true"></i><em>建議玩法</em></span><strong id="overviewPlayMetric">--</strong></div>
