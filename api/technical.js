@@ -66,6 +66,63 @@ async function handleHistory(req,res){
   }
 }
 
+
+
+const FUND_TYPES=[
+  'quarterlyDilutedEPS','quarterlyBasicEPS','quarterlyTotalRevenue','quarterlyOperatingRevenue',
+  'quarterlyGrossProfit','quarterlyOperatingIncome','quarterlyTotalOperatingIncomeAsReported',
+  'quarterlyNetIncome','quarterlyNetIncomeCommonStockholders'
+];
+function rawReported(x){const v=x?.reportedValue?.raw??x?.raw??null;return num(v)}
+function quarterLabel(date){const m=String(date||'').match(/^(\d{4})-(\d{2})/);if(!m)return String(date||'');return `${m[1]} Q${Math.ceil(Number(m[2])/3)}`}
+async function fetchFundamentalSeries(symbol,period1,period2){
+  const qs=FUND_TYPES.map(x=>`type=${encodeURIComponent(x)}`).join('&');
+  let last=null;
+  for(const host of ['query1.finance.yahoo.com','query2.finance.yahoo.com']){
+    try{
+      const url=`https://${host}/ws/fundamentals-timeseries/v1/finance/timeseries/${encodeURIComponent(symbol)}?symbol=${encodeURIComponent(symbol)}&${qs}&period1=${period1}&period2=${period2}&padTimeSeries=true`;
+      const r=await fetch(url,{headers:{...HEADERS,'origin':'https://finance.yahoo.com','referer':`https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/financials/`},redirect:'follow'});
+      if(!r.ok)throw new Error(`Yahoo fundamentals HTTP ${r.status}`);
+      const j=await r.json(),result=j?.timeseries?.result||[];
+      if(!Array.isArray(result)||!result.length)throw new Error('Yahoo fundamentals 無資料');
+      const map=new Map();
+      for(const block of result){
+        for(const key of FUND_TYPES){
+          const arr=Array.isArray(block?.[key])?block[key]:[];
+          for(const item of arr){
+            const date=String(item?.asOfDate||item?.reportedDate||'').slice(0,10);if(!date)continue;
+            if(!map.has(date))map.set(date,{date});
+            const v=rawReported(item);if(v!==null)map.get(date)[key]=v;
+          }
+        }
+      }
+      const rows=[...map.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{
+        const eps=num(x.quarterlyDilutedEPS)??num(x.quarterlyBasicEPS),revenue=num(x.quarterlyTotalRevenue)??num(x.quarterlyOperatingRevenue),
+          grossProfit=num(x.quarterlyGrossProfit),operatingIncome=num(x.quarterlyOperatingIncome)??num(x.quarterlyTotalOperatingIncomeAsReported),
+          netIncome=num(x.quarterlyNetIncome)??num(x.quarterlyNetIncomeCommonStockholders);
+        return {period:quarterLabel(x.date),date:x.date,eps,revenue,grossProfit,operatingIncome,netIncome,
+          grossMargin:revenue&&grossProfit!==null?round(grossProfit/revenue*100):null,
+          operatingMargin:revenue&&operatingIncome!==null?round(operatingIncome/revenue*100):null};
+      }).filter(x=>[x.eps,x.revenue,x.grossProfit,x.operatingIncome,x.netIncome].some(Number.isFinite));
+      if(!rows.length)throw new Error('Yahoo fundamentals 無可用季度資料');
+      return {symbol,rows};
+    }catch(e){last=e}
+  }
+  throw last||new Error('Yahoo fundamentals 取得失敗');
+}
+async function handleFundamentals(req,res){
+  const code=codeOf(req.query.q||req.query.code||req.query.symbol),market=String(req.query.market||'');
+  if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
+  try{
+    const now=Math.floor(Date.now()/1000),period2=now+86400,period1=now-Math.round(3.5*365.25*86400);
+    let data,last=null;for(const s of marketSymbols(code,market)){try{data=await fetchFundamentalSeries(s,period1,period2);break}catch(e){last=e}}
+    if(!data)throw last||new Error('Yahoo fundamentals 取得失敗');
+    const quarters=data.rows.slice(-12).reverse(),coverage={eps:quarters.filter(x=>Number.isFinite(x.eps)).length,revenue:quarters.filter(x=>Number.isFinite(x.revenue)).length,grossMargin:quarters.filter(x=>Number.isFinite(x.grossMargin)).length,operatingMargin:quarters.filter(x=>Number.isFinite(x.operatingMargin)).length};
+    res.setHeader('Cache-Control','public, s-maxage=21600, stale-while-revalidate=86400');
+    return res.status(200).json({ok:true,source:'Yahoo Finance fundamentals-timeseries',code,market,symbol:data.symbol,updatedAt:new Date().toISOString(),quarters,coverage});
+  }catch(e){return res.status(502).json({ok:false,error:e?.message||'長期基本面資料取得失敗'})}
+}
+
 async function handleTechnical(req,res){
   const q=req.query?.q,market=req.query?.market||'';
   if(!q)return res.status(400).json({ok:false,error:'缺少股票代碼'});
@@ -100,6 +157,7 @@ export default async function handler(req,res){
   try{
     const mode=String(req.query?.mode||'').toLowerCase();
     if(mode==='history')return await handleHistory(req,res);
+    if(mode==='fundamentals')return await handleFundamentals(req,res);
     return await handleTechnical(req,res);
   }catch(e){
     return res.status(500).json({ok:false,error:e?.message||'技術資料取得失敗'});
