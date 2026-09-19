@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07111f">
+  <meta name="theme-color" content="#ffffff">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -989,6 +989,46 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .adaptive-stop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.adaptive-stop-grid>div{padding:10px;border:1px solid #37506a;border-radius:10px;background:#081522}.adaptive-stop-grid>div:first-child{border-color:#49654f}.adaptive-stop-grid>div:last-child{border-color:#4b5576}.adaptive-stop-grid span{display:block;color:#a8bac8;font-size:10px}.adaptive-stop-grid b{display:block;margin:5px 0;color:#f5fbff;font-size:16px}.adaptive-stop-grid small{display:block;color:#879caf;font-size:9px;line-height:1.5}.adaptive-stop-grid em{font-style:normal;color:#ffb66d;font-weight:800}.adaptive-stop-note{display:block;margin-top:9px;color:#73899c;font-size:9px;line-height:1.45}
 @media(max-width:720px){.adaptive-stop-panel{padding:10px 8px}.adaptive-stop-head{display:block}.adaptive-stop-head small{display:block;max-width:none;margin-top:5px;text-align:left}.adaptive-stop-grid{grid-template-columns:1fr}.adaptive-stop-grid b{font-size:15px}}
 </style>
+
+<style id="v2605-color-only">
+/* v2.6.0.5 — 僅做顏色反轉：原深色底改白底；原白字改黑字。尺寸、間距、排版完全沿用 v2.6.0.4。 */
+:root{--bg:#ffffff;--side:#ffffff;--card:#ffffff;--line:#dfe5ec;--text:#111111;--muted:#8999ad}
+html,body,.app-shell,.main-shell{background:#ffffff!important;color:#111111!important}
+
+/* 原本的深色內容底：只換成白色，不改任何尺寸/位置。 */
+.sidebar,.topbar,.searchbox,.searchbox button,.section-tabs,.card,.status-toast,.bottom-nav,
+.side-item.active,.side-title,.stock-list-actions button,.stock-list-actions button.in-list,
+.broker-row:hover,.broker-row.selected,.target-tabs button.active,.manage-stock,
+.broker-actions a,.broker-actions button,.modal-card,.modal-card input,.modal-actions button,
+.broker-expand,.broker-menu-btn,.broker-menu,.target-b-main,.target-b-main .target-play-head select,
+.valuation-card,.valuation-card .valuation-hero,.valuation-section,.valuation-eps-chip,.valuation-eps-chip.is-ttm,.valuation-eps-chip.is-latest,
+#valuation .formula-popover,#valuation .valuation-unit,#valuation .valuation-quarter-chip,#valuation .valuation-quarter-chip.is-latest,
+#valuation .valuation-summary-grid,#valuation .fair-flat,#technical .tech-overview-main,
+.disposal-panel .card,.disposal-reason-note,.disposal-popover,.valuation-scenario-card,.scenario-hero,.scenario-values>div,
+.stage-step i,.stage-summary,.playstyle-hero,.playstyle-fit-row,.playstyle-bar,.playstyle-personality,
+.playstyle-short-analysis,.short-engine-grid>div,.playstyle-swing-analysis,.swing-wave-chart,.swing-wave-legend,
+.expected-position,.expected-target,.decision-position-note,.holding-profile input,.holding-profile button,
+.playstyle-position-mode,.playstyle-long-analysis,.long-engine-grid>div,.expected-growth-grid>div,
+.decision-risk-badge.risk-low,.decision-risk-badge.risk-medium,.decision-risk-badge.risk-high,.decision-risk-badge.risk-extreme,
+.overview-resonance-head>b,.overview-resonance-metrics>div,.overview-wave-shell,.overview-source-chips span,.overview-decision-row>div,
+.short-wave-mini,.adaptive-stop-panel,.adaptive-stop-grid>div,#technical.technical-card,.tech-overview,.tech-state-icon,.tech-tile,.tech-tile header em,.tech-summary,
+.scenario-grid,.scenario-cell,.news-summary-editor,.news-summary-row textarea,.news-filter-row button,.news-item,
+#valuation .risk-neutral,#valuationScenario .scenario-summary,.decision-grid>div{background:#ffffff!important}
+
+/* 原本是深色線/軌道者只轉成淺灰，不碰尺寸。 */
+.stage-progress-line,.disposal-progress-row>em,.disposal-dot,#valuation .valuation-eps-divider,
+#valuation .valuation-bps-value:before,.valuation-mini+.valuation-mini:before,.valuation-bps .valuation-mini:before{background:#e7ebf0!important}
+
+/* 原本明確是白字者改黑；原本有色字維持原色。 */
+.side-item.active,.searchbox input,.star,.section-tabs button.active,.stages i,
+.modal-head button,.modal-card input,.modal-actions button,.target-b-main .target-play-head select,
+#valuation .valuation-quarter-chip em,.section-tabs.analysis-tabs button.active,
+.news-summary-row textarea,.news-summary-row button,.news-filter-row button.active{color:#111111!important}
+
+/* SVG 原本白字；白底後改黑。 */
+.swing-wave-value,.overview-wave-price,.overview-wave-tag-price{fill:#111111!important}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
@@ -1016,7 +1056,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.4</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.5</span></button>
   </aside>
 
   <div class="main-shell">
