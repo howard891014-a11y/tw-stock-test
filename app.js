@@ -1,4 +1,4 @@
-// v2.5.9.2 — 股性歷史底色、短線合理/樂觀目標與布林路徑整合。
+// v2.5.9.4 — MACD 動能生命週期整合；布林參數維持不變。
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
@@ -528,7 +528,7 @@ function calculateSwingWave(r,t,breakout=playBreakoutState(r,t)){
     else{state="延伸過熱區";phase="高檔延伸";nextTarget=null}
   }
 
-  const bollingerPath=bollingerPathSignal(rows,t,price,breakout);
+  const bollingerPath=bollingerPathSignal(rows,t,price,breakout),macdLifecycle=macdLifecycleSignal(rows,t,price,bollingerPath,breakout);
   let quality=50;
   if(chosen.gain>=10&&chosen.gain<=60)quality+=12;else if(chosen.gain>=6)quality+=6;
   if(chosen.pullback!==null&&chosen.pullback<=-3&&chosen.pullback>=-25)quality+=10;
@@ -539,11 +539,13 @@ function calculateSwingWave(r,t,breakout=playBreakoutState(r,t)){
   if(price>=activeDefenseLow*.98)quality+=4;else quality-=30;
   if(currentMultiple>2.7)quality-=14;
   if(bollingerPath?.upwardExpansion)quality+=8;else if(bollingerPath?.trendExpansion)quality+=5;else if(bollingerPath?.breakdown)quality-=14;
+  if(macdLifecycle?.valid)quality+=macdLifecycle.swingAdj;
   quality=Math.round(playClamp(quality));
-  let extensionMax=1.5;if(!bollingerPath?.breakdown&&quality>=60)extensionMax=2;if(!bollingerPath?.breakdown&&((bollingerPath?.upwardExpansion||bollingerPath?.trendExpansion)&&quality>=66||price>=target(2)*.985))extensionMax=2.5;
+  const macdAttack=!macdLifecycle?.valid||["重新攻擊","攻擊擴張"].includes(macdLifecycle.state);
+  let extensionMax=1.5;if(!bollingerPath?.breakdown&&quality>=60)extensionMax=2;if(!bollingerPath?.breakdown&&((((bollingerPath?.upwardExpansion||bollingerPath?.trendExpansion)&&macdAttack)&&quality>=66)||price>=target(2)*.985))extensionMax=2.5;
 
   return{
-    valid:true,state,phase,quality,currentMultiple,nextTarget,referenceHigh,activeDefenseLow,bollingerPath,extensionMax,
+    valid:true,state,phase,quality,currentMultiple,nextTarget,referenceHigh,activeDefenseLow,bollingerPath,macdLifecycle,extensionMax,
     baseLow:chosen.low,firstWave:chosen.high,pullbackLow:firstPullback,
     secondWaveHigh:second?.high??null,secondPullbackLow,
     ext15:target(1.5),ext20:target(2),ext25:target(2.5),targetBase,
@@ -795,6 +797,42 @@ function shortMacdSnapshot(rows,price){
   const i=values.length-1,prev=i-1,m=macd[i],s=sigMap.get(i),pm=macd[prev],ps=sigMap.get(prev),hist=m!==null&&Number.isFinite(s)?m-s:null,prevHist=pm!==null&&Number.isFinite(ps)?pm-ps:null;
   return {macd:m,signal:Number.isFinite(s)?s:null,hist,histDelta:hist!==null&&prevHist!==null?hist-prevHist:null};
 }
+
+// v2.5.9.4 — MACD 動能生命週期：零軸只當趨勢背景，柱體縮短／短柱蓄力／重新放大才決定攻擊節奏。
+function macdHistogramSeries(rows,price){
+  let values=(rows||[]).map(playRowClose).filter(Number.isFinite);if(values.length<35)return [];
+  const lastDate=swingDate(rows.at(-1)),includesCurrent=!!(lastDate&&shortCurrentDate()&&lastDate===shortCurrentDate());
+  if(Number.isFinite(price)){if(includesCurrent)values[values.length-1]=price;else values.push(price)}
+  const e12=shortEma(values,12),e26=shortEma(values,26),macd=values.map((_,i)=>e12[i]!==null&&e26[i]!==null?e12[i]-e26[i]:null),validIdx=macd.map((v,i)=>v===null?null:i).filter(Number.isFinite),macdVals=validIdx.map(i=>macd[i]);
+  if(macdVals.length<9)return [];
+  const sigVals=shortEma(macdVals,9),sigMap=new Map();validIdx.forEach((idx,j)=>sigMap.set(idx,sigVals[j]));
+  const out=[];for(const i of validIdx){const m=macd[i],sg=sigMap.get(i);if(m===null||!Number.isFinite(sg))continue;out.push({i,macd:m,signal:sg,hist:m-sg})}return out;
+}
+function macdLifecycleSignal(rows,t,price,bollinger=null,breakout=null){
+  const series=macdHistogramSeries(rows,price),p=stageNum(price);if(series.length<12||p===null)return {valid:false,state:"MACD資料不足",score:50,shortAdj:0,swingAdj:0,entryOk:null};
+  const a=series.slice(-45),h=a.map(x=>x.hist),last=a.at(-1),cur=last.hist,prev=h.at(-2),prev2=h.at(-3);
+  if(![cur,prev,prev2].every(Number.isFinite))return {valid:false,state:"MACD資料不足",score:50,shortAdj:0,swingAdj:0,entryOk:null};
+  const absPeak=Math.max(...h.slice(0,-1).map(x=>Math.abs(x)).filter(Number.isFinite),Math.abs(cur),1e-9),tinyLimit=absPeak*.32,recent8=h.slice(-8),priorTiny=h.slice(-9,-2),
+        tinyCount=recent8.filter(x=>Math.abs(x)<=tinyLimit).length,positiveCount=recent8.filter(x=>x>0).length,priorTinyCount=priorTiny.filter(x=>Math.abs(x)<=tinyLimit).length,
+        ma20Slope=stageMaSlope(rows,20,10),ma60Slope=stageMaSlope(rows,60,20),ma20=stageNum(t?.ma?.ma20),ma60=stageNum(t?.ma?.ma60),
+        longTrendUp=(ma20Slope===null||ma20Slope>=0)&&(ma60Slope===null||ma60Slope>=-.15),structureIntact=(ma60===null||p>=ma60*.97)&&(ma20===null||p>=ma20*.94),
+        macdAboveZero=last.macd>=0,shrinkingBelow=cur<0&&cur>prev&&prev>=prev2,shrinkingAbove=cur>0&&cur<prev&&prev<=prev2,
+        longAccumulation=longTrendUp&&structureIntact&&macdAboveZero&&tinyCount>=5&&positiveCount>=3,
+        twoStepExpand=cur>0&&cur>prev&&prev>prev2,reactivation=longTrendUp&&structureIntact&&priorTinyCount>=4&&twoStepExpand&&cur>tinyLimit*.65,
+        attackExpansion=cur>0&&cur>prev&&(prev>prev2||prev<=0),bearExpansion=cur<0&&cur<prev&&prev<=prev2,
+        bollAttack=!!(bollinger?.upwardExpansion||bollinger?.trendExpansion),breakoutOk=!!breakout?.confirmed;
+  let state="動能中性",score=52,shortAdj=0,swingAdj=0,entryOk=false,note="柱體沒有形成明確擴張或衰退序列";
+  if(reactivation){state="重新攻擊";score=bollAttack||breakoutOk?94:86;shortAdj=8;swingAdj=10;entryOk=true;note="短柱蓄力後柱體連續重新放大，進入再攻擊觀察"}
+  else if(longAccumulation){state="長波蓄力";score=72;shortAdj=1;swingAdj=8;entryOk=false;note="零軸附近／上方連續多根短柱，長趨勢仍完整，偏長波整理蓄力"}
+  else if(bearExpansion&&(!longTrendUp||!structureIntact||!macdAboveZero)){state="空方擴張";score=22;shortAdj=-8;swingAdj=-10;entryOk=false;note="零軸下柱體重新放大，空方動能增加"}
+  else if(shrinkingBelow){state="攻擊觀察";score=66;shortAdj=3;swingAdj=2;entryOk=false;note="零軸下柱體連續縮短，空方動能衰退"}
+  else if(attackExpansion&&longTrendUp&&structureIntact){state="攻擊擴張";score=82;shortAdj=6;swingAdj=5;entryOk=true;note="柱體連續放大，多方動能正在擴張"}
+  else if(attackExpansion){state="攻擊觀察";score=64;shortAdj=2;swingAdj=1;entryOk=false;note="柱體轉強，但長趨勢／結構尚未確認，只列攻擊觀察"}
+  else if(shrinkingAbove||bearExpansion){state="動能降溫";score=45;shortAdj=-4;swingAdj=1;entryOk=false;note="柱體開始縮短／轉弱，短線動能降溫但不直接視為波段破壞"}
+  const delta=cur-prev,background=macdAboveZero?"零軸上趨勢背景":"零軸下趨勢背景";
+  return {valid:true,state,score,shortAdj,swingAdj,entryOk,note,background,hist:cur,histDelta:delta,tinyLimit,tinyCount,positiveCount,priorTinyCount,longTrendUp,structureIntact,macdAboveZero,shrinkingBelow,shrinkingAbove,longAccumulation,reactivation,attackExpansion,bearExpansion,bollAttack,breakoutOk};
+}
+
 function shortStochastic(rows,period=9){
   if((rows||[]).length<period+2)return {k:null,d:null};const ks=[];
   for(let i=Math.max(period-1,rows.length-3);i<rows.length;i++){
@@ -830,7 +868,7 @@ function shortNewsCatalyst(){
   else if(p>n&&p>=1){delta=Math.min(5,2+p);label=`題材／正向關鍵字 ${p} 則`}
   return {label,score:delta,fit:Math.round(playClamp(50+delta*5)),count:fresh.length,positive:p,negative:n,available:true};
 }
-// v2.5.9.2 — 布林路徑：窄口只代表能量壓縮；必須配合向上突破／張口才提高延伸目標可信度。
+// v2.5.9.2 — 布林路徑保持獨立：窄口只代表能量壓縮；v2.5.9.4 新增 MACD 動能生命週期，但不改布林參數。
 function bollingerBandwidthSeries(rows,period=20,lookback=150){
   const a=(rows||[]).filter(x=>playRowClose(x)!==null).slice(-(lookback+period+12));if(a.length<period+8)return [];
   const closes=a.map(playRowClose),out=[];
@@ -897,21 +935,21 @@ function calculateShortWave(rowsInput,priceInput){
   return {valid:true,quality,state:chosen.pb?.confirmed?"短波回測後延伸":"短波形成中",baseLow:chosen.low,firstHigh:chosen.high,pullbackLow,targetBase,amplitude,currentMultiple,targets,
     baseDate:swingDate(rows[chosen.lowIndex]),highDate:swingDate(rows[chosen.highIndex]),pullbackDate:chosen.pb?.index>=0?swingDate(rows[chosen.pb.index]):"",reason:"短波只使用近期結構；動能分數決定可採用 1X／1.5X／2X 的哪一層，並受近端壓力與最大合理延伸限制。"};
 }
-function shortWaveTargetPlan(wave,score,price,atr,bollinger){
+function shortWaveTargetPlan(wave,score,price,atr,bollinger,macdLifecycle){
   if(!wave?.valid||!(price>0))return {reasonable:[],optimistic:null,optimisticEnabled:false,capPct:null,optimisticCapPct:null};
   const maxMultiple=score>=76?2:score>=62?1.5:1,atrPct=atr&&price?atr/price*100:2,
         capPct=stageClamp(5+atrPct*2+(score-50)*.08,5,16),optimisticCapPct=stageClamp(Math.max(capPct+12,capPct*2),12,35);
   const future=wave.targets.filter(x=>x.value>price*1.002),reasonable=future.filter(x=>x.multiple<=maxMultiple&&x.value<=price*(1+capPct/100)).map(x=>({...x,kind:"shortwave",targetClass:"reasonable"}));
   const lastReasonable=reasonable.at(-1)?.value??price,optMaxMultiple=score>=72?2:score>=58?1.5:1;
   const optimistic=future.filter(x=>x.value>lastReasonable*1.002&&x.multiple<=optMaxMultiple&&x.value<=price*(1+optimisticCapPct/100)).sort((a,b)=>a.value-b.value)[0]||null;
-  const optimisticEnabled=!!optimistic&&!!(bollinger?.upwardExpansion||bollinger?.trendExpansion);
+  const macdAttack=!macdLifecycle?.valid||["重新攻擊","攻擊擴張"].includes(macdLifecycle.state),optimisticEnabled=!!optimistic&&!!(bollinger?.upwardExpansion||bollinger?.trendExpansion)&&macdAttack;
   return {reasonable,optimistic:optimistic?{...optimistic,kind:"shortwave",targetClass:"optimistic",enabled:optimisticEnabled}:null,optimisticEnabled,capPct,optimisticCapPct};
 }
 function calculateShortEngine(r,t,breakout=playBreakoutState(r,t)){
   const rows=r?.path?.rows||stageHistory(t),price=stageNum(currentStock?.last??currentStock?.price??r?.price);if(rows.length<12||price===null)return {valid:false,state:"資料不足",score:0,tradeable:false};
   const ret1=shortReturnN(rows,1,price),ret3=shortReturnN(rows,3,price),ret5=shortReturnN(rows,5,price),ma5Slope=shortSmaSlope(rows,5,3),ma10Slope=shortSmaSlope(rows,10,3);
   const ratio20=stageNum(t?.volume?.ratio20),rsi=stageNum(t?.momentum?.rsi14),macd=shortMacdSnapshot(rows,price),kd=shortStochastic(rows),candle=shortCandleState(rows),news=shortNewsCatalyst();
-  const high20=stageHigh(rows,20),high60=stageHigh(rows,60),upper=stageNum(t?.bollinger?.upper),atr=shortAtr(rows,10),pressureTargets=[],shortWave=calculateShortWave(rows,price),bollinger=bollingerPathSignal(rows,t,price,breakout);
+  const high20=stageHigh(rows,20),high60=stageHigh(rows,60),upper=stageNum(t?.bollinger?.upper),atr=shortAtr(rows,10),pressureTargets=[],shortWave=calculateShortWave(rows,price),bollinger=bollingerPathSignal(rows,t,price,breakout),macdLifecycle=macdLifecycleSignal(rows,t,price,bollinger,breakout);
   for(const [label,value] of [["20日高",high20],["布林上軌",upper],["60日高",high60]])if(Number.isFinite(value)&&value>price*1.003&&!pressureTargets.some(x=>Math.abs(x.value/value-1)<.003))pressureTargets.push({label,value,kind:"pressure"});
   if(atr&&pressureTargets.length<2){pressureTargets.push({label:"波動延伸1",value:price+atr*1.2,kind:"pressure"},{label:"波動延伸2",value:price+atr*2,kind:"pressure"})}
   pressureTargets.sort((a,b)=>a.value-b.value);const resistance=pressureTargets[0]||null,resistancePct=resistance?stagePct(resistance.value,price):null;
@@ -923,21 +961,28 @@ function calculateShortEngine(r,t,breakout=playBreakoutState(r,t)){
   if(ma5Slope!==null)score+=ma5Slope>.5?6:ma5Slope<-.5?-5:0;if(ma10Slope!==null)score+=ma10Slope>.25?4:ma10Slope<-.35?-4:0;if(ma5!==null&&ma10!==null)score+=ma5>=ma10?3:-3;
   if(ratio20!==null)score+=ratio20>=1.2&&ratio20<=2.8?8:ratio20>=1?3:ratio20<.7?-4:0;
   if(rsi!==null)score+=rsi>=55&&rsi<=72?6:rsi>=80?-9:rsi<42?-5:0;
-  if(macd.hist!==null)score+=macd.hist>0?4:-3;if(macd.histDelta!==null)score+=macd.histDelta>0?3:-2;
+  if(macd.hist!==null)score+=macd.hist>0?2:-2;if(macdLifecycle?.valid)score+=macdLifecycle.shortAdj;
   if(kd.k!==null&&kd.d!==null)score+=kd.k>kd.d&&kd.k>=45&&kd.k<=85?4:kd.k>=90?-4:kd.k<kd.d&&kd.k<45?-3:0;
   score+=candle.score;if(breakout?.confirmed)score+=12;else if(breakout?.failed)score-=24;else if(breakout?.fresh)score-=4;
   if(resistancePct!==null)score+=resistancePct>=2&&resistancePct<=9?5:resistancePct<1?-5:resistancePct>12?1:0;
   if(shortWave?.valid)score+=stageClamp((shortWave.quality-50)*.10,-4,6);
   if(bollinger?.valid){if(bollinger.upwardExpansion)score+=6;else if(bollinger.trendExpansion)score+=4;else if(bollinger.breakdown)score-=8}
   score=Math.round(playClamp(score));
-  const shortPlan=shortWaveTargetPlan(shortWave,score,price,atr,bollinger),shortWaveTargets=shortPlan.reasonable,shortWaveOptimisticTarget=shortPlan.optimistic,targets=[...pressureTargets];
+  const shortPlan=shortWaveTargetPlan(shortWave,score,price,atr,bollinger,macdLifecycle),shortWaveTargets=shortPlan.reasonable,shortWaveOptimisticTarget=shortPlan.optimistic,targets=[...pressureTargets];
   for(const x of shortWaveTargets)if(!targets.some(y=>Math.abs(y.value/x.value-1)<.003))targets.push(x);
   if(shortWaveOptimisticTarget?.enabled&&!targets.some(y=>Math.abs(y.value/shortWaveOptimisticTarget.value-1)<.003))targets.push(shortWaveOptimisticTarget);targets.sort((a,b)=>a.value-b.value);
   const chaseRisk=(rsi!==null&&rsi>=80)||((ret5??0)>=18&&(rsi??0)>=74)||((ret3??0)>=8&&resistancePct!==null&&resistancePct<1.2);
   let state="偏強整理";
-  if(breakout?.failed)state="疑似假突破";else if(breakout?.fresh&&!breakout?.confirmed)state="突破待確認";else if(chaseRisk)state="追價風險高";else if(breakout?.confirmed&&(breakout.age??9)<=2&&score>=58)state="剛發動";else if(score>=72&&(ret3??0)>0)state="動能加速";else if(score<48||(ret3??0)<=-4||(macd.hist!==null&&macd.hist<0&&(macd.histDelta??0)<0))state="動能轉弱";
-  const tradeable=!['疑似假突破','突破待確認','追價風險高','動能轉弱'].includes(state),shortTargetCapPct=shortPlan.capPct,shortOptimisticCapPct=shortPlan.optimisticCapPct;
-  return {valid:true,state,score,tradeable,holding:"3～5交易日",ret1,ret3,ret5,ma5Slope,ma10Slope,ratio20,rsi,macd,kd,candle,news,resistance,resistancePct,support,targets:targets.slice(0,5),pressureTargets:pressureTargets.slice(0,3),shortWave,shortWaveTargets,shortWaveOptimisticTarget,shortTargetCapPct,shortOptimisticCapPct,bollingerSignal:bollinger,breakout,chaseRisk};
+  if(breakout?.failed)state="疑似假突破";else if(breakout?.fresh&&!breakout?.confirmed)state="突破待確認";else if(chaseRisk)state="追價風險高";
+  else if(macdLifecycle?.state==="重新攻擊"&&score>=58)state="重新攻擊";
+  else if(macdLifecycle?.state==="攻擊擴張"&&score>=58)state="攻擊擴張";
+  else if(macdLifecycle?.state==="長波蓄力")state="長波蓄力";
+  else if(macdLifecycle?.state==="攻擊觀察")state="攻擊觀察";
+  else if(macdLifecycle?.state==="動能降溫")state="動能降溫";
+  else if(macdLifecycle?.state==="空方擴張")state="動能轉弱";
+  else if(breakout?.confirmed&&(breakout.age??9)<=2&&score>=58)state="剛發動";else if(score>=72&&(ret3??0)>0)state="動能加速";else if(score<48||(ret3??0)<=-4)state="動能轉弱";
+  const tradeable=!['疑似假突破','突破待確認','追價風險高','動能轉弱','長波蓄力','攻擊觀察','動能降溫'].includes(state),shortTargetCapPct=shortPlan.capPct,shortOptimisticCapPct=shortPlan.optimisticCapPct;
+  return {valid:true,state,score,tradeable,holding:"3～5交易日",ret1,ret3,ret5,ma5Slope,ma10Slope,ratio20,rsi,macd,macdLifecycle,kd,candle,news,resistance,resistancePct,support,targets:targets.slice(0,5),pressureTargets:pressureTargets.slice(0,3),shortWave,shortWaveTargets,shortWaveOptimisticTarget,shortTargetCapPct,shortOptimisticCapPct,bollingerSignal:bollinger,breakout,chaseRisk};
 }
 
 
@@ -1234,17 +1279,17 @@ function renderShortAnalysis(x){
   setText("shortMomentum",`1日 ${shortFmtPct(s.ret1)}｜3日 ${shortFmtPct(s.ret3)}｜5日 ${shortFmtPct(s.ret5)}`);
   setText("shortMaAccel",`MA5 ${shortFmtPct(s.ma5Slope)}｜MA10 ${shortFmtPct(s.ma10Slope)}`);
   setText("shortVolume",Number.isFinite(s.ratio20)?`20日量比 ${shortFmtNum(s.ratio20,2)}x`:`量比資料不足`);
-  const macdText=s.macd?.hist===null?"MACD --":`MACD柱 ${s.macd.hist>=0?"+":""}${shortFmtNum(s.macd.hist,2)}`;
+  const macdText=s.macd?.hist===null?"MACD --":`MACD柱 ${s.macd.hist>=0?"+":""}${shortFmtNum(s.macd.hist,2)}`,macdLife=s.macdLifecycle?.valid?s.macdLifecycle.state:"MACD狀態不足";
   const kdText=s.kd?.k===null?"KD --":`KD ${shortFmtNum(s.kd.k,0)}/${shortFmtNum(s.kd.d,0)}`;
-  setText("shortIndicators",`RSI ${shortFmtNum(s.rsi,1)}｜${macdText}｜${kdText}`);
+  setText("shortIndicators",`RSI ${shortFmtNum(s.rsi,1)}｜${macdText}｜${macdLife}｜${kdText}`);
   setText("shortCandle",s.candle?.label||"--");setText("shortNews",s.news?.label||"新聞資料待補");
   setText("shortResistance",s.resistance?`${s.resistance.label} ${technicalFmt(s.resistance.value)}｜距離 ${shortFmtPct(s.resistancePct)}`:"上方暫無明確近端壓力");
   const sw=s.shortWave;setText("shortWaveStructure",sw?.valid?`${sw.state}｜結構 ${sw.quality}分｜目前 ${Number.isFinite(sw.currentMultiple)?sw.currentMultiple.toFixed(2):"--"}X`:sw?.reason||"短波結構不足");
   const usable=s.shortWaveTargets||[],opt=s.shortWaveOptimisticTarget,boll=s.bollingerSignal,reasonableText=usable.length?usable.map(x=>`${x.label} ${technicalFmt(x.value)}`).join(" / "):"尚無";
-  const optimisticText=opt?`${opt.label} ${technicalFmt(opt.value)}（${opt.enabled?"布林已啟用":"待布林向上張口確認"}）`:"尚無下一級結構目標";
+  const optimisticText=opt?`${opt.label} ${technicalFmt(opt.value)}（${opt.enabled?"布林＋MACD已啟用":"待布林張口＋MACD攻擊確認"}）`:"尚無下一級結構目標";
   setText("shortWaveGoal",`合理：${reasonableText}｜樂觀：${optimisticText}｜正常上限 ${s.shortTargetCapPct?.toFixed?.(1)??"--"}%／樂觀上限 ${s.shortOptimisticCapPct?.toFixed?.(1)??"--"}%`);
   drawShortWave(sw,stageNum(currentStock?.last??currentStock?.price??latestFiveStageResult?.price),[...usable,...(opt?[{...opt,label:`${opt.enabled?"樂觀":"樂觀候選"} ${opt.label}`}]:[])]);
-  setText("playShortNote",`假突破濾網：${s.breakout?.failed?"未通過":s.breakout?.confirmed?"已確認":"無明顯失敗"}｜布林：${boll?.state||"資料不足"}${Number.isFinite(boll?.percentile)?`（壓縮百分位 ${boll.percentile.toFixed(0)}%）`:""}。ATR 決定正常合理範圍；窄口後向上突破並張口，才啟用下一級樂觀短波目標。`);
+  setText("playShortNote",`假突破濾網：${s.breakout?.failed?"未通過":s.breakout?.confirmed?"已確認":"無明顯失敗"}｜布林：${boll?.state||"資料不足"}${Number.isFinite(boll?.percentile)?`（壓縮百分位 ${boll.percentile.toFixed(0)}%）`:""}｜MACD：${s.macdLifecycle?.state||"資料不足"}。ATR 決定正常合理範圍；布林張口判斷波動擴張，MACD柱體生命週期判斷蓄力／降溫／重新攻擊，兩者確認才啟用下一級樂觀短波目標。`);
 }
 
 function resetSwingWave(){
@@ -1262,7 +1307,7 @@ function renderSwingWave(x){
     setText("playSwingState","資料不足");setText("playSwingGoal","第一目標：--");setText("playSwingNote",w?.reason||"近期波段結構不足");
     const svg=$("playSwingSvg");if(svg)svg.replaceChildren();return;
   }
-  setText("playSwingState",`目前階段：${w.phase||w.state}｜結構 ${w.quality}分`);
+  setText("playSwingState",`目前階段：${w.phase||w.state}｜結構 ${w.quality}分｜MACD ${w.macdLifecycle?.state||"資料不足"}`);
   const refHigh=Number.isFinite(w.referenceHigh)?w.referenceHigh:w.firstWave;
   let goal="--";
   if(Number.isFinite(w.secondPullbackLow)&&price<refHigh*.995)goal=`先回到第二波高點 ${technicalFmt(refHigh)}；突破後再評估第三波`;
@@ -1271,7 +1316,7 @@ function renderSwingWave(x){
   else if(price<w.ext20)goal=`已到 1.5X 區；其餘可能目標為 2X ${technicalFmt(w.ext20)} 或 2.5X ${technicalFmt(w.ext25)}`;
   else if(price<w.ext25)goal=`已到 2X 區；高延伸可能目標為 2.5X ${technicalFmt(w.ext25)}`;
   else goal="已超過 2.5X 參考區，優先觀察過熱與轉弱";
-  const extText=Number.isFinite(w.extensionMax)?`｜目前布林路徑允許延伸至 ${w.extensionMax}X`:"";setText("playSwingGoal",`下一步：${goal}${extText}`);
+  const extText=Number.isFinite(w.extensionMax)?`｜目前布林＋MACD路徑允許延伸至 ${w.extensionMax}X`:"";setText("playSwingGoal",`下一步：${goal}${extText}`);
   drawSwingWave(w,price,position);
   const legend=$("playSwingLegend");
   if(legend){
@@ -1290,8 +1335,8 @@ function renderSwingWave(x){
   const dates=w.baseDate&&w.waveDate?`${w.baseDate} → ${w.waveDate}`:"";
   const p1=w.pullbackDate?`；第一回測 ${w.pullbackDate}`:"";
   const p2=w.secondPullbackDate?`；第二回測 ${w.secondPullbackDate}`:"";
-  const boll=w.bollingerPath,bollText=boll?.valid?` 布林路徑：${boll.state}${Number.isFinite(boll.percentile)?`（近120日壓縮百分位 ${boll.percentile.toFixed(0)}%）`:""}；布林只控制延伸層級與可信度，不直接當波段目標價。`:"";
-  setText("playSwingNote",`${dates}${p1}${p2}。${w.reason}${bollText} 第二次回測只作結構／防守參考，暫不重新套固定倍率。`);
+  const boll=w.bollingerPath,bollText=boll?.valid?` 布林路徑：${boll.state}${Number.isFinite(boll.percentile)?`（近120日壓縮百分位 ${boll.percentile.toFixed(0)}%）`:""}；布林只判斷壓縮／張口。`:"",macdText=w.macdLifecycle?.valid?` MACD：${w.macdLifecycle.state}（${w.macdLifecycle.note}）；MACD只判斷動能生命週期。`:"";
+  setText("playSwingNote",`${dates}${p1}${p2}。${w.reason}${bollText}${macdText} 布林＋MACD共同控制延伸層級與可信度，不直接改波段倍率價格；第二次回測只作結構／防守參考，暫不重新套固定倍率。`);
 }
 
 function resetLongAnalysis(){
@@ -1407,9 +1452,10 @@ function resonanceSourceRelevance(mode,family){
 }
 function resonancePathScore(play,target,price){
   const tech=stageNum(latestTechnicalForPlay?.analysis?.overall?.score)??50,stage=latestFiveStageResult?.stage??2,stageScore=({1:35,2:58,3:80,4:84,5:42})[stage]??55;
-  const engine=play?.key==="short"?(play?.shortEngine?.score??50):play?.key==="long"?(play?.longEngine?.score??50):(play?.swingWave?.quality??tech),boll=play?.key==="short"?play?.shortEngine?.bollingerSignal:play?.swingWave?.bollingerPath,bollScore=boll?.valid?(boll.score??50):50,gap=price>0&&target>0?(target/price-1)*100:0;
+  const engine=play?.key==="short"?(play?.shortEngine?.score??50):play?.key==="long"?(play?.longEngine?.score??50):(play?.swingWave?.quality??tech),boll=play?.key==="short"?play?.shortEngine?.bollingerSignal:play?.swingWave?.bollingerPath,bollScore=boll?.valid?(boll.score??50):50,
+        macdLife=play?.key==="short"?play?.shortEngine?.macdLifecycle:(play?.swingWave?.macdLifecycle??play?.shortEngine?.macdLifecycle),macdScore=macdLife?.valid?(macdLife.score??50):50,gap=price>0&&target>0?(target/price-1)*100:0;
   let distanceScore=88;if(play?.key==="short"&&gap>16)distanceScore=Math.max(20,88-(gap-16)*2.2);else if(play?.key==="swing"&&gap>55)distanceScore=Math.max(35,88-(gap-55)*.75);else if(play?.key==="long"&&gap>130)distanceScore=Math.max(45,88-(gap-130)*.35);
-  return Math.round(resonanceClamp(tech*.26+stageScore*.22+engine*.22+bollScore*.20+distanceScore*.10));
+  return Math.round(resonanceClamp(tech*.24+stageScore*.20+engine*.20+bollScore*.16+macdScore*.12+distanceScore*.08));
 }
 function resonanceDistanceDecay(center,value,bandwidthPct){
   if(!(center>0&&value>0))return 0;const d=Math.abs(value/center-1)*100,b=Math.max(.8,bandwidthPct);return Math.exp(-.5*Math.pow(d/b,2));
@@ -1633,15 +1679,15 @@ function renderExpectedUpside(play=latestPlayStyleResult){
   return {price,position,base,plan,downside,winRate:wr,upRange:range,downRange};
 }
 
-// v2.5.9.3 — 大量進場不只看突破價：結構、布林、量能、五階段共同確認。
+// v2.5.9.4 — 大量進場：結構、布林、MACD 動能週期、量能、五階段共同確認。
 function tradeEntryConfirmation(play,confirm,price){
   const p=positionNumber(price),c=positionNumber(confirm),t=latestTechnicalForPlay||{},se=play?.shortEngine||play?.diagnostics?.shortEngine,w=play?.swingWave,bo=play?.diagnostics?.breakout||se?.breakout||{},boll=play?.key==="short"?se?.bollingerSignal:w?.bollingerPath,
-        ratio=stageNum(se?.ratio20??bo?.volumeRatio??t?.volume?.ratio20),stage=latestFiveStageResult?.stage??null;
+        macdLife=play?.key==="short"?se?.macdLifecycle:(w?.macdLifecycle??se?.macdLifecycle),ratio=stageNum(se?.ratio20??bo?.volumeRatio??t?.volume?.ratio20),stage=latestFiveStageResult?.stage??null;
   const structure=!!(c&&p&&p>=c*.995&&!bo?.failed&&(play?.key!=="short"||bo?.confirmed||p>=c*1.005)),bollOk=boll?.valid?(!boll.breakdown&&(boll.upwardExpansion||boll.trendExpansion||(boll.score??0)>=65)):null,
-        volumeOk=ratio===null?null:ratio>=.95,volumeWeak=ratio!==null&&ratio<.8,stageOk=stage===null?null:[2,3,4].includes(stage);
-  let score=structure?35:0;if(bollOk===true)score+=25;else if(bollOk===null)score+=12;if(volumeOk===true)score+=20;else if(volumeOk===null)score+=10;if(stageOk===true)score+=20;else if(stageOk===null)score+=10;
-  const ready=!!structure&&score>=70&&!boll?.breakdown&&!volumeWeak&&stageOk!==false,mark=x=>x===true?"✓":x===false?"×":"–",parts=[`突破${mark(structure)}`,`布林${mark(bollOk)}`,`量能${mark(volumeOk)}`,`階段${mark(stageOk)}`];
-  return {ready,score:Math.round(score),structure,bollOk,volumeOk,stageOk,ratio,stage,note:`確認 ${Math.round(score)}/100｜${parts.join("・")}`};
+        macdOk=macdLife?.valid?["重新攻擊","攻擊擴張"].includes(macdLife.state):null,volumeOk=ratio===null?null:ratio>=.95,volumeWeak=ratio!==null&&ratio<.8,stageOk=stage===null?null:[2,3,4].includes(stage);
+  let score=structure?30:0;if(bollOk===true)score+=20;else if(bollOk===null)score+=10;if(macdOk===true)score+=20;else if(macdOk===null)score+=10;if(volumeOk===true)score+=15;else if(volumeOk===null)score+=7;if(stageOk===true)score+=15;else if(stageOk===null)score+=7;
+  const ready=!!structure&&score>=72&&!boll?.breakdown&&!volumeWeak&&stageOk!==false&&macdOk!==false,mark=x=>x===true?"✓":x===false?"×":"–",parts=[`突破${mark(structure)}`,`布林${mark(bollOk)}`,`MACD${mark(macdOk)}`,`量能${mark(volumeOk)}`,`階段${mark(stageOk)}`];
+  return {ready,score:Math.round(score),structure,bollOk,macdOk,volumeOk,stageOk,ratio,stage,macdState:macdLife?.state??null,note:`確認 ${Math.round(score)}/100｜${parts.join("・")}`};
 }
 function buildDecisionPlan(play,price,expected){
   const p=positionNumber(price),t=latestTechnicalForPlay||{},w=play?.swingWave,profile=play?.operationProfile||{};if(p===null)return null;
@@ -1649,16 +1695,16 @@ function buildDecisionPlan(play,price,expected){
     const se=play?.shortEngine||play?.diagnostics?.shortEngine,bo=play?.diagnostics?.breakout||{};
     const support=positionNumber(w?.activeDefenseLow??w?.secondPullbackLow??w?.pullbackLow??se?.support??t?.ma?.ma20),confirm=positionNumber(w?.referenceHigh??w?.firstWave??bo?.level),levels=expected?.plan?.levels||[];
     const trim=levels[0]?.value??confirm,exit=levels[1]?.value??w?.ext15??levels.at(-1)?.value??null;
-    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02);return {mode:"短波混合",trial:targetZone(support,.99,1.02),entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(trim,.99,1.01),exit:targetZone(exit,.985,1.015),trialNote:"回測支撐附近只補機動倉；底倉不因短線震盪重複進出",entryNote:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；突破／布林／量能／五階段共同確認後再把機動倉補足`,trimNote:"先處理機動倉，底倉保留波段趨勢",exitNote:"高延伸目標或波段結構轉弱時，再評估剩餘底倉"};
+    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02);return {mode:"短波混合",trial:targetZone(support,.99,1.02),entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(trim,.99,1.01),exit:targetZone(exit,.985,1.015),trialNote:"回測支撐附近只補機動倉；底倉不因短線震盪重複進出",entryNote:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；突破／布林／MACD／量能／五階段共同確認後再把機動倉補足`,trimNote:"先處理機動倉，底倉保留波段趨勢",exitNote:"高延伸目標或波段結構轉弱時，再評估剩餘底倉"};
   }
   if(play?.key==="swing"&&w?.valid){
     const support=positionNumber(w.activeDefenseLow??w.secondPullbackLow??w.pullbackLow??t?.ma?.ma20),confirm=positionNumber(w.referenceHigh??w.firstWave),levels=(expected?.plan?.levels||[]).filter(x=>x.value>p*1.002).sort((a,b)=>a.value-b.value);
     const trim=levels[0]?.value??w.ext15??null,exit=levels[1]?.value??levels[0]?.value??w.ext20??null;
-    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02),entryReady=ec.ready&&!(p>(confirm||Infinity)*1.03);return {mode:"波段",trial:targetZone(support,.99,1.02),entry:entryReady?entryCandidate:null,entryCandidate,entryReady,trim:targetZone(trim,.985,1.01),exit:targetZone(exit,.985,1.015),trialNote:"支撐附近先小量試單；此時價格優勢較高，但不要求所有發動條件已確認",entryNote:p>(confirm||Infinity)*1.03?`已突破偏遠，不追價｜${ec.note}；等回測確認後再提高部位`:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；突破、布林、量能、五階段共同確認`,trimNote:"先到達的主要／次要目標附近先收部分",exitNote:"下一目標／結構轉弱時處理剩餘部位"};
+    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02),entryReady=ec.ready&&!(p>(confirm||Infinity)*1.03);return {mode:"波段",trial:targetZone(support,.99,1.02),entry:entryReady?entryCandidate:null,entryCandidate,entryReady,trim:targetZone(trim,.985,1.01),exit:targetZone(exit,.985,1.015),trialNote:"支撐附近先小量試單；此時價格優勢較高，但不要求所有發動條件已確認",entryNote:p>(confirm||Infinity)*1.03?`已突破偏遠，不追價｜${ec.note}；等回測確認後再提高部位`:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；突破、布林、MACD、量能、五階段共同確認`,trimNote:"先到達的主要／次要目標附近先收部分",exitNote:"下一目標／結構轉弱時處理剩餘部位"};
   }
   if(play?.key==="short"){
     const se=play?.shortEngine||play?.diagnostics?.shortEngine,bo=play?.diagnostics?.breakout||{},support=positionNumber(se?.support??t?.ma?.ma10??t?.ma?.ma20??t?.ma?.ma5),confirm=positionNumber(bo?.level??se?.resistance?.value??t?.bollinger?.upper),levels=(expected?.plan?.levels||[]).filter(x=>x.value>p*1.002).sort((a,b)=>a.value-b.value),entryCenter=bo?.confirmed&&bo?.level?positionNumber(bo.level):confirm;
-    const ec=tradeEntryConfirmation(play,entryCenter,p),entryCandidate=targetZone(entryCenter,bo?.confirmed ? .992 : 1,bo?.confirmed?1.012:1.015);return {mode:"短期",trial:targetZone(support,.995,1.015),entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(levels[0]?.value,.99,1.005),exit:targetZone(levels[1]?.value??levels[0]?.value,.99,1.01),trialNote:"短均線／突破回測附近先小量試單；價格優勢優先，容許訊號尚未完全確認",entryNote:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；有效突破＋布林向上／趨勢擴張＋量能＋五階段共同確認`,trimNote:"碰主要短線目標先收部分",exitNote:"下一目標／動能轉弱時處理剩餘部位"};
+    const ec=tradeEntryConfirmation(play,entryCenter,p),entryCandidate=targetZone(entryCenter,bo?.confirmed ? .992 : 1,bo?.confirmed?1.012:1.015);return {mode:"短期",trial:targetZone(support,.995,1.015),entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(levels[0]?.value,.99,1.005),exit:targetZone(levels[1]?.value??levels[0]?.value,.99,1.01),trialNote:"短均線／突破回測附近先小量試單；價格優勢優先，容許訊號尚未完全確認",entryNote:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；有效突破＋布林向上／趨勢擴張＋MACD重新攻擊＋量能＋五階段共同確認`,trimNote:"碰主要短線目標先收部分",exitNote:"下一目標／動能轉弱時處理剩餘部位"};
   }
   if(profile?.key==="long-swing"&&["long","swing"].includes(play?.key)){
     const l=play?.longEngine||{},support=positionNumber(w?.activeDefenseLow??w?.secondPullbackLow??w?.pullbackLow??t?.ma?.ma60),confirm=positionNumber(w?.referenceHigh??w?.firstWave),levels=(expected?.plan?.levels||[]).filter(x=>x.value>p*1.002).sort((a,b)=>a.value-b.value),fair=positionNumber(latestValuationScenario?.F);
