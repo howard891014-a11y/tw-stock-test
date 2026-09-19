@@ -658,6 +658,40 @@ body{padding-bottom:68px}
   #overviewResonanceCard .overview-wave-tag-price{font-size:25px!important}
 }
 
+
+/* v2.6.0.15 — wave visibility, stronger icons, alignment polish */
+#overviewResonanceCard .overview-resonance-head{align-items:flex-start!important}
+#overviewResonanceCard .overview-resonance-head h2{display:flex!important;align-items:center!important;gap:8px!important}
+#overviewResonanceCard .overview-title-icon{display:inline-block;width:1em;height:1em;flex:0 0 1em;background:currentColor;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 16.5c1.8-3.5 3.7-5.2 5.8-5.2 1.6 0 2.7.8 4 2.4 1.7-4.3 4.5-6.5 8.2-6.5v2c-3 0-5.2 2.1-6.6 6.2l-.6 1.8-1.2-1.5c-1.6-2.1-2.6-2.9-3.8-2.9-1.1 0-2.5 1.5-4 4.3L3 16.5z' fill='black'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 16.5c1.8-3.5 3.7-5.2 5.8-5.2 1.6 0 2.7.8 4 2.4 1.7-4.3 4.5-6.5 8.2-6.5v2c-3 0-5.2 2.1-6.6 6.2l-.6 1.8-1.2-1.5c-1.6-2.1-2.6-2.9-3.8-2.9-1.1 0-2.5 1.5-4 4.3L3 16.5z' fill='black'/></svg>")}
+#overviewResonanceCard .overview-head-side{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:8px!important;margin-left:auto!important}
+#overviewResonanceCard .overview-strength-chip{display:flex!important;flex-direction:column!important;align-items:flex-end!important;padding:8px 12px!important;border:1px solid #e6edf5!important;border-radius:14px!important;background:linear-gradient(180deg,#ffffff,#f8fbff)!important;box-shadow:0 8px 18px rgba(17,34,61,.05)!important;min-width:118px!important}
+#overviewResonanceCard .overview-strength-chip span{font-size:12px!important;color:#7e91a7!important;line-height:1.1!important}
+#overviewResonanceCard .overview-strength-chip strong{font-size:16px!important;color:#1a2e4a!important;line-height:1.25!important;text-align:right!important}
+#overviewResonanceCard .metric-badge{width:28px!important;height:28px!important;flex-basis:28px!important}
+#overviewResonanceCard .metric-badge::before{width:15px!important;height:15px!important}
+#overviewResonanceCard .metric-badge-play{background:#d8e1ff!important;color:#624cf0!important}
+#overviewResonanceCard .metric-badge-up{background:#d1f0df!important;color:#179f61!important}
+#overviewResonanceCard .metric-badge-down{background:#ffd9e0!important;color:#df4d61!important}
+#overviewResonanceCard .metric-badge-target{background:#dfd3ff!important;color:#7647ec!important}
+#overviewResonanceCard .overview-resonance-metrics strong{display:block!important;width:calc(100% - 38px)!important;margin-left:38px!important;text-align:left!important}
+#overviewResonanceCard .overview-resonance-metrics small{display:block!important;width:calc(100% - 38px)!important;margin-left:38px!important;text-align:left!important}
+#overviewPlayMetric{margin-left:38px!important;width:calc(100% - 38px)!important}
+#overviewResonanceCard .overview-wave-shell{padding:12px 8px 8px!important;border-radius:22px!important}
+#overviewResonanceCard .overview-wave-shell svg{min-height:300px!important}
+#overviewResonanceCard .overview-wave-tag-title{font-size:14px!important}
+#overviewResonanceCard .overview-wave-tag-price{font-size:21px!important}
+@media(max-width:720px){
+  #overviewResonanceCard .overview-strength-chip{padding:7px 10px!important;min-width:108px!important}
+  #overviewResonanceCard .overview-strength-chip span{font-size:11px!important}
+  #overviewResonanceCard .overview-strength-chip strong{font-size:15px!important}
+  #overviewResonanceCard .metric-badge{width:26px!important;height:26px!important;flex-basis:26px!important}
+  #overviewResonanceCard .metric-badge::before{width:14px!important;height:14px!important}
+  #overviewResonanceCard .overview-resonance-metrics strong,#overviewResonanceCard .overview-resonance-metrics small,#overviewPlayMetric{width:calc(100% - 34px)!important;margin-left:34px!important}
+  #overviewResonanceCard .overview-wave-shell svg{min-height:270px!important}
+  #overviewResonanceCard .overview-wave-tag-title{font-size:13px!important}
+  #overviewResonanceCard .overview-wave-tag-price{font-size:19px!important}
+}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -1286,7 +1320,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.14</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.15</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1338,8 +1372,8 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
       <section class="overview-outline" data-view-panel="overview">
         <article class="card overview-resonance-card" id="overviewResonanceCard">
           <header class="overview-resonance-head">
-            <div><span>總覽最終路徑</span><h2>共振分析</h2><small>價格看共振，技術／五階段決定路徑與達成條件</small></div>
-            <b id="overviewResonancePlay" hidden aria-hidden="true">等待資料</b>
+            <div><span>總覽最終路徑</span><h2><i class="overview-title-icon" aria-hidden="true"></i>共振分析</h2><small>價格看共振，技術／五階段決定路徑與達成條件</small></div>
+            <div class="overview-head-side"><b id="overviewResonancePlay" hidden aria-hidden="true">等待資料</b><div class="overview-strength-chip"><span>共振強度</span><strong id="overviewStrengthMini">--</strong></div></div>
           </header>
           <div class="overview-resonance-metrics">
             <div class="metric-play"><span class="metric-title"><i class="metric-badge metric-badge-play" aria-hidden="true"></i><em>建議玩法</em></span><strong id="overviewPlayMetric">--</strong></div>

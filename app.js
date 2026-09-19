@@ -1761,7 +1761,7 @@ function overviewZoneText(cluster){
   return lo!==null&&hi!==null&&Math.abs(hi/lo-1)>=.005?`${technicalFmt(lo)} ～ ${technicalFmt(hi)}`:technicalFmt(c);
 }
 function resetOverviewResonance(note="等待分析資料"){
-  setText("overviewResonancePlay","等待資料");setText("overviewPlayMetric","等待資料");setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength","--");setText("overviewResonanceStrengthNote",note);setText("overviewGrowthUp","--%");setText("overviewGrowthDown","--%");setText("overviewTargetZone","--");
+  setText("overviewResonancePlay","等待資料");setText("overviewPlayMetric","等待資料");setText("overviewStrengthMini","--");setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength","--");setText("overviewResonanceStrengthNote",note);setText("overviewGrowthUp","--%");setText("overviewGrowthDown","--%");setText("overviewTargetZone","--");
   for(const id of ["overviewTrialPrice","overviewEntryPrice","overviewTrimPrice","overviewExitPrice","overviewTrimStopPrice","overviewFullStopPrice"])setText(id,"--");
   setText("overviewFinalDirection","--");setText("overviewFinalStrategy",note);setText("overviewFinalRisk","--");setText("overviewFinalNext","--");setText("overviewTrimStopLabel","⑤ 減碼止損");setText("overviewFullStopLabel","⑥ 全部止損");
   const svg=$("overviewResonanceSvg");if(svg)svg.replaceChildren();const src=$("overviewResonanceSources");if(src)src.replaceChildren();
@@ -1805,8 +1805,8 @@ function overviewNodeBubble(svg,x,pointY,title,value,color,opts={}){
   svg.append(bubble);
 }
 function drawOverviewResonance(play,expected){
-  const svg=$("overviewResonanceSvg");if(!svg)return;svg.replaceChildren();
-  const price=positionNumber(expected?.price);if(!(price>0))return;
+  const svg=$("overviewResonanceSvg"); if(!svg) return; svg.replaceChildren();
+  const price=positionNumber(expected?.price); if(!(price>0)) return;
   const res=expected?.plan?.resonance||{}, swing=play?.swingWave, se=play?.shortEngine||play?.diagnostics?.shortEngine;
   const support=positionNumber(expected?.downside?.levels?.[0]?.value);
   const breakout=positionNumber(swing?.referenceHigh??swing?.firstWave??se?.resistance?.value??play?.diagnostics?.breakout?.level);
@@ -1816,48 +1816,40 @@ function drawOverviewResonance(play,expected){
   const altTitle=(res?.secondary?.familyCount||0)>=2?"次要共振":"樂觀目標";
 
   const nodes=[];
-  if(Number.isFinite(support))nodes.push({key:'support',title:'支撐',value:support,border:'#b9d8ff',dot:'#3c9cff'});
-  nodes.push({key:'current',title:'現價',value:price,border:'#d9dfe7',dot:'#b5bcc7'});
-  if(Number.isFinite(breakout))nodes.push({key:'breakout',title:'前高／突破',value:breakout,border:'#f6dfb9',dot:'#f2b340'});
-  if(Number.isFinite(main))nodes.push({key:'main',title:mainTitle,value:main,border:'#dfd0ff',dot:'#7a45f3'});
-  if(Number.isFinite(alt) && (!Number.isFinite(main) || Math.abs(alt-main)/Math.max(1,main)>.004))nodes.push({key:'alt',title:altTitle,value:alt,border:'#d8f0e1',dot:'#45cb93'});
-  if(nodes.length<2)return;
+  if(Number.isFinite(support)) nodes.push({title:'支撐', value:support, v:support, border:'#b9d8ff', dot:'#3c9cff'});
+  nodes.push({title:'現價', value:price, v:price, border:'#d9dfe7', dot:'#b5bcc7'});
+  if(Number.isFinite(breakout)) nodes.push({title:'前高／突破', value:breakout, v:breakout, border:'#f6dfb9', dot:'#f2b340'});
+  if(Number.isFinite(main)) nodes.push({title:mainTitle, value:main, v:main, border:'#dfd0ff', dot:'#7a45f3'});
+  if(Number.isFinite(alt) && (!Number.isFinite(main) || Math.abs(alt-main)/Math.max(1,main)>.004)) nodes.push({title:altTitle, value:alt, v:alt, border:'#d8f0e1', dot:'#45cb93'});
+  if(nodes.length < 2) return;
 
   const slotPresets=[100,230,355,510,665];
-  nodes.forEach((n,i)=>n.x=slotPresets[i] ?? (100+i*125));
+  nodes.forEach((n,i)=>n.x = slotPresets[i] ?? (100+i*125));
   const vals=nodes.map(n=>n.value).filter(Number.isFinite);
-  let lo=Math.min(...vals), hi=Math.max(...vals); const pad=Math.max((hi-lo)*0.22, hi*0.05, 60);
-  lo-=pad; hi+=pad; if(hi<=lo)hi=lo+1;
-  const top=44,bottom=306,left=56,right=710;
+  let lo=Math.min(...vals), hi=Math.max(...vals), spread=Math.max(hi-lo, Math.max(hi,1)*0.08, 60);
+  lo -= spread*0.18; hi += spread*0.18; if(hi<=lo) hi=lo+1;
+  const top=42, bottom=242, left=56, right=710;
   const y=v=>bottom-((v-lo)/(hi-lo))*(bottom-top);
 
   const defs=swingWaveSvg('defs');
-  const lineGrad=swingWaveSvg('linearGradient',{id:'overviewWaveLineGradientV2614',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
-  lineGrad.append(
-    swingWaveSvg('stop',{offset:'0%','stop-color':'#4ca5ff'}),
-    swingWaveSvg('stop',{offset:'42%','stop-color':'#8090ff'}),
-    swingWaveSvg('stop',{offset:'72%','stop-color':'#8c59f7'}),
-    swingWaveSvg('stop',{offset:'100%','stop-color':'#53c6ff'})
-  );
-  const areaGrad=swingWaveSvg('linearGradient',{id:'overviewWaveAreaGradientV2614',x1:'0%',y1:'0%',x2:'0%',y2:'100%'});
-  areaGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#98afff','stop-opacity':'0.24'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#eaf2ff','stop-opacity':'0.05'}));
-  defs.append(lineGrad,areaGrad); svg.append(defs);
+  const lineGrad=swingWaveSvg('linearGradient',{id:'overviewWaveLineGradientV2615',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
+  lineGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#4ca5ff'}),swingWaveSvg('stop',{offset:'42%','stop-color':'#8090ff'}),swingWaveSvg('stop',{offset:'72%','stop-color':'#8c59f7'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#53c6ff'}));
+  defs.append(lineGrad); svg.append(defs);
 
-  const gridYs=[0.28,0.52,0.76,1].map(r=>top+(bottom-top)*r);
-  gridYs.forEach(gy=>svg.append(swingWaveSvg('line',{x1:left,y1:gy,x2:right,y2:gy,class:'overview-wave-grid'})));
+  [0.28,0.52,0.76,1].forEach(r=>{const gy=top+(bottom-top)*r; svg.append(swingWaveSvg('line',{x1:left,y1:gy,x2:right,y2:gy,class:'overview-wave-grid'}));});
   nodes.forEach(n=>{const yy=y(n.value); svg.append(swingWaveSvg('line',{x1:n.x,y1:yy+9,x2:n.x,y2:bottom,class:'overview-wave-vline'}));});
 
   const pathD=overviewWavePath(nodes,y);
   if(pathD){
     const areaD=`${pathD} L ${nodes[nodes.length-1].x} ${bottom} L ${nodes[0].x} ${bottom} Z`;
-    svg.append(swingWaveSvg('path',{d:areaD,fill:'url(#overviewWaveAreaGradientV2614)'}));
-    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'rgba(109,138,224,0.20)','stroke-width':'12','stroke-linecap':'round','stroke-linejoin':'round'}));
-    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'url(#overviewWaveLineGradientV2614)','stroke-width':'8','stroke-linecap':'round','stroke-linejoin':'round'}));
+    svg.append(swingWaveSvg('path',{d:areaD,fill:'rgba(143,172,255,0.10)'}));
+    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'rgba(120,145,230,0.26)','stroke-width':'13','stroke-linecap':'round','stroke-linejoin':'round'}));
+    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'url(#overviewWaveLineGradientV2615)','stroke-width':'8','stroke-linecap':'round','stroke-linejoin':'round'}));
   }
 
   nodes.forEach(n=>{
-    const yy=y(n.value), w=Math.max(96,Math.min(150, Math.max(String(n.title).length*17+30,String(technicalFmt(n.value)).length*19+34))), h=62;
-    const boxX=Math.max(12,Math.min(744-w,n.x-w/2)), boxY=Math.max(8,yy-h-20), tipX=Math.max(boxX+16,Math.min(boxX+w-16,n.x));
+    const yy=y(n.value), w=Math.max(96,Math.min(150, Math.max(String(n.title).length*17+30, String(technicalFmt(n.value)).length*19+34))), h=62;
+    const boxX=Math.max(12,Math.min(744-w,n.x-w/2)), boxY=Math.max(8,yy-h-18), tipX=Math.max(boxX+16,Math.min(boxX+w-16,n.x));
     svg.append(swingWaveSvg('rect',{x:boxX,y:boxY,width:w,height:h,rx:15,fill:'#ffffff',stroke:n.border,'stroke-width':'1.7'}));
     svg.append(swingWaveSvg('path',{d:`M ${tipX-9} ${boxY+h} L ${tipX} ${boxY+h+10} L ${tipX+9} ${boxY+h} Z`,fill:'#ffffff',stroke:n.border,'stroke-width':'1.7'}));
     svg.append(swingWaveSvg('text',{x:boxX+w/2,y:boxY+21,class:'overview-wave-tag-title','text-anchor':'middle'},n.title));
@@ -1873,6 +1865,7 @@ function renderOverviewResonance(play,expected,decision,risk=null){
   if(familyCount>=2){setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength",`${resonanceStrengthLabel({...mainCluster,adjustedStrength:resonanceStrength})} ${resonanceStrength} / 100`);setText("overviewResonanceStrengthNote",`${familyCount} 類價格來源｜連續距離衰減 ${res.bandwidthPct?.toFixed?.(1)??"--"}%${res.historyValidation?`｜5年驗證 ${res.historyValidation}%`:""}`)}
   else if(mainCluster){setText("overviewResonanceStrengthLabel","目標依據");setText("overviewResonanceStrength","單一來源");setText("overviewResonanceStrengthNote",`${mainCluster.points?.[0]?.source||mainCluster.points?.[0]?.label||"單一價格來源"}主導；其他來源仍以距離衰減保留${res.historyValidation?`｜5年驗證 ${res.historyValidation}%`:""}`)}
   else{setText("overviewResonanceStrengthLabel","目標依據");setText("overviewResonanceStrength","等待目標");setText("overviewResonanceStrengthNote","目前沒有高於現價的可用價格來源")}
+  setText("overviewStrengthMini",$("overviewResonanceStrength")?.textContent||"--");
   const main=expected?.plan?.levels?.[0]?.value,up=main?positionReturn(main,expected.price):null,down=expected?.downside?.levels?.[0]?.value?positionReturn(expected.downside.levels[0].value,expected.price):null;
   setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?technicalFmt(main):"--"));
   setText("overviewTrialPrice",targetZoneText(decision?.trial));setText("overviewEntryPrice",decisionEntryText(decision));setText("overviewTrimPrice",targetZoneText(decision?.trim));setText("overviewExitPrice",targetZoneText(decision?.exit));setText("overviewTrimStopPrice",targetZoneText(decision?.trimStop));setText("overviewFullStopPrice",targetZoneText(decision?.fullStop));
