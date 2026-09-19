@@ -426,8 +426,8 @@ function playBreakoutState(r,t){
   return {fresh:true,confirmed,failed,age,level:hit.level,volumeRatio,margin:hit.margin};
 }
 
-// v2.5.7.2 — 波段分析 v3：第一波 X 與後續回測分離。
-// 1.5X／2X／2.5X 由「第一波後回測低點」起算，並辨識第二次回測；倍率只代表可能目標區，不代表必經路線。
+// 波段基礎工具：保留舊版局部高低點／回測辨識，作為多波 Pivot 樣本不足時的容錯。
+// v2.6.0.2 起，主要波段結構由完整多波 Pivot 引擎負責。
 function swingLow(x){return stageNum(x?.low)??playRowClose(x)}
 function swingHigh(x){return stageNum(x?.high)??playRowClose(x)}
 function swingDate(x){return String(x?.date||x?.tradeDate||x?.datetime||"").slice(0,10)}
@@ -493,99 +493,160 @@ function swingFindCompletedNextWave(rows,fromIndex,fromLow){
   }
   return null;
 }
+
+// v2.6.0.2 — 多波 Pivot 結構：以動態波動閾值建立低/高交替 pivot，
+// 深回或跌破前波起點時自動結束舊結構並從新低點重算；最多保留近期 4 個推進波供畫面與決策使用。
+function swingPivotMedian(values){
+  const a=(values||[]).filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+function swingPivotThreshold(rows){
+  const ranges=[];
+  for(let i=1;i<(rows||[]).length;i++){
+    const h=swingHigh(rows[i]),l=swingLow(rows[i]),pc=playRowClose(rows[i-1]);
+    if(h===null||l===null||pc===null||pc<=0)continue;ranges.push((h-l)/pc*100);
+  }
+  const med=swingPivotMedian(ranges)??2.2;return stageClamp(med*1.35,2.5,6.0);
+}
+function swingBuildPivots(rows,thresholdPct){
+  const a=rows||[];if(a.length<12)return [];
+  let trend=0,scanLow=null,scanLowI=-1,scanHigh=null,scanHighI=-1,ext=null,extI=-1;const out=[];
+  const add=(i,p,type,open=false)=>{if(i<0||!Number.isFinite(p))return;const prev=out.at(-1);if(prev?.type===type){const replace=type==="low"?p<prev.p:p>prev.p;if(replace)out[out.length-1]={i,p,type,open};return}out.push({i,p,type,open})};
+  for(let i=0;i<a.length;i++){
+    const low=swingLow(a[i]),high=swingHigh(a[i]);if(low===null||high===null)continue;
+    if(scanLow===null||low<scanLow){scanLow=low;scanLowI=i}if(scanHigh===null||high>scanHigh){scanHigh=high;scanHighI=i}
+    if(trend===0){
+      const up=scanLow>0?(high/scanLow-1)*100:null,down=scanHigh>0?(low/scanHigh-1)*100:null;
+      if(up!==null&&up>=thresholdPct){add(scanLowI,scanLow,"low");trend=1;ext=high;extI=i;scanHigh=high;scanHighI=i}
+      else if(down!==null&&down<=-thresholdPct){add(scanHighI,scanHigh,"high");trend=-1;ext=low;extI=i;scanLow=low;scanLowI=i}
+      continue;
+    }
+    if(trend===1){
+      if(ext===null||high>=ext){ext=high;extI=i}
+      const rev=ext>0?(low/ext-1)*100:null;
+      if(rev!==null&&rev<=-thresholdPct){add(extI,ext,"high");trend=-1;ext=low;extI=i;scanLow=low;scanLowI=i;scanHigh=high;scanHighI=i}
+    }else{
+      if(ext===null||low<=ext){ext=low;extI=i}
+      const rev=ext>0?(high/ext-1)*100:null;
+      if(rev!==null&&rev>=thresholdPct){add(extI,ext,"low");trend=1;ext=high;extI=i;scanHigh=high;scanHighI=i;scanLow=low;scanLowI=i}
+    }
+  }
+  if(extI>=0){if(trend===1)add(extI,ext,"high",true);else if(trend===-1)add(extI,ext,"low",true)}
+  return out;
+}
+function swingBuildMultiStructure(rows,price){
+  const threshold=swingPivotThreshold(rows),pivots=swingBuildPivots(rows,threshold);if(pivots.length<2)return {valid:false,threshold,pivots,reason:"多波 Pivot 尚未形成"};
+  let start=pivots.findIndex(x=>x.type==="low");if(start<0)return {valid:false,threshold,pivots,reason:"近期找不到有效起漲低點"};
+  let legs=[],resets=[],i=start,guard=0;
+  while(i<pivots.length-1&&guard++<40){
+    const low=pivots[i];if(low?.type!=="low"){i++;continue}
+    const high=pivots[i+1];if(high?.type!=="high"){i++;continue}
+    const risePct=stagePct(high.p,low.p),amp=high.p-low.p;if(!(amp>0)||risePct===null||risePct<Math.max(4.5,threshold*.85)){i+=2;continue}
+    const nextLow=pivots[i+2]?.type==="low"?pivots[i+2]:null;
+    let pullbackPct=null,retracePct=null,reset=false,resetReason="";
+    if(nextLow){
+      pullbackPct=stagePct(nextLow.p,high.p);retracePct=(high.p-nextLow.p)/amp*100;
+      const brokeBase=nextLow.p<low.p*.99,deep=Number.isFinite(retracePct)&&retracePct>70;
+      reset=brokeBase||deep;if(reset)resetReason=brokeBase?"跌破前波起點":"回吐超過 70%";
+    }
+    if(reset&&nextLow){
+      resets.push({fromLow:low.p,high:high.p,newBase:nextLow.p,index:nextLow.i,date:swingDate(rows[nextLow.i]),reason:resetReason,retracePct});legs=[];i+=2;continue;
+    }
+    const prevHigh=legs.at(-1)?.high??null;
+    legs.push({number:legs.length+1,low:low.p,lowIndex:low.i,lowDate:swingDate(rows[low.i]),high:high.p,highIndex:high.i,highDate:swingDate(rows[high.i]),risePct,amplitude:amp,highOpen:!!high.open,pullbackLow:nextLow?.p??null,pullbackIndex:nextLow?.i??-1,pullbackDate:nextLow?swingDate(rows[nextLow.i]):"",pullbackOpen:!!nextLow?.open,pullbackPct,retracePct,higherHigh:prevHigh===null?null:high.p>=prevHigh*.985});
+    if(!nextLow)break;i+=2;
+  }
+  if(!legs.length)return {valid:false,threshold,pivots,resets,reason:"舊波已重置，新推進波尚未形成"};
+  // 若結構很長，只保留完整計數，但繪圖使用最近四波；起始第一波仍保留給 X 倍率基準。
+  const first=legs[0],last=legs.at(-1),completedPullbacks=legs.filter(x=>Number.isFinite(x.pullbackLow)),lastPullback=completedPullbacks.at(-1)?.pullbackLow??null;
+  let activeWave=last.pullbackLow!==null?last.number+1:last.number;
+  if(last.highOpen)activeWave=last.number;
+  const activeDefenseLow=last.pullbackLow??last.low??lastPullback??first.low;
+  const referenceHigh=last.pullbackLow!==null?last.high:(legs.length>1?(legs.at(-2)?.high??first.high):first.high);
+  const recentReset=resets.at(-1)||null,resetAge=recentReset?rows.length-1-recentReset.index:null;
+  const higherHighs=legs.slice(1).filter(x=>x.higherHigh===true).length,lowerHighs=legs.slice(1).filter(x=>x.higherHigh===false).length,
+        healthyPullbacks=legs.filter(x=>Number.isFinite(x.retracePct)&&x.retracePct>=18&&x.retracePct<=70).length;
+  let qualityAdj=Math.min(10,(legs.length-1)*3)+Math.min(6,higherHighs*2)+Math.min(6,healthyPullbacks*2)-Math.min(10,lowerHighs*4);
+  if(price<activeDefenseLow*.98)qualityAdj-=18;if(resetAge!==null&&resetAge<=12)qualityAdj+=2;
+  let phase,state;
+  if(last.pullbackLow!==null&&last.pullbackOpen){phase=`第${last.number}波回測中`;state=`等待第${last.number+1}波確認`}
+  else if(last.highOpen){phase=`第${last.number}波進行中`;state=last.number>=3?`多波延伸・第${last.number}波`:`第${last.number}波推進`}
+  else if(last.pullbackLow!==null){phase=`第${last.number}波回測完成`;state=`等待第${last.number+1}波`}
+  else{phase=`第${last.number}波形成中`;state=`第${last.number}波形成中`}
+  return {valid:true,threshold,pivots,legs,resets,waveCount:legs.length,activeWave,activeDefenseLow,referenceHigh,phase,state,qualityAdj,recentReset,resetAge,higherHighs,lowerHighs,healthyPullbacks};
+}
+
 function calculateSwingWave(r,t,breakout=playBreakoutState(r,t)){
   const rows=(r?.path?.rows||stageHistory(t)).slice(-120),price=stageNum(r?.price);
   if(rows.length<25||price===null)return {valid:false,reason:"歷史K線不足"};
-  const candidates=[];
+  const multi=swingBuildMultiStructure(rows,price);let chosen=null,second=null;
 
-  // 找一個有明確「上漲 -> 回測」的主要第一波；優先選振幅較完整、且仍屬近期結構者。
-  for(let hi=12;hi<rows.length-2;hi++){
-    if(!swingIsLocalHigh(rows,hi,2))continue;
-    const high=swingHigh(rows[hi]);if(high===null)continue;
-    const lowInfo=swingRangeMin(rows,Math.max(0,hi-35),hi-2,swingLow);
-    const low=lowInfo.value;if(low===null||lowInfo.index<0)continue;
-    const gain=stagePct(high,low);if(gain===null||gain<6||gain>120)continue;
-    // 若 low→high 之間早已出現一次完整回測，這個 high 屬後續波，不再誤當第一波高點。
-    if(swingHasCompletedPullbackBetween(rows,lowInfo.index,hi))continue;
-    const pb=swingFindPullback(rows,hi,high);
-    if(!pb)continue;
-    const age=rows.length-1-hi;
-    const score=Math.min(gain,80)+(pb.confirmed?12:3)+Math.max(0,10-age*.12)-Math.max(0,age-85)*.45;
-    const candidate={low,lowIndex:lowInfo.index,high,highIndex:hi,gain,pullback:pb.dropPct,completed:pb.confirmed,pullbackLow:pb.low,pullbackIndex:pb.index,score};
-    // 若這個候選後面還能辨識出完整第二波，代表它更可能是整段行情的第一波，而不是後段子波。
-    candidate.secondCandidate=pb.confirmed?swingFindCompletedNextWave(rows,pb.index,pb.low):null;
-    candidate.chainDepth=1+(candidate.secondCandidate?1:0);
-    candidates.push(candidate);
+  if(multi?.valid&&multi.legs?.length){
+    const a=multi.legs[0],b=multi.legs[1];
+    chosen={low:a.low,lowIndex:a.lowIndex,high:a.high,highIndex:a.highIndex,gain:a.risePct,pullback:a.pullbackPct,completed:Number.isFinite(a.pullbackLow)&&!a.pullbackOpen,pullbackLow:a.pullbackLow,pullbackIndex:a.pullbackIndex};
+    if(b)second={high:b.high,highIndex:b.highIndex,risePct:b.risePct,pullbackLow:b.pullbackLow,pullbackIndex:b.pullbackIndex,pullbackPct:b.pullbackPct};
+  }else{
+    const candidates=[];
+    // Pivot 尚不足時沿用舊版找法作容錯，避免剛起漲股票整張卡直接失效。
+    for(let hi=12;hi<rows.length-2;hi++){
+      if(!swingIsLocalHigh(rows,hi,2))continue;const high=swingHigh(rows[hi]);if(high===null)continue;
+      const lowInfo=swingRangeMin(rows,Math.max(0,hi-35),hi-2,swingLow),low=lowInfo.value;if(low===null||lowInfo.index<0)continue;
+      const gain=stagePct(high,low);if(gain===null||gain<6||gain>120)continue;if(swingHasCompletedPullbackBetween(rows,lowInfo.index,hi))continue;
+      const pb=swingFindPullback(rows,hi,high);if(!pb)continue;const age=rows.length-1-hi,score=Math.min(gain,80)+(pb.confirmed?12:3)+Math.max(0,10-age*.12)-Math.max(0,age-85)*.45;
+      const candidate={low,lowIndex:lowInfo.index,high,highIndex:hi,gain,pullback:pb.dropPct,completed:pb.confirmed,pullbackLow:pb.low,pullbackIndex:pb.index,score};candidate.secondCandidate=pb.confirmed?swingFindCompletedNextWave(rows,pb.index,pb.low):null;candidate.chainDepth=1+(candidate.secondCandidate?1:0);candidates.push(candidate);
+    }
+    chosen=candidates.sort((a,b)=>b.chainDepth-a.chainDepth||b.score-a.score||a.highIndex-b.highIndex)[0]||null;
+    if(!chosen){
+      const hiInfo=swingRangeMax(rows,Math.max(8,rows.length-20),rows.length,swingHigh);
+      if(hiInfo.index>5){const lowInfo=swingRangeMin(rows,Math.max(0,hiInfo.index-35),hiInfo.index-2,swingLow),gain=lowInfo.value!==null&&hiInfo.value!==null?stagePct(hiInfo.value,lowInfo.value):null;if(gain!==null&&gain>=6&&gain<=120)chosen={low:lowInfo.value,lowIndex:lowInfo.index,high:hiInfo.value,highIndex:hiInfo.index,gain,pullback:null,completed:false,pullbackLow:null,pullbackIndex:-1}}
+    }
+    if(chosen)second=chosen.secondCandidate??(chosen.completed&&chosen.pullbackIndex>=0?swingFindCompletedNextWave(rows,chosen.pullbackIndex,chosen.pullbackLow):null);
   }
-  let chosen=candidates.sort((a,b)=>b.chainDepth-a.chainDepth||b.score-a.score||a.highIndex-b.highIndex)[0]||null;
+  if(!chosen)return {valid:false,reason:multi?.reason||"近期沒有足夠明確的推進波",pivotThreshold:multi?.threshold??null};
 
-  // 若尚未形成可確認回測，保留最近正在形成的第一波。
-  if(!chosen){
-    const hiInfo=swingRangeMax(rows,Math.max(8,rows.length-20),rows.length,swingHigh);
-    if(hiInfo.index>5){
-      const lowInfo=swingRangeMin(rows,Math.max(0,hiInfo.index-35),hiInfo.index-2,swingLow);
-      const gain=lowInfo.value!==null&&hiInfo.value!==null?stagePct(hiInfo.value,lowInfo.value):null;
-      if(gain!==null&&gain>=6&&gain<=120)chosen={low:lowInfo.value,lowIndex:lowInfo.index,high:hiInfo.value,highIndex:hiInfo.index,gain,pullback:null,completed:false,pullbackLow:null,pullbackIndex:-1};
+  const amplitude=chosen.high-chosen.low;if(!(amplitude>0))return {valid:false,reason:"波段振幅不足"};
+  const firstPullback=Number.isFinite(chosen.pullbackLow)?chosen.pullbackLow:null,targetBase=firstPullback??chosen.low,target=m=>targetBase+amplitude*m;
+  const legs=multi?.valid?multi.legs:[
+    {number:1,low:chosen.low,lowIndex:chosen.lowIndex,lowDate:swingDate(rows[chosen.lowIndex]),high:chosen.high,highIndex:chosen.highIndex,highDate:swingDate(rows[chosen.highIndex]),risePct:chosen.gain,amplitude,pullbackLow:firstPullback,pullbackIndex:chosen.pullbackIndex,pullbackDate:chosen.pullbackIndex>=0?swingDate(rows[chosen.pullbackIndex]):"",pullbackPct:chosen.pullback,retracePct:firstPullback===null?null:(chosen.high-firstPullback)/amplitude*100},
+    ...(second?[{number:2,low:firstPullback??chosen.low,lowIndex:chosen.pullbackIndex,lowDate:chosen.pullbackIndex>=0?swingDate(rows[chosen.pullbackIndex]):"",high:second.high,highIndex:second.highIndex,highDate:swingDate(rows[second.highIndex]),risePct:second.risePct,amplitude:second.high-(firstPullback??chosen.low),pullbackLow:second.pullbackLow,pullbackIndex:second.pullbackIndex,pullbackDate:second.pullbackIndex>=0?swingDate(rows[second.pullbackIndex]):"",pullbackPct:second.pullbackPct}]:[])
+  ];
+  const secondPullbackLow=legs[1]?.pullbackLow??second?.pullbackLow??null,activeDefenseLow=multi?.valid?multi.activeDefenseLow:(secondPullbackLow??firstPullback??chosen.low),referenceHigh=multi?.valid?multi.referenceHigh:(secondPullbackLow!==null?(second?.high??chosen.high):chosen.high),activeWave=multi?.valid?multi.activeWave:(secondPullbackLow!==null?3:firstPullback!==null?2:1),waveCount=multi?.valid?multi.waveCount:legs.length;
+  const currentMultiple=(price-targetBase)/amplitude,activeBase=positionNumber(activeDefenseLow)??targetBase,activeMultiple=(price-activeBase)/amplitude;
+  const activeTargets=[1,1.5,2].map(m=>({label:`第${activeWave}波 ${m}X`,multiple:m,value:activeBase+amplitude*m}));
+
+  let state=multi?.valid?multi.state:"第一波形成中",phase=multi?.valid?multi.phase:"第一波形成中";
+  if(!multi?.valid){
+    if(firstPullback!==null&&!chosen.completed){state="第一波後回測形成中";phase="第一波後回測形成中"}
+    if(chosen.completed){
+      if(secondPullbackLow!==null){if(price>=referenceHigh*1.005){state="第二次回測後再轉強";phase="第三波嘗試"}else{state="第二波後回測";phase="第二波後回測"}}
+      else if(price<chosen.high*.985){state="第一波後回測";phase="等待第二波"}
+      else if(price<target(1.5)){state="第二波進行中";phase="第二波進行中"}
+      else if(price<target(2)){state="第二波延伸";phase="第二波延伸"}
+      else if(price<target(2.5)){state="第二波高延伸";phase="第二波高延伸"}
+      else{state="延伸過熱區";phase="高檔延伸"}
     }
   }
-  if(!chosen)return {valid:false,reason:"近期沒有足夠明確的推進波"};
 
-  const amplitude=chosen.high-chosen.low;
-  if(!(amplitude>0))return {valid:false,reason:"波段振幅不足"};
-  const firstPullback=Number.isFinite(chosen.pullbackLow)?chosen.pullbackLow:null;
-  const targetBase=firstPullback??chosen.low;
-  const target=m=>targetBase+amplitude*m;
-
-  // 第一個回測完成後，再找「第二波高點 -> 第二次回測低點」。第三波暫不套新的固定倍率。
-  const second=chosen.secondCandidate??(chosen.completed&&chosen.pullbackIndex>=0?swingFindCompletedNextWave(rows,chosen.pullbackIndex,chosen.pullbackLow):null);
-  const secondPullbackLow=second?.pullbackLow??null;
-  const activeDefenseLow=secondPullbackLow??firstPullback??chosen.low;
-  const currentMultiple=(price-targetBase)/amplitude;
-  const referenceHigh=secondPullbackLow!==null?(second?.high??chosen.high):chosen.high;
-
-  let state="第一波形成中",phase="第一波形成中",nextTarget=chosen.high;
-  if(firstPullback!==null&&!chosen.completed){state="第一波後回測形成中";phase="第一波後回測形成中";nextTarget=chosen.high}
-  if(chosen.completed){
-    if(secondPullbackLow!==null){
-      if(price>=referenceHigh*1.005){state="第二次回測後再轉強";phase="第三波嘗試";nextTarget=null}
-      else{state="第二波後回測";phase="第二波後回測";nextTarget=referenceHigh}
-    }else if(price<chosen.high*.985){state="第一波後回測";phase="等待第二波";nextTarget=chosen.high}
-    else if(price<target(1.5)){state="第二波進行中";phase="第二波進行中";nextTarget=target(1.5)}
-    else if(price<target(2)){state="第二波延伸";phase="第二波延伸";nextTarget=target(2)}
-    else if(price<target(2.5)){state="第二波高延伸";phase="第二波高延伸";nextTarget=target(2.5)}
-    else{state="延伸過熱區";phase="高檔延伸";nextTarget=null}
-  }
-
-  const bollingerPath=bollingerPathSignal(rows,t,price,breakout),macdLifecycle=macdLifecycleSignal(rows,t,price,bollingerPath,breakout);
-  let quality=50;
+  const bollingerPath=bollingerPathSignal(rows,t,price,breakout),macdLifecycle=macdLifecycleSignal(rows,t,price,bollingerPath,breakout);let quality=50;
   if(chosen.gain>=10&&chosen.gain<=60)quality+=12;else if(chosen.gain>=6)quality+=6;
-  if(chosen.pullback!==null&&chosen.pullback<=-3&&chosen.pullback>=-25)quality+=10;
-  if(chosen.completed)quality+=6;
-  if(secondPullbackLow!==null)quality+=4;
-  if((r?.path?.ma20Slope10??-99)>.3)quality+=6;
-  if((r?.path?.ma60Slope20??-99)>0)quality+=6;
-  if(price>=activeDefenseLow*.98)quality+=4;else quality-=30;
-  if(currentMultiple>2.7)quality-=14;
-  if(bollingerPath?.upwardExpansion)quality+=8;else if(bollingerPath?.trendExpansion)quality+=5;else if(bollingerPath?.breakdown)quality-=14;
-  if(macdLifecycle?.valid)quality+=macdLifecycle.swingAdj;
-  quality=Math.round(playClamp(quality));
-  const macdAttack=!macdLifecycle?.valid||["重新攻擊","攻擊擴張"].includes(macdLifecycle.state);
-  let extensionMax=1.5;if(!bollingerPath?.breakdown&&quality>=60)extensionMax=2;if(!bollingerPath?.breakdown&&((((bollingerPath?.upwardExpansion||bollingerPath?.trendExpansion)&&macdAttack)&&quality>=66)||price>=target(2)*.985))extensionMax=2.5;
+  if(chosen.pullback!==null&&chosen.pullback<=-3&&chosen.pullback>=-25)quality+=10;if(chosen.completed)quality+=6;if(secondPullbackLow!==null)quality+=4;
+  if((r?.path?.ma20Slope10??-99)>.3)quality+=6;if((r?.path?.ma60Slope20??-99)>0)quality+=6;if(price>=activeDefenseLow*.98)quality+=4;else quality-=30;
+  if(currentMultiple>2.7&&!multi?.valid)quality-=14;if(multi?.valid)quality+=multi.qualityAdj??0;
+  if(bollingerPath?.upwardExpansion)quality+=8;else if(bollingerPath?.trendExpansion)quality+=5;else if(bollingerPath?.breakdown)quality-=14;if(macdLifecycle?.valid)quality+=macdLifecycle.swingAdj;quality=Math.round(playClamp(quality));
+  const macdAttack=!macdLifecycle?.valid||["重新攻擊","攻擊擴張"].includes(macdLifecycle.state);let extensionMax=1.5;if(!bollingerPath?.breakdown&&quality>=60)extensionMax=2;if(!bollingerPath?.breakdown&&((((bollingerPath?.upwardExpansion||bollingerPath?.trendExpansion)&&macdAttack)&&quality>=66)||price>=target(2)*.985))extensionMax=2.5;
+  const projected=[...activeTargets,...[{label:"結構 1.5X",multiple:1.5,value:target(1.5)},{label:"結構 2X",multiple:2,value:target(2)},{label:"結構 2.5X",multiple:2.5,value:target(2.5)}]].filter(x=>Number.isFinite(x.value)&&x.value>price*1.002).sort((a,b)=>a.value-b.value),nextTarget=projected[0]?.value??referenceHigh;
 
   return{
-    valid:true,state,phase,quality,currentMultiple,nextTarget,referenceHigh,activeDefenseLow,bollingerPath,macdLifecycle,extensionMax,
-    baseLow:chosen.low,firstWave:chosen.high,pullbackLow:firstPullback,
-    secondWaveHigh:second?.high??null,secondPullbackLow,
-    ext15:target(1.5),ext20:target(2),ext25:target(2.5),targetBase,
-    gainPct:chosen.gain,pullbackPct:chosen.pullback,secondPullbackPct:second?.pullbackPct??null,
-    completed:chosen.completed,
-    baseDate:swingDate(rows[chosen.lowIndex]),waveDate:swingDate(rows[chosen.highIndex]),
-    pullbackDate:chosen.pullbackIndex>=0?swingDate(rows[chosen.pullbackIndex]):"",
-    secondWaveDate:second?.highIndex>=0?swingDate(rows[second.highIndex]):"",
-    secondPullbackDate:second?.pullbackIndex>=0?swingDate(rows[second.pullbackIndex]):"",
-    reason:chosen.completed
-      ?"第一波振幅 X 固定不變；1.5X／2X／2.5X 從第一波後回測低點起算，僅代表第二波可能目標區。"
-      :"第一波尚在形成；回測低點確認後才固定第二波倍率目標。"
+    valid:true,state,phase,quality,currentMultiple,activeMultiple,nextTarget,referenceHigh,activeDefenseLow,bollingerPath,macdLifecycle,extensionMax,
+    baseLow:chosen.low,firstWave:chosen.high,pullbackLow:firstPullback,secondWaveHigh:legs[1]?.high??second?.high??null,secondPullbackLow,
+    thirdWaveHigh:legs[2]?.high??null,thirdPullbackLow:legs[2]?.pullbackLow??null,fourthWaveHigh:legs[3]?.high??null,fourthPullbackLow:legs[3]?.pullbackLow??null,
+    ext15:target(1.5),ext20:target(2),ext25:target(2.5),targetBase,activeTargets,waveLegs:legs,pivots:multi?.pivots??[],pivotThreshold:multi?.threshold??null,waveCount,activeWave,
+    structuralResetCount:multi?.resets?.length??0,recentReset:multi?.recentReset??null,resetAge:multi?.resetAge??null,
+    gainPct:chosen.gain,pullbackPct:chosen.pullback,secondPullbackPct:legs[1]?.pullbackPct??second?.pullbackPct??null,completed:chosen.completed,
+    baseDate:swingDate(rows[chosen.lowIndex]),waveDate:swingDate(rows[chosen.highIndex]),pullbackDate:chosen.pullbackIndex>=0?swingDate(rows[chosen.pullbackIndex]):"",
+    secondWaveDate:legs[1]?.highDate??(second?.highIndex>=0?swingDate(rows[second.highIndex]):""),secondPullbackDate:legs[1]?.pullbackDate??(second?.pullbackIndex>=0?swingDate(rows[second.pullbackIndex]):""),
+    reason:multi?.valid
+      ?`多波 Pivot 使用 ${multi.threshold.toFixed(1)}% 動態反轉閾值；目前辨識 ${waveCount} 個推進波、作用中第 ${activeWave} 波${multi.resets.length?`，已自動重置舊結構 ${multi.resets.length} 次`:""}。深回超過 70% 或跌破前波起點時，舊波結束並從新低點重新計算。`
+      :chosen.completed?"Pivot 樣本不足時使用舊版容錯：第一波振幅 X 固定，倍率從第一波後回測低點起算。":"第一波尚在形成；回測低點確認後才固定倍率目標。"
   };
 }
 
@@ -1261,79 +1322,32 @@ function swingWaveLabel(svg,x,y,title,value,color,anchor="middle",extra=""){
   svg.append(g);
 }
 function drawSwingWave(w,price,position=null){
-  const svg=$("playSwingSvg");if(!svg)return;
-  svg.replaceChildren();
-  if(!w?.valid)return;
-
-  const actual=[
-    {key:"A",title:"起漲低點",value:w.baseLow,color:"#35e5e7",kind:"low"},
-    {key:"B",title:"第一波高點",value:w.firstWave,color:"#c46cff",kind:"high"}
-  ];
-  if(Number.isFinite(w.pullbackLow))actual.push({key:"C",title:"第一回測",value:w.pullbackLow,color:"#63a9ff",kind:"low"});
-  if(Number.isFinite(w.secondWaveHigh))actual.push({key:"D",title:"第二波高點",value:w.secondWaveHigh,color:"#c46cff",kind:"high"});
-  if(Number.isFinite(w.secondPullbackLow))actual.push({key:"E",title:"第二回測",value:w.secondPullbackLow,color:"#63a9ff",kind:"low"});
-  actual.push({key:"NOW",title:"目前位置",value:price,color:"#34dbe6",kind:"current"});
-
-  const targets=[
-    {title:"1.5X可能",value:w.ext15,color:"#c46cff"},
-    {title:"2X可能",value:w.ext20,color:"#c46cff"},
-    {title:"2.5X可能",value:w.ext25,color:"#c46cff"}
-  ].filter(x=>Number.isFinite(x.value));
-  const vals=[...actual.map(x=>x.value),...targets.map(x=>x.value)].filter(Number.isFinite);
-  const lo=Math.min(...vals),hi=Math.max(...vals),pad=Math.max((hi-lo)*.14,1),vmin=lo-pad,vmax=hi+pad;
-  const y=v=>305-((v-vmin)/(vmax-vmin))*245;
-
-  for(let i=0;i<4;i++){
-    const yy=70+i*68;
-    svg.append(swingWaveSvg("line",{x1:45,y1:yy,x2:775,y2:yy,class:"swing-wave-grid"}));
-    const val=vmax-(vmax-vmin)*((yy-60)/245);
-    svg.append(swingWaveSvg("text",{x:38,y:yy+3,class:"swing-wave-axis","text-anchor":"end"},swingWaveFmt(val)));
-  }
-  svg.append(swingWaveSvg("text",{x:16,y:48,class:"swing-wave-axis"},"股價"));
-  svg.append(swingWaveSvg("text",{x:742,y:330,class:"swing-wave-axis"},"時間 →"));
-  const avg=positionNumber(position?.avgCost);
-  if(avg!==null&&avg>=vmin&&avg<=vmax){
-    const cy=y(avg);svg.append(swingWaveSvg("line",{x1:45,y1:cy,x2:775,y2:cy,class:"swing-wave-cost-line"}));
-    svg.append(swingWaveSvg("text",{x:770,y:Math.max(18,cy-5),class:"swing-wave-cost-text","text-anchor":"end"},`持股均價 ${swingWaveFmt(avg)}`));
-  }
-
-  const xStart=68,xEnd=545,step=actual.length>1?(xEnd-xStart)/(actual.length-1):0;
-  const pts=actual.map((n,i)=>({...n,x:xStart+step*i,y:y(n.value)}));
-  if(pts.length>1){
-    let d=`M ${pts[0].x} ${pts[0].y}`;
-    for(let i=1;i<pts.length;i++){
-      const a=pts[i-1],b=pts[i],mx=(a.x+b.x)/2;
-      d+=` C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x} ${b.y}`;
+  const svg=$("playSwingSvg");if(!svg)return;svg.replaceChildren();if(!w?.valid)return;
+  const allLegs=w.waveLegs||[],legs=allLegs.length<=4?allLegs:[allLegs[0],...allLegs.slice(-3)],actual=[];
+  if(legs.length){
+    actual.push({key:"A",title:"結構起點",value:legs[0].low,color:"#35e5e7",kind:"low"});
+    for(const leg of legs){
+      actual.push({key:`H${leg.number}`,title:`第${leg.number}波高點`,value:leg.high,color:"#c46cff",kind:"high",wave:leg.number});
+      if(Number.isFinite(leg.pullbackLow))actual.push({key:`L${leg.number}`,title:`第${leg.number}回測`,value:leg.pullbackLow,color:"#63a9ff",kind:"low",wave:leg.number});
     }
-    svg.append(swingWaveSvg("path",{d,class:"swing-wave-path-actual"}));
+  }else{
+    actual.push({key:"A",title:"起漲低點",value:w.baseLow,color:"#35e5e7",kind:"low"},{key:"B",title:"第一波高點",value:w.firstWave,color:"#c46cff",kind:"high"});
+    if(Number.isFinite(w.pullbackLow))actual.push({key:"C",title:"第一回測",value:w.pullbackLow,color:"#63a9ff",kind:"low"});
   }
-
-  // 前高／最近一波高點只做參考水平線。
-  const ref=Number.isFinite(w.referenceHigh)?w.referenceHigh:w.firstWave;
-  const refPt=pts.find(p=>Math.abs(p.value-ref)<1e-8&&p.kind==="high")||pts[1];
-  const now=pts.at(-1);
-  if(refPt&&now)svg.append(swingWaveSvg("line",{x1:refPt.x+9,y1:y(ref),x2:now.x-9,y2:y(ref),class:"swing-wave-guide"}));
-
-  // 1.5X／2X／2.5X 是「替代目標」，不是依序必經路線：用目標區＋三條分支呈現。
-  if(targets.length&&now){
-    const zoneTop=Math.min(...targets.map(t=>y(t.value))),zoneBottom=Math.max(...targets.map(t=>y(t.value)));
-    svg.append(swingWaveSvg("rect",{x:692,y:Math.max(18,zoneTop-16),width:84,height:Math.max(28,zoneBottom-zoneTop+32),rx:10,class:"swing-wave-target-zone"}));
-    svg.append(swingWaveSvg("text",{x:734,y:Math.max(28,zoneTop-23),class:"swing-wave-target-title","text-anchor":"middle"},"可能目標區"));
-    targets.forEach((t,i)=>{
-      const tx=744,ty=y(t.value);
-      svg.append(swingWaveSvg("path",{d:`M ${now.x+8} ${now.y} C 615 ${now.y}, 680 ${ty}, ${tx} ${ty}`,class:"swing-wave-target-ray"}));
-      svg.append(swingWaveSvg("circle",{cx:tx,cy:ty,r:6,fill:t.color,class:"swing-wave-dot"}));
-      swingWaveLabel(svg,tx-4,Math.max(28,ty-28),t.title,swingWaveFmt(t.value),t.color,"middle");
-    });
-  }
-
-  pts.forEach((p,i)=>{
-    svg.append(swingWaveSvg("circle",{cx:p.x,cy:p.y,r:p.kind==="current"?7:6,fill:p.color,class:"swing-wave-dot"}));
-    let ly=p.kind==="high"?Math.max(34,p.y-38):Math.min(292,p.y+31);
-    let extra="";
-    if(p.kind==="current"&&Number.isFinite(w.currentMultiple))extra=`(第2波 ${w.currentMultiple.toFixed(2)}X)`;
-    swingWaveLabel(svg,p.x,ly,p.title,swingWaveFmt(p.value),p.color,"middle",extra);
-  });
+  // 避免回測低點同時又作下一波起點時重複畫點。
+  const dedup=[];for(const n of actual){const prev=dedup.at(-1);if(prev&&Math.abs(prev.value/n.value-1)<.00001&&prev.kind==="low"&&n.kind==="low")continue;dedup.push(n)}
+  let shown=dedup;if(shown.length>8)shown=[shown[0],...shown.slice(-7)];shown=[...shown,{key:"NOW",title:"目前位置",value:price,color:"#34dbe6",kind:"current"}];
+  const rawTargets=[...(w.activeTargets||[]),{label:"結構1.5X",value:w.ext15},{label:"結構2X",value:w.ext20},{label:"結構2.5X",value:w.ext25}].filter(x=>Number.isFinite(x.value)&&x.value>price*1.002).sort((a,b)=>a.value-b.value),targets=[];
+  for(const t of rawTargets){if(targets.some(x=>Math.abs(x.value/t.value-1)<.006))continue;targets.push({title:t.label,value:t.value,color:"#c46cff"});if(targets.length>=3)break}
+  const vals=[...shown.map(x=>x.value),...targets.map(x=>x.value)].filter(Number.isFinite);if(!vals.length)return;const lo=Math.min(...vals),hi=Math.max(...vals),pad=Math.max((hi-lo)*.14,1),vmin=lo-pad,vmax=hi+pad,y=v=>305-((v-vmin)/(vmax-vmin))*245;
+  for(let i=0;i<4;i++){const yy=70+i*68;svg.append(swingWaveSvg("line",{x1:45,y1:yy,x2:775,y2:yy,class:"swing-wave-grid"}));const val=vmax-(vmax-vmin)*((yy-60)/245);svg.append(swingWaveSvg("text",{x:38,y:yy+3,class:"swing-wave-axis","text-anchor":"end"},swingWaveFmt(val)))}
+  svg.append(swingWaveSvg("text",{x:16,y:48,class:"swing-wave-axis"},"股價"));svg.append(swingWaveSvg("text",{x:742,y:330,class:"swing-wave-axis"},"時間 →"));
+  const avg=positionNumber(position?.avgCost);if(avg!==null&&avg>=vmin&&avg<=vmax){const cy=y(avg);svg.append(swingWaveSvg("line",{x1:45,y1:cy,x2:775,y2:cy,class:"swing-wave-cost-line"}));svg.append(swingWaveSvg("text",{x:770,y:Math.max(18,cy-5),class:"swing-wave-cost-text","text-anchor":"end"},`持股均價 ${swingWaveFmt(avg)}`))}
+  const xStart=68,xEnd=545,step=shown.length>1?(xEnd-xStart)/(shown.length-1):0,pts=shown.map((n,i)=>({...n,x:xStart+step*i,y:y(n.value)}));
+  if(pts.length>1){let d=`M ${pts[0].x} ${pts[0].y}`;for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],mx=(a.x+b.x)/2;d+=` C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x} ${b.y}`}svg.append(swingWaveSvg("path",{d,class:"swing-wave-path-actual"}))}
+  const ref=Number.isFinite(w.referenceHigh)?w.referenceHigh:w.firstWave,refPt=[...pts].reverse().find(q=>q.kind==="high"&&Math.abs(q.value/ref-1)<.008),now=pts.at(-1);if(refPt&&now)svg.append(swingWaveSvg("line",{x1:refPt.x+9,y1:y(ref),x2:now.x-9,y2:y(ref),class:"swing-wave-guide"}));
+  if(targets.length&&now){const zoneTop=Math.min(...targets.map(t=>y(t.value))),zoneBottom=Math.max(...targets.map(t=>y(t.value)));svg.append(swingWaveSvg("rect",{x:692,y:Math.max(18,zoneTop-16),width:84,height:Math.max(28,zoneBottom-zoneTop+32),rx:10,class:"swing-wave-target-zone"}));svg.append(swingWaveSvg("text",{x:734,y:Math.max(28,zoneTop-23),class:"swing-wave-target-title","text-anchor":"middle"},"多波目標"));targets.forEach(t=>{const tx=744,ty=y(t.value);svg.append(swingWaveSvg("path",{d:`M ${now.x+8} ${now.y} C 615 ${now.y}, 680 ${ty}, ${tx} ${ty}`,class:"swing-wave-target-ray"}));svg.append(swingWaveSvg("circle",{cx:tx,cy:ty,r:6,fill:t.color,class:"swing-wave-dot"}));swingWaveLabel(svg,tx-4,Math.max(28,ty-28),t.title,swingWaveFmt(t.value),t.color,"middle")})}
+  pts.forEach(p=>{svg.append(swingWaveSvg("circle",{cx:p.x,cy:p.y,r:p.kind==="current"?7:6,fill:p.color,class:"swing-wave-dot"}));let ly=p.kind==="high"?Math.max(34,p.y-38):Math.min(292,p.y+31),extra="";if(p.kind==="current")extra=`(作用中第 ${w.activeWave||1} 波${Number.isFinite(w.activeMultiple)?` ${w.activeMultiple.toFixed(2)}X`:""})`;swingWaveLabel(svg,p.x,ly,p.title,swingWaveFmt(p.value),p.color,"middle",extra)});
 }
 
 function shortFmtPct(v){return Number.isFinite(v)?`${v>=0?"+":""}${v.toFixed(1)}%`:"--"}
@@ -1384,44 +1398,22 @@ function resetSwingWave(){
   setText("playSwingState","--");setText("playSwingGoal","第一目標：--");setText("playSwingNote","波段或短波混合時啟用。");
 }
 function renderSwingWave(x){
-  const box=$("playSwingAnalysis");if(!box)return;
-  if(!["swing","mixed","long-swing"].includes(x?.key)){resetSwingWave();return}
-  box.hidden=false;
+  const box=$("playSwingAnalysis");if(!box)return;if(!["swing","mixed","long-swing"].includes(x?.key)){resetSwingWave();return}box.hidden=false;
   const w=x?.swingWave,price=stageNum(latestFiveStageResult?.price),position=currentHoldingPosition();
-  if(!w?.valid||price===null){
-    setText("playSwingState","資料不足");setText("playSwingGoal","第一目標：--");setText("playSwingNote",w?.reason||"近期波段結構不足");
-    const svg=$("playSwingSvg");if(svg)svg.replaceChildren();return;
-  }
-  setText("playSwingState",`目前階段：${w.phase||w.state}｜結構 ${w.quality}分｜MACD ${w.macdLifecycle?.state||"資料不足"}`);
-  const refHigh=Number.isFinite(w.referenceHigh)?w.referenceHigh:w.firstWave;
+  if(!w?.valid||price===null){setText("playSwingState","資料不足");setText("playSwingGoal","第一目標：--");setText("playSwingNote",w?.reason||"近期波段結構不足");const svg=$("playSwingSvg");if(svg)svg.replaceChildren();return}
+  const waveText=w.waveCount?`｜多波 ${w.waveCount}｜作用中第 ${w.activeWave||1} 波`:"";setText("playSwingState",`目前階段：${w.phase||w.state}${waveText}｜結構 ${w.quality}分｜MACD ${w.macdLifecycle?.state||"資料不足"}`);
+  const refHigh=Number.isFinite(w.referenceHigh)?w.referenceHigh:w.firstWave,activeTargets=(w.activeTargets||[]).filter(t=>Number.isFinite(t.value)&&t.value>price*1.002).sort((a,b)=>a.value-b.value),legacyTargets=[{label:"結構1.5X",value:w.ext15},{label:"結構2X",value:w.ext20},{label:"結構2.5X",value:w.ext25}].filter(t=>Number.isFinite(t.value)&&t.value>price*1.002).sort((a,b)=>a.value-b.value),future=[];
+  for(const t of [...activeTargets,...legacyTargets].sort((a,b)=>a.value-b.value)){if(future.some(q=>Math.abs(q.value/t.value-1)<.006))continue;future.push(t);if(future.length>=3)break}
   let goal="--";
-  if(Number.isFinite(w.secondPullbackLow)&&price<refHigh*.995)goal=`先回到第二波高點 ${technicalFmt(refHigh)}；突破後再評估第三波`;
-  else if(price<w.firstWave*.985)goal=`先回到第一波前高 ${technicalFmt(w.firstWave)}；突破後進入第二波`;
-  else if(price<w.ext15)goal=`第二波可能目標：1.5X ${technicalFmt(w.ext15)} / 2X ${technicalFmt(w.ext20)} / 2.5X ${technicalFmt(w.ext25)}`;
-  else if(price<w.ext20)goal=`已到 1.5X 區；其餘可能目標為 2X ${technicalFmt(w.ext20)} 或 2.5X ${technicalFmt(w.ext25)}`;
-  else if(price<w.ext25)goal=`已到 2X 區；高延伸可能目標為 2.5X ${technicalFmt(w.ext25)}`;
-  else goal="已超過 2.5X 參考區，優先觀察過熱與轉弱";
-  const extText=Number.isFinite(w.extensionMax)?`｜目前布林＋MACD路徑允許延伸至 ${w.extensionMax}X`:"";setText("playSwingGoal",`下一步：${goal}${extText}`);
-  drawSwingWave(w,price,position);
-  const legend=$("playSwingLegend");
-  if(legend){
-    const items=[
-      ["#35e5e7",`起漲低點 <b>${swingWaveFmt(w.baseLow)}</b> — 第一波起點`],
-      ["#c46cff",`第一波高點 <b>${swingWaveFmt(w.firstWave)}</b> — 第一波 X = ${swingWaveFmt(w.firstWave-w.baseLow)}`]
-    ];
-    if(Number.isFinite(w.pullbackLow))items.push(["#63a9ff",`第一回測 <b>${swingWaveFmt(w.pullbackLow)}</b> — 第二波倍率從這裡起算`]);
-    if(Number.isFinite(w.secondWaveHigh))items.push(["#c46cff",`第二波高點 <b>${swingWaveFmt(w.secondWaveHigh)}</b> — 實際走勢轉折`]);
-    if(Number.isFinite(w.secondPullbackLow))items.push(["#63a9ff",`第二回測 <b>${swingWaveFmt(w.secondPullbackLow)}</b> — 後續進場／防守參考`]);
-    items.push(["#34dbe6",`目前位置 <b>${swingWaveFmt(price)}</b>${Number.isFinite(w.currentMultiple)?`（相對第一回測 ${w.currentMultiple.toFixed(2)}X）`:""}`]);
-    if(position?.avgCost)items.push(["#ffb44b",`持股均價 <b>${swingWaveFmt(position.avgCost)}</b>${position?.shares?` ｜ ${position.shares.toLocaleString("zh-TW")} 股`:""}`]);
-    items.push(["#c46cff",`可能目標區：1.5X <b>${swingWaveFmt(w.ext15)}</b> ｜ 2X <b>${swingWaveFmt(w.ext20)}</b> ｜ 2.5X <b>${swingWaveFmt(w.ext25)}</b>`]);
-    legend.innerHTML=items.map(([c,t])=>`<div style="color:${c}"><i></i><span style="color:#9fb1c0">${t}</span></div>`).join("");
-  }
-  const dates=w.baseDate&&w.waveDate?`${w.baseDate} → ${w.waveDate}`:"";
-  const p1=w.pullbackDate?`；第一回測 ${w.pullbackDate}`:"";
-  const p2=w.secondPullbackDate?`；第二回測 ${w.secondPullbackDate}`:"";
-  const boll=w.bollingerPath,bollText=boll?.valid?` 布林路徑：${boll.state}${Number.isFinite(boll.percentile)?`（近120日壓縮百分位 ${boll.percentile.toFixed(0)}%）`:""}；布林只判斷壓縮／張口。`:"",macdText=w.macdLifecycle?.valid?` MACD：${w.macdLifecycle.state}（${w.macdLifecycle.note}）；MACD只判斷動能生命週期。`:"";
-  setText("playSwingNote",`${dates}${p1}${p2}。${w.reason}${bollText}${macdText} 布林＋MACD共同控制延伸層級與可信度，不直接改波段倍率價格；第二次回測只作結構／防守參考，暫不重新套固定倍率。`);
+  if(Number.isFinite(refHigh)&&price<refHigh*.995)goal=`先突破前一波高點 ${technicalFmt(refHigh)}，再確認第 ${w.activeWave||2} 波延伸`;
+  else if(future.length)goal=`第 ${w.activeWave||1} 波下一目標：${future.map(t=>`${t.label} ${technicalFmt(t.value)}`).join(" / ")}`;
+  else if(price>=w.ext25*.995)goal="已超過主要結構倍率區，優先觀察過熱、回測與新 Pivot 重算";
+  else goal=`等待第 ${w.activeWave||1} 波新高／新回測 Pivot 確認`;
+  const extText=Number.isFinite(w.extensionMax)?`｜目前布林＋MACD路徑允許延伸至 ${w.extensionMax}X`:"";setText("playSwingGoal",`下一步：${goal}${extText}`);drawSwingWave(w,price,position);
+  const legend=$("playSwingLegend");if(legend){const items=[],allLegs=w.waveLegs||[],legs=allLegs.length<=4?allLegs:[allLegs[0],...allLegs.slice(-3)];if(legs.length){items.push(["#35e5e7",`結構起點 <b>${swingWaveFmt(legs[0].low)}</b>${legs[0].lowDate?`｜${legs[0].lowDate}`:""}`]);for(const leg of legs){items.push(["#c46cff",`第${leg.number}波高點 <b>${swingWaveFmt(leg.high)}</b>${leg.highDate?`｜${leg.highDate}`:""}`]);if(Number.isFinite(leg.pullbackLow))items.push(["#63a9ff",`第${leg.number}回測 <b>${swingWaveFmt(leg.pullbackLow)}</b>${Number.isFinite(leg.retracePct)?`｜回吐 ${leg.retracePct.toFixed(0)}%`:""}`])}}else{items.push(["#35e5e7",`起漲低點 <b>${swingWaveFmt(w.baseLow)}</b>`],["#c46cff",`第一波高點 <b>${swingWaveFmt(w.firstWave)}</b>`])}
+    items.push(["#34dbe6",`目前位置 <b>${swingWaveFmt(price)}</b>｜作用中第 <b>${w.activeWave||1}</b> 波${Number.isFinite(w.activeMultiple)?`｜相對作用中防守 ${w.activeMultiple.toFixed(2)}X`:""}`]);if(position?.avgCost)items.push(["#ffb44b",`持股均價 <b>${swingWaveFmt(position.avgCost)}</b>${position?.shares?` ｜ ${position.shares.toLocaleString("zh-TW")} 股`:""}`]);if(w.structuralResetCount)items.push(["#ff8d78",`舊結構已自動重置 <b>${w.structuralResetCount}</b> 次${w.recentReset?.date?`｜最近 ${w.recentReset.date}`:""}`]);items.push(["#c46cff",`結構倍率：1.5X <b>${swingWaveFmt(w.ext15)}</b> ｜ 2X <b>${swingWaveFmt(w.ext20)}</b> ｜ 2.5X <b>${swingWaveFmt(w.ext25)}</b>`]);legend.innerHTML=items.map(([c,t])=>`<div style="color:${c}"><i></i><span style="color:#9fb1c0">${t}</span></div>`).join("")}
+  const dates=w.baseDate&&w.waveDate?`${w.baseDate} → ${w.waveDate}`:"",p1=w.pullbackDate?`；第一回測 ${w.pullbackDate}`:"",p2=w.secondPullbackDate?`；第二回測 ${w.secondPullbackDate}`:"",pivot=Number.isFinite(w.pivotThreshold)?` Pivot 反轉閾值 ${w.pivotThreshold.toFixed(1)}%。`:"",boll=w.bollingerPath,bollText=boll?.valid?` 布林路徑：${boll.state}${Number.isFinite(boll.percentile)?`（近120日壓縮百分位 ${boll.percentile.toFixed(0)}%）`:""}；布林只判斷壓縮／張口。`:"",macdText=w.macdLifecycle?.valid?` MACD：${w.macdLifecycle.state}（${w.macdLifecycle.note}）；MACD只判斷動能生命週期。`:"";
+  setText("playSwingNote",`${dates}${p1}${p2}。${w.reason}${pivot}${bollText}${macdText} 多波 Pivot 會把最近有效回測當作用中防守；深回或跌破前波起點時自動關閉舊波並重新起算，不再把過期 C 點永久沿用。`);
 }
 
 function resetLongAnalysis(){
@@ -1596,10 +1588,11 @@ function buildResonanceTargets(play,price){
   // 中期波段倍率：即使布林目前只允許較低延伸，較遠倍率仍保留但降低品質，不直接刪掉。
   if(w?.valid){
     const bAdj=((w?.bollingerPath?.score??50)-50)*.18,max=w.extensionMax??2;
-    add("pressure","波段前高",w.referenceHigh??w.firstWave,72+bAdj,{source:"波段前高"});
-    add("swing","波段1.5X",w.ext15,w.quality+bAdj,{source:"波段倍率"});
-    add("swing","波段2X",w.ext20,w.quality-2+bAdj+(max>=2?0:-12),{source:"波段倍率"});
-    add("swing","波段2.5X",w.ext25,w.quality-6+bAdj+(max>=2.5?0:-16),{source:"波段倍率"});
+    add("pressure",w.activeWave>1?`第${Math.max(1,w.activeWave-1)}波前高`:"波段前高",w.referenceHigh??w.firstWave,72+bAdj,{source:"波段前高"});
+    for(const x of w.activeTargets||[]){const penalty=x.multiple>=2?(max>=2?0:-12):x.multiple>=1.5?(max>=1.5?0:-7):0;add("swing",x.label,x.value,w.quality+bAdj-penalty,{source:"多波 Pivot 目標"})}
+    add("swing","結構1.5X",w.ext15,w.quality+bAdj,{source:"波段倍率"});
+    add("swing","結構2X",w.ext20,w.quality-2+bAdj+(max>=2?0:-12),{source:"波段倍率"});
+    add("swing","結構2.5X",w.ext25,w.quality-6+bAdj+(max>=2.5?0:-16),{source:"波段倍率"});
   }
   // 券商與估值：同一家族多個倍率都保留，但每個目標區只取券商家族貢獻最高的一點，避免同源灌票。
   if(basis?.base>0){add("broker","目標價80%",basis.base*.80,brokerQ,{source:"券商目標"});add("broker","目標價85%",basis.base*.85,brokerQ-1,{source:"券商目標"});add("broker","目標價88%",basis.base*.88,brokerQ-2,{source:"券商目標"});add("broker","券商基準目標",basis.base,brokerQ-4,{source:"券商目標"})}
