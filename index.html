@@ -1199,7 +1199,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.7</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.8</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1207,7 +1207,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
       <button class="menu-btn" id="menuBtn" aria-label="選單">☰</button>
       <div class="mobile-brand"><img class="brand-logo" src="stockzone-mark.png" alt=""><strong>股域StockZone</strong></div>
       <div class="searchbox">
-        <input id="stockCode" placeholder="搜尋股票名稱或代碼，例如 聯發科、2454" autocomplete="off">
+        <input id="stockCode" placeholder="搜尋股票名稱或代碼" autocomplete="off">
         <button id="searchButton">搜尋</button>
       </div>
     </header>
@@ -2089,5 +2089,102 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
   line-height:1!important;
   vertical-align:-.08em!important;
   flex:0 0 auto!important;
+}
+</style>
+
+
+<style id="v2608-light-polish">
+/* v2.6.0.8 — light skin polish: logo color, action buttons, dark-block cleanup, active tab, heading position */
+
+/* 1) StockZone mark uses exactly the same blue as the left section headers. */
+.brand-logo{display:none!important}
+.brand::before,.mobile-brand::before{
+  content:"";
+  display:inline-block;
+  flex:0 0 auto;
+  width:28px;
+  height:20px;
+  background:#4b74b8;
+  -webkit-mask:url("stockzone-mark.png") center/contain no-repeat;
+  mask:url("stockzone-mark.png") center/contain no-repeat;
+}
+.mobile-brand::before{width:25px;height:16px;margin-right:6px}
+
+/* 2) Keep holding/watch button boxes unchanged, enlarge text and center vertically. */
+.stock-list-actions button{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-size:14px!important;
+  line-height:1!important;
+}
+@media(max-width:720px){
+  .stock-list-actions button{
+    height:40px!important;
+    padding-top:0!important;
+    padding-bottom:0!important;
+    font-size:13px!important;
+    line-height:1!important;
+  }
+}
+
+/* 3) Remove remaining dark/black blocks from the light theme. */
+#overviewResonancePlay{
+  background:#f3eefe!important;
+  border:1px solid #e3d8fb!important;
+  color:#7655c8!important;
+  box-shadow:none!important;
+}
+.overview-wave-tag-box{
+  fill:#ffffff!important;
+  filter:drop-shadow(0 4px 7px rgba(31,52,78,.09))!important;
+}
+.overview-wave-tag-price{fill:#13233a!important}
+.overview-wave-tag-title{fill:#60758f!important}
+#valuation .formula-popover,.formula-popover,.disposal-popover{
+  background:#ffffff!important;
+  border-color:#e0e8f1!important;
+  color:#13233a!important;
+  box-shadow:0 18px 42px rgba(28,45,70,.15)!important;
+}
+#valuation .formula-popover div,.formula-popover div,.disposal-popover div{color:#657991!important}
+#valuation .formula-popover-close,.formula-popover-close{color:#73859a!important}
+.news-summary-editor,.news-item{background:#ffffff!important;border-color:#e6edf5!important}
+.news-summary-row textarea{background:#ffffff!important;color:#13233a!important;border-color:#dfe7f0!important}
+.news-filter-row button{background:#f5f8fc!important;color:#5e7188!important;border-color:#e2e9f2!important}
+.news-filter-row button.active{background:#eaf3ff!important;color:#245f9f!important;border-color:#cfe2f7!important}
+.valuation-eps-chip.is-ttm{background:#f6f8fb!important;border-color:#e0e8f1!important;color:#60738a!important}
+.valuation-eps-chip.is-latest{background:#eef8ff!important;border-color:#6bc7ff!important;color:#245f88!important}
+#valuationScenario .scenario-summary{background:#ffffff!important;border-color:#e4ebf3!important}
+#valuationScenario .scenario-summary p{color:#30445b!important}
+.news-analysis-head .card-title{color:#13233a!important}
+
+/* 4) Active analysis sub-tab uses deep black/navy text. */
+.section-tabs.analysis-tabs button.active,
+#analysisTabs button.active{
+  color:#111827!important;
+  font-weight:800!important;
+  border-bottom-color:#2f80ff!important;
+}
+.section-tabs.analysis-tabs button:not(.active),
+#analysisTabs button:not(.active){color:#8190a3!important}
+
+/* 5) "個股分析" sits on the page background, not inside the white stock card. */
+.stock-head{
+  position:relative!important;
+  margin-top:42px!important;
+}
+.stock-head .eyebrow{
+  position:absolute!important;
+  left:4px!important;
+  top:-36px!important;
+  margin:0!important;
+  color:#62799a!important;
+  font-weight:800!important;
+  z-index:2!important;
+}
+@media(max-width:720px){
+  .stock-head{margin-top:42px!important}
+  .stock-head .eyebrow{left:4px!important;top:-34px!important;font-size:14px!important}
 }
 </style>

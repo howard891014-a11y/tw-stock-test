@@ -1,4 +1,4 @@
-// v2.6.0.7 — light skin high-similarity refresh; keeps structure, plus prior mobile tabs and industry label.
+// v2.6.0.8 — light theme polish only; no stock-analysis logic changes.
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
