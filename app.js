@@ -1,4 +1,4 @@
-// v2.5.9.1 — 五年歷史、短波段、目標共振與總覽共振波浪圖。
+// v2.5.9.2 — 股性歷史底色、短線合理/樂觀目標與布林路徑整合。
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
@@ -465,7 +465,7 @@ function swingFindCompletedNextWave(rows,fromIndex,fromLow){
   }
   return null;
 }
-function calculateSwingWave(r,t){
+function calculateSwingWave(r,t,breakout=playBreakoutState(r,t)){
   const rows=(r?.path?.rows||stageHistory(t)).slice(-120),price=stageNum(r?.price);
   if(rows.length<25||price===null)return {valid:false,reason:"歷史K線不足"};
   const candidates=[];
@@ -528,6 +528,7 @@ function calculateSwingWave(r,t){
     else{state="延伸過熱區";phase="高檔延伸";nextTarget=null}
   }
 
+  const bollingerPath=bollingerPathSignal(rows,t,price,breakout);
   let quality=50;
   if(chosen.gain>=10&&chosen.gain<=60)quality+=12;else if(chosen.gain>=6)quality+=6;
   if(chosen.pullback!==null&&chosen.pullback<=-3&&chosen.pullback>=-25)quality+=10;
@@ -537,10 +538,12 @@ function calculateSwingWave(r,t){
   if((r?.path?.ma60Slope20??-99)>0)quality+=6;
   if(price>=activeDefenseLow*.98)quality+=4;else quality-=30;
   if(currentMultiple>2.7)quality-=14;
+  if(bollingerPath?.upwardExpansion)quality+=8;else if(bollingerPath?.trendExpansion)quality+=5;else if(bollingerPath?.breakdown)quality-=14;
   quality=Math.round(playClamp(quality));
+  let extensionMax=1.5;if(!bollingerPath?.breakdown&&quality>=60)extensionMax=2;if(!bollingerPath?.breakdown&&((bollingerPath?.upwardExpansion||bollingerPath?.trendExpansion)&&quality>=66||price>=target(2)*.985))extensionMax=2.5;
 
   return{
-    valid:true,state,phase,quality,currentMultiple,nextTarget,referenceHigh,activeDefenseLow,
+    valid:true,state,phase,quality,currentMultiple,nextTarget,referenceHigh,activeDefenseLow,bollingerPath,extensionMax,
     baseLow:chosen.low,firstWave:chosen.high,pullbackLow:firstPullback,
     secondWaveHigh:second?.high??null,secondPullbackLow,
     ext15:target(1.5),ext20:target(2),ext25:target(2.5),targetBase,
@@ -738,17 +741,23 @@ function calculateStockPersonalitySegment(rows){
     shortRhythmScore,shortCycle,hybridRhythm,swingTrend,range,burst,deepRhythm,structuralReset,deepPullbacks,recoveredDeep,qualifyingShortCycles,shortLikeCycles,resetCycles,strongShort,strongSwing,stressCycles:stressCycleRows.length};
 }
 function calculateStockPersonality(rows){
-  const all=(rows||[]).filter(x=>playRowClose(x)!==null).slice(-240);
+  const all=(rows||[]).filter(x=>playRowClose(x)!==null).slice(-1260);
   if(all.length<60)return calculateStockPersonalitySegment(all);
-  const recent=all.slice(-160),older=all.slice(Math.max(0,all.length-240),Math.max(0,all.length-160));
+  const recent=all.slice(-160),older=all.slice(Math.max(0,all.length-240),Math.max(0,all.length-160)),historical=all.slice(0,Math.max(0,all.length-240));
   const pr=calculateStockPersonalitySegment(recent),po=older.length>=60?calculateStockPersonalitySegment(older):null;
   if(!pr?.valid)return calculateStockPersonalitySegment(all);
-  const oldValid=!!po?.valid,wRecent=oldValid?70:100,wOld=oldValid?30:0;
-  const blend=(a,b)=>Math.round(playClamp((Number(a)||50)*(wRecent/100)+(Number(b)||50)*(wOld/100)));
-  const result={...pr,shortFit:blend(pr.shortFit,po?.shortFit),swingFit:blend(pr.swingFit,po?.swingFit),longFit:blend(pr.longFit,po?.longFit),windowDays:all.length,recentWeight:wRecent,olderWeight:wOld};
-  result.detail=`股性1年｜近160日 ${wRecent}%${wOld?`／前80日 ${wOld}%`:""}${pr.detail?`｜${pr.detail}`:""}`;
+  const histSegments=[];
+  for(let end=historical.length;end>=60&&histSegments.length<5;end-=160){const seg=historical.slice(Math.max(0,end-160),end),x=calculateStockPersonalitySegment(seg);if(x?.valid)histSegments.push(x)}
+  const histMedian=key=>rhythmMedian(histSegments.map(x=>Number(x?.[key])).filter(Number.isFinite)),histValid=histSegments.length>0,oldValid=!!po?.valid;
+  let wRecent=100,wOld=0,wHistory=0;if(oldValid&&histValid){wRecent=63;wOld=27;wHistory=10}else if(oldValid){wRecent=70;wOld=30}else if(histValid){wRecent=90;wHistory=10}
+  const blend=key=>{const total=wRecent+wOld+wHistory,rv=Number(pr?.[key])||50,ov=Number(po?.[key])||50,hv=histMedian(key)??50;return Math.round(playClamp((rv*wRecent+ov*wOld+hv*wHistory)/total))};
+  // 股性「種類」仍由最近160日決定；舊資料只提供適性分數的歷史底色，避免多年以前的節奏硬改現在分類。
+  const result={...pr,shortFit:blend('shortFit'),swingFit:blend('swingFit'),longFit:blend('longFit'),windowDays:all.length,recentWeight:wRecent,olderWeight:wOld,historyWeight:wHistory,historySegments:histSegments.length,
+    historicalBaseline:histValid?{shortFit:Math.round(histMedian('shortFit')),swingFit:Math.round(histMedian('swingFit')),longFit:Math.round(histMedian('longFit'))}:null};
+  result.detail=`股性加權｜近160日 ${wRecent}%${wOld?`／前80日 ${wOld}%`:""}${wHistory?`／更早歷史 ${wHistory}%（${histSegments.length}段）`:""}${pr.detail?`｜${pr.detail}`:""}`;
   return result;
 }
+
 function seasonality5Y(rows,now=new Date()){
   const a=(rows||[]).filter(x=>playRowClose(x)!==null),q=Math.floor(now.getMonth()/3)+1,byYear=new Map();
   for(const r of a){const d=new Date(`${historyDateKey(r)}T00:00:00Z`);if(Number.isNaN(d.getTime())||Math.floor(d.getUTCMonth()/3)+1!==q)continue;const y=d.getUTCFullYear();if(!byYear.has(y))byYear.set(y,[]);byYear.get(y).push(r)}
@@ -821,7 +830,41 @@ function shortNewsCatalyst(){
   else if(p>n&&p>=1){delta=Math.min(5,2+p);label=`題材／正向關鍵字 ${p} 則`}
   return {label,score:delta,fit:Math.round(playClamp(50+delta*5)),count:fresh.length,positive:p,negative:n,available:true};
 }
-// v2.5.9.1 — 短期玩法也建立自己的短波段價格結構；只看最近 20～60 日日K，不沿用中期波段倍率。
+// v2.5.9.2 — 布林路徑：窄口只代表能量壓縮；必須配合向上突破／張口才提高延伸目標可信度。
+function bollingerBandwidthSeries(rows,period=20,lookback=150){
+  const a=(rows||[]).filter(x=>playRowClose(x)!==null).slice(-(lookback+period+12));if(a.length<period+8)return [];
+  const closes=a.map(playRowClose),out=[];
+  for(let i=period-1;i<a.length;i++){
+    const w=closes.slice(i-period+1,i+1),mid=w.reduce((x,y)=>x+y,0)/period;if(!(mid>0))continue;
+    const variance=w.reduce((x,y)=>x+(y-mid)*(y-mid),0)/period,sd=Math.sqrt(Math.max(0,variance)),upper=mid+sd*2,lower=mid-sd*2,bw=(upper-lower)/mid*100;
+    out.push({index:i,date:swingDate(a[i]),width:bw,middle:mid,upper,lower,close:closes[i]});
+  }
+  return out;
+}
+function bollingerPathSignal(rows,t,price,breakout=null){
+  const series=bollingerBandwidthSeries(rows,20,150),p=stageNum(price);if(series.length<25||p===null)return {valid:false,score:50,state:"布林資料不足",percentile:null};
+  const hist=series.slice(-120),recent=hist.slice(-10),latest=hist.at(-1),current=stageNum(t?.bollinger?.bandwidth)??latest?.width??null;
+  if(current===null)return {valid:false,score:50,state:"布林資料不足",percentile:null};
+  const floor=recent.reduce((a,b)=>!a||b.width<a.width?b:a,null),floorWidth=floor?.width??current,widths=hist.map(x=>x.width).filter(Number.isFinite),percentile=widths.length?widths.filter(x=>x<=floorWidth).length/widths.length*100:null;
+  const expansionRatio=floorWidth>0?current/floorWidth:1,prev3=hist.slice(-4,-1).map(x=>x.width).filter(Number.isFinite),prevMedian=rhythmMedian(prev3),expanding=expansionRatio>=1.10&&(prevMedian===null||current>=prevMedian*1.03);
+  const upper=stageNum(t?.bollinger?.upper)??latest?.upper??null,middle=stageNum(t?.bollinger?.middle)??latest?.middle??null,lower=stageNum(t?.bollinger?.lower)??latest?.lower??null,
+        ma5=stageNum(t?.ma?.ma5),ma10=stageNum(t?.ma?.ma10),ratio20=stageNum(t?.volume?.ratio20),maBull=ma5!==null&&ma10!==null?ma5>=ma10:true,
+        upperBreak=upper!==null&&p>=upper*.995,volumeOk=ratio20===null||ratio20>=1.05,compressed=percentile!==null&&percentile<=15,extreme=percentile!==null&&percentile<=5,
+        bullishConfirm=!!(breakout?.confirmed||upperBreak)&&maBull,upwardExpansion=compressed&&expanding&&bullishConfirm&&volumeOk,
+        trendExpansion=!compressed&&expanding&&upperBreak&&maBull&&volumeOk,breakdown=(lower!==null&&p<lower*.995)||(middle!==null&&p<middle*.985&&ma5!==null&&ma10!==null&&ma5<ma10&&expanding);
+  let score=50,state="布林正常";
+  if(extreme&&!bullishConfirm){score=53;state="極端窄口蓄力"}
+  else if(compressed&&!bullishConfirm){score=51;state="窄口蓄力"}
+  if(bullishConfirm&&!expanding){score=Math.max(score,65);state=compressed?"窄口向上確認":"上軌突破待張口"}
+  if(trendExpansion){score=80;state="沿上軌擴張"}
+  if(upwardExpansion){score=90;state=extreme?"極端窄口後向上張口":"窄口後向上張口"}
+  if(breakdown){score=24;state="下軌擴張／波段轉弱"}
+  const level=percentile===null?"--":percentile<=5?"極端壓縮":percentile<=10?"高度壓縮":percentile<=30?"偏窄":"正常";
+  return {valid:true,score,state,level,bandwidth:current,squeezeBandwidth:floorWidth,percentile,expansionRatio,expanding,compressed,extreme,upperBreak,maBull,volumeOk,upwardExpansion,trendExpansion,breakdown,upper,middle,lower,
+    note:`${level}｜近120日壓縮百分位 ${percentile===null?"--":percentile.toFixed(0)+"%"}｜帶寬 ${current.toFixed(1)}%${expanding?"｜張口中":""}`};
+}
+
+// v2.5.9.2 — 短期玩法也建立自己的短波段價格結構；只看最近 20～60 日日K，不沿用中期波段倍率。
 function calculateShortWave(rowsInput,priceInput){
   const rows=(rowsInput||[]).filter(x=>playRowClose(x)!==null).slice(-60),price=stageNum(priceInput);
   if(rows.length<20||price===null)return {valid:false,reason:"短波K線不足",targets:[]};
@@ -854,17 +897,21 @@ function calculateShortWave(rowsInput,priceInput){
   return {valid:true,quality,state:chosen.pb?.confirmed?"短波回測後延伸":"短波形成中",baseLow:chosen.low,firstHigh:chosen.high,pullbackLow,targetBase,amplitude,currentMultiple,targets,
     baseDate:swingDate(rows[chosen.lowIndex]),highDate:swingDate(rows[chosen.highIndex]),pullbackDate:chosen.pb?.index>=0?swingDate(rows[chosen.pb.index]):"",reason:"短波只使用近期結構；動能分數決定可採用 1X／1.5X／2X 的哪一層，並受近端壓力與最大合理延伸限制。"};
 }
-function shortWaveAllowedTargets(wave,score,price,atr){
-  if(!wave?.valid||!(price>0))return [];
-  const maxMultiple=score>=76?2:score>=62?1.5:1,atrPct=atr&&price?atr/price*100:2;
-  const capPct=stageClamp(5+atrPct*2+(score-50)*.08,5,16);
-  return wave.targets.filter(x=>x.multiple<=maxMultiple&&x.value>price*1.002&&x.value<=price*(1+capPct/100)).map(x=>({...x,kind:"shortwave"}));
+function shortWaveTargetPlan(wave,score,price,atr,bollinger){
+  if(!wave?.valid||!(price>0))return {reasonable:[],optimistic:null,optimisticEnabled:false,capPct:null,optimisticCapPct:null};
+  const maxMultiple=score>=76?2:score>=62?1.5:1,atrPct=atr&&price?atr/price*100:2,
+        capPct=stageClamp(5+atrPct*2+(score-50)*.08,5,16),optimisticCapPct=stageClamp(Math.max(capPct+12,capPct*2),12,35);
+  const future=wave.targets.filter(x=>x.value>price*1.002),reasonable=future.filter(x=>x.multiple<=maxMultiple&&x.value<=price*(1+capPct/100)).map(x=>({...x,kind:"shortwave",targetClass:"reasonable"}));
+  const lastReasonable=reasonable.at(-1)?.value??price,optMaxMultiple=score>=72?2:score>=58?1.5:1;
+  const optimistic=future.filter(x=>x.value>lastReasonable*1.002&&x.multiple<=optMaxMultiple&&x.value<=price*(1+optimisticCapPct/100)).sort((a,b)=>a.value-b.value)[0]||null;
+  const optimisticEnabled=!!optimistic&&!!(bollinger?.upwardExpansion||bollinger?.trendExpansion);
+  return {reasonable,optimistic:optimistic?{...optimistic,kind:"shortwave",targetClass:"optimistic",enabled:optimisticEnabled}:null,optimisticEnabled,capPct,optimisticCapPct};
 }
 function calculateShortEngine(r,t,breakout=playBreakoutState(r,t)){
   const rows=r?.path?.rows||stageHistory(t),price=stageNum(currentStock?.last??currentStock?.price??r?.price);if(rows.length<12||price===null)return {valid:false,state:"資料不足",score:0,tradeable:false};
   const ret1=shortReturnN(rows,1,price),ret3=shortReturnN(rows,3,price),ret5=shortReturnN(rows,5,price),ma5Slope=shortSmaSlope(rows,5,3),ma10Slope=shortSmaSlope(rows,10,3);
   const ratio20=stageNum(t?.volume?.ratio20),rsi=stageNum(t?.momentum?.rsi14),macd=shortMacdSnapshot(rows,price),kd=shortStochastic(rows),candle=shortCandleState(rows),news=shortNewsCatalyst();
-  const high20=stageHigh(rows,20),high60=stageHigh(rows,60),upper=stageNum(t?.bollinger?.upper),atr=shortAtr(rows,10),pressureTargets=[],shortWave=calculateShortWave(rows,price);
+  const high20=stageHigh(rows,20),high60=stageHigh(rows,60),upper=stageNum(t?.bollinger?.upper),atr=shortAtr(rows,10),pressureTargets=[],shortWave=calculateShortWave(rows,price),bollinger=bollingerPathSignal(rows,t,price,breakout);
   for(const [label,value] of [["20日高",high20],["布林上軌",upper],["60日高",high60]])if(Number.isFinite(value)&&value>price*1.003&&!pressureTargets.some(x=>Math.abs(x.value/value-1)<.003))pressureTargets.push({label,value,kind:"pressure"});
   if(atr&&pressureTargets.length<2){pressureTargets.push({label:"波動延伸1",value:price+atr*1.2,kind:"pressure"},{label:"波動延伸2",value:price+atr*2,kind:"pressure"})}
   pressureTargets.sort((a,b)=>a.value-b.value);const resistance=pressureTargets[0]||null,resistancePct=resistance?stagePct(resistance.value,price):null;
@@ -881,14 +928,16 @@ function calculateShortEngine(r,t,breakout=playBreakoutState(r,t)){
   score+=candle.score;if(breakout?.confirmed)score+=12;else if(breakout?.failed)score-=24;else if(breakout?.fresh)score-=4;
   if(resistancePct!==null)score+=resistancePct>=2&&resistancePct<=9?5:resistancePct<1?-5:resistancePct>12?1:0;
   if(shortWave?.valid)score+=stageClamp((shortWave.quality-50)*.10,-4,6);
+  if(bollinger?.valid){if(bollinger.upwardExpansion)score+=6;else if(bollinger.trendExpansion)score+=4;else if(bollinger.breakdown)score-=8}
   score=Math.round(playClamp(score));
-  const shortWaveTargets=shortWaveAllowedTargets(shortWave,score,price,atr),targets=[...pressureTargets];
-  for(const x of shortWaveTargets)if(!targets.some(y=>Math.abs(y.value/x.value-1)<.003))targets.push(x);targets.sort((a,b)=>a.value-b.value);
+  const shortPlan=shortWaveTargetPlan(shortWave,score,price,atr,bollinger),shortWaveTargets=shortPlan.reasonable,shortWaveOptimisticTarget=shortPlan.optimistic,targets=[...pressureTargets];
+  for(const x of shortWaveTargets)if(!targets.some(y=>Math.abs(y.value/x.value-1)<.003))targets.push(x);
+  if(shortWaveOptimisticTarget?.enabled&&!targets.some(y=>Math.abs(y.value/shortWaveOptimisticTarget.value-1)<.003))targets.push(shortWaveOptimisticTarget);targets.sort((a,b)=>a.value-b.value);
   const chaseRisk=(rsi!==null&&rsi>=80)||((ret5??0)>=18&&(rsi??0)>=74)||((ret3??0)>=8&&resistancePct!==null&&resistancePct<1.2);
   let state="偏強整理";
   if(breakout?.failed)state="疑似假突破";else if(breakout?.fresh&&!breakout?.confirmed)state="突破待確認";else if(chaseRisk)state="追價風險高";else if(breakout?.confirmed&&(breakout.age??9)<=2&&score>=58)state="剛發動";else if(score>=72&&(ret3??0)>0)state="動能加速";else if(score<48||(ret3??0)<=-4||(macd.hist!==null&&macd.hist<0&&(macd.histDelta??0)<0))state="動能轉弱";
-  const tradeable=!['疑似假突破','突破待確認','追價風險高','動能轉弱'].includes(state),shortTargetCapPct=stageClamp(5+(atr&&price?atr/price*100:2)*2+(score-50)*.08,5,16);
-  return {valid:true,state,score,tradeable,holding:"3～5交易日",ret1,ret3,ret5,ma5Slope,ma10Slope,ratio20,rsi,macd,kd,candle,news,resistance,resistancePct,support,targets:targets.slice(0,4),pressureTargets:pressureTargets.slice(0,3),shortWave,shortWaveTargets,shortTargetCapPct,breakout,chaseRisk};
+  const tradeable=!['疑似假突破','突破待確認','追價風險高','動能轉弱'].includes(state),shortTargetCapPct=shortPlan.capPct,shortOptimisticCapPct=shortPlan.optimisticCapPct;
+  return {valid:true,state,score,tradeable,holding:"3～5交易日",ret1,ret3,ret5,ma5Slope,ma10Slope,ratio20,rsi,macd,kd,candle,news,resistance,resistancePct,support,targets:targets.slice(0,5),pressureTargets:pressureTargets.slice(0,3),shortWave,shortWaveTargets,shortWaveOptimisticTarget,shortTargetCapPct,shortOptimisticCapPct,bollingerSignal:bollinger,breakout,chaseRisk};
 }
 
 
@@ -986,7 +1035,7 @@ function calculatePlayStyle(r,t){
   const stage=r.stage,sub=r.substate||"",score=stageNum(t?.analysis?.overall?.score)??50,
         rsi=stageNum(t?.momentum?.rsi14),ratio20=stageNum(t?.volume?.ratio20),vr=playValuationResult(),price=stageNum(currentStock?.last??currentStock?.price??r?.price);
   const breakout=playBreakoutState(r,t),path=r.path||{},crosses=playMaCrossCount(path.rows||[],20,20),
-        swingWave=calculateSwingWave(r,t),shortEngine=calculateShortEngine(r,t,breakout),personality=calculateStockPersonality((latestHistory5Y?.history?.length?latestHistory5Y.history:path.rows)||[]),
+        swingWave=calculateSwingWave(r,t,breakout),shortEngine=calculateShortEngine(r,t,breakout),personality=calculateStockPersonality((latestHistory5Y?.history?.length?latestHistory5Y.history:path.rows)||[]),
         targetSignal=targetPlaySignal(price),swingNews=swingNewsSignal(),longEngine=calculateLongEngine(r,t,personality,targetSignal);
   const rangeNoise=!!(r.flags?.tangled&&crosses>=3&&Math.abs(path.ret20??0)<=10);
   const overheated=stage===5||r.flags?.extremeHeat||(rsi!==null&&rsi>=80)||((r.bias20??0)>=18&&(rsi??0)>=74);
@@ -1191,9 +1240,11 @@ function renderShortAnalysis(x){
   setText("shortCandle",s.candle?.label||"--");setText("shortNews",s.news?.label||"新聞資料待補");
   setText("shortResistance",s.resistance?`${s.resistance.label} ${technicalFmt(s.resistance.value)}｜距離 ${shortFmtPct(s.resistancePct)}`:"上方暫無明確近端壓力");
   const sw=s.shortWave;setText("shortWaveStructure",sw?.valid?`${sw.state}｜結構 ${sw.quality}分｜目前 ${Number.isFinite(sw.currentMultiple)?sw.currentMultiple.toFixed(2):"--"}X`:sw?.reason||"短波結構不足");
-  const usable=s.shortWaveTargets||[];setText("shortWaveGoal",usable.length?`可採用：${usable.map(x=>`${x.label} ${technicalFmt(x.value)}`).join(" / ")}｜最大合理延伸 ${s.shortTargetCapPct?.toFixed?.(1)??"--"}%`:"目前動能／距離條件未支持更遠短波目標");
-  drawShortWave(sw,stageNum(currentStock?.last??currentStock?.price??latestFiveStageResult?.price),usable);
-  setText("playShortNote",`假突破濾網：${s.breakout?.failed?"未通過":s.breakout?.confirmed?"已確認":"無明顯失敗"}｜短波倍率由近期 20～60 日日K計算，並由動能與近端壓力限制可採用層級。`);
+  const usable=s.shortWaveTargets||[],opt=s.shortWaveOptimisticTarget,boll=s.bollingerSignal,reasonableText=usable.length?usable.map(x=>`${x.label} ${technicalFmt(x.value)}`).join(" / "):"尚無";
+  const optimisticText=opt?`${opt.label} ${technicalFmt(opt.value)}（${opt.enabled?"布林已啟用":"待布林向上張口確認"}）`:"尚無下一級結構目標";
+  setText("shortWaveGoal",`合理：${reasonableText}｜樂觀：${optimisticText}｜正常上限 ${s.shortTargetCapPct?.toFixed?.(1)??"--"}%／樂觀上限 ${s.shortOptimisticCapPct?.toFixed?.(1)??"--"}%`);
+  drawShortWave(sw,stageNum(currentStock?.last??currentStock?.price??latestFiveStageResult?.price),[...usable,...(opt?[{...opt,label:`${opt.enabled?"樂觀":"樂觀候選"} ${opt.label}`}]:[])]);
+  setText("playShortNote",`假突破濾網：${s.breakout?.failed?"未通過":s.breakout?.confirmed?"已確認":"無明顯失敗"}｜布林：${boll?.state||"資料不足"}${Number.isFinite(boll?.percentile)?`（壓縮百分位 ${boll.percentile.toFixed(0)}%）`:""}。ATR 決定正常合理範圍；窄口後向上突破並張口，才啟用下一級樂觀短波目標。`);
 }
 
 function resetSwingWave(){
@@ -1220,7 +1271,7 @@ function renderSwingWave(x){
   else if(price<w.ext20)goal=`已到 1.5X 區；其餘可能目標為 2X ${technicalFmt(w.ext20)} 或 2.5X ${technicalFmt(w.ext25)}`;
   else if(price<w.ext25)goal=`已到 2X 區；高延伸可能目標為 2.5X ${technicalFmt(w.ext25)}`;
   else goal="已超過 2.5X 參考區，優先觀察過熱與轉弱";
-  setText("playSwingGoal",`下一步：${goal}`);
+  const extText=Number.isFinite(w.extensionMax)?`｜目前布林路徑允許延伸至 ${w.extensionMax}X`:"";setText("playSwingGoal",`下一步：${goal}${extText}`);
   drawSwingWave(w,price,position);
   const legend=$("playSwingLegend");
   if(legend){
@@ -1239,7 +1290,8 @@ function renderSwingWave(x){
   const dates=w.baseDate&&w.waveDate?`${w.baseDate} → ${w.waveDate}`:"";
   const p1=w.pullbackDate?`；第一回測 ${w.pullbackDate}`:"";
   const p2=w.secondPullbackDate?`；第二回測 ${w.secondPullbackDate}`:"";
-  setText("playSwingNote",`${dates}${p1}${p2}。${w.reason} 第二次回測只作結構／防守參考，暫不重新套固定倍率。`);
+  const boll=w.bollingerPath,bollText=boll?.valid?` 布林路徑：${boll.state}${Number.isFinite(boll.percentile)?`（近120日壓縮百分位 ${boll.percentile.toFixed(0)}%）`:""}；布林只控制延伸層級與可信度，不直接當波段目標價。`:"";
+  setText("playSwingNote",`${dates}${p1}${p2}。${w.reason}${bollText} 第二次回測只作結構／防守參考，暫不重新套固定倍率。`);
 }
 
 function resetLongAnalysis(){
@@ -1329,7 +1381,7 @@ function uniqueFutureTargets(items,price){
   for(const item of items||[]){const v=positionNumber(item?.value);if(v===null||p===null||v<=p*1.002)continue;if(out.some(x=>Math.abs(x.value/v-1)<.003))continue;out.push({...item,value:v})}
   return out.sort((a,b)=>a.value-b.value);
 }
-// v2.5.9.1 — 目標共振：價格由「來源價格群聚」決定；技術／五階段只影響可達性與共振強度，不拿來平均價格。
+// v2.5.9.2 — 目標共振：布林只加入路徑/可信度，不拿布林上軌直接平均波段目標價格。
 function resonanceClamp(n,min=0,max=100){return Math.max(min,Math.min(max,Number(n)||0))}
 function resonanceBrokerQuality(main){
   if(!main)return 45;const ts=Number(main.time)||Date.parse(String(main.latest?.date||main.latest?.publishedAt||""))||0,age=ts?Math.max(0,(Date.now()-ts)/86400000):999;
@@ -1344,9 +1396,9 @@ function resonanceTolerancePct(play){
 }
 function resonancePathScore(play,target,price){
   const tech=stageNum(latestTechnicalForPlay?.analysis?.overall?.score)??50,stage=latestFiveStageResult?.stage??2,stageScore=({1:35,2:58,3:80,4:84,5:42})[stage]??55;
-  const engine=play?.key==="short"?(play?.shortEngine?.score??50):play?.key==="long"?(play?.longEngine?.score??50):(play?.swingWave?.quality??tech),gap=price>0&&target>0?(target/price-1)*100:0;
+  const engine=play?.key==="short"?(play?.shortEngine?.score??50):play?.key==="long"?(play?.longEngine?.score??50):(play?.swingWave?.quality??tech),boll=play?.key==="short"?play?.shortEngine?.bollingerSignal:play?.swingWave?.bollingerPath,bollScore=boll?.valid?(boll.score??50):50,gap=price>0&&target>0?(target/price-1)*100:0;
   let distanceScore=85;if(play?.key==="short"&&gap>16)distanceScore=25;else if(play?.key==="swing"&&gap>70)distanceScore=50;else if(play?.key==="long"&&gap>140)distanceScore=55;
-  return Math.round(resonanceClamp(tech*.32+stageScore*.28+engine*.25+distanceScore*.15));
+  return Math.round(resonanceClamp(tech*.26+stageScore*.22+engine*.22+bollScore*.20+distanceScore*.10));
 }
 function resonanceCluster(points,tolerancePct,play,price){
   const sorted=(points||[]).filter(x=>Number.isFinite(x?.value)&&x.value>price*1.002).sort((a,b)=>a.value-b.value),groups=[];
@@ -1367,11 +1419,12 @@ function buildResonanceTargets(play,price){
   const p=positionNumber(price);if(p===null)return {valid:false,points:[],clusters:[],strength:0};const points=[],add=(family,label,value,quality=65,meta={})=>{const v=positionNumber(value);if(v!==null&&v>p*1.002)points.push({family,label,value:v,quality:resonanceClamp(quality),...meta})};
   const mode=play?.key||"observe",w=play?.swingWave,se=play?.shortEngine||play?.diagnostics?.shortEngine,main=preferredMainTarget(),basis=main?targetBasis(main):null,brokerQ=resonanceBrokerQuality(main),fair=positionNumber(latestValuationScenario?.F),valuationQ=resonanceValuationQuality();
   if(mode==="short"){
-    for(const x of se?.shortWaveTargets||[])add("shortwave",x.label,x.value,se?.shortWave?.quality??70,{source:"短波倍率"});
+    for(const x of se?.shortWaveTargets||[])add("shortwave",`合理・${x.label}`,x.value,se?.shortWave?.quality??70,{source:"短波合理目標"});
+    if(se?.shortWaveOptimisticTarget?.enabled)add("shortwave",`樂觀・${se.shortWaveOptimisticTarget.label}`,se.shortWaveOptimisticTarget.value,(se?.shortWave?.quality??70)-5,{source:"短波樂觀目標"});
     for(const x of se?.pressureTargets||[])add("pressure",x.label,x.value,68,{source:"近期壓力"});
     const bo=play?.diagnostics?.breakout;if(bo?.level)add("pressure","突破位",bo.level,bo.confirmed?82:62,{source:"突破結構"});
   }else if(mode==="swing"){
-    if(w?.valid){add("swing","波段1.5X",w.ext15,w.quality,{source:"波段倍率"});add("swing","波段2X",w.ext20,w.quality-2,{source:"波段倍率"});add("swing","波段2.5X",w.ext25,w.quality-6,{source:"波段倍率"})}
+    if(w?.valid){const bAdj=((w?.bollingerPath?.score??50)-50)*.18;add("swing","波段1.5X",w.ext15,w.quality+bAdj,{source:"波段倍率"});if((w.extensionMax??2)>=2)add("swing","波段2X",w.ext20,w.quality-2+bAdj,{source:"波段倍率"});if((w.extensionMax??2)>=2.5)add("swing","波段2.5X",w.ext25,w.quality-6+bAdj,{source:"波段倍率"})}
     if(basis?.base>0){add("broker","目標價80%",basis.base*.80,brokerQ,{source:"券商目標"});add("broker","目標價85%",basis.base*.85,brokerQ-1,{source:"券商目標"});add("broker","目標價88%",basis.base*.88,brokerQ-2,{source:"券商目標"})}
     if(fair)add("valuation","內部合理價",fair,valuationQ,{source:"估值"});
   }else if(mode==="long"){
