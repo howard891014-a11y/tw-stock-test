@@ -1,4 +1,4 @@
-// v2.5.9.5 — 長期基本面 v2：EPS／營收成長、毛利率／營益率、獲利穩定度＋展望訊號；技術核心不變。
+// v2.5.9.6 — 長期基本面 v3：TWSE／TPEx 官方財報＋月營收優先，Yahoo 僅補歷史季度；技術核心不變。
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
@@ -249,7 +249,7 @@ async function history5Y(query,market){
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v2595",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v2596",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
 async function fundamentals(query,market){
@@ -1030,7 +1030,7 @@ function targetPlaySignal(price){
   return {score,label:`目標價中位空間 ${signedPercent(gap)}`,available:true,count:latest.length,gap,median:med,ageDays,ups,downs};
 }
 
-// v2.5.9.5 — 長期基本面 v2：量化財報趨勢＋展望／訂單／產能／產業訊號；上層長期權重維持不變。
+// v2.5.9.6 — 長期基本面 v3：官方財報／月營收優先；缺資料不再把剩餘權重放大。
 function longFundamentalNewsSignal(){
   const rows=Array.isArray(newsRowsCache)?newsRowsCache:[];if(!rows.length)return {score:50,label:"新聞資料待補",detail:"展望／訂單／產能資料待補",count:0,available:false};
   const cutoff=Date.now()-120*86400000,fresh=rows.filter(x=>{const t=newsTime(x);return !t||t>=cutoff}).slice(0,36);
@@ -1060,29 +1060,59 @@ function marginSignal(cur,yearAgo){
   const d=c-b,score=d>=3?86:d>=1?76:d>=0?64:d>=-1?50:d>=-3?34:20;return {available:true,score,delta:d};
 }
 function medianNums(a){const x=a.filter(Number.isFinite).sort((a,b)=>a-b);if(!x.length)return null;const m=Math.floor(x.length/2);return x.length%2?x[m]:(x[m-1]+x[m])/2}
+function fundamentalPctSignal(pct,kind="revenue"){
+  const p=valuationNum(pct);if(p===null)return {available:false,score:50,label:"--",pct:null};let score;
+  if(kind==="revenue")score=p>=30?90:p>=15?82:p>=5?72:p>=0?62:p>=-5?50:p>=-15?35:20;
+  else score=p>=50?92:p>=25?85:p>=10?76:p>=0?64:p>=-10?50:p>=-25?35:20;
+  return {available:true,score,label:signedPercent(p),pct:p};
+}
 function longQuantitativeFundamentals(v){
-  const rows=(Array.isArray(latestFundamentalData?.quarters)?latestFundamentalData.quarters:[]).filter(x=>x&&typeof x==="object");
+  const data=latestFundamentalData||{},rows=(Array.isArray(data?.quarters)?data.quarters:[]).filter(x=>x&&typeof x==="object"),off=data?.officialStatement||null,monthly=data?.monthlyRevenue||null;
   const eps=rows.map(x=>valuationNum(x.eps)),rev=rows.map(x=>valuationNum(x.revenue)),gm=rows.map(x=>valuationNum(x.grossMargin)),om=rows.map(x=>valuationNum(x.operatingMargin));
-  const latest=rows[0]||{},yoyEps=fundamentalPair(eps[0],eps[4],"eps"),qoqEps=fundamentalPair(eps[0],eps[1],"eps"),yoyRev=fundamentalPair(rev[0],rev[4],"revenue");
-  const ttmNow=eps.slice(0,4).filter(Number.isFinite),ttmPrev=eps.slice(4,8).filter(Number.isFinite),ttmPair=ttmNow.length===4&&ttmPrev.length===4?fundamentalPair(ttmNow.reduce((a,b)=>a+b,0),ttmPrev.reduce((a,b)=>a+b,0),"eps"):{available:false,score:50,label:"--",pct:null};
-  const epsSignals=[[yoyEps,.65],[qoqEps,.20],[ttmPair,.15]].filter(x=>x[0].available),epsW=epsSignals.reduce((a,x)=>a+x[1],0),epsScore=epsW?Math.round(epsSignals.reduce((a,x)=>a+x[0].score*x[1],0)/epsW):null;
-  const revYoys=[];for(let i=0;i<Math.min(4,rev.length-4);i++){const z=fundamentalPair(rev[i],rev[i+4],"revenue");if(z.available&&Number.isFinite(z.pct))revYoys.push(z.pct)}
+  const yoyEps=fundamentalPair(eps[0],eps[4],"eps"),qoqEps=fundamentalPair(eps[0],eps[1],"eps"),ttmNow=eps.slice(0,4).filter(Number.isFinite),ttmPrev=eps.slice(4,8).filter(Number.isFinite),ttmPair=ttmNow.length===4&&ttmPrev.length===4?fundamentalPair(ttmNow.reduce((a,b)=>a+b,0),ttmPrev.reduce((a,b)=>a+b,0),"eps"):{available:false,score:50,label:"--",pct:null};
+  const epsSignals=[[yoyEps,.65],[qoqEps,.20],[ttmPair,.15]].filter(x=>x[0].available),epsW=epsSignals.reduce((a,x)=>a+x[1],0),officialEps=valuationNum(off?.eps);
+  let epsScore=epsW?Math.round(epsSignals.reduce((a,x)=>a+x[0].score*x[1],0)/epsW):null;
+  if(epsScore===null&&officialEps!==null)epsScore=officialEps>0?62:officialEps===0?45:25;
+
+  const yoyRev=fundamentalPair(rev[0],rev[4],"revenue"),revYoys=[];for(let i=0;i<Math.min(4,rev.length-4);i++){const z=fundamentalPair(rev[i],rev[i+4],"revenue");if(z.available&&Number.isFinite(z.pct))revYoys.push(z.pct)}
   const revTrendPct=medianNums(revYoys),revTrendScore=revTrendPct===null?null:(revTrendPct>=20?86:revTrendPct>=10?78:revTrendPct>=3?68:revTrendPct>=0?60:revTrendPct>=-8?46:30);
-  const revenueScore=yoyRev.available?Math.round(revTrendScore===null?yoyRev.score:yoyRev.score*.7+revTrendScore*.3):null;
-  const gm0=gm[0]??null,om0=om[0]??null,gross=marginSignal(gm0,gm[4]),operating=marginSignal(om0,om[4]);
+  const quarterlyRevenueScore=yoyRev.available?Math.round(revTrendScore===null?yoyRev.score:yoyRev.score*.7+revTrendScore*.3):null;
+  const monthYoy=fundamentalPctSignal(monthly?.yoyPct,"revenue"),cumYoy=fundamentalPctSignal(monthly?.cumulativeYoyPct,"revenue");
+  const officialRevSignals=[[monthYoy,.7],[cumYoy,.3]].filter(x=>x[0].available),officialRevW=officialRevSignals.reduce((a,x)=>a+x[1],0),officialRevenueScore=officialRevW?Math.round(officialRevSignals.reduce((a,x)=>a+x[0].score*x[1],0)/officialRevW):null;
+  let revenueScore=officialRevenueScore!==null?(quarterlyRevenueScore!==null?Math.round(officialRevenueScore*.75+quarterlyRevenueScore*.25):officialRevenueScore):quarterlyRevenueScore;
+
+  const marginApplicable=off?.marginApplicable!==false,officialGm=valuationNum(off?.grossMargin),officialOm=valuationNum(off?.operatingMargin),seriesGross=marginSignal(gm[0],gm[4]),seriesOperating=marginSignal(om[0],om[4]);
+  let gross={available:false,score:50,delta:null},operating={available:false,score:50,delta:null};
+  if(marginApplicable){
+    if(seriesGross.available)gross=seriesGross;else if(officialGm!==null)gross={available:true,score:50,delta:null};
+    if(seriesOperating.available)operating=seriesOperating;else if(officialOm!==null)operating={available:true,score:50,delta:null};
+  }
+
   const posEps=eps.slice(0,8).filter(Number.isFinite),positive=posEps.filter(x=>x>0).length;let stabilityScore=null;if(posEps.length>=4){const ratio=positive/posEps.length;stabilityScore=ratio>=1?86:ratio>=.875?80:ratio>=.75?72:ratio>=.625?62:ratio>=.5?50:ratio>=.375?38:25;if(ttmPair.available)stabilityScore=playClamp(stabilityScore+(ttmPair.score>=64?5:ttmPair.score<=35?-7:0))}
-  const parts=[{k:"eps",score:epsScore,w:.30,available:epsScore!==null},{k:"revenue",score:revenueScore,w:.25,available:revenueScore!==null},{k:"gross",score:gross.score,w:.15,available:gross.available},{k:"operating",score:operating.score,w:.15,available:operating.available},{k:"stability",score:stabilityScore,w:.15,available:stabilityScore!==null}].filter(x=>x.available),sumW=parts.reduce((a,x)=>a+x.w,0);
-  let score=sumW?Math.round(playClamp(parts.reduce((a,x)=>a+x.score*x.w,0)/sumW)):null;
-  // Yahoo fundamentals 暫時拿不到時，沿用原本估值 API 的近四季 EPS，避免長期引擎整段失效。
+
   const fallbackQ=(Array.isArray(v?.latest4)?v.latest4:[]).map(x=>valuationNum(x?.eps)).filter(Number.isFinite).slice(0,4),fallbackTtm=valuationNum(v?.ttm);
-  if(score===null){let old=50,positiveQ=fallbackQ.filter(x=>x>0).length;if(fallbackTtm!==null)old+=fallbackTtm>0?8:-18;if(fallbackQ.length){old+=positiveQ===fallbackQ.length?10:positiveQ>=3?6:positiveQ===2?0:-10;const avg=fallbackQ.reduce((a,b)=>a+b,0)/fallbackQ.length;if(fallbackQ[0]!==undefined&&avg>0)old+=fallbackQ[0]>=avg*.9?3:-3}score=Math.round(playClamp(old))}
-  let coverage=0;const epsCount=eps.filter(Number.isFinite).length,revCount=rev.filter(Number.isFinite).length,gmCount=gm.filter(Number.isFinite).length,omCount=om.filter(Number.isFinite).length;
-  if(epsCount>=8)coverage+=15;else if(epsCount>=5)coverage+=11;else if(fallbackQ.length>=4)coverage+=8;if(revCount>=8)coverage+=10;else if(revCount>=5)coverage+=7;if(gmCount>=5)coverage+=5;if(omCount>=5)coverage+=5;if(posEps.length>=6)coverage+=5;
-  const epsText=epsCount>=2?`YoY ${yoyEps.label}｜QoQ ${qoqEps.label}${ttmPair.available?`｜TTM ${ttmPair.label}`:""}`:(fallbackQ.length?`近4季 ${fallbackQ.filter(x=>x>0).length}/${fallbackQ.length} 季為正${fallbackTtm!==null?`｜TTM ${valuationEpsFmt(fallbackTtm)}`:""}`:"EPS資料不足");
-  const revenueText=yoyRev.available?`YoY ${yoyRev.label}${revTrendPct!==null?`｜近4季YoY中位 ${signedPercent(revTrendPct)}`:""}`:"營收成長資料不足";
-  const marginText=gm0!==null||om0!==null?`毛利 ${gm0!==null?`${gm0.toFixed(1)}%${gross.delta!==null?` (${gross.delta>=0?"+":""}${gross.delta.toFixed(1)}pp)`:""}`:"--"}｜營益 ${om0!==null?`${om0.toFixed(1)}%${operating.delta!==null?` (${operating.delta>=0?"+":""}${operating.delta.toFixed(1)}pp)`:""}`:"--"}`:"利潤率資料不足";
-  const stabilityText=posEps.length>=4?`近${posEps.length}季 ${positive}/${posEps.length} 季EPS為正${ttmPair.available?`｜TTM ${ttmPair.label}`:""}`:"獲利穩定度資料不足";
-  return {score,coverage,rows,epsCount,revCount,gmCount,omCount,epsScore,revenueScore,grossScore:gross.available?gross.score:null,operatingScore:operating.available?operating.score:null,stabilityScore,epsText,revenueText,marginText,stabilityText,yoyEps,qoqEps,ttmPair,yoyRev,revTrendPct,latest};
+  if(epsScore===null&&fallbackQ.length){let old=50,positiveQ=fallbackQ.filter(x=>x>0).length;if(fallbackTtm!==null)old+=fallbackTtm>0?8:-18;old+=positiveQ===fallbackQ.length?10:positiveQ>=3?6:positiveQ===2?0:-10;epsScore=Math.round(playClamp(old))}
+  if(stabilityScore===null&&fallbackQ.length>=4){const r=fallbackQ.filter(x=>x>0).length/fallbackQ.length;stabilityScore=r===1?80:r>=.75?68:r>=.5?50:30}
+
+  // 一般業固定保留完整權重；缺一欄給中性 50，不把剩餘欄位放大。金融／金控／保險等毛利率不適用，使用明確的產業版權重。
+  let weights;
+  if(off&&off.marginApplicable===false)weights=[['eps',epsScore,.40],['revenue',revenueScore,.30],['stability',stabilityScore,.30]];
+  else weights=[['eps',epsScore,.30],['revenue',revenueScore,.25],['gross',gross.available?gross.score:null,.15],['operating',operating.available?operating.score:null,.15],['stability',stabilityScore,.15]];
+  const score=Math.round(playClamp(weights.reduce((a,x)=>a+(x[1]??50)*x[2],0)));
+
+  const epsCount=eps.filter(Number.isFinite).length,revCount=rev.filter(Number.isFinite).length,gmCount=gm.filter(Number.isFinite).length,omCount=om.filter(Number.isFinite).length;
+  let coverage=0;if(epsCount>=8)coverage+=15;else if(epsCount>=5)coverage+=11;else if(officialEps!==null||fallbackQ.length>=4)coverage+=8;
+  if(monthYoy.available||cumYoy.available)coverage+=10;else if(revCount>=5)coverage+=7;
+  if(off){if(off.marginApplicable===false)coverage+=10;else{if(officialGm!==null||gmCount>=5)coverage+=5;if(officialOm!==null||omCount>=5)coverage+=5}}
+  else{if(gmCount>=5)coverage+=5;if(omCount>=5)coverage+=5}
+  if(posEps.length>=6||fallbackQ.length>=4)coverage+=5;coverage=Math.min(40,coverage);
+
+  const epsText=epsCount>=2?`YoY ${yoyEps.label}｜QoQ ${qoqEps.label}${ttmPair.available?`｜TTM ${ttmPair.label}`:""}`:officialEps!==null?`官方累計 EPS ${valuationEpsFmt(officialEps)}${off?.period?`｜${off.period}`:""}`:(fallbackQ.length?`近4季 ${fallbackQ.filter(x=>x>0).length}/${fallbackQ.length} 季為正${fallbackTtm!==null?`｜TTM ${valuationEpsFmt(fallbackTtm)}`:""}`:"EPS資料不足");
+  let revenueText="營收成長資料不足";if(monthYoy.available||cumYoy.available)revenueText=`月營收 YoY ${monthYoy.label}${cumYoy.available?`｜累計 YoY ${cumYoy.label}`:""}${monthly?.period?`｜${monthly.period}`:""}`;else if(yoyRev.available)revenueText=`季營收 YoY ${yoyRev.label}${revTrendPct!==null?`｜近4季YoY中位 ${signedPercent(revTrendPct)}`:""}`;
+  let marginText;if(off?.marginApplicable===false)marginText=`${off?.financialTypeLabel||"金融類"}｜毛利率／營益率不適用`;else if(officialGm!==null||officialOm!==null)marginText=`毛利 ${officialGm!==null?`${officialGm.toFixed(1)}%`:"--"}｜營益 ${officialOm!==null?`${officialOm.toFixed(1)}%`:"--"}｜官方累計${off?.period?` ${off.period}`:""}`;else if(gm[0]!==null||om[0]!==null)marginText=`毛利 ${gm[0]!==null?`${gm[0].toFixed(1)}%${seriesGross.delta!==null?` (${seriesGross.delta>=0?"+":""}${seriesGross.delta.toFixed(1)}pp)`:""}`:"--"}｜營益 ${om[0]!==null?`${om[0].toFixed(1)}%${seriesOperating.delta!==null?` (${seriesOperating.delta>=0?"+":""}${seriesOperating.delta.toFixed(1)}pp)`:""}`:"--"}`;else marginText="利潤率資料不足";
+  const stabilityText=posEps.length>=4?`近${posEps.length}季 ${positive}/${posEps.length} 季EPS為正${ttmPair.available?`｜TTM ${ttmPair.label}`:""}`:fallbackQ.length>=4?`近4季 ${fallbackQ.filter(x=>x>0).length}/4 季EPS為正`:"獲利穩定度資料不足";
+  const sourceText=data?.source||([off||monthly?"TWSE／TPEx官方":"",rows.length?"Yahoo歷史補充":""].filter(Boolean).join("＋")||"基本面來源待補");
+  return {score,coverage,rows,epsCount,revCount,gmCount,omCount,epsScore,revenueScore,grossScore:gross.available?gross.score:null,operatingScore:operating.available?operating.score:null,stabilityScore,epsText,revenueText,marginText,stabilityText,yoyEps,qoqEps,ttmPair,yoyRev,revTrendPct,latest:rows[0]||{},officialStatement:off,monthlyRevenue:monthly,sourceText};
 }
 function calculateLongEngine(r,t,personality=null,targetSignal=null){
   const v=latestValuationData||{},scenario=latestValuationScenario,rows=r?.path?.rows||stageHistory(t),path=r?.path||{},fund=longQuantitativeFundamentals(v),earnings=fund.score;
@@ -1394,7 +1424,7 @@ function renderLongAnalysis(x){
   const box=$("playLongAnalysis");if(!box)return;if(!["long","long-swing"].includes(x?.key)){resetLongAnalysis();return}box.hidden=false;
   const l=x?.longEngine;if(!l?.valid){setText("playLongState","資料不足");return}setText("playLongState",`${l.state}｜玩法適配 ${x.scores?.long??l.score}分`);setText("playLongData",`資料完整度 ${l.completeness}%｜不是勝率`);
   setText("longEarnings",l.earningsText||"--");setText("longRevenue",l.revenueText||"--");setText("longMargins",l.marginText||"--");setText("longStability",l.stabilityText||"--");setText("longValuation",l.valuationText||"--");setText("longTrend",l.trendText||"--");setText("longNews",l.news?.detail||l.news?.label||"展望／訂單／產能資料待補");
-  setText("playLongNote","基本面30%內已納入 EPS 年增／季增、營收年增趨勢、毛利率／營益率變化與獲利穩定度；展望／訂單／產能／產業訊號由近期基本面新聞輔助。資料完整度只顯示、不加分。");
+  setText("playLongNote",`基本面主來源：${l.fundamentals?.sourceText||"TWSE／TPEx 官方"}。一般業缺欄位採中性值，不會把剩餘權重放大；金融／金控／保險使用不含毛利率的適用權重。資料完整度只顯示、不加分。`);
 }
 
 function playEligibilityReason(key,x){
