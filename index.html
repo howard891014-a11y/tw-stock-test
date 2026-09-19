@@ -930,7 +930,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .expected-target>em{display:block;margin-top:5px;color:#75d9a6;font-size:10px;font-style:normal;min-height:1.2em}
 .expected-foot,.decision-foot{display:block;margin-top:9px;color:#71899d;font-size:10px;line-height:1.45}
 .decision-position-note{margin:-4px 0 10px;padding:8px 10px;border:1px solid #233e55;border-radius:9px;background:#0a1826;color:#95a9bc;font-size:11px;line-height:1.45}
-.decision-grid-v2>div{min-height:95px;justify-content:center}
+.decision-grid-v2>div{min-height:95px;justify-content:center}.decision-grid-v3>div{min-height:104px}
 .decision-grid-v2 small{color:#8fa3b7;font-size:10px;line-height:1.35}
 .holding-profile{grid-column:1/-1!important;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:7px;align-items:end;padding-top:9px;margin-top:1px;border-top:1px solid #1d3449}
 .holding-profile label{display:flex;flex-direction:column;gap:4px;color:#7f93a6;font-size:10px}
@@ -942,7 +942,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 @media(max-width:720px){
  .expected-position{grid-template-columns:1fr 1fr 1fr;gap:5px;padding:8px 5px}.expected-position span{font-size:9px}.expected-position b{font-size:12px}
  .expected-target-grid{grid-template-columns:1fr;gap:7px}.expected-target{display:grid;grid-template-columns:minmax(84px,.8fr) 1fr 1fr;align-items:center;text-align:left;padding:10px}.expected-target>span,.expected-target>strong,.expected-target>small{margin:0}.expected-target>strong{text-align:center;font-size:18px}.expected-target>small{text-align:right}.expected-target>em{grid-column:1/-1;text-align:right;margin-top:3px}
- .decision-grid-v2{grid-template-columns:1fr 1fr!important}.decision-grid-v2>div{min-height:92px;padding:11px 8px}.decision-grid-v2 strong{font-size:15px}.decision-grid-v2 small{font-size:9px}
+ .decision-grid-v2{grid-template-columns:1fr 1fr!important}.decision-grid-v2>div{min-height:92px;padding:11px 8px}.decision-grid-v2 strong{font-size:15px}.decision-grid-v2 small{font-size:9px}.decision-grid-v3>div.stop{background:rgba(39,18,22,.92)}
  .holding-profile{grid-template-columns:1fr 1fr 58px!important;gap:5px!important}.holding-profile input{height:32px;padding:0 6px}.holding-profile button{height:32px;padding:0 7px;font-size:11px}
 }
 </style>
@@ -972,7 +972,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .overview-resonance-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}.overview-resonance-metrics>div{min-width:0;padding:10px 11px;border:1px solid #203d56;border-radius:11px;background:rgba(5,17,30,.62)}.overview-resonance-metrics span{display:block;color:#7890a5;font-size:9px}.overview-resonance-metrics strong{display:block;margin-top:5px;color:#f3f8ff;font-size:17px;overflow-wrap:anywhere}.overview-resonance-metrics>div:nth-child(1) strong{color:#bf8cff}.overview-resonance-metrics>div:nth-child(2) strong{color:#69d9ff}.overview-resonance-metrics>div:nth-child(3) strong{color:#ffb06a}.overview-resonance-metrics>div:nth-child(4) strong{color:#d49aff}.overview-resonance-metrics small{display:block;margin-top:4px;color:#667f95;font-size:8px;line-height:1.35}
 .overview-wave-shell{margin-top:12px;padding:10px 8px 4px;border:1px solid #1e3d55;border-radius:14px;background:linear-gradient(180deg,rgba(4,15,26,.92),rgba(7,24,38,.72));overflow:hidden}.overview-wave-shell svg{display:block;width:100%;height:auto;min-height:270px}.overview-wave-grid{stroke:#17364d;stroke-width:1;stroke-dasharray:4 6}.overview-wave-label{font-size:11px;font-weight:800}.overview-wave-price{font-size:13px;font-weight:800}.overview-wave-tag-box{paint-order:stroke}.overview-wave-tag-title{font-size:11px;font-weight:800;letter-spacing:.02em}.overview-wave-tag-price{font-size:14px;font-weight:900}.overview-wave-zone-title{font-size:11px;font-weight:800}.overview-wave-support-guide{stroke:#2d8fce;stroke-width:1.2;stroke-dasharray:5 5;opacity:.65}.overview-wave-zone{paint-order:stroke}
 .overview-source-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.overview-source-chips span{padding:5px 8px;border:1px solid #294861;border-radius:999px;background:#081827;color:#91aec3;font-size:9px;line-height:1.2}
-.overview-decision-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.overview-decision-row>div{min-width:0;padding:10px;border:1px solid #29435a;border-radius:10px;background:#091725}.overview-decision-row span{display:block;color:#7f98ad;font-size:9px}.overview-decision-row strong{display:block;margin-top:6px;font-size:12px;line-height:1.35;color:#eaf5ff;overflow-wrap:anywhere}.overview-decision-row>div:nth-child(1){border-color:#265576}.overview-decision-row>div:nth-child(2){border-color:#2c6b68}.overview-decision-row>div:nth-child(3){border-color:#685982}.overview-decision-row>div:nth-child(4){border-color:#74475d}
+.overview-decision-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.overview-decision-row>div{min-width:0;padding:10px;border:1px solid #29435a;border-radius:10px;background:#091725}.overview-decision-row span{display:block;color:#7f98ad;font-size:9px}.overview-decision-row strong{display:block;margin-top:6px;font-size:12px;line-height:1.35;color:#eaf5ff;overflow-wrap:anywhere}.overview-decision-row>div:nth-child(1){border-color:#265576}.overview-decision-row>div:nth-child(2){border-color:#2c6b68}.overview-decision-row>div:nth-child(3){border-color:#685982}.overview-decision-row>div:nth-child(4){border-color:#74475d}.overview-decision-row>div:nth-child(5){border-color:#7f6431}.overview-decision-row>div:nth-child(6){border-color:#8a4653}
 .overview-final-line{display:grid;grid-template-columns:.8fr 1.5fr 1.15fr 1.1fr;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #1e3447}.overview-final-line>div{min-width:0}.overview-final-line span{display:block;color:#607b91;font-size:8px}.overview-final-line b{display:block;margin-top:3px;color:#aebfd0;font-size:9px;line-height:1.4;overflow-wrap:anywhere}
 .short-wave-mini{margin-top:9px;padding:9px;border:1px solid #234d68;border-radius:11px;background:#071724;overflow:hidden}.short-wave-mini-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 8px;align-items:center}.short-wave-mini-head>span{color:#61d6ff;font-size:11px;font-weight:800}.short-wave-mini-head>b{color:#e9f7ff;font-size:10px;overflow-wrap:anywhere}.short-wave-mini-head>small{grid-column:1/-1;color:#7f9ab0;font-size:9px;line-height:1.4}.short-wave-mini svg{display:block;width:100%;height:auto;min-height:150px;margin-top:5px}.short-wave-grid{stroke:#183247;stroke-width:1;stroke-dasharray:2 5}.short-wave-label{fill:#bdd7e8;font-size:10px;font-weight:700}.short-wave-target-line{stroke:#76569a;stroke-width:1;stroke-dasharray:4 5}.short-wave-target-label{fill:#caa0ff;font-size:9px;font-weight:700}
 @media(max-width:720px){
@@ -1077,6 +1077,8 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             <div><span>② 大量進場</span><strong id="overviewEntryPrice">--</strong></div>
             <div><span>③ 減碼／止盈</span><strong id="overviewTrimPrice">--</strong></div>
             <div><span>④ 出場／獲利</span><strong id="overviewExitPrice">--</strong></div>
+            <div><span>⑤ 減碼止損</span><strong id="overviewTrimStopPrice">--</strong></div>
+            <div><span>⑥ 全部止損</span><strong id="overviewFullStopPrice">--</strong></div>
           </div>
           <footer class="overview-final-line">
             <div><span>方向</span><b id="overviewFinalDirection">--</b></div>
@@ -1296,11 +1298,13 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <article class="card decision-card detail-panel" id="decision" data-view-panel="analysis">
           <div class="card-title">買賣決策 <span class="badge" id="decisionModeBadge">依玩法</span> <span class="badge decision-risk-badge" id="decisionRiskBadge">風險 --</span></div>
           <div class="decision-position-note" id="decisionPositionNote">等待玩法與持股資料</div>
-          <div class="decision-grid decision-grid-v2">
+          <div class="decision-grid decision-grid-v2 decision-grid-v3">
             <div class="buy"><span>小量試單</span><strong id="decisionTrialPrice">--</strong><small id="decisionTrialNote">--</small></div>
             <div class="buy"><span>大量進場</span><strong id="decisionEntryPrice">--</strong><small id="decisionEntryNote">--</small></div>
             <div class="trim"><span>減碼／止盈</span><strong id="decisionTrimPrice">--</strong><small id="decisionTrimNote">--</small></div>
             <div class="sell"><span>出場／獲利</span><strong id="decisionExitPrice">--</strong><small id="decisionExitNote">--</small></div>
+            <div class="trim stop"><span>減碼止損</span><strong id="decisionTrimStopPrice">--</strong><small id="decisionTrimStopNote">--</small></div>
+            <div class="sell stop"><span>全部止損</span><strong id="decisionFullStopPrice">--</strong><small id="decisionFullStopNote">--</small></div>
           </div>
           <small class="decision-foot" id="decisionFoot">價格來自目前玩法的結構與目標區；持股股數只用來換算分批數量，不改變市場目標價。</small>
         </article>

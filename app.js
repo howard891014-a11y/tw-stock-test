@@ -1762,7 +1762,7 @@ function renderOverviewResonance(play,expected,decision,risk=null){
   else{setText("overviewResonanceStrengthLabel","目標依據");setText("overviewResonanceStrength","等待目標");setText("overviewResonanceStrengthNote","目前沒有高於現價的可用價格來源")}
   const main=expected?.plan?.levels?.[0]?.value,up=main?positionReturn(main,expected.price):null,down=expected?.downside?.levels?.[0]?.value?positionReturn(expected.downside.levels[0].value,expected.price):null;
   setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?technicalFmt(main):"--"));
-  setText("overviewTrialPrice",targetZoneText(decision?.trial));setText("overviewEntryPrice",decisionEntryText(decision));setText("overviewTrimPrice",targetZoneText(decision?.trim));setText("overviewExitPrice",targetZoneText(decision?.exit));
+  setText("overviewTrialPrice",targetZoneText(decision?.trial));setText("overviewEntryPrice",decisionEntryText(decision));setText("overviewTrimPrice",targetZoneText(decision?.trim));setText("overviewExitPrice",targetZoneText(decision?.exit));setText("overviewTrimStopPrice",targetZoneText(decision?.trimStop));setText("overviewFullStopPrice",targetZoneText(decision?.fullStop));
   setText("overviewFinalDirection",`${play.period||"--"}｜${play.action||"等待訊號"}`);setText("overviewFinalStrategy",`${decision?.mode||play.period||"--"}｜依目標節點與確認條件分批`);
   const ex=expected?.winRate?.extreme,setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",ex?.valid&&risk?.valid?`${riskText}｜極端壓力 ${signedPercent(ex.far)}`:(risk?.valid?riskText:setRisk));setText("overviewFinalNext",risk?.exitTriggered?"走壞出場條件成立，先處理風險":risk?.trimTriggered?"走壞減碼條件成立，先降部位":main?`先看 ${expected.plan.levels[0].label} ${technicalFmt(main)}`:"等待新目標來源");
   const host=$("overviewResonanceSources");if(host){host.replaceChildren();const pts=mainCluster?.points||[];const families=new Map();for(const x of pts){if(!families.has(x.family))families.set(x.family,[]);families.get(x.family).push(x)}for(const [family,a] of families){const chip=document.createElement("span");const name={swing:"波段倍率",broker:"券商目標",valuation:"內部估值",shortwave:"短波倍率",pressure:"前高／壓力"}[family]||family;chip.textContent=`${name}｜${a.map(x=>x.label).join("・")}`;host.append(chip)}if(expected?.winRate?.valid){const chip=document.createElement("span");chip.textContent=`5年相似訊號｜${expected.winRate.rate}%・${expected.winRate.sample}次`;host.append(chip)}if(!families.size){const chip=document.createElement("span");chip.textContent="等待可用價格來源";host.append(chip)}}
@@ -1773,7 +1773,7 @@ function resetTradeOutputs(note="等待分析資料"){
   setText("overviewExpectedUpside","--%");setText("overviewExpectedUpsideNote",note);setText("expectedModeBadge","依玩法");setText("expectedBasisLabel","現價基準");setText("expectedRange","--%");setText("expectedDownsideRange","--%");setText("expectedWinRate","--");setText("expectedWinRateNote","樣本不足");setText("expectedExtremeRisk","--%");setText("expectedExtremeRiskNote","系統性崩壞壓力測試");setText("expectedSeasonalityNote","季節性：等待五年資料");setText("expectedBasisNote",note);setText("expectedFoot","持股會改用均價計算報酬與預估損益；觀察股維持現價基準。勝率是同檔歷史相似訊號回測，不代表未來機率。");
   const pos=$("expectedPositionSummary");if(pos)pos.hidden=true;
   for(let i=1;i<=3;i++){const box=$(`expectedTarget${i}`);if(box)box.hidden=i>1;setText(`expectedT${i}Label`,i===1?"第一目標":i===2?"主要目標":"樂觀目標");setText(`expectedT${i}Price`,"--");setText(`expectedT${i}Return`,"--");setText(`expectedT${i}Profit`,"")}
-  setText("decisionModeBadge","依玩法");setText("decisionRiskBadge","風險 --");const rb=$("decisionRiskBadge");if(rb)rb.classList.remove("risk-low","risk-medium","risk-high","risk-extreme");setText("decisionPositionNote",note);for(const id of ["decisionTrialPrice","decisionEntryPrice","decisionTrimPrice","decisionExitPrice"])setText(id,"--");for(const id of ["decisionTrialNote","decisionEntryNote","decisionTrimNote","decisionExitNote"])setText(id,"--");
+  setText("decisionModeBadge","依玩法");setText("decisionRiskBadge","風險 --");const rb=$("decisionRiskBadge");if(rb)rb.classList.remove("risk-low","risk-medium","risk-high","risk-extreme");setText("decisionPositionNote",note);for(const id of ["decisionTrialPrice","decisionEntryPrice","decisionTrimPrice","decisionExitPrice","decisionTrimStopPrice","decisionFullStopPrice","overviewTrialPrice","overviewEntryPrice","overviewTrimPrice","overviewExitPrice","overviewTrimStopPrice","overviewFullStopPrice"])setText(id,"--");for(const id of ["decisionTrialNote","decisionEntryNote","decisionTrimNote","decisionExitNote","decisionTrimStopNote","decisionFullStopNote"])setText(id,"--");
 }
 function renderExpectedUpside(play=latestPlayStyleResult){
   const price=positionNumber(currentStock?.last??currentStock?.price??latestFiveStageResult?.price);if(price===null){resetTradeOutputs("等待股價資料");return null}
@@ -1851,12 +1851,21 @@ function buildDecisionRisk(play,price,expected){
         summary=reasons.length?reasons.slice(0,4).join("｜"):"結構未見明顯風險訊號";
   return {valid:true,score,level,reasons,strong,summary,trimTriggered,exitTriggered,trimRef,exitRef,support,candle,below5,below10,below20,below60,supportLoss,macdState:macdLife?.state??null,bollBreakdown:!!boll?.breakdown,stage,fairGap};
 }
+function decisionStopZone(ref,level="trim"){
+  const c=positionNumber(ref);if(c===null)return null;
+  return level==="full"?targetZone(c,.992,1.002):targetZone(c,.995,1.005);
+}
 function applyDecisionRisk(base,risk,price){
   if(!base||!risk?.valid)return base;const p=positionNumber(price);if(p===null)return {...base,risk};
-  const out={...base,risk,profitTrim:base.trim,profitExit:base.exit},profitTrimText=targetZoneText(base.trim),profitExitText=targetZoneText(base.exit);
-  if(risk.exitTriggered){out.exit=targetZone(p,.992,1.008);out.trim=targetZone(p,.992,1.008);out.defenseMode="exit";out.trimNote=`風險已升高，先進入防守減碼｜${risk.summary}${profitTrimText!=="--"?`｜原止盈目標 ${profitTrimText}`:""}`;out.exitNote=`走壞型出場條件成立｜${risk.summary}${profitExitText!=="--"?`｜原獲利目標 ${profitExitText} 退居次要`:""}`;}
-  else if(risk.trimTriggered){out.trim=targetZone(p,.992,1.008);out.defenseMode="trim";out.trimNote=`走壞型減碼條件成立｜${risk.summary}${profitTrimText!=="--"?`｜原止盈目標 ${profitTrimText} 仍保留`:""}`;out.exitNote=`尚未達強制出場；防守線 ${technicalFmt(risk.exitRef)}${profitExitText!=="--"?`｜原獲利目標 ${profitExitText}`:""}`;}
-  else{out.defenseMode="normal";out.trimNote=`${base.trimNote}｜防守減碼尚未觸發${risk.trimRef?`（參考 ${technicalFmt(risk.trimRef)}）`:""}`;out.exitNote=`${base.exitNote}｜走壞出場尚未觸發${risk.exitRef?`（防守 ${technicalFmt(risk.exitRef)}）`:""}`;}
+  const out={...base,risk,profitTrim:base.trim,profitExit:base.exit};
+  out.trimStop=decisionStopZone(risk.trimRef??risk.support??p,"trim");
+  out.fullStop=decisionStopZone(risk.exitRef??risk.support??risk.trimRef??p,"full");
+  out.defenseMode=risk.exitTriggered?"exit":risk.trimTriggered?"trim":"normal";
+  const trimStopTxt=targetZoneText(out.trimStop),fullStopTxt=targetZoneText(out.fullStop);
+  out.trimNote=`${base.trimNote}${risk.trimTriggered?`｜已觸發風險減碼，優先看「減碼止損」 ${trimStopTxt}`:`｜未觸發止損，防守參考看「減碼止損」 ${trimStopTxt}`}`;
+  out.exitNote=`${base.exitNote}${risk.exitTriggered?`｜已觸發全面防守，優先看「全部止損」 ${fullStopTxt}`:`｜走壞出場未觸發，全面防守參考 ${fullStopTxt}`}`;
+  out.trimStopNote=risk.trimTriggered?`減碼止損已觸發｜${risk.summary}｜先依 ${trimStopTxt} 防守減碼`:`跌破 ${technicalFmt(risk.trimRef)} 附近先做防守減碼${risk.trimRef&&risk.trimRef<p?"｜現價已逼近/跌破防守線":""}`;
+  out.fullStopNote=risk.exitTriggered?`全部止損已觸發｜${risk.summary}｜依 ${fullStopTxt} 優先退出`:`跌破 ${technicalFmt(risk.exitRef)} 且主要支撐失守時，依 ${fullStopTxt} 全部止損`;
   return out;
 }
 
@@ -1935,16 +1944,19 @@ function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
   setText("decisionModeBadge",`${position?.avgCost?"持股｜":""}${d.mode}`);setText("decisionRiskBadge",risk?.valid?`風險 ${risk.level.label} ${risk.score}`:"風險 --");const riskBadge=$("decisionRiskBadge");if(riskBadge){riskBadge.classList.remove("risk-low","risk-medium","risk-high","risk-extreme");if(risk?.valid)riskBadge.classList.add(`risk-${risk.level.key}`)}
   const split=profile?(profile.key==="long-swing"?`｜部位：長期核心 ${profile.basePct}%／波段倉 ${profile.tacticalPct}%`:profile.key==="mixed"?`｜部位：底倉 ${profile.basePct}%／機動 ${profile.tacticalPct}%`:`｜部位：核心 ${profile.basePct}%／機動 ${profile.tacticalPct}%`):"";
   if(position){const pnl=position.avgCost&&position.shares?(price-position.avgCost)*position.shares:null,pct=position.avgCost?positionReturn(price,position.avgCost):null;setText("decisionPositionNote",`持股均價 ${position.avgCost?technicalFmt(position.avgCost):"未填"}｜${position.shares?`${position.shares.toLocaleString("zh-TW")} 股`:"股數未填"}${pnl===null?"":`｜目前 ${signedMoney(pnl)}（${signedPercent(pct)}）`}${split}`)}else setText("decisionPositionNote",`未在持股清單：依目前股價與市場結構計算${split}；觀察清單不套用個人持股資料。`);
-  setText("decisionTrialPrice",targetZoneText(d.trial));setText("decisionEntryPrice",decisionEntryText(d));setText("decisionTrimPrice",targetZoneText(d.trim));setText("decisionExitPrice",targetZoneText(d.exit));
+  setText("decisionTrialPrice",targetZoneText(d.trial));setText("decisionEntryPrice",decisionEntryText(d));setText("decisionTrimPrice",targetZoneText(d.trim));setText("decisionExitPrice",targetZoneText(d.exit));setText("decisionTrimStopPrice",targetZoneText(d.trimStop));setText("decisionFullStopPrice",targetZoneText(d.fullStop));
   let trimNote=d.trimNote,exitNote=d.exitNote;
   if(position?.shares){
     if(["mixed","long-swing"].includes(profile?.key)){const baseQty=Math.round(position.shares*profile.basePct/100),tacticalQty=Math.max(0,position.shares-baseQty),firstTrim=Math.max(1,Math.floor(tacticalQty*.5));trimNote+=`｜${profile.key==="long-swing"?"波段倉":"機動倉"}約 ${tacticalQty.toLocaleString("zh-TW")} 股，先減約 ${firstTrim.toLocaleString("zh-TW")} 股`;exitNote+=`｜${profile.key==="long-swing"?"長期核心":"底倉"}約 ${baseQty.toLocaleString("zh-TW")} 股，不因一般短期震盪強制賣出`}
     else if(position.shares>=4){const trimQty=Math.max(1,Math.floor(position.shares*.25)),remain=Math.max(0,position.shares-trimQty);trimNote+=`｜參考 25% = ${trimQty.toLocaleString("zh-TW")} 股`;exitNote+=`｜其餘 ${remain.toLocaleString("zh-TW")} 股`}
     else{trimNote+="｜股數較少，不強制切 25%";exitNote+=`｜共 ${position.shares.toLocaleString("zh-TW")} 股`}
   }
-  const trimMid=d.trim?(d.trim[0]+d.trim[1])/2:null,exitMid=d.exit?(d.exit[0]+d.exit[1])/2:null;
+  const trimMid=d.trim?(d.trim[0]+d.trim[1])/2:null,exitMid=d.exit?(d.exit[0]+d.exit[1])/2:null,trimStopMid=d.trimStop?(d.trimStop[0]+d.trimStop[1])/2:null,fullStopMid=d.fullStop?(d.fullStop[0]+d.fullStop[1])/2:null;
   if(position?.avgCost&&trimMid&&trimMid<position.avgCost)trimNote+="｜此區仍低於你的均價";if(position?.avgCost&&exitMid&&exitMid<position.avgCost)exitNote+="｜此區仍低於你的均價";
-  setText("decisionTrialNote",position?`${d.trialNote}；已有持股時視為加碼參考`:d.trialNote);setText("decisionEntryNote",d.entryNote);setText("decisionTrimNote",trimNote);setText("decisionExitNote",exitNote);
+  let trimStopNote=d.trimStopNote,fullStopNote=d.fullStopNote;
+  if(position?.shares){if(position.shares>=4){const trimQty=Math.max(1,Math.floor(position.shares*.25)),fullQty=position.shares;trimStopNote+=`｜先防守約 ${trimQty.toLocaleString("zh-TW")} 股`;fullStopNote+=`｜全部 ${fullQty.toLocaleString("zh-TW")} 股`; } else {trimStopNote+="｜股數較少，可用更保守方式處理";fullStopNote+=`｜共 ${position.shares.toLocaleString("zh-TW")} 股`;}}
+  if(position?.avgCost&&trimStopMid&&trimStopMid<position.avgCost)trimStopNote+="｜此區低於你的均價";if(position?.avgCost&&fullStopMid&&fullStopMid<position.avgCost)fullStopNote+="｜此區低於你的均價";
+  setText("decisionTrialNote",position?`${d.trialNote}；已有持股時視為加碼參考`:d.trialNote);setText("decisionEntryNote",d.entryNote);setText("decisionTrimNote",trimNote);setText("decisionExitNote",exitNote);setText("decisionTrimStopNote",trimStopNote);setText("decisionFullStopNote",fullStopNote);
   const riskFoot=risk?.valid?` 風險 ${risk.level.label} ${risk.score}/100：${risk.summary}。`:"";setText("decisionFoot",(profile?`${profile.label}：${profile.note}。價格仍由市場結構／估值決定，持股資料只調整報酬與分批股數。`:"價格來自目前玩法的結構與目標區；持股股數只用來換算分批數量，不改變市場目標價。")+riskFoot);
   return d;
 }
