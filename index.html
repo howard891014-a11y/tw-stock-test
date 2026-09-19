@@ -962,7 +962,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 </style>
 
 <style id="v2592-resonance-overview">
-/* v2.5.9.2 — 總覽只保留結論、價格、路徑與操作；上半部股票 header/tabs 完全不動 */
+/* v2.5.9.3 — 總覽只保留結論、價格、路徑與操作；上半部股票 header/tabs 完全不動 */
 .overview-outline[data-view-panel="overview"].active-view{grid-template-columns:minmax(0,1fr)!important}
 .overview-resonance-card{position:relative;overflow:hidden;padding:18px;border-color:#27496a;background:radial-gradient(circle at 74% 18%,rgba(150,82,255,.13),transparent 34%),radial-gradient(circle at 18% 20%,rgba(58,158,255,.12),transparent 32%),linear-gradient(155deg,#0b1a2b,#081421 72%);box-shadow:inset 0 0 0 1px rgba(102,178,255,.03)}
 .overview-resonance-card:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(97,178,255,.025),transparent)}
@@ -1007,7 +1007,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.9.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.9.3</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1063,10 +1063,10 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
             <b id="overviewResonancePlay">等待資料</b>
           </header>
           <div class="overview-resonance-metrics">
-            <div><span>共振強度</span><strong id="overviewResonanceStrength">-- / 100</strong><small id="overviewResonanceStrengthNote">等待分析資料</small></div>
-            <div><span>預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要共振對現價</small></div>
+            <div><span id="overviewResonanceStrengthLabel">共振強度</span><strong id="overviewResonanceStrength">--</strong><small id="overviewResonanceStrengthNote">等待分析資料</small></div>
+            <div><span>預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
             <div><span>正常下跌空間</span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
-            <div><span>主要共振區</span><strong id="overviewTargetZone">--</strong><small>來源群聚後的價格區</small></div>
+            <div><span>主要目標區</span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
           </div>
           <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 340" role="img" aria-label="共振價格路徑"></svg></div>
           <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
