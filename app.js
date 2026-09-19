@@ -1,4 +1,4 @@
-// v2.5.9.8 — 長期基本面空值修復＋渲染隔離；技術核心與後端不變。
+// v2.5.9.9 — 決策價格常駐顯示＋錯過試單區後動態抬高新支撐；技術核心與後端不變。
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
@@ -1505,7 +1505,7 @@ function signedMoney(v){const n=Number(v);return Number.isFinite(n)?`${n>=0?"+":
 function positionReturn(target,base){const t=positionNumber(target),b=positionNumber(base);return t!==null&&b!==null?(t/b-1)*100:null}
 function targetZone(center,lo=.99,hi=1.01){const c=positionNumber(center);if(c===null)return null;return [c*lo,c*hi].sort((a,b)=>a-b)}
 function targetZoneText(zone){return Array.isArray(zone)&&zone.length===2?`${technicalFmt(zone[0])} ～ ${technicalFmt(zone[1])}`:"--"}
-function decisionEntryText(d){return d?.entry?targetZoneText(d.entry):d?.entryCandidate?`待確認｜${targetZoneText(d.entryCandidate)}`:"--"}
+function decisionEntryText(d){return targetZoneText(d?.entryCandidate??d?.entry)}
 function uniqueFutureTargets(items,price){
   const p=positionNumber(price),out=[];
   for(const item of items||[]){const v=positionNumber(item?.value);if(v===null||p===null||v<=p*1.002)continue;if(out.some(x=>Math.abs(x.value/v-1)<.003))continue;out.push({...item,value:v})}
@@ -1764,6 +1764,29 @@ function renderExpectedUpside(play=latestPlayStyleResult){
 }
 
 // v2.5.9.4 — 大量進場：結構、布林、MACD 動能週期、量能、五階段共同確認。
+// v2.5.9.9 — 價格與策略分離：價位持續顯示；策略只描述目前是否可執行。
+function decisionTrialState(zone,price){
+  const p=positionNumber(price);if(!Array.isArray(zone)||zone.length!==2||p===null)return "試單條件待補";
+  const [lo,hi]=zone;if(p>=lo&&p<=hi)return "現價進入試單區，可小量分批";
+  if(p>hi)return "現價已離開試單區，不追價";
+  return "現價低於試單區，等重新站回支撐再評估";
+}
+function decisionNearestRaisedSupport(values,price,oldSupport){
+  const p=positionNumber(price),old=positionNumber(oldSupport);if(p===null)return null;const out=[];
+  for(const raw of values||[]){const n=positionNumber(raw);if(n===null||n>p*1.015||n<p*.80)continue;if(old!==null&&n<=old*1.005)continue;if(out.some(x=>Math.abs(x/n-1)<.002))continue;out.push(n)}
+  return out.sort((a,b)=>b-a)[0]??null;
+}
+function decisionTrialPlan({baseSupport,price,confirmed=false,candidates=[],lo=.995,hi=1.015,context="支撐"}={}){
+  const p=positionNumber(price),base=positionNumber(baseSupport);if(p===null||base===null)return {zone:null,center:null,oldZone:null,raised:false,note:`${context}資料不足，暫無法計算試單區`};
+  const oldZone=targetZone(base,lo,hi),missed=!!oldZone&&p>oldZone[1]*1.015;
+  if(missed&&confirmed){
+    const raised=decisionNearestRaisedSupport(candidates,p,base);
+    if(raised!==null){const zone=targetZone(raised,lo,hi),state=decisionTrialState(zone,p);return {zone,center:raised,oldZone,raised:true,note:`原試單區 ${targetZoneText(oldZone)} 已錯過；突破確認後新支撐抬高到 ${targetZoneText(zone)}。${state}${p>zone[1]?"，等回測新支撐":""}`}}
+  }
+  const state=decisionTrialState(oldZone,p),tail=missed?confirmed?"；突破已確認，但新支撐尚未形成，先等回測":"；等回測或突破確認後再更新新試單區":"";
+  return {zone:oldZone,center:base,oldZone,raised:false,note:`${context}試單區 ${targetZoneText(oldZone)}。${state}${tail}`};
+}
+
 function tradeEntryConfirmation(play,confirm,price){
   const p=positionNumber(price),c=positionNumber(confirm),t=latestTechnicalForPlay||{},se=play?.shortEngine||play?.diagnostics?.shortEngine,w=play?.swingWave,bo=play?.diagnostics?.breakout||se?.breakout||{},boll=play?.key==="short"?se?.bollingerSignal:w?.bollingerPath,
         macdLife=play?.key==="short"?se?.macdLifecycle:(w?.macdLifecycle??se?.macdLifecycle),ratio=stageNum(se?.ratio20??bo?.volumeRatio??t?.volume?.ratio20),stage=latestFiveStageResult?.stage??null;
@@ -1779,28 +1802,29 @@ function buildDecisionPlan(play,price,expected){
     const se=play?.shortEngine||play?.diagnostics?.shortEngine,bo=play?.diagnostics?.breakout||{};
     const support=positionNumber(w?.activeDefenseLow??w?.secondPullbackLow??w?.pullbackLow??se?.support??t?.ma?.ma20),confirm=positionNumber(w?.referenceHigh??w?.firstWave??bo?.level),levels=expected?.plan?.levels||[];
     const trim=levels[0]?.value??confirm,exit=levels[1]?.value??w?.ext15??levels.at(-1)?.value??null;
-    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02);return {mode:"短波混合",trial:targetZone(support,.99,1.02),entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(trim,.99,1.01),exit:targetZone(exit,.985,1.015),trialNote:"回測支撐附近只補機動倉；底倉不因短線震盪重複進出",entryNote:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；突破／布林／MACD／量能／五階段共同確認後再把機動倉補足`,trimNote:"先處理機動倉，底倉保留波段趨勢",exitNote:"高延伸目標或波段結構轉弱時，再評估剩餘底倉"};
+    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02),trialPlan=decisionTrialPlan({baseSupport:support,price:p,confirmed:ec.ready,candidates:[confirm,bo?.level,t?.ma?.ma5,t?.ma?.ma10,t?.bollinger?.middle,t?.ma?.ma20,w?.secondPullbackLow,w?.pullbackLow],lo:.99,hi:1.02,context:"機動倉支撐"});return {mode:"短波混合",trial:trialPlan.zone,trialPlan,entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(trim,.99,1.01),exit:targetZone(exit,.985,1.015),trialNote:`${trialPlan.note}；回測支撐附近只補機動倉，底倉不因短線震盪重複進出`,entryNote:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；突破／布林／MACD／量能／五階段共同確認後再把機動倉補足`,trimNote:"先處理機動倉，底倉保留波段趨勢",exitNote:"高延伸目標或波段結構轉弱時，再評估剩餘底倉"};
   }
   if(play?.key==="swing"&&w?.valid){
     const support=positionNumber(w.activeDefenseLow??w.secondPullbackLow??w.pullbackLow??t?.ma?.ma20),confirm=positionNumber(w.referenceHigh??w.firstWave),levels=(expected?.plan?.levels||[]).filter(x=>x.value>p*1.002).sort((a,b)=>a.value-b.value);
     const trim=levels[0]?.value??w.ext15??null,exit=levels[1]?.value??levels[0]?.value??w.ext20??null;
-    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02),entryReady=ec.ready&&!(p>(confirm||Infinity)*1.03);return {mode:"波段",trial:targetZone(support,.99,1.02),entry:entryReady?entryCandidate:null,entryCandidate,entryReady,trim:targetZone(trim,.985,1.01),exit:targetZone(exit,.985,1.015),trialNote:"支撐附近先小量試單；此時價格優勢較高，但不要求所有發動條件已確認",entryNote:p>(confirm||Infinity)*1.03?`已突破偏遠，不追價｜${ec.note}；等回測確認後再提高部位`:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；突破、布林、MACD、量能、五階段共同確認`,trimNote:"先到達的主要／次要目標附近先收部分",exitNote:"下一目標／結構轉弱時處理剩餘部位"};
+    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02),entryReady=ec.ready&&!(p>(confirm||Infinity)*1.03),trialPlan=decisionTrialPlan({baseSupport:support,price:p,confirmed:ec.ready,candidates:[confirm,t?.ma?.ma5,t?.ma?.ma10,t?.bollinger?.middle,t?.ma?.ma20,w?.activeDefenseLow,w?.secondPullbackLow,w?.pullbackLow],lo:.99,hi:1.02,context:"波段支撐"});return {mode:"波段",trial:trialPlan.zone,trialPlan,entry:entryReady?entryCandidate:null,entryCandidate,entryReady,trim:targetZone(trim,.985,1.01),exit:targetZone(exit,.985,1.015),trialNote:`${trialPlan.note}；價格優勢較高時先小量試單，不要求所有發動條件已確認`,entryNote:p>(confirm||Infinity)*1.03?`已突破偏遠，不追價｜${ec.note}；等回測確認後再提高部位`:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；突破、布林、MACD、量能、五階段共同確認`,trimNote:"先到達的主要／次要目標附近先收部分",exitNote:"下一目標／結構轉弱時處理剩餘部位"};
   }
   if(play?.key==="short"){
     const se=play?.shortEngine||play?.diagnostics?.shortEngine,bo=play?.diagnostics?.breakout||{},support=positionNumber(se?.support??t?.ma?.ma10??t?.ma?.ma20??t?.ma?.ma5),confirm=positionNumber(bo?.level??se?.resistance?.value??t?.bollinger?.upper),levels=(expected?.plan?.levels||[]).filter(x=>x.value>p*1.002).sort((a,b)=>a.value-b.value),entryCenter=bo?.confirmed&&bo?.level?positionNumber(bo.level):confirm;
-    const ec=tradeEntryConfirmation(play,entryCenter,p),entryCandidate=targetZone(entryCenter,bo?.confirmed ? .992 : 1,bo?.confirmed?1.012:1.015);return {mode:"短期",trial:targetZone(support,.995,1.015),entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(levels[0]?.value,.99,1.005),exit:targetZone(levels[1]?.value??levels[0]?.value,.99,1.01),trialNote:"短均線／突破回測附近先小量試單；價格優勢優先，容許訊號尚未完全確認",entryNote:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；有效突破＋布林向上／趨勢擴張＋MACD重新攻擊＋量能＋五階段共同確認`,trimNote:"碰主要短線目標先收部分",exitNote:"下一目標／動能轉弱時處理剩餘部位"};
+    const ec=tradeEntryConfirmation(play,entryCenter,p),entryCandidate=targetZone(entryCenter,bo?.confirmed ? .992 : 1,bo?.confirmed?1.012:1.015),trialPlan=decisionTrialPlan({baseSupport:support,price:p,confirmed:ec.ready,candidates:[entryCenter,bo?.level,t?.ma?.ma5,t?.ma?.ma10,t?.bollinger?.middle,t?.ma?.ma20,se?.shortWave?.pullbackLow,se?.support],lo:.995,hi:1.015,context:"短線支撐"});return {mode:"短期",trial:trialPlan.zone,trialPlan,entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(levels[0]?.value,.99,1.005),exit:targetZone(levels[1]?.value??levels[0]?.value,.99,1.01),trialNote:`${trialPlan.note}；價格優勢優先，容許訊號尚未完全確認`,entryNote:`${ec.ready?"大量進場條件達標":"大量進場候選區，條件未齊"}｜${ec.note}；有效突破＋布林向上／趨勢擴張＋MACD重新攻擊＋量能＋五階段共同確認`,trimNote:"碰主要短線目標先收部分",exitNote:"下一目標／動能轉弱時處理剩餘部位"};
   }
   if(profile?.key==="long-swing"&&["long","swing"].includes(play?.key)){
     const l=play?.longEngine||{},support=positionNumber(w?.activeDefenseLow??w?.secondPullbackLow??w?.pullbackLow??t?.ma?.ma60),confirm=positionNumber(w?.referenceHigh??w?.firstWave),levels=(expected?.plan?.levels||[]).filter(x=>x.value>p*1.002).sort((a,b)=>a.value-b.value),fair=positionNumber(latestValuationScenario?.F);
     const trim=levels[0]?.value??confirm,exit=levels[1]?.value??fair??currentTargetPrice();
-    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02);return {mode:"長波混合",trial:targetZone(support,.985,1.015),entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(trim,.99,1.01),exit:targetZone(exit,.985,1.015),trialNote:"長期核心不因一般波動反覆進出；回測支撐只調整波段倉",entryNote:`${ec.ready?"波段倉加碼條件達標":"波段倉候選區，確認未齊"}｜${ec.note}；長期適配 ${play?.scores?.long??l.score??"--"}分、資料完整度 ${l.completeness??0}%`,trimNote:"先處理波段倉，長期核心續看基本面／估值",exitNote:"長期核心只有在估值過熱、基本面或長趨勢轉弱時才大幅退出"};
+    const ec=tradeEntryConfirmation(play,confirm,p),entryCandidate=targetZone(confirm,1,1.02),trialPlan=decisionTrialPlan({baseSupport:support,price:p,confirmed:ec.ready,candidates:[confirm,t?.ma?.ma10,t?.ma?.ma20,t?.bollinger?.middle,t?.ma?.ma60,w?.activeDefenseLow,w?.secondPullbackLow,w?.pullbackLow],lo:.985,hi:1.015,context:"波段倉支撐"});return {mode:"長波混合",trial:trialPlan.zone,trialPlan,entry:ec.ready?entryCandidate:null,entryCandidate,entryReady:ec.ready,trim:targetZone(trim,.99,1.01),exit:targetZone(exit,.985,1.015),trialNote:`${trialPlan.note}；長期核心不因一般波動反覆進出，回測支撐只調整波段倉`,entryNote:`${ec.ready?"波段倉加碼條件達標":"波段倉候選區，確認未齊"}｜${ec.note}；長期適配 ${play?.scores?.long??l.score??"--"}分、資料完整度 ${l.completeness??0}%`,trimNote:"先處理波段倉，長期核心續看基本面／估值",exitNote:"長期核心只有在估值過熱、基本面或長趨勢轉弱時才大幅退出"};
   }
   if(play?.key==="long"){
     const l=play?.longEngine||{},fair=positionNumber(latestValuationScenario?.F),ma60=positionNumber(t?.ma?.ma60),support=ma60&&ma60<p*1.08?ma60:p,levels=(expected?.plan?.levels||[]).filter(x=>x.value>p*1.002).sort((a,b)=>a.value-b.value);
     const entryCenter=(fair&&fair>p)?p:Math.min(p,support||p),trim=levels[0]?.value??fair,exit=levels[1]?.value??levels[0]?.value??currentTargetPrice();
-    return {mode:"長期",trial:targetZone(support,.985,1.015),entry:targetZone(entryCenter,.97,1.01),trim:targetZone(trim,.985,1.01),exit:targetZone(exit,.985,1.015),trialNote:"以中長期支撐／估值安全邊際分批，不追單日動能",entryNote:`長期適配 ${play?.scores?.long??l.score??"--"}分、資料完整度 ${l.completeness??0}%；基本面與估值持續成立才提高部位`,trimNote:"接近內部合理價／主要目標時先回收部分",exitNote:"高於主要估值區且基本面或長趨勢轉弱時處理剩餘部位"};
+    const trialPlan=decisionTrialPlan({baseSupport:support,price:p,confirmed:false,candidates:[t?.ma?.ma20,t?.ma?.ma60,t?.bollinger?.middle,fair],lo:.985,hi:1.015,context:"中長期支撐"});return {mode:"長期",trial:trialPlan.zone,trialPlan,entry:targetZone(entryCenter,.97,1.01),entryCandidate:targetZone(entryCenter,.97,1.01),entryReady:true,trim:targetZone(trim,.985,1.01),exit:targetZone(exit,.985,1.015),trialNote:`${trialPlan.note}；以中長期支撐／估值安全邊際分批，不追單日動能`,entryNote:`長期適配 ${play?.scores?.long??l.score??"--"}分、資料完整度 ${l.completeness??0}%；基本面與估值持續成立才提高部位`,trimNote:"接近內部合理價／主要目標時先回收部分",exitNote:"高於主要估值區且基本面或長趨勢轉弱時處理剩餘部位"};
   }
-  return {mode:"觀察",trial:null,entry:null,trim:null,exit:null,trialNote:"目前先觀察，不主動試單",entryNote:"等待玩法確認後再計算",trimNote:"持股可先看上方結構壓力",exitNote:"尚未形成完整操作計畫"};
+  const se=play?.shortEngine||play?.diagnostics?.shortEngine,bo=play?.diagnostics?.breakout||se?.breakout||{},rows=latestFiveStageResult?.path?.rows||[],support=positionNumber(se?.support??t?.ma?.ma10??t?.ma?.ma20??t?.ma?.ma60??t?.bollinger?.middle),confirm=positionNumber(bo?.level??se?.resistance?.value??t?.bollinger?.upper??stageHigh(rows,20)),refs=[...(expected?.plan?.levels||[]),...(se?.targets||[])].map(x=>({value:positionNumber(x?.value)})).filter(x=>x.value!==null&&x.value>p*1.002).sort((a,b)=>a.value-b.value),trim=refs[0]?.value??confirm,exit=refs[1]?.value??refs[0]?.value??currentTargetPrice(),trialPlan=decisionTrialPlan({baseSupport:support,price:p,confirmed:false,candidates:[t?.ma?.ma5,t?.ma?.ma10,t?.bollinger?.middle,t?.ma?.ma20,t?.ma?.ma60],lo:.995,hi:1.015,context:"觀察支撐"}),entryCandidate=targetZone(confirm,1,1.015);
+  return {mode:"觀察",trial:trialPlan.zone,trialPlan,entry:null,entryCandidate,entryReady:false,trim:targetZone(trim,.99,1.01),exit:targetZone(exit,.985,1.015),trialNote:`${trialPlan.note}；目前玩法尚未確認，價位只作結構參考，不主動追價`,entryNote:entryCandidate?"大量進場參考價已保留，但策略仍是等待玩法／突破條件確認":"突破確認價資料不足，暫不主動進場",trimNote:"持股可先看上方結構壓力；未持股只作參考",exitNote:"遠端目標仍保留，等玩法成立後再決定是否執行"};
 }
 function renderDecision(play=latestPlayStyleResult,expected=null){
   const price=positionNumber(currentStock?.last??currentStock?.price??latestFiveStageResult?.price);if(price===null)return;
