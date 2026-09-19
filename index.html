@@ -715,6 +715,34 @@ body{padding-bottom:68px}
   #overviewResonanceCard .overview-wave-tag-price{font-size:20px!important}
 }
 
+
+/* v2.6.0.17 — fix wave path rendering, raise node labels, and update resonance title icon */
+#overviewResonanceCard .overview-title-icon{
+  width:1.45em!important;
+  height:1.05em!important;
+  flex:0 0 1.45em!important;
+  background:center/contain no-repeat url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 32' fill='none' stroke='%23111827' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'><path d='M2 18c5 0 7-3 10-7 3-3 5-4 8-4 5 0 8 4 10 11 2 7 5 12 10 12 4 0 7-3 10-8 2-4 5-7 9-7 3 0 6 2 8 6 2 3 4 5 7 5'/><path d='M2 23c5 0 8-3 11-8 2-4 4-6 7-6 4 0 7 4 10 10 3 6 6 10 10 10 4 0 7-4 10-10 2-5 5-8 9-8 4 0 7 3 10 8 2 3 4 4 5 4'/></svg>")!important;
+  -webkit-mask:none!important;
+  mask:none!important;
+}
+#overviewResonanceCard .overview-strength-chip{padding:10px 14px!important}
+#overviewResonanceCard .overview-strength-chip strong{
+  font-size:15px!important;
+  color:#7a8da3!important;
+  font-weight:700!important;
+}
+#overviewResonanceCard .overview-wave-shell{padding:6px 2px 2px!important}
+#overviewResonanceCard .overview-wave-shell svg{min-height:245px!important}
+#overviewResonanceCard .overview-wave-tag-title{font-size:14px!important;fill:#7a8da3!important}
+#overviewResonanceCard .overview-wave-tag-price{font-size:22px!important;fill:#1d2f48!important}
+@media(max-width:720px){
+  #overviewResonanceCard .overview-title-icon{width:1.4em!important;height:1em!important;flex-basis:1.4em!important}
+  #overviewResonanceCard .overview-strength-chip strong{font-size:15px!important;color:#7a8da3!important}
+  #overviewResonanceCard .overview-wave-shell svg{min-height:235px!important}
+  #overviewResonanceCard .overview-wave-tag-title{font-size:13px!important}
+  #overviewResonanceCard .overview-wave-tag-price{font-size:20px!important}
+}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -1343,7 +1371,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.16</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.17</span></button>
   </aside>
 
   <div class="main-shell">

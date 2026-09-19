@@ -1768,9 +1768,14 @@ function resetOverviewResonance(note="等待分析資料"){
 }
 function overviewWavePath(points,yFn){
   if(!Array.isArray(points)||points.length<2)return "";
-  let d=`M ${points[0].x} ${yFn(points[0].v)}`;
+  const getV=p=>Number.isFinite(p?.v)?p.v:p?.value;
+  const firstV=getV(points[0]);
+  if(!Number.isFinite(firstV)) return "";
+  let d=`M ${points[0].x} ${yFn(firstV)}`;
   for(let i=1;i<points.length;i++){
-    const a=points[i-1],b=points[i],ax=a.x,ay=yFn(a.v),bx=b.x,by=yFn(b.v),dx=bx-ax;
+    const a=points[i-1],b=points[i],av=getV(a),bv=getV(b);
+    if(!Number.isFinite(av)||!Number.isFinite(bv)) continue;
+    const ax=a.x,ay=yFn(av),bx=b.x,by=yFn(bv),dx=bx-ax;
     d+=` C ${ax+dx*.42} ${ay}, ${ax+dx*.58} ${by}, ${bx} ${by}`;
   }
   return d;
@@ -1816,14 +1821,14 @@ function drawOverviewResonance(play,expected){
   const altTitle=(res?.secondary?.familyCount||0)>=2?"次要共振":"樂觀目標";
 
   const nodes=[];
-  if(Number.isFinite(support)) nodes.push({title:'支撐', value:support, border:'#b9d8ff', dot:'#3c9cff'});
-  nodes.push({title:'現價', value:price, border:'#d9dfe7', dot:'#b5bcc7'});
-  if(Number.isFinite(breakout)) nodes.push({title:'前高／突破', value:breakout, border:'#f6dfb9', dot:'#f2b340'});
-  if(Number.isFinite(main)) nodes.push({title:mainTitle, value:main, border:'#dfd0ff', dot:'#7a45f3'});
-  if(Number.isFinite(alt) && (!Number.isFinite(main) || Math.abs(alt-main)/Math.max(1,main)>.004)) nodes.push({title:altTitle, value:alt, border:'#d8f0e1', dot:'#45cb93'});
+  if(Number.isFinite(support)) nodes.push({title:'支撐', value:support, v:support, dot:'#3c9cff'});
+  nodes.push({title:'現價', value:price, v:price, dot:'#b5bcc7'});
+  if(Number.isFinite(breakout)) nodes.push({title:'前高／突破', value:breakout, v:breakout, dot:'#f2b340'});
+  if(Number.isFinite(main)) nodes.push({title:mainTitle, value:main, v:main, dot:'#7a45f3'});
+  if(Number.isFinite(alt) && (!Number.isFinite(main) || Math.abs(alt-main)/Math.max(1,main)>.004)) nodes.push({title:altTitle, value:alt, v:alt, dot:'#45cb93'});
   if(nodes.length<2) return;
 
-  const left=30,right=730,top=36,bottom=220;
+  const left=30,right=730,top=44,bottom=220;
   const step=nodes.length>1?(right-left)/(nodes.length-1):0;
   nodes.forEach((n,i)=>n.x=left+i*step);
   const vals=nodes.map(n=>n.value).filter(Number.isFinite);
@@ -1832,25 +1837,25 @@ function drawOverviewResonance(play,expected){
   const y=v=>bottom-((v-lo)/(hi-lo))*(bottom-top);
 
   const defs=swingWaveSvg('defs');
-  const lineGrad=swingWaveSvg('linearGradient',{id:'overviewWaveLineGradientV2616',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
+  const lineGrad=swingWaveSvg('linearGradient',{id:'overviewWaveLineGradientV2617',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
   lineGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#4ba6ff'}),swingWaveSvg('stop',{offset:'40%','stop-color':'#7f8fff'}),swingWaveSvg('stop',{offset:'72%','stop-color':'#8b59f6'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#50c7ff'}));
   defs.append(lineGrad); svg.append(defs);
 
-  [0.32,0.60,0.86].forEach(r=>{const gy=top+(bottom-top)*r; svg.append(swingWaveSvg('line',{x1:left,y1:gy,x2:right,y2:gy,class:'overview-wave-grid'}));});
+  [0.34,0.62,0.88].forEach(r=>{const gy=top+(bottom-top)*r; svg.append(swingWaveSvg('line',{x1:left,y1:gy,x2:right,y2:gy,class:'overview-wave-grid'}));});
   nodes.forEach(n=>{const yy=y(n.value); svg.append(swingWaveSvg('line',{x1:n.x,y1:yy+8,x2:n.x,y2:bottom,class:'overview-wave-vline'}));});
 
   const pathD=overviewWavePath(nodes,y);
   if(pathD){
     const areaD=`${pathD} L ${nodes[nodes.length-1].x} ${bottom} L ${nodes[0].x} ${bottom} Z`;
-    svg.append(swingWaveSvg('path',{d:areaD,fill:'rgba(143,172,255,0.10)'}));
+    svg.append(swingWaveSvg('path',{d:areaD,fill:'rgba(143,172,255,0.11)'}));
     svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'rgba(120,145,230,0.25)','stroke-width':'14','stroke-linecap':'round','stroke-linejoin':'round'}));
-    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'url(#overviewWaveLineGradientV2616)','stroke-width':'8','stroke-linecap':'round','stroke-linejoin':'round'}));
+    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'url(#overviewWaveLineGradientV2617)','stroke-width':'8','stroke-linecap':'round','stroke-linejoin':'round'}));
   }
 
   nodes.forEach(n=>{
     const yy=y(n.value);
-    svg.append(swingWaveSvg('text',{x:n.x,y:yy-26,class:'overview-wave-tag-title','text-anchor':'middle'},n.title));
-    svg.append(swingWaveSvg('text',{x:n.x,y:yy-2,class:'overview-wave-tag-price','text-anchor':'middle'},technicalFmt(n.value)));
+    svg.append(swingWaveSvg('text',{x:n.x,y:yy-36,class:'overview-wave-tag-title','text-anchor':'middle'},n.title));
+    svg.append(swingWaveSvg('text',{x:n.x,y:yy-12,class:'overview-wave-tag-price','text-anchor':'middle'},technicalFmt(n.value)));
     svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:9.5,fill:'#ffffff'}));
     svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:6.8,fill:n.dot}));
   });
