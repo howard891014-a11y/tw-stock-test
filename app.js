@@ -1806,56 +1806,68 @@ function overviewNodeBubble(svg,x,pointY,title,value,color,opts={}){
 }
 function drawOverviewResonance(play,expected){
   const svg=$("overviewResonanceSvg");if(!svg)return;svg.replaceChildren();
-  const p=expected?.price;if(!(p>0))return;
-  const res=expected?.plan?.resonance||{}, down=expected?.downside?.levels?.[0]?.value??null, w=play?.swingWave, se=play?.shortEngine||play?.diagnostics?.shortEngine,
-        breakout=positionNumber(w?.referenceHigh??w?.firstWave??se?.resistance?.value??play?.diagnostics?.breakout?.level),
-        main=positionNumber(res?.main?.center??expected?.plan?.levels?.[0]?.value),
-        secondary=positionNumber(res?.secondary?.center??expected?.plan?.levels?.[1]?.value),
-        fair=positionNumber(latestValuationScenario?.F),
-        mainTitle=(res?.main?.familyCount||0)>=2?"主要共振":"主要目標",
-        secondaryTitle=(res?.secondary?.familyCount||0)>=2?"次要共振":"樂觀目標";
+  const price=positionNumber(expected?.price);if(!(price>0))return;
+  const res=expected?.plan?.resonance||{}, swing=play?.swingWave, se=play?.shortEngine||play?.diagnostics?.shortEngine;
+  const support=positionNumber(expected?.downside?.levels?.[0]?.value);
+  const breakout=positionNumber(swing?.referenceHigh??swing?.firstWave??se?.resistance?.value??play?.diagnostics?.breakout?.level);
+  const main=positionNumber(res?.main?.center??expected?.plan?.levels?.[0]?.value);
+  const alt=positionNumber(expected?.plan?.levels?.[1]?.value??res?.secondary?.center??latestValuationScenario?.F);
+  const mainTitle=(res?.main?.familyCount||0)>=2?"主要共振":"主要目標";
+  const altTitle=(res?.secondary?.familyCount||0)>=2?"次要共振":"樂觀目標";
 
-  const allVals=[down,p,breakout,main,secondary,fair].filter(Number.isFinite);
-  if(!allVals.length)return;
-  const mm=overviewTickList(Math.min(...allVals)*0.97, Math.max(...allVals)*1.03, 6), left=70, right=730, top=34, bottom=300, chartW=right-left, chartH=bottom-top;
-  const y=v=>bottom-((v-mm.lo)/(mm.hi-mm.lo))*chartH;
+  const nodes=[];
+  if(Number.isFinite(support))nodes.push({key:'support',title:'支撐',value:support,color:'#5ca9ff',dot:'#3594ff'});
+  nodes.push({key:'current',title:'現價',value:price,color:'#d7dfe8',dot:'#9fa8b7'});
+  if(Number.isFinite(breakout))nodes.push({key:'breakout',title:'前高／突破',value:breakout,color:'#f6d6a2',dot:'#f4b240'});
+  if(Number.isFinite(main))nodes.push({key:'main',title:mainTitle,value:main,color:'#d9c7ff',dot:'#7b47f6'});
+  if(Number.isFinite(alt) && (!Number.isFinite(main) || Math.abs(alt-main)/Math.max(1,main)>.004))nodes.push({key:'alt',title:altTitle,value:alt,color:'#cdf0de',dot:'#3ac88e'});
+  if(nodes.length<2)return;
 
-  const defs=swingWaveSvg('defs'), lineGrad=swingWaveSvg('linearGradient',{id:'overviewWaveLineGradientV2612',x1:'0%',y1:'0%',x2:'100%',y2:'0%'}), areaGrad=swingWaveSvg('linearGradient',{id:'overviewWaveAreaGradientV2612',x1:'0%',y1:'0%',x2:'0%',y2:'100%'}), bubbleShadow=swingWaveSvg('filter',{id:'overviewWaveBubbleShadowV2612',x:'-20%',y:'-20%',width:'140%',height:'150%'}), lineShadow=swingWaveSvg('filter',{id:'overviewWaveLineShadowV2612',x:'-20%',y:'-20%',width:'140%',height:'150%'});
-  lineGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#5da8ff'}),swingWaveSvg('stop',{offset:'38%','stop-color':'#7c92ff'}),swingWaveSvg('stop',{offset:'65%','stop-color':'#9d78ff'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#6fc9ff'}));
-  areaGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#a58bff','stop-opacity':'0.20'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#e7f0ff','stop-opacity':'0.04'}));
-  bubbleShadow.append(swingWaveSvg('feDropShadow',{'dx':'0','dy':'4','stdDeviation':'5','flood-color':'#c8d7e8','flood-opacity':'0.55'}));
-  lineShadow.append(swingWaveSvg('feDropShadow',{'dx':'0','dy':'5','stdDeviation':'5','flood-color':'#a7bee4','flood-opacity':'0.40'}));
-  defs.append(lineGrad,areaGrad,bubbleShadow,lineShadow);svg.append(defs);
+  const xSlots=[100,230,355,510,665], xs=xSlots.slice(0,nodes.length);
+  nodes.forEach((n,i)=>n.x=xs[i]);
+  const vals=nodes.map(n=>n.value).filter(Number.isFinite); if(!vals.length)return;
+  let lo=Math.min(...vals), hi=Math.max(...vals); const span=Math.max(hi-lo, Math.max(hi,1)*0.08, 60);
+  lo-=span*0.18; hi+=span*0.18; if(hi<=lo)hi=lo+1;
+  const top=46,bottom=304,left=56,right=708; const y=v=>bottom-((v-lo)/(hi-lo))*(bottom-top);
 
-  // white chart plate
-  svg.append(swingWaveSvg('rect',{x:6,y:8,width:748,height:320,rx:24,fill:'transparent'}));
-  mm.ticks.forEach(t=>{const yy=y(t); svg.append(swingWaveSvg('line',{x1:left,y1:yy,x2:right,y2:yy,class:'overview-wave-grid'})); svg.append(swingWaveSvg('text',{x:left-12,y:yy+6,class:'overview-wave-axis','text-anchor':'end'}, technicalFmt(t)));});
-  svg.append(swingWaveSvg('line',{x1:left,y1:top,x2:left,y2:bottom,stroke:'#e2ebf4','stroke-width':'1.5'}));
+  const defs=swingWaveSvg('defs');
+  const lineGrad=swingWaveSvg('linearGradient',{id:'overviewWaveLineGradientV2613',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
+  lineGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#4ea8ff'}),swingWaveSvg('stop',{offset:'45%','stop-color':'#8b8cff'}),swingWaveSvg('stop',{offset:'75%','stop-color':'#8b64ff'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#54c5ff'}));
+  const areaGrad=swingWaveSvg('linearGradient',{id:'overviewWaveAreaGradientV2613',x1:'0%',y1:'0%',x2:'0%',y2:'100%'});
+  areaGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#86a8ff','stop-opacity':'0.22'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#edf4ff','stop-opacity':'0.03'}));
+  const waveShadow=swingWaveSvg('filter',{id:'overviewWaveShadowV2613',x:'-20%',y:'-20%',width:'140%',height:'150%'});
+  waveShadow.append(swingWaveSvg('feDropShadow',{'dx':'0','dy':'5','stdDeviation':'6','flood-color':'#c4d5e8','flood-opacity':'0.55'}));
+  const bubbleShadow=swingWaveSvg('filter',{id:'overviewBubbleShadowV2613',x:'-20%',y:'-20%',width:'140%',height:'150%'});
+  bubbleShadow.append(swingWaveSvg('feDropShadow',{'dx':'0','dy':'4','stdDeviation':'5','flood-color':'#d4e0ed','flood-opacity':'0.7'}));
+  defs.append(lineGrad,areaGrad,waveShadow,bubbleShadow); svg.append(defs);
 
-  const supportX=100,currentX=235,breakoutX=355,mainX=498,secondaryX=615,fairX=725;
-  const solidNodes=[];
-  if(Number.isFinite(down))solidNodes.push({x:supportX,v:down,title:'支撐',color:'#8ab6ff'});
-  solidNodes.push({x:currentX,v:p,title:'現價',color:'#9ad7b2',current:true});
-  if(Number.isFinite(breakout))solidNodes.push({x:breakoutX,v:breakout,title:'前高／突破',color:'#f3c27a'});
-  if(Number.isFinite(main))solidNodes.push({x:mainX,v:main,title:mainTitle,color:'#c6a6ff'});
-  if(Number.isFinite(secondary))solidNodes.push({x:secondaryX,v:secondary,title:secondaryTitle,color:'#9ad8ff'});
-  const projected=Number.isFinite(fair)?{x:fairX,v:fair,title:'估值',color:'#9cd9b0',aux:true}:null;
+  // gentle background reference lines
+  [0.28,0.52,0.76].forEach(r=>{const yy=top+(bottom-top)*r; svg.append(swingWaveSvg('line',{x1:left,y1:yy,x2:right,y2:yy,class:'overview-wave-grid'}));});
+  svg.append(swingWaveSvg('line',{x1:left,y1:bottom,x2:right,y2:bottom,class:'overview-wave-grid'}));
 
-  const primary=solidNodes.sort((a,b)=>a.x-b.x);
-  const pathD=overviewWavePath(primary,y);
+  nodes.forEach((n,i)=>{const yy=y(n.value); svg.append(swingWaveSvg('line',{x1:n.x,y1:yy+9,x2:n.x,y2:bottom,class:'overview-wave-vline'}));});
+
+  const pathD=overviewWavePath(nodes,y);
   if(pathD){
-    const areaD=`${pathD} L ${primary[primary.length-1].x} ${bottom} L ${primary[0].x} ${bottom} Z`;
-    svg.append(swingWaveSvg('path',{d:areaD,fill:'url(#overviewWaveAreaGradientV2612)'}));
-    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'url(#overviewWaveLineGradientV2612)','stroke-width':'7','stroke-linecap':'round','stroke-linejoin':'round',filter:'url(#overviewWaveLineShadowV2612)'}));
-  }
-  if(projected && primary.length){
-    const last=primary[primary.length-1], extD=overviewWavePath([last,projected],y);
-    svg.append(swingWaveSvg('path',{d:extD,fill:'none',stroke:'#9fd7ff','stroke-width':'6','stroke-linecap':'round','stroke-linejoin':'round','stroke-dasharray':'8 8',opacity:'0.95'}));
+    const areaD=`${pathD} L ${nodes[nodes.length-1].x} ${bottom} L ${nodes[0].x} ${bottom} Z`;
+    svg.append(swingWaveSvg('path',{d:areaD,fill:'url(#overviewWaveAreaGradientV2613)'}));
+    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'url(#overviewWaveLineGradientV2613)','stroke-width':'7','stroke-linecap':'round','stroke-linejoin':'round',filter:'url(#overviewWaveShadowV2613)'}));
   }
 
-  const bubblePrefs={支撐:{align:'middle',below:false,dx:-6},現價:{align:'middle',below:false},'前高／突破':{align:'middle',below:false},'主要共振':{align:'middle',below:false},'主要目標':{align:'middle',below:false},'次要共振':{align:'middle',below:false,dx:8},'樂觀目標':{align:'middle',below:false,dx:8},估值:{align:'end',below:false,dx:6}};
-  primary.forEach(n=>{const yy=y(n.v);svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:n.current?10:9,fill:'#ffffff',stroke:n.color,'stroke-width':'5'})); svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:n.current?7:6,fill:n.current?'#2db673':(n.title==='前高／突破'?'#f5a623':n.title===mainTitle?'#8c5cff':n.title===secondaryTitle?'#4bbbf2':'#4e8dff')})); overviewNodeBubble(svg,n.x,yy,n.title,technicalFmt(n.v),n.color,bubblePrefs[n.title]||{});});
-  if(projected){const yy=y(projected.v); svg.append(swingWaveSvg('circle',{cx:projected.x,cy:yy,r:8,fill:'#ffffff',stroke:projected.color,'stroke-width':'4'})); svg.append(swingWaveSvg('circle',{cx:projected.x,cy:yy,r:5,fill:'#2bb76c'})); overviewNodeBubble(svg,projected.x,yy,projected.title,technicalFmt(projected.v),projected.color,bubblePrefs[projected.title]||{});}
+  nodes.forEach((n,i)=>{
+    const yy=y(n.value), boxW=Math.max(92,Math.min(150, String(n.title).length*16+36, String(technicalFmt(n.value)).length*18+42)), boxH=60;
+    const boxX=Math.max(14,Math.min(742-boxW,n.x-boxW/2));
+    const boxY=Math.max(8,yy-boxH-18);
+    const tipX=Math.max(boxX+16,Math.min(boxX+boxW-16,n.x));
+    const g=swingWaveSvg('g',{});
+    g.append(swingWaveSvg('rect',{x:boxX,y:boxY,width:boxW,height:boxH,rx:15,fill:'#ffffff',stroke:n.color,'stroke-width':1.5,filter:'url(#overviewBubbleShadowV2613)'}));
+    g.append(swingWaveSvg('path',{d:`M ${tipX-9} ${boxY+boxH} L ${tipX} ${boxY+boxH+10} L ${tipX+9} ${boxY+boxH} Z`,fill:'#ffffff',stroke:n.color,'stroke-width':1.5,filter:'url(#overviewBubbleShadowV2613)'}));
+    g.append(swingWaveSvg('text',{x:boxX+boxW/2,y:boxY+20,class:'overview-wave-tag-title','text-anchor':'middle'},n.title));
+    g.append(swingWaveSvg('text',{x:boxX+boxW/2,y:boxY+46,class:'overview-wave-tag-price','text-anchor':'middle'},technicalFmt(n.value)));
+    svg.append(g);
+    svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:10,fill:'#ffffff',stroke:'#ffffff','stroke-width':'4'}));
+    svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:7,fill:n.dot}));
+  });
 }
 function renderOverviewResonance(play,expected,decision,risk=null){
   if(!play||!expected){resetOverviewResonance();return}const res=expected?.plan?.resonance||{},mainCluster=res?.main||null,familyCount=mainCluster?.familyCount||0,resonanceStrength=res.adjustedStrength??res.strength??0;

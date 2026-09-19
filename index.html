@@ -606,6 +606,36 @@ body{padding-bottom:68px}
 .overview-wave-caption{font-size:12px;font-weight:800;fill:#8396ad}
 @media(max-width:720px){.overview-wave-shell{padding:10px 8px 8px!important;border-radius:20px!important}.overview-wave-shell svg{min-height:330px!important}.overview-wave-axis{font-size:15px}.overview-wave-tag-title{font-size:13px!important}.overview-wave-tag-price{font-size:18px!important}}
 
+
+/* v2.6.0.13 — inline metric icons and wave chart refresh */
+#overviewResonanceCard .metric-title{display:flex!important;align-items:center!important;gap:8px!important;color:#7a8da3!important;font-size:15px!important;line-height:1.2!important}
+#overviewResonanceCard .metric-title em{font-style:normal!important;font-size:inherit!important;color:inherit!important}
+#overviewResonanceCard .metric-badge{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;flex:0 0 22px}
+#overviewResonanceCard .metric-badge::before{content:"";display:block;width:12px;height:12px;background:currentColor;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
+#overviewResonanceCard .metric-badge-play{background:#eef1ff;color:#6f5cf6}
+#overviewResonanceCard .metric-badge-play::before{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2.8l2.53 5.12 5.65.82-4.09 3.99.97 5.63L12 15.68 6.94 18.36l.97-5.63-4.09-3.99 5.65-.82L12 2.8z' fill='black'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2.8l2.53 5.12 5.65.82-4.09 3.99.97 5.63L12 15.68 6.94 18.36l.97-5.63-4.09-3.99 5.65-.82L12 2.8z' fill='black'/></svg>")}
+#overviewResonanceCard .metric-badge-up{background:#e7f8ef;color:#21aa67}
+#overviewResonanceCard .metric-badge-up::before{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 16.2l5.2-5.2 3.3 3.3 5.5-5.5v4.1H21V5h-7v2h4.1l-4.6 4.6-3.3-3.3L3 15.4z' fill='black'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 16.2l5.2-5.2 3.3 3.3 5.5-5.5v4.1H21V5h-7v2h4.1l-4.6 4.6-3.3-3.3L3 15.4z' fill='black'/></svg>")}
+#overviewResonanceCard .metric-badge-down{background:#fff0f2;color:#e45666}
+#overviewResonanceCard .metric-badge-down::before{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 7.8l5.2 5.2 3.3-3.3 5.5 5.5v-4.1H21V19h-7v-2h4.1l-4.6-4.6-3.3 3.3L3 8.6z' fill='black'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 7.8l5.2 5.2 3.3-3.3 5.5 5.5v-4.1H21V19h-7v-2h4.1l-4.6-4.6-3.3 3.3L3 8.6z' fill='black'/></svg>")}
+#overviewResonanceCard .metric-badge-target{background:#f1ecff;color:#8156ee}
+#overviewResonanceCard .metric-badge-target::before{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 3a9 9 0 109 9h-2a7 7 0 11-7-7V3zm0 4a5 5 0 105 5h-2a3 3 0 11-3-3V7zm5-4v2.59l-3.3 3.3 1.41 1.41 3.3-3.3H21V3h-4z' fill='black'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 3a9 9 0 109 9h-2a7 7 0 11-7-7V3zm0 4a5 5 0 105 5h-2a3 3 0 11-3-3V7zm5-4v2.59l-3.3 3.3 1.41 1.41 3.3-3.3H21V3h-4z' fill='black'/></svg>")}
+#overviewResonanceCard .overview-wave-shell{padding:14px 10px 10px!important;border-radius:24px!important;background:linear-gradient(180deg,#ffffff,#f8fbff)!important;border:1px solid #e4ebf3!important}
+#overviewResonanceCard .overview-wave-shell svg{min-height:360px!important}
+#overviewResonanceCard .overview-wave-grid{stroke:#e5edf5!important;stroke-width:1.2!important;stroke-dasharray:6 7!important}
+#overviewResonanceCard .overview-wave-vline{stroke:#dfe7f0;stroke-width:1.2;stroke-dasharray:6 6}
+#overviewResonanceCard .overview-wave-tag-title{font-size:15px!important;font-weight:800!important;fill:#6f8199!important}
+#overviewResonanceCard .overview-wave-tag-price{font-size:21px!important;font-weight:900!important;fill:#14263e!important}
+@media(max-width:720px){
+  #overviewResonanceCard .metric-title{font-size:14px!important;gap:7px!important}
+  #overviewResonanceCard .metric-badge{width:20px;height:20px;flex-basis:20px}
+  #overviewResonanceCard .metric-badge::before{width:11px;height:11px}
+  #overviewResonanceCard .overview-wave-shell{padding:10px 6px 8px!important;border-radius:22px!important}
+  #overviewResonanceCard .overview-wave-shell svg{min-height:350px!important}
+  #overviewResonanceCard .overview-wave-tag-title{font-size:16px!important}
+  #overviewResonanceCard .overview-wave-tag-price{font-size:24px!important}
+}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -1234,7 +1264,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.12</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.13</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1290,10 +1320,10 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
             <b id="overviewResonancePlay" hidden aria-hidden="true">等待資料</b>
           </header>
           <div class="overview-resonance-metrics">
-            <div class="metric-play"><span>⭐ 建議玩法</span><strong id="overviewPlayMetric">--</strong></div>
-            <div class="metric-target"><span>🎯 主要目標區</span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
-            <div class="metric-up"><span>📈 預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
-            <div class="metric-down"><span>📉 正常下跌空間</span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
+            <div class="metric-play"><span class="metric-title"><i class="metric-badge metric-badge-play" aria-hidden="true"></i><em>建議玩法</em></span><strong id="overviewPlayMetric">--</strong></div>
+            <div class="metric-target"><span class="metric-title"><i class="metric-badge metric-badge-target" aria-hidden="true"></i><em>主要目標區</em></span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
+            <div class="metric-up"><span class="metric-title"><i class="metric-badge metric-badge-up" aria-hidden="true"></i><em>預計上漲空間</em></span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
+            <div class="metric-down"><span class="metric-title"><i class="metric-badge metric-badge-down" aria-hidden="true"></i><em>正常下跌空間</em></span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
           </div>
           <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 340" role="img" aria-label="共振價格路徑"></svg></div>
           <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
