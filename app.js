@@ -1,4 +1,4 @@
-// v2.5.9.7 — 技術鏈隔離修復：官方基本面移出 technical Function；技術核心恢復 v2.5.9.5。
+// v2.5.9.8 — 長期基本面空值修復＋渲染隔離；技術核心與後端不變。
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
@@ -249,7 +249,7 @@ async function history5Y(query,market){
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v2597",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v2598",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
 async function fundamentals(query,market){
@@ -387,7 +387,8 @@ function renderFiveStage(t,currentPrice){
   const fill=$("stageProgressFill");if(fill)fill.style.width=pct;
   const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.classList.add(`stage-${r.stage}`);ov.textContent=r.name;}
   setText("overviewStageNote",`第${r.stage}階段｜${r.substate}`);setText("stageTitle",`${r.stage}. ${r.name}｜${r.substate}`);setText("stageSummary",r.summary);setText("stageSignals",r.signals.join("｜"));
-  latestFiveStageResult=r;latestTechnicalForPlay=t;renderPlayStyle();
+  latestFiveStageResult=r;latestTechnicalForPlay=t;
+  try{renderPlayStyle()}catch(e){console.warn("玩法／長期基本面渲染失敗，不影響技術與五階段",e);resetPlayStyle("玩法計算暫時失敗");latestFiveStageResult=r;latestTechnicalForPlay=t}
 }
 
 // 建議玩法 v5：先辨識股性節奏，再用資格制＋短線專屬引擎比較短期／波段。
@@ -1117,7 +1118,8 @@ function longQuantitativeFundamentals(v){
 
   const epsText=epsCount>=2?`YoY ${yoyEps.label}｜QoQ ${qoqEps.label}${ttmPair.available?`｜TTM ${ttmPair.label}`:""}`:officialEps!==null?`官方累計 EPS ${valuationEpsFmt(officialEps)}${off?.period?`｜${off.period}`:""}`:(fallbackQ.length?`近4季 ${fallbackQ.filter(x=>x>0).length}/${fallbackQ.length} 季為正${fallbackTtm!==null?`｜TTM ${valuationEpsFmt(fallbackTtm)}`:""}`:"EPS資料不足");
   let revenueText="營收成長資料不足";if(monthYoy.available||cumYoy.available)revenueText=`月營收 YoY ${monthYoy.label}${cumYoy.available?`｜累計 YoY ${cumYoy.label}`:""}${monthly?.period?`｜${monthly.period}`:""}`;else if(yoyRev.available)revenueText=`季營收 YoY ${yoyRev.label}${revTrendPct!==null?`｜近4季YoY中位 ${signedPercent(revTrendPct)}`:""}`;
-  let marginText;if(off?.marginApplicable===false)marginText=`${off?.financialTypeLabel||"金融類"}｜毛利率／營益率不適用`;else if(officialGm!==null||officialOm!==null)marginText=`毛利 ${officialGm!==null?`${officialGm.toFixed(1)}%`:"--"}｜營益 ${officialOm!==null?`${officialOm.toFixed(1)}%`:"--"}｜官方累計${off?.period?` ${off.period}`:""}`;else if(gm[0]!==null||om[0]!==null)marginText=`毛利 ${gm[0]!==null?`${gm[0].toFixed(1)}%${seriesGross.delta!==null?` (${seriesGross.delta>=0?"+":""}${seriesGross.delta.toFixed(1)}pp)`:""}`:"--"}｜營益 ${om[0]!==null?`${om[0].toFixed(1)}%${seriesOperating.delta!==null?` (${seriesOperating.delta>=0?"+":""}${seriesOperating.delta.toFixed(1)}pp)`:""}`:"--"}`;else marginText="利潤率資料不足";
+  const gm0=valuationNum(gm[0]),om0=valuationNum(om[0]);
+  let marginText;if(off?.marginApplicable===false)marginText=`${off?.financialTypeLabel||"金融類"}｜毛利率／營益率不適用`;else if(officialGm!==null||officialOm!==null)marginText=`毛利 ${officialGm!==null?`${officialGm.toFixed(1)}%`:"--"}｜營益 ${officialOm!==null?`${officialOm.toFixed(1)}%`:"--"}｜官方累計${off?.period?` ${off.period}`:""}`;else if(gm0!==null||om0!==null)marginText=`毛利 ${gm0!==null?`${gm0.toFixed(1)}%${seriesGross.delta!==null?` (${seriesGross.delta>=0?"+":""}${seriesGross.delta.toFixed(1)}pp)`:""}`:"--"}｜營益 ${om0!==null?`${om0.toFixed(1)}%${seriesOperating.delta!==null?` (${seriesOperating.delta>=0?"+":""}${seriesOperating.delta.toFixed(1)}pp)`:""}`:"--"}`;else marginText="利潤率資料不足";
   const stabilityText=posEps.length>=4?`近${posEps.length}季 ${positive}/${posEps.length} 季EPS為正${ttmPair.available?`｜TTM ${ttmPair.label}`:""}`:fallbackQ.length>=4?`近4季 ${fallbackQ.filter(x=>x>0).length}/4 季EPS為正`:"獲利穩定度資料不足";
   const sourceText=data?.source||([off||monthly?"TWSE／TPEx官方":"",rows.length?"Yahoo歷史補充":""].filter(Boolean).join("＋")||"基本面來源待補");
   return {score,coverage,rows,epsCount,revCount,gmCount,omCount,epsScore,revenueScore,grossScore:gross.available?gross.score:null,operatingScore:operating.available?operating.score:null,stabilityScore,epsText,revenueText,marginText,stabilityText,yoyEps,qoqEps,ttmPair,yoyRev,revTrendPct,latest:rows[0]||{},officialStatement:off,monthlyRevenue:monthly,sourceText};
