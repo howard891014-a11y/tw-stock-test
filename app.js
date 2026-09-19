@@ -1761,7 +1761,7 @@ function drawOverviewResonance(play,expected){
     overviewNodeBox(svg,n.x,yy,n.title,technicalFmt(n.v),n.color,anchor,preferBelow);
   });
 }
-function renderOverviewResonance(play,expected,decision){
+function renderOverviewResonance(play,expected,decision,risk=null){
   if(!play||!expected){resetOverviewResonance();return}const res=expected?.plan?.resonance||{},mainCluster=res?.main||null,familyCount=mainCluster?.familyCount||0,resonanceStrength=res.adjustedStrength??res.strength??0;
   setText("overviewResonancePlay",`${play.period||"--"}｜${play.action||"等待訊號"}`);
   if(familyCount>=2){setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength",`${resonanceStrengthLabel({...mainCluster,adjustedStrength:resonanceStrength})} ${resonanceStrength} / 100`);setText("overviewResonanceStrengthNote",`${familyCount} 類價格來源｜連續距離衰減 ${res.bandwidthPct?.toFixed?.(1)??"--"}%${res.historyValidation?`｜5年驗證 ${res.historyValidation}%`:""}`)}
@@ -1771,7 +1771,7 @@ function renderOverviewResonance(play,expected,decision){
   setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?technicalFmt(main):"--"));
   setText("overviewTrialPrice",targetZoneText(decision?.trial));setText("overviewEntryPrice",decisionEntryText(decision));setText("overviewTrimPrice",targetZoneText(decision?.trim));setText("overviewExitPrice",targetZoneText(decision?.exit));
   setText("overviewFinalDirection",`${play.period||"--"}｜${play.action||"等待訊號"}`);setText("overviewFinalStrategy",`${decision?.mode||play.period||"--"}｜依目標節點與確認條件分批`);
-  const ex=expected?.winRate?.extreme,setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認";setText("overviewFinalRisk",ex?.valid?`${setRisk}｜極端壓力 ${signedPercent(ex.far)}`:setRisk);setText("overviewFinalNext",main?`先看 ${expected.plan.levels[0].label} ${technicalFmt(main)}`:"等待新目標來源");
+  const ex=expected?.winRate?.extreme,setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",ex?.valid&&risk?.valid?`${riskText}｜極端壓力 ${signedPercent(ex.far)}`:(risk?.valid?riskText:setRisk));setText("overviewFinalNext",risk?.exitTriggered?"走壞出場條件成立，先處理風險":risk?.trimTriggered?"走壞減碼條件成立，先降部位":main?`先看 ${expected.plan.levels[0].label} ${technicalFmt(main)}`:"等待新目標來源");
   const host=$("overviewResonanceSources");if(host){host.replaceChildren();const pts=mainCluster?.points||[];const families=new Map();for(const x of pts){if(!families.has(x.family))families.set(x.family,[]);families.get(x.family).push(x)}for(const [family,a] of families){const chip=document.createElement("span");const name={swing:"波段倍率",broker:"券商目標",valuation:"內部估值",shortwave:"短波倍率",pressure:"前高／壓力"}[family]||family;chip.textContent=`${name}｜${a.map(x=>x.label).join("・")}`;host.append(chip)}if(expected?.winRate?.valid){const chip=document.createElement("span");chip.textContent=`5年相似訊號｜${expected.winRate.rate}%・${expected.winRate.sample}次`;host.append(chip)}if(!families.size){const chip=document.createElement("span");chip.textContent="等待可用價格來源";host.append(chip)}}
   drawOverviewResonance(play,expected);
 }
@@ -1780,7 +1780,7 @@ function resetTradeOutputs(note="等待分析資料"){
   setText("overviewExpectedUpside","--%");setText("overviewExpectedUpsideNote",note);setText("expectedModeBadge","依玩法");setText("expectedBasisLabel","現價基準");setText("expectedRange","--%");setText("expectedDownsideRange","--%");setText("expectedWinRate","--");setText("expectedWinRateNote","樣本不足");setText("expectedExtremeRisk","--%");setText("expectedExtremeRiskNote","系統性崩壞壓力測試");setText("expectedSeasonalityNote","季節性：等待五年資料");setText("expectedBasisNote",note);setText("expectedFoot","持股會改用均價計算報酬與預估損益；觀察股維持現價基準。勝率是同檔歷史相似訊號回測，不代表未來機率。");
   const pos=$("expectedPositionSummary");if(pos)pos.hidden=true;
   for(let i=1;i<=3;i++){const box=$(`expectedTarget${i}`);if(box)box.hidden=i>1;setText(`expectedT${i}Label`,i===1?"第一目標":i===2?"主要目標":"樂觀目標");setText(`expectedT${i}Price`,"--");setText(`expectedT${i}Return`,"--");setText(`expectedT${i}Profit`,"")}
-  setText("decisionModeBadge","依玩法");setText("decisionPositionNote",note);for(const id of ["decisionTrialPrice","decisionEntryPrice","decisionTrimPrice","decisionExitPrice"])setText(id,"--");for(const id of ["decisionTrialNote","decisionEntryNote","decisionTrimNote","decisionExitNote"])setText(id,"--");
+  setText("decisionModeBadge","依玩法");setText("decisionRiskBadge","風險 --");const rb=$("decisionRiskBadge");if(rb)rb.classList.remove("risk-low","risk-medium","risk-high","risk-extreme");setText("decisionPositionNote",note);for(const id of ["decisionTrialPrice","decisionEntryPrice","decisionTrimPrice","decisionExitPrice"])setText(id,"--");for(const id of ["decisionTrialNote","decisionEntryNote","decisionTrimNote","decisionExitNote"])setText(id,"--");
 }
 function renderExpectedUpside(play=latestPlayStyleResult){
   const price=positionNumber(currentStock?.last??currentStock?.price??latestFiveStageResult?.price);if(price===null){resetTradeOutputs("等待股價資料");return null}
@@ -1811,6 +1811,60 @@ function renderExpectedUpside(play=latestPlayStyleResult){
   const winNote=wr.valid?`近5年正常市場相似訊號勝率 ${wr.rate}%（${wr.sample}次；${wr.recencyModel}）；系統性崩壞另外列為極端市場風險。${longCaveat}`:`近5年正常市場相似訊號樣本不足。${longCaveat}`;
   setText("expectedFoot",`${plan.note} 目標價位仍依目前玩法結構；成長／正常下跌空間與勝率使用五年歷史樣本。${winNote}${position?.shares?` 目前持有 ${position.shares.toLocaleString("zh-TW")} 股。`:""}`);
   return {price,position,base,plan,downside,winRate:wr,upRange:range,downRange};
+}
+
+
+// v2.6.0.1 — 正式風險標籤＋走壞型減碼／出場。
+// 風險不改寫主玩法分數；只限制操作強度。獲利目標仍保留，結構走壞時決策卡切換為防守模式。
+function decisionRiskLevel(score){
+  const n=Math.max(0,Math.min(100,Number(score)||0));
+  if(n>=72)return {key:"extreme",label:"極高",tone:"danger"};
+  if(n>=50)return {key:"high",label:"高",tone:"danger"};
+  if(n>=25)return {key:"medium",label:"中",tone:"watch"};
+  return {key:"low",label:"低",tone:"safe"};
+}
+function decisionCandleRisk(rows,ratio20){
+  const x=rows?.at(-1),prev=rows?.at(-2);if(!x)return {longUpper:false,heavyBear:false,label:null};
+  const o=stageNum(x.open),h=playRowHigh(x),l=swingLow(x),c=playRowClose(x),pc=playRowClose(prev);if([o,h,l,c].some(v=>v===null)||h<=l)return {longUpper:false,heavyBear:false,label:null};
+  const range=h-l,body=Math.abs(c-o)/range,upper=(h-Math.max(o,c))/range,chg=pc===null?null:stagePct(c,pc),vol=stageNum(x.volume),histVol=(rows||[]).slice(-21,-1).map(r=>stageNum(r.volume)).filter(Number.isFinite),avgVol=histVol.length?histVol.reduce((a,b)=>a+b,0)/histVol.length:null,vr=stageNum(ratio20)??(avgVol&&vol?vol/avgVol:null),volumeHeavy=vr!==null&&vr>=1.25;
+  const longUpper=upper>=.42&&volumeHeavy&&(body>=.18||c<o),heavyBear=c<o&&body>=.55&&volumeHeavy&&(chg===null||chg<=-1.5);
+  return {longUpper,heavyBear,volumeRatio:vr,label:heavyBear?"爆量長黑":longUpper?"爆量長上影":null};
+}
+function decisionRiskSupport(play,expected,price){
+  const t=latestTechnicalForPlay||{},w=play?.swingWave,se=play?.shortEngine||play?.diagnostics?.shortEngine,p=positionNumber(price),levels=[w?.activeDefenseLow,w?.secondPullbackLow,w?.pullbackLow,se?.support,expected?.downside?.levels?.[0]?.value,t?.ma?.ma20,t?.ma?.ma60].map(positionNumber).filter(x=>x!==null&&p!==null&&x<=p*1.04&&x>=p*.55);
+  return levels.length?Math.max(...levels):null;
+}
+function buildDecisionRisk(play,price,expected){
+  const p=positionNumber(price),t=latestTechnicalForPlay||{},rows=(latestFiveStageResult?.path?.rows||stageHistory(t)).slice(-80);if(p===null)return {valid:false,score:0,level:decisionRiskLevel(0),reasons:[],trimTriggered:false,exitTriggered:false};
+  const ma5=positionNumber(t?.ma?.ma5),ma10=positionNumber(t?.ma?.ma10),ma20=positionNumber(t?.ma?.ma20),ma60=positionNumber(t?.ma?.ma60),support=decisionRiskSupport(play,expected,p),ratio20=stageNum(t?.volume?.ratio20),stage=latestFiveStageResult?.stage??null,flags=latestFiveStageResult?.flags||{},w=play?.swingWave,se=play?.shortEngine||play?.diagnostics?.shortEngine,
+        boll=play?.key==="short"?se?.bollingerSignal:(w?.bollingerPath??se?.bollingerSignal),macdLife=play?.key==="short"?se?.macdLifecycle:(w?.macdLifecycle??se?.macdLifecycle),candle=decisionCandleRisk(rows,ratio20),vr=playValuationResult(),fair=positionNumber(latestValuationScenario?.F),fairGap=fair?stagePct(p,fair):null,longEngine=play?.longEngine||{},fundScore=Number(longEngine?.fundamentals?.score),newsRisk=Number(longEngine?.news?.negative)||0;
+  let score=8;const reasons=[],strong=[];
+  const add=(pts,text,isStrong=false)=>{score+=pts;if(text&&!reasons.includes(text))reasons.push(text);if(isStrong&&text&&!strong.includes(text))strong.push(text)};
+  const below5=ma5!==null&&p<ma5*.995,below10=ma10!==null&&p<ma10*.992,below20=ma20!==null&&p<ma20*.99,below60=ma60!==null&&p<ma60*.985,supportLoss=support!==null&&p<support*.99;
+  if(below5)add(5,"跌破 MA5");if(below10)add(9,"跌破 MA10");if(below20)add(17,"跌破 MA20",true);if(below60)add(14,"跌破 MA60",true);if(supportLoss)add(25,"主要支撐失守",true);
+  if(macdLife?.state==="動能降溫")add(7,"MACD 動能降溫");if(macdLife?.state==="空方擴張")add(20,"MACD 空方擴張",true);
+  if(boll?.breakdown)add(18,"布林下軌擴張／結構轉弱",true);
+  if(candle.longUpper)add(14,"爆量長上影");if(candle.heavyBear)add(22,"爆量長黑",true);
+  if(stage===5)add(12,"高檔過熱／追價風險");
+  const bias5=stageNum(t?.bias?.ma5),bias20=stageNum(t?.bias?.ma20);if((bias5??0)>=7)add(5,"短線乖離偏大");if((bias20??0)>=15)add(8,"中期乖離偏大");
+  if(vr&&["明顯高估","全面高估"].includes(vr.state))add(vr.state==="全面高估"?14:9,`${vr.state}／估值風險`);else if(fairGap!==null&&fairGap>=25)add(8,"股價明顯高於內部合理價");
+  if(Number.isFinite(fundScore)&&fundScore<38)add(12,"基本面分數偏弱",true);else if(Number.isFinite(fundScore)&&fundScore<50)add(6,"基本面動能偏弱");
+  if(newsRisk>=2)add(Math.min(10,newsRisk*3),`基本面負面訊號 ${newsRisk} 則`);
+  if(flags.lifecycleReset)add(20,"中長趨勢生命週期重置",true);
+  score=Math.round(Math.max(0,Math.min(100,score)));
+  const level=decisionRiskLevel(score),trimTriggered=!!(candle.longUpper||candle.heavyBear||below10||(below5&&macdLife?.state==="動能降溫")||stage===5&&((bias20??0)>=15||candle.longUpper)||boll?.breakdown),
+        exitTriggered=!!(supportLoss||(below20&&(macdLife?.state==="空方擴張"||boll?.breakdown||candle.heavyBear))||(below60&&flags.lifecycleReset)||(strong.length>=3&&score>=72));
+  const mode=play?.key||"observe",trimRef=mode==="short"?(ma5??ma10??support):mode==="swing"?(ma10??ma20??support):(ma20??ma60??support),exitRef=support??ma20??ma60,
+        summary=reasons.length?reasons.slice(0,4).join("｜"):"結構未見明顯風險訊號";
+  return {valid:true,score,level,reasons,strong,summary,trimTriggered,exitTriggered,trimRef,exitRef,support,candle,below5,below10,below20,below60,supportLoss,macdState:macdLife?.state??null,bollBreakdown:!!boll?.breakdown,stage,fairGap};
+}
+function applyDecisionRisk(base,risk,price){
+  if(!base||!risk?.valid)return base;const p=positionNumber(price);if(p===null)return {...base,risk};
+  const out={...base,risk,profitTrim:base.trim,profitExit:base.exit},profitTrimText=targetZoneText(base.trim),profitExitText=targetZoneText(base.exit);
+  if(risk.exitTriggered){out.exit=targetZone(p,.992,1.008);out.trim=targetZone(p,.992,1.008);out.defenseMode="exit";out.trimNote=`風險已升高，先進入防守減碼｜${risk.summary}${profitTrimText!=="--"?`｜原止盈目標 ${profitTrimText}`:""}`;out.exitNote=`走壞型出場條件成立｜${risk.summary}${profitExitText!=="--"?`｜原獲利目標 ${profitExitText} 退居次要`:""}`;}
+  else if(risk.trimTriggered){out.trim=targetZone(p,.992,1.008);out.defenseMode="trim";out.trimNote=`走壞型減碼條件成立｜${risk.summary}${profitTrimText!=="--"?`｜原止盈目標 ${profitTrimText} 仍保留`:""}`;out.exitNote=`尚未達強制出場；防守線 ${technicalFmt(risk.exitRef)}${profitExitText!=="--"?`｜原獲利目標 ${profitExitText}`:""}`;}
+  else{out.defenseMode="normal";out.trimNote=`${base.trimNote}｜防守減碼尚未觸發${risk.trimRef?`（參考 ${technicalFmt(risk.trimRef)}）`:""}`;out.exitNote=`${base.exitNote}｜走壞出場尚未觸發${risk.exitRef?`（防守 ${technicalFmt(risk.exitRef)}）`:""}`;}
+  return out;
 }
 
 // v2.5.9.4 — 大量進場：結構、布林、MACD 動能週期、量能、五階段共同確認。
@@ -1882,10 +1936,10 @@ function buildDecisionPlan(play,price,expected){
   const se=play?.shortEngine||play?.diagnostics?.shortEngine,bo=play?.diagnostics?.breakout||se?.breakout||{},rows=latestFiveStageResult?.path?.rows||[],support=positionNumber(se?.support??t?.ma?.ma10??t?.ma?.ma20??t?.ma?.ma60??t?.bollinger?.middle),confirm=positionNumber(bo?.level??se?.resistance?.value??t?.bollinger?.upper??stageHigh(rows,20)),refs=[...(expected?.plan?.levels||[]),...(se?.targets||[])].map(x=>({value:positionNumber(x?.value)})).filter(x=>x.value!==null&&x.value>p*1.002).sort((a,b)=>a.value-b.value),trim=refs[0]?.value??confirm,exit=refs[1]?.value??refs[0]?.value??currentTargetPrice(),trialPlan=decisionTrialPlan({baseSupport:support,price:p,confirmed:false,candidates:[t?.ma?.ma5,t?.ma?.ma10,t?.bollinger?.middle,t?.ma?.ma20,t?.ma?.ma60,expected?.downside?.levels?.[0]?.value],lo:.995,hi:1.015,context:"觀察支撐"}),entryCandidate=targetZone(confirm,1,1.015);
   return {mode:"觀察",trial:trialPlan.zone,trialPlan,entry:null,entryCandidate,entryReady:false,trim:targetZone(trim,.99,1.01),exit:targetZone(exit,.985,1.015),trialNote:`${trialPlan.note}；目前玩法尚未確認，價位只作結構參考，不主動追價`,entryNote:entryCandidate?"大量進場參考價已保留，但策略仍是等待玩法／突破條件確認":"突破確認價資料不足，暫不主動進場",trimNote:"持股可先看上方結構壓力；未持股只作參考",exitNote:"遠端目標仍保留，等玩法成立後再決定是否執行"};
 }
-function renderDecision(play=latestPlayStyleResult,expected=null){
+function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
   const price=positionNumber(currentStock?.last??currentStock?.price??latestFiveStageResult?.price);if(price===null)return;
-  expected=expected||{price,position:currentHoldingPosition(),plan:buildExpectedPlan(play,price)};const d=buildDecisionPlan(play,price,expected),position=expected.position||currentHoldingPosition(),profile=play?.operationProfile;if(!d)return;
-  setText("decisionModeBadge",`${position?.avgCost?"持股｜":""}${d.mode}`);
+  expected=expected||{price,position:currentHoldingPosition(),plan:buildExpectedPlan(play,price)};risk=risk||buildDecisionRisk(play,price,expected);const baseDecision=buildDecisionPlan(play,price,expected),d=applyDecisionRisk(baseDecision,risk,price),position=expected.position||currentHoldingPosition(),profile=play?.operationProfile;if(!d)return;
+  setText("decisionModeBadge",`${position?.avgCost?"持股｜":""}${d.mode}`);setText("decisionRiskBadge",risk?.valid?`風險 ${risk.level.label} ${risk.score}`:"風險 --");const riskBadge=$("decisionRiskBadge");if(riskBadge){riskBadge.classList.remove("risk-low","risk-medium","risk-high","risk-extreme");if(risk?.valid)riskBadge.classList.add(`risk-${risk.level.key}`)}
   const split=profile?(profile.key==="long-swing"?`｜部位：長期核心 ${profile.basePct}%／波段倉 ${profile.tacticalPct}%`:profile.key==="mixed"?`｜部位：底倉 ${profile.basePct}%／機動 ${profile.tacticalPct}%`:`｜部位：核心 ${profile.basePct}%／機動 ${profile.tacticalPct}%`):"";
   if(position){const pnl=position.avgCost&&position.shares?(price-position.avgCost)*position.shares:null,pct=position.avgCost?positionReturn(price,position.avgCost):null;setText("decisionPositionNote",`持股均價 ${position.avgCost?technicalFmt(position.avgCost):"未填"}｜${position.shares?`${position.shares.toLocaleString("zh-TW")} 股`:"股數未填"}${pnl===null?"":`｜目前 ${signedMoney(pnl)}（${signedPercent(pct)}）`}${split}`)}else setText("decisionPositionNote",`未在持股清單：依目前股價與市場結構計算${split}；觀察清單不套用個人持股資料。`);
   setText("decisionTrialPrice",targetZoneText(d.trial));setText("decisionEntryPrice",decisionEntryText(d));setText("decisionTrimPrice",targetZoneText(d.trim));setText("decisionExitPrice",targetZoneText(d.exit));
@@ -1898,10 +1952,10 @@ function renderDecision(play=latestPlayStyleResult,expected=null){
   const trimMid=d.trim?(d.trim[0]+d.trim[1])/2:null,exitMid=d.exit?(d.exit[0]+d.exit[1])/2:null;
   if(position?.avgCost&&trimMid&&trimMid<position.avgCost)trimNote+="｜此區仍低於你的均價";if(position?.avgCost&&exitMid&&exitMid<position.avgCost)exitNote+="｜此區仍低於你的均價";
   setText("decisionTrialNote",position?`${d.trialNote}；已有持股時視為加碼參考`:d.trialNote);setText("decisionEntryNote",d.entryNote);setText("decisionTrimNote",trimNote);setText("decisionExitNote",exitNote);
-  setText("decisionFoot",profile?`${profile.label}：${profile.note}。價格仍由市場結構／估值決定，持股資料只調整報酬與分批股數。`:"價格來自目前玩法的結構與目標區；持股股數只用來換算分批數量，不改變市場目標價。");
+  const riskFoot=risk?.valid?` 風險 ${risk.level.label} ${risk.score}/100：${risk.summary}。`:"";setText("decisionFoot",(profile?`${profile.label}：${profile.note}。價格仍由市場結構／估值決定，持股資料只調整報酬與分批股數。`:"價格來自目前玩法的結構與目標區；持股股數只用來換算分批數量，不改變市場目標價。")+riskFoot);
   return d;
 }
-function renderTradeOutputs(){const expected=renderExpectedUpside(latestPlayStyleResult);if(expected){const decision=renderDecision(latestPlayStyleResult,expected);renderOverviewResonance(latestPlayStyleResult,expected,decision)}}
+function renderTradeOutputs(){const expected=renderExpectedUpside(latestPlayStyleResult);if(expected){const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price),risk=buildDecisionRisk(latestPlayStyleResult,price,expected),decision=renderDecision(latestPlayStyleResult,expected,risk);renderOverviewResonance(latestPlayStyleResult,expected,decision,risk)}}
 
 async function loadTechnical(data){
   const code=data?.code||data?.symbol||"",market=data?.market||data?.marketLabel||"";

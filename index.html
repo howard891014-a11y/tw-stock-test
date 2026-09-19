@@ -960,6 +960,8 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .expected-growth-hero{gap:8px}.expected-growth-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin:4px 0 2px}.expected-growth-grid>div{min-width:0;padding:10px 8px;border:1px solid #29445c;border-radius:10px;background:#091725;text-align:center}.expected-growth-grid small{display:block;color:#8297aa;font-size:10px;margin-bottom:5px}.expected-growth-grid strong{display:block;font-size:18px;line-height:1.2}.expected-growth-grid .risk{color:#ff9b8f}.expected-growth-grid .win{color:#64e7b5}.expected-growth-grid .extreme-risk{color:#ffbe73}.expected-seasonality{display:block;color:#71899d;font-size:9px;line-height:1.4}.expected-growth-grid em{display:block;margin-top:4px;color:#8194a5;font-size:9px;font-style:normal;line-height:1.35}.playstyle-fit-head b{max-width:58%;text-align:right;white-space:normal;line-height:1.25}
 @media(max-width:720px){.expected-growth-grid{grid-template-columns:1fr 1fr}.expected-growth-grid strong{font-size:16px}.playstyle-fit-head b{max-width:62%;font-size:9px}}
 </style>
+<style id="v2601-risk-decision">.decision-risk-badge{margin-left:5px;border-color:#365064!important;color:#a9bbc9!important}.decision-risk-badge.risk-low{border-color:#2e765e!important;color:#72e6b0!important;background:#0b2a22!important}.decision-risk-badge.risk-medium{border-color:#866c36!important;color:#ffd07a!important;background:#2b2412!important}.decision-risk-badge.risk-high,.decision-risk-badge.risk-extreme{border-color:#8a4653!important;color:#ff929f!important;background:#321821!important}.decision-risk-badge.risk-extreme{box-shadow:0 0 0 1px rgba(255,95,120,.12),0 0 18px rgba(255,73,106,.08)}
+</style>
 
 <style id="v2592-resonance-overview">
 /* v2.5.9.3 — 總覽只保留結論、價格、路徑與操作；上半部股票 header/tabs 完全不動 */
@@ -1007,7 +1009,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.5.9.10</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.1</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1292,13 +1294,13 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         </article>
 
         <article class="card decision-card detail-panel" id="decision" data-view-panel="analysis">
-          <div class="card-title">買賣決策 <span class="badge" id="decisionModeBadge">依玩法</span></div>
+          <div class="card-title">買賣決策 <span class="badge" id="decisionModeBadge">依玩法</span> <span class="badge decision-risk-badge" id="decisionRiskBadge">風險 --</span></div>
           <div class="decision-position-note" id="decisionPositionNote">等待玩法與持股資料</div>
           <div class="decision-grid decision-grid-v2">
             <div class="buy"><span>小量試單</span><strong id="decisionTrialPrice">--</strong><small id="decisionTrialNote">--</small></div>
             <div class="buy"><span>大量進場</span><strong id="decisionEntryPrice">--</strong><small id="decisionEntryNote">--</small></div>
-            <div class="trim"><span>小量止盈</span><strong id="decisionTrimPrice">--</strong><small id="decisionTrimNote">--</small></div>
-            <div class="sell"><span>全數獲利</span><strong id="decisionExitPrice">--</strong><small id="decisionExitNote">--</small></div>
+            <div class="trim"><span>減碼／止盈</span><strong id="decisionTrimPrice">--</strong><small id="decisionTrimNote">--</small></div>
+            <div class="sell"><span>出場／獲利</span><strong id="decisionExitPrice">--</strong><small id="decisionExitNote">--</small></div>
           </div>
           <small class="decision-foot" id="decisionFoot">價格來自目前玩法的結構與目標區；持股股數只用來換算分批數量，不改變市場目標價。</small>
         </article>
