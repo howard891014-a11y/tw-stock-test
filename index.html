@@ -595,6 +595,17 @@ body{padding-bottom:68px}
 #overviewPlayMetric{font-size:18px!important;line-height:1.3!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
 @media(max-width:720px){#overviewPlayMetric{font-size:17px!important}}
 
+
+/* v2.6.0.12 — refreshed overview wave chart */
+.overview-wave-shell{padding:14px 12px 10px!important;background:linear-gradient(180deg,#ffffff,#f7fbff)!important;border:1px solid #e2eaf3!important;border-radius:22px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)!important}
+.overview-wave-shell svg{min-height:360px!important}
+.overview-wave-grid{stroke:#d7e3f0!important;stroke-dasharray:6 7!important;stroke-width:1.2!important}
+.overview-wave-axis{font-size:17px;font-weight:700;fill:#7f93ac}
+.overview-wave-tag-title{font-size:14px!important;font-weight:800!important;fill:#6b7f97!important}
+.overview-wave-tag-price{font-size:20px!important;font-weight:900!important;fill:#14263e!important}
+.overview-wave-caption{font-size:12px;font-weight:800;fill:#8396ad}
+@media(max-width:720px){.overview-wave-shell{padding:10px 8px 8px!important;border-radius:20px!important}.overview-wave-shell svg{min-height:330px!important}.overview-wave-axis{font-size:15px}.overview-wave-tag-title{font-size:13px!important}.overview-wave-tag-price{font-size:18px!important}}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -1223,7 +1234,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.11</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.12</span></button>
   </aside>
 
   <div class="main-shell">
@@ -1279,10 +1290,10 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
             <b id="overviewResonancePlay" hidden aria-hidden="true">等待資料</b>
           </header>
           <div class="overview-resonance-metrics">
-            <div class="metric-play"><span>建議玩法</span><strong id="overviewPlayMetric">--</strong></div>
-            <div class="metric-target"><span>主要目標區</span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
-            <div class="metric-up"><span>預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
-            <div class="metric-down"><span>正常下跌空間</span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
+            <div class="metric-play"><span>⭐ 建議玩法</span><strong id="overviewPlayMetric">--</strong></div>
+            <div class="metric-target"><span>🎯 主要目標區</span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
+            <div class="metric-up"><span>📈 預計上漲空間</span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
+            <div class="metric-down"><span>📉 正常下跌空間</span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
           </div>
           <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 340" role="img" aria-label="共振價格路徑"></svg></div>
           <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
