@@ -988,44 +988,59 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .adaptive-stop-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.adaptive-stop-head span{display:block;color:#7e9ab0;font-size:10px}.adaptive-stop-head b{display:block;margin-top:3px;color:#eaf5ff;font-size:13px}.adaptive-stop-head small{max-width:64%;color:#7e95a8;font-size:9px;line-height:1.4;text-align:right}
 .adaptive-stop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.adaptive-stop-grid>div{padding:10px;border:1px solid #37506a;border-radius:10px;background:#081522}.adaptive-stop-grid>div:first-child{border-color:#49654f}.adaptive-stop-grid>div:last-child{border-color:#4b5576}.adaptive-stop-grid span{display:block;color:#a8bac8;font-size:10px}.adaptive-stop-grid b{display:block;margin:5px 0;color:#f5fbff;font-size:16px}.adaptive-stop-grid small{display:block;color:#879caf;font-size:9px;line-height:1.5}.adaptive-stop-grid em{font-style:normal;color:#ffb66d;font-weight:800}.adaptive-stop-note{display:block;margin-top:9px;color:#73899c;font-size:9px;line-height:1.45}
 @media(max-width:720px){.adaptive-stop-panel{padding:10px 8px}.adaptive-stop-head{display:block}.adaptive-stop-head small{display:block;max-width:none;margin-top:5px;text-align:left}.adaptive-stop-grid{grid-template-columns:1fr}.adaptive-stop-grid b{font-size:15px}}
-
-<style id="v2605-overview-mobile-tune">
-/* v2.6.0.5 — 使用者指定：總覽分頁平均分配寬度／刪除總覽輔助小字／藍圈標題字級提升 */
-#analysisTabs{
+</style>
+<style id="v2606-overview-mobile-tune">
+/* v2.6.0.6 — 手機分頁固定六等分、不允許橫向滑動；保留前版總覽精簡與標題放大 */
+body.mode-analysis #analysisTabs{
   display:grid!important;
   grid-template-columns:repeat(6,minmax(0,1fr))!important;
-  overflow:hidden!important;
-}
-#analysisTabs button{
-  min-width:0!important;
   width:100%!important;
-  flex:0 0 auto!important;
-  padding:0 8px!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  overflow-x:hidden!important;
+  scrollbar-width:none!important;
+}
+body.mode-analysis #analysisTabs::-webkit-scrollbar{display:none!important}
+body.mode-analysis #analysisTabs button{
+  min-width:0!important;
+  width:auto!important;
+  max-width:100%!important;
+  flex:none!important;
+  padding:0 4px!important;
   text-align:center!important;
+  white-space:nowrap!important;
 }
 #overviewResonanceCard .overview-resonance-head>div>span,
 #overviewResonanceCard .overview-resonance-head>div>small,
 #overviewResonanceCard .overview-resonance-metrics small{
   display:none!important;
 }
-#overviewResonanceCard .overview-resonance-head h2{
-  margin:0!important;
-}
+#overviewResonanceCard .overview-resonance-head h2{margin:0!important}
 #overviewResonanceCard .overview-resonance-metrics span{
   font-size:11px!important;
   line-height:1.35!important;
 }
 @media(max-width:720px){
-  #analysisTabs{margin:0 0 12px!important;height:44px!important}
-  #analysisTabs button{padding:0 4px!important;font-size:13px!important}
+  body.mode-analysis #analysisTabs{
+    height:44px!important;
+    margin:0 0 12px!important;
+  }
+  body.mode-analysis #analysisTabs button{
+    padding:0 1px!important;
+    font-size:12px!important;
+    letter-spacing:0!important;
+  }
   #overviewResonanceCard .overview-resonance-head{align-items:center!important}
   #overviewResonanceCard .overview-resonance-head h2{font-size:20px!important}
   #overviewResonanceCard .overview-resonance-metrics span{font-size:12px!important}
   #overviewResonanceCard .overview-resonance-metrics strong{margin-top:3px!important}
-  #overviewResonanceCard .overview-resonance-metrics>div{display:flex!important;flex-direction:column!important;justify-content:center!important;min-height:72px!important}
+  #overviewResonanceCard .overview-resonance-metrics>div{
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    min-height:72px!important;
+  }
 }
-</style>
-
 </style>
 </head>
 <body>
@@ -1054,7 +1069,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.5</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.6</span></button>
   </aside>
 
   <div class="main-shell">

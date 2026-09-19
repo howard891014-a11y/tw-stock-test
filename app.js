@@ -1,4 +1,4 @@
-// v2.5.9.10 — 試單價補齊多層支撐 fallback；只要已有有效支撐，價格節點不得顯示 --。
+// v2.6.0.6 — 手機分頁六等分、總覽精簡字級調整、股票標題加入產業別。
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
@@ -33,6 +33,67 @@ const LOCAL_STOCK_META={
   "2330":{code:"2330",name:"台積電",market:"上市",symbol:"2330.TW"},"台積電":{code:"2330",name:"台積電",market:"上市",symbol:"2330.TW"}
 };
 function localStockMeta(query){return LOCAL_STOCK_META[String(query||"").trim()]||null}
+const INDUSTRY_META_CACHE_KEY="stockzone_industry_meta_v2606",INDUSTRY_META_CACHE_MS=7*24*60*60*1000;
+function stockIndustryValue(...sources){
+  for(const x of sources){
+    if(!x||typeof x!=="object")continue;
+    for(const k of ["industry","industryName","sector","sectorName","companyIndustry","industryCategory","industry_type","產業別","產業類別","產業"]){
+      const v=String(x?.[k]??"").trim();
+      if(v&&v!=="--"&&v!=="—"&&v!=="N/A")return v;
+    }
+  }
+  return "";
+}
+function readIndustryMetaCache(){try{return JSON.parse(localStorage.getItem(INDUSTRY_META_CACHE_KEY)||"{}")||{}}catch{return{}}}
+function writeIndustryMetaCache(x){try{localStorage.setItem(INDUSTRY_META_CACHE_KEY,JSON.stringify(x))}catch{}}
+const SECURITIES_INDUSTRY_NAMES={
+  "01":"水泥工業","02":"食品工業","03":"塑膠工業","04":"紡織纖維","05":"電機機械","06":"電器電纜",
+  "08":"玻璃陶瓷","09":"造紙工業","10":"鋼鐵工業","11":"橡膠工業","12":"汽車工業","14":"建材營造",
+  "15":"航運業","16":"觀光餐旅","18":"貿易百貨","19":"綜合","20":"其他","21":"化學工業","22":"生技醫療業",
+  "23":"油電燃氣業","24":"半導體業","25":"電腦及週邊設備業","26":"光電業","27":"通信網路業","28":"電子零組件業",
+  "29":"電子通路業","30":"資訊服務業","31":"其他電子業","32":"文化創意業","33":"農業科技","35":"綠能環保",
+  "36":"數位雲端","37":"運動休閒","38":"居家生活","80":"管理股票"
+};
+function officialIndustryName(row,market=""){
+  const direct=stockIndustryValue(row);if(direct)return direct;
+  const code=String(row?.SecuritiesIndustryCode??row?.industryCode??row?.["產業別代碼"]??"").trim().padStart(2,"0");
+  if(code==="17")return /上市|TWSE|TW/i.test(String(market||""))?"金融保險":"金融業";
+  return SECURITIES_INDUSTRY_NAMES[code]||"";
+}
+async function officialIndustryMeta(code,market=""){
+  const c=String(code||"").replace(/\.(?:TW|TWO)$/i,"").trim();
+  if(!/^\d{4,6}$/.test(c))return "";
+  const cache=readIndustryMetaCache(),hit=cache[c];
+  if(hit&&Date.now()-Number(hit.savedAt||0)<INDUSTRY_META_CACHE_MS&&hit.industry)return String(hit.industry);
+  const urls=[];
+  if(/上櫃|OTC|TWO/i.test(String(market||"")))urls.push("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O");
+  else if(/上市|TWSE|TW/i.test(String(market||"")))urls.push("https://openapi.twse.com.tw/v1/opendata/t187ap03_L");
+  else urls.push("https://openapi.twse.com.tw/v1/opendata/t187ap03_L","https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O");
+  for(const url of urls){
+    try{
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),7000);
+      let res;
+      try{res=await fetch(url,{cache:"default",signal:controller.signal})}finally{clearTimeout(timer)}
+      if(!res.ok)continue;
+      const payload=await res.json(),rows=Array.isArray(payload)?payload:(Array.isArray(payload?.data)?payload.data:[]);
+      const row=rows.find(r=>String(r?.SecuritiesCompanyCode??r?.["公司代號"]??r?.code??r?.stockCode??"").trim()===c);
+      const industry=officialIndustryName(row,market);
+      if(industry){cache[c]={industry,savedAt:Date.now()};writeIndustryMetaCache(cache);return industry}
+    }catch(e){console.warn("產業別官方資料讀取失敗",e)}
+  }
+  return "";
+}
+async function enrichStockMetaIndustry(meta){
+  if(!meta)return meta;
+  const existing=stockIndustryValue(meta);if(existing)return {...meta,industry:existing};
+  const code=meta?.code||String(meta?.symbol||"").split(".")[0]||"",market=meta?.market||meta?.marketLabel||"";
+  const industry=await officialIndustryMeta(code,market);
+  return industry?{...meta,industry}:meta;
+}
+function stockHeaderMeta(stock){
+  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"—"),market=String(stock?.market||stock?.marketLabel||"台股").trim(),industry=stockIndustryValue(stock);
+  return [code,market,industry].filter(Boolean).join(" | ");
+}
 const STOCK_META_CACHE_KEY="stockzone_stock_meta_cache_v2573";
 function readStockMetaCache(){try{return JSON.parse(localStorage.getItem(STOCK_META_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function cachedStockMeta(query){
@@ -42,9 +103,9 @@ function cachedStockMeta(query){
   return hit;
 }
 function rememberStockMeta(stock){
-  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"").trim(),name=shortStockName(stock?.name||stock?.shortName||""),market=stock?.market||stock?.marketLabel||"";
+  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"").trim(),name=shortStockName(stock?.name||stock?.shortName||""),market=stock?.market||stock?.marketLabel||"",industry=stockIndustryValue(stock);
   if(!/^\d{4,6}$/.test(code))return;
-  const row={code,name,market,symbol:stock?.symbol||`${code}${market==="上櫃"?".TWO":".TW"}`,savedAt:Date.now()},all=readStockMetaCache();
+  const row={code,name,market,industry,symbol:stock?.symbol||`${code}${market==="上櫃"?".TWO":".TW"}`,savedAt:Date.now()},all=readStockMetaCache();
   all[code]=row;if(name)all[name]=row;localStorage.setItem(STOCK_META_CACHE_KEY,JSON.stringify(all));
 }
 async function stockMeta(query){
@@ -63,7 +124,8 @@ async function stockMeta(query){
 }
 function mergeStockMeta(data,meta){
   if(!meta)return data;
-  return {...data,code:meta.code||data?.code||data?.symbol,symbol:data?.symbol||meta.symbol||meta.code,name:meta.name||data?.name||data?.shortName,shortName:meta.name||data?.shortName||data?.name,market:meta.market||data?.market||data?.marketLabel,marketLabel:meta.market||data?.marketLabel||data?.market};
+  const industry=stockIndustryValue(meta,data);
+  return {...data,code:meta.code||data?.code||data?.symbol,symbol:data?.symbol||meta.symbol||meta.code,name:meta.name||data?.name||data?.shortName,shortName:meta.name||data?.shortName||data?.name,market:meta.market||data?.market||data?.marketLabel,marketLabel:meta.market||data?.marketLabel||data?.market,industry};
 }
 
 function taipeiMarketClock(now=new Date()){
@@ -270,7 +332,7 @@ async function loadFundamentals(stock){
   const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||""),market=stock?.market||stock?.marketLabel||"";
   try{
     const data=await fundamentals(code,market),cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");
-    if(cur&&cur!==code)return;latestFundamentalData=data;if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
+    if(cur&&cur!==code)return;latestFundamentalData=data;const industry=stockIndustryValue(data,data?.company,data?.profile,data?.officialStatement);if(industry&&currentStock){currentStock={...currentStock,industry};setText("stockCodeLabel",stockHeaderMeta(currentStock));rememberStockMeta(currentStock)}if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
   }catch(e){console.warn("長期基本面更新失敗",e);const cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(!cur||cur===code){latestFundamentalData=null;if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle()}}
 }
 
@@ -2211,7 +2273,7 @@ function patchCurrentQuote(x){
 function renderStock(x){
   currentStock=x;latestHistory5Y=null;latestFundamentalData=null;resetPlayStyle("讀取分析資料中…");
   setText("stockName",shortStockName(x.name||x.shortName)||"—");
-  setText("stockCodeLabel",`${x.code||x.symbol||"—"} | ${x.market||"台股"}`);
+  setText("stockCodeLabel",stockHeaderMeta(x));
   setText("marketLabel","");
   renderQuoteFields(x);updateListButtons();beginNews();rememberStockMeta(x);
 }
@@ -2223,7 +2285,7 @@ async function search(){
   try{
     // v2.5.7.3：主畫面只等待行情。股票身分、目標價、新聞改背景補齊，避免第一次搜尋被 20～30 秒的外部來源卡住。
     let meta=localStockMeta(q)||cachedStockMeta(q);
-    const metaPromise=meta?Promise.resolve(meta):stockMeta(q).catch(e=>{console.warn("股票身分背景補查失敗",e);return null});
+    const metaPromise=(meta?enrichStockMetaIndustry(meta):stockMeta(q).then(enrichStockMetaIndustry)).catch(e=>{console.warn("股票身分／產業別背景補查失敗",e);return null});
     let data=await quote(meta?.code||q,meta?.market||"");
     if(seq!==activeSearchSeq)return;
     if(!meta){
@@ -2238,7 +2300,7 @@ async function search(){
 
     const code=String(data.code||String(data.symbol||"").split(".")[0]||q),name=data.name||data.shortName||"";
     // 身分資料晚到時，只修正標題／市場，不重跑整頁。
-    void metaPromise.then(m=>{if(!m||seq!==activeSearchSeq)return;const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(m.code||"")!==curCode)return;currentStock=mergeStockMeta(currentStock,m);rememberStockMeta(currentStock);setText("stockName",shortStockName(currentStock.name||currentStock.shortName)||"—");setText("stockCodeLabel",`${currentStock.code||currentStock.symbol||"—"} | ${currentStock.market||"台股"}`)});
+    void metaPromise.then(m=>{if(!m||seq!==activeSearchSeq)return;const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(m.code||"")!==curCode)return;currentStock=mergeStockMeta(currentStock,m);rememberStockMeta(currentStock);setText("stockName",shortStockName(currentStock.name||currentStock.shortName)||"—");setText("stockCodeLabel",stockHeaderMeta(currentStock))});
     // 慢來源並行刷新；舊快取已先顯示，不再阻塞搜尋按鈕與主畫面。
     void loadTargetPlay(code,name).catch(e=>console.warn("目標價背景更新失敗",e));
     void loadNews(code,name).catch(e=>console.warn("新聞背景更新失敗",e));
