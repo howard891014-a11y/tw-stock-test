@@ -929,6 +929,119 @@ body{padding-bottom:68px}
   #overviewDecisionCard .overview-final-line span::before{width:32px;height:32px;flex-basis:32px;background-size:17px 17px}
 }
 
+
+/* v2.6.0.23 — decision section exactly aligned closer to resonance cards */
+#overviewDecisionCard .overview-decision-head h2{
+  font-size:24px!important;
+  line-height:1.15!important;
+  font-weight:800!important;
+  color:#13233a!important;
+  gap:10px!important;
+}
+#overviewDecisionCard .overview-decision-title-icon{
+  width:1.45em!important;
+  height:1.02em!important;
+  flex:0 0 1.45em!important;
+}
+#overviewDecisionCard .overview-decision-row{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:12px!important;
+  margin-top:12px!important;
+}
+#overviewDecisionCard .overview-decision-row > div,
+#overviewDecisionCard .overview-final-line > div{
+  position:relative!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  padding:14px 14px 14px!important;
+  border-radius:18px!important;
+  border:1px solid #edf1f7!important;
+  box-shadow:none!important;
+}
+#overviewDecisionCard .overview-decision-row > div:nth-child(1){background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important;border-color:#dfe9ff!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(2){background:linear-gradient(180deg,#effaf5,#e7f7ee)!important;border-color:#d6f4e5!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(3){background:linear-gradient(180deg,#fff8eb,#fff2da)!important;border-color:#ffe7bb!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(4){background:linear-gradient(180deg,#f6f0ff,#f1e9ff)!important;border-color:#e5d8ff!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(5){background:linear-gradient(180deg,#fff3f5,#ffedf0)!important;border-color:#ffdce3!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(6){background:linear-gradient(180deg,#fff3f5,#ffedf0)!important;border-color:#ffdcdc!important}
+#overviewDecisionCard .overview-final-line{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:12px!important;
+  margin-top:14px!important;
+  padding-top:14px!important;
+  border-top:1px solid #edf2f7!important;
+}
+#overviewDecisionCard .overview-final-line > div:nth-child(1){background:linear-gradient(180deg,#fff3f5,#ffedf0)!important;border-color:#ffdcdc!important}
+#overviewDecisionCard .overview-final-line > div:nth-child(2){background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important;border-color:#dfe9ff!important}
+
+#overviewDecisionCard .overview-decision-row span,
+#overviewDecisionCard .overview-final-line span{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  color:#7a8da3!important;
+  font-size:15px!important;
+  line-height:1.2!important;
+  font-weight:700!important;
+}
+#overviewDecisionCard .overview-decision-row span::before,
+#overviewDecisionCard .overview-final-line span::before{
+  content:'';
+  display:inline-flex!important;
+  width:28px!important;
+  height:28px!important;
+  flex:0 0 28px!important;
+  border-radius:999px!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  background-size:16px 16px!important;
+}
+#overviewDecisionCard .overview-decision-row strong,
+#overviewDecisionCard .overview-final-line b{
+  display:block!important;
+  width:calc(100% - 36px)!important;
+  margin-left:36px!important;
+  margin-top:4px!important;
+  text-align:left!important;
+  font-size:17px!important;
+  line-height:1.35!important;
+  font-weight:800!important;
+  overflow-wrap:anywhere!important;
+}
+#overviewDecisionCard .overview-decision-row > div:nth-child(1) span::before{background-color:#d8e1ff!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(2) span::before{background-color:#d1f0df!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(3) span::before{background-color:#ffebc1!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(4) span::before{background-color:#dfd3ff!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(5) span::before{background-color:#fde0e5!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(6) span::before{background-color:#ffdfe3!important}
+#overviewDecisionCard .overview-final-line > div:nth-child(1) span::before{background-color:#fde0e5!important}
+#overviewDecisionCard .overview-final-line > div:nth-child(2) span::before{background-color:#d8e1ff!important}
+
+#overviewDecisionCard .overview-decision-row > div:nth-child(1) strong{color:#2f80ff!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(2) strong{color:#1fa86a!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(3) strong{color:#d59a1a!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(4) strong{color:#7d57d8!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(5) strong{color:#e24c5b!important}
+#overviewDecisionCard .overview-decision-row > div:nth-child(6) strong{color:#d9534f!important}
+#overviewDecisionCard .overview-final-line > div:nth-child(1) b{color:#d9534f!important}
+#overviewDecisionCard .overview-final-line > div:nth-child(2) b{color:#2f80ff!important}
+
+@media (max-width:720px){
+  #overviewDecisionCard .overview-decision-head h2{font-size:24px!important}
+  #overviewDecisionCard .overview-decision-row,
+  #overviewDecisionCard .overview-final-line{gap:10px!important}
+  #overviewDecisionCard .overview-decision-row > div,
+  #overviewDecisionCard .overview-final-line > div{padding:13px 12px 13px!important;border-radius:18px!important}
+  #overviewDecisionCard .overview-decision-row span,
+  #overviewDecisionCard .overview-final-line span{font-size:15px!important;gap:8px!important}
+  #overviewDecisionCard .overview-decision-row strong,
+  #overviewDecisionCard .overview-final-line b{font-size:17px!important;line-height:1.38!important;width:calc(100% - 34px)!important;margin-left:34px!important}
+  #overviewDecisionCard .overview-decision-row span::before,
+  #overviewDecisionCard .overview-final-line span::before{width:28px!important;height:28px!important;flex-basis:28px!important;background-size:16px 16px!important}
+}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -1557,7 +1670,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.22</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.23</span></button>
   </aside>
 
   <div class="main-shell">
