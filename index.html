@@ -1914,6 +1914,171 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
 }
 </style>
 
+
+<style id="stockzone-v2613-technical-overview-redesign">
+/* v2.6.1.3 — replace the duplicated split technical summary with one compact centered judgment card. */
+body.mode-analysis #technical .tech-overview.tech-overview-v2{
+  --tech-accent:#6f86a4;
+  --tech-accent-soft:#edf3fa;
+  display:block!important;
+  grid-template-columns:none!important;
+  position:relative!important;
+  overflow:hidden!important;
+  margin-bottom:12px!important;
+  padding:0!important;
+  border:1px solid #dfe8f1!important;
+  border-radius:20px!important;
+  background:linear-gradient(180deg,#fbfffd 0%,#f3fbf7 100%)!important;
+  box-shadow:none!important;
+}
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-good{--tech-accent:#20ad72;--tech-accent-soft:#ddf6e9}
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-watch{--tech-accent:#d49a1d;--tech-accent-soft:#fff1c9}
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad{--tech-accent:#e05865;--tech-accent-soft:#ffe3e7}
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-neutral{--tech-accent:#6788af;--tech-accent-soft:#e8f1fb}
+body.mode-analysis #technical .tech-overview-v2-inner{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  width:100%!important;
+  padding:18px 20px 14px!important;
+  text-align:center!important;
+}
+body.mode-analysis #technical .tech-overview-kicker{
+  display:block!important;
+  margin:0 0 8px!important;
+  color:#7d8fa4!important;
+  font-size:14px!important;
+  font-weight:500!important;
+  line-height:1.2!important;
+}
+body.mode-analysis #technical .tech-overview-v2 .tech-state-line{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  margin:0!important;
+}
+body.mode-analysis #technical .tech-overview-v2 .tech-state-icon{
+  width:42px!important;
+  height:42px!important;
+  flex:0 0 42px!important;
+  border-radius:999px!important;
+  background:var(--tech-accent-soft)!important;
+  color:var(--tech-accent)!important;
+  font-size:28px!important;
+  font-weight:800!important;
+  line-height:42px!important;
+  transform:none!important;
+}
+body.mode-analysis #technical .tech-overview-v2 .tech-state-line strong{
+  color:var(--tech-accent)!important;
+  font-size:38px!important;
+  font-weight:800!important;
+  line-height:1!important;
+}
+body.mode-analysis #technical .tech-direction-summary{
+  margin:13px 0 16px!important;
+  color:#647990!important;
+  font-size:13px!important;
+  font-weight:400!important;
+  line-height:1.55!important;
+}
+body.mode-analysis #technical .tech-direction-scale{
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  width:min(100%,560px)!important;
+  margin:0 auto 16px!important;
+  padding:0 6px!important;
+}
+body.mode-analysis #technical .tech-scale-track{
+  position:absolute!important;
+  left:10%!important;
+  right:10%!important;
+  top:9px!important;
+  height:2px!important;
+  border-radius:999px!important;
+  background:#d6dfe9!important;
+  z-index:0!important;
+}
+body.mode-analysis #technical .tech-scale-item{
+  position:relative!important;
+  z-index:1!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  gap:7px!important;
+  min-width:0!important;
+  color:#8191a5!important;
+  font-size:11px!important;
+  line-height:1!important;
+}
+body.mode-analysis #technical .tech-scale-item i{
+  display:block!important;
+  width:18px!important;
+  height:18px!important;
+  border:3px solid #edf2f7!important;
+  border-radius:999px!important;
+  background:#cdd8e5!important;
+  box-shadow:0 0 0 1px rgba(129,145,165,.06)!important;
+}
+body.mode-analysis #technical .tech-scale-item.is-active{
+  color:#24364d!important;
+  font-weight:700!important;
+}
+body.mode-analysis #technical .tech-scale-item.is-active i{
+  background:var(--tech-accent)!important;
+  border-color:#fff!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--tech-accent) 30%,transparent)!important;
+}
+body.mode-analysis #technical .tech-overview-insight{
+  display:flex!important;
+  align-items:center!important;
+  gap:9px!important;
+  width:100%!important;
+  min-height:44px!important;
+  padding:9px 12px!important;
+  border-radius:14px!important;
+  background:linear-gradient(90deg,#eef6ff,#f4fbf8)!important;
+  text-align:left!important;
+}
+body.mode-analysis #technical .tech-overview-insight-icon{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:30px!important;
+  height:30px!important;
+  flex:0 0 30px!important;
+  border-radius:999px!important;
+  background:#dcecff!important;
+  color:#4b8edb!important;
+  font-size:17px!important;
+  font-weight:800!important;
+}
+body.mode-analysis #technical .tech-overview-insight p{
+  margin:0!important;
+  color:#526b86!important;
+  font-size:12px!important;
+  font-weight:500!important;
+  line-height:1.45!important;
+}
+@media(max-width:720px){
+  body.mode-analysis #technical .tech-overview.tech-overview-v2{border-radius:18px!important}
+  body.mode-analysis #technical .tech-overview-v2-inner{padding:15px 13px 12px!important}
+  body.mode-analysis #technical .tech-overview-kicker{font-size:12px!important;margin-bottom:7px!important}
+  body.mode-analysis #technical .tech-overview-v2 .tech-state-icon{width:36px!important;height:36px!important;flex-basis:36px!important;font-size:24px!important;line-height:36px!important}
+  body.mode-analysis #technical .tech-overview-v2 .tech-state-line strong{font-size:32px!important}
+  body.mode-analysis #technical .tech-direction-summary{margin:10px 0 14px!important;font-size:11px!important;line-height:1.5!important}
+  body.mode-analysis #technical .tech-direction-scale{margin-bottom:13px!important;padding:0 2px!important}
+  body.mode-analysis #technical .tech-scale-track{top:8px!important}
+  body.mode-analysis #technical .tech-scale-item{gap:6px!important;font-size:10px!important}
+  body.mode-analysis #technical .tech-scale-item i{width:16px!important;height:16px!important}
+  body.mode-analysis #technical .tech-overview-insight{gap:8px!important;min-height:40px!important;padding:8px 10px!important;border-radius:12px!important}
+  body.mode-analysis #technical .tech-overview-insight-icon{width:27px!important;height:27px!important;flex-basis:27px!important;font-size:15px!important}
+  body.mode-analysis #technical .tech-overview-insight p{font-size:10px!important;line-height:1.45!important}
+}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
@@ -1941,7 +2106,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.3</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2028,15 +2193,20 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
       <section class="dashboard-grid">
         <article class="card detail-panel technical-card" id="technical" data-view-panel="analysis">
           <div class="card-title">技術分析 <span class="badge" id="technicalSource">Yahoo｜--</span></div>
-          <section class="tech-overview" id="techOverview">
-            <div class="tech-overview-main">
-              <span>方向</span>
+          <section class="tech-overview tech-overview-v2" id="techOverview">
+            <div class="tech-overview-v2-inner">
+              <span class="tech-overview-kicker">綜合判斷</span>
               <div class="tech-state-line"><i class="tech-state-icon" aria-hidden="true">↔</i><strong id="techState">--</strong></div>
-              <small class="tech-direction-note">均線・量價・布林・乖離・趨勢位置・動能綜合判斷</small>
-            </div>
-            <div class="tech-overview-points">
-              <ul id="techKeyPoints"><li>--</li></ul>
-              <p id="techHeadline">--</p>
+              <p class="tech-direction-summary" id="techDirectionSummary">--</p>
+              <div class="tech-direction-scale" id="techDirectionScale" data-level="3" aria-label="技術方向位置">
+                <div class="tech-scale-track" aria-hidden="true"></div>
+                <div class="tech-scale-item" data-level="1"><i aria-hidden="true"></i><span>低檔</span></div>
+                <div class="tech-scale-item" data-level="2"><i aria-hidden="true"></i><span>偏空</span></div>
+                <div class="tech-scale-item" data-level="3"><i aria-hidden="true"></i><span>中段</span></div>
+                <div class="tech-scale-item" data-level="4"><i aria-hidden="true"></i><span>偏多</span></div>
+                <div class="tech-scale-item" data-level="5"><i aria-hidden="true"></i><span>高檔</span></div>
+              </div>
+              <div class="tech-overview-insight"><span class="tech-overview-insight-icon" aria-hidden="true">↗</span><p id="techSummary">--</p></div>
             </div>
           </section>
           <section class="tech-grid">
@@ -2049,7 +2219,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
             <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">◈</span>股性</b><em id="techPersonalityState">--</em></header><p id="techPersonalityConclusion">--</p><small id="techPersonality">--</small></div>
             <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">◷</span>季節性</b><em id="techSeasonState">--</em></header><p id="techSeasonConclusion">--</p><small id="techSeason">--</small></div>
           </section>
-          <section class="tech-summary"><b>風險評語</b><p id="techSummary">--</p></section>
+
         </article>
 
         <article class="card detail-panel valuation-card" id="valuation" data-view-panel="valuation">
@@ -3070,7 +3240,7 @@ body.mode-analysis #technical .tech-summary p{color:#65788f!important}
 body.mode-analysis #technical .tech-summary b::after{color:#c0cbd8!important}
 
 
-/* v2.6.1.2 — technical direction architecture */
+/* v2.6.1.3 — technical direction architecture */
 body.mode-analysis #technical .tech-direction-note{display:block;margin-top:10px;color:#71859b!important;font-size:12px;line-height:1.55;text-align:center;max-width:220px}
 body.mode-analysis #technical .tech-overview-main{justify-content:center!important}
 body.mode-analysis #technical .tech-state-line strong{font-size:34px!important}
@@ -3083,7 +3253,7 @@ body.mode-analysis #technical .tech-summary b::after{content:""!important;margin
   body.mode-analysis #technical .tech-state-line strong{font-size:28px!important}
 }
 
-/* v2.6.1.2 — strategy name is a display label derived from the final core/tactical ratio; no public short/swing/long score bars. */
+/* v2.6.1.3 — strategy name is a display label derived from the final core/tactical ratio; no public short/swing/long score bars. */
 body.mode-analysis #playStyleCard .playstyle-hero{margin-bottom:0!important}
 
 /* 建議玩法 */

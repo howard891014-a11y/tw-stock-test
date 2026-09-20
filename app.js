@@ -1,4 +1,4 @@
-// v2.6.1.2 — technical analysis rebuilt around direction / risk / stage; legacy technical score retired.
+// v2.6.1.3 — technical analysis rebuilt around direction / risk / stage; legacy technical score retired.
 // 五年日K只抓一次並快取；近期股性維持一年加權，五年資料用於季節性／相似訊號／成長空間／極端風險。
 const $=id=>document.getElementById(id);
 
@@ -459,10 +459,35 @@ function calculateTechnicalDirection(t,price,personality=null,seasonality=null){
   const risk=technicalRiskAssessment(result,null);result.riskLevel=risk.level;result.riskTone=risk.tone;result.riskText=risk.text;result.hiddenPosition=technicalHiddenPosition(result,null);
   return result;
 }
+function technicalDirectionScaleLevel(d){
+  const x=Number(d?.index)||0;
+  if(x>=58)return 5;
+  if(x>=18)return 4;
+  if(x<=-58)return 1;
+  if(x<=-18)return 2;
+  return 3;
+}
+function technicalOverviewPositionLabel(stageResult){
+  const stage=Number(stageResult?.stage);
+  return ({1:'低檔',2:'修復段',3:'中段',4:'加速段',5:'高檔'})[stage]||'目前區間';
+}
+function technicalOverviewInsight(d,stageResult=null){
+  if(!d)return '--';
+  const pos=technicalOverviewPositionLabel(stageResult),dir=d.direction==='整理'?'方向整理':`短線${d.direction}`;
+  const raw=String(d.riskText||'').replace(/^(低|中|高)\s*[｜|]\s*/,'').replace(/[。.]$/,'');
+  return `目前位於${pos}，${dir}${raw?`，${raw}`:''}。`;
+}
+function updateTechnicalOverview(d,stageResult=null){
+  if(!d)return;
+  setText('techDirectionSummary',`均線、量價、布林、乖離、趨勢位置與動能等指標綜合判斷${d.direction}。`);
+  setText('techSummary',technicalOverviewInsight(d,stageResult));
+  const scale=$('techDirectionScale'),level=technicalDirectionScaleLevel(d);
+  if(scale){scale.dataset.level=String(level);scale.querySelectorAll('.tech-scale-item').forEach(el=>el.classList.toggle('is-active',Number(el.dataset.level)===level));}
+}
 function refreshTechnicalDirectionAfterStage(stageResult){
   if(!latestTechnicalDirection)return;
   const risk=technicalRiskAssessment(latestTechnicalDirection,stageResult);latestTechnicalDirection.riskLevel=risk.level;latestTechnicalDirection.riskTone=risk.tone;latestTechnicalDirection.riskText=risk.text;latestTechnicalDirection.hiddenPosition=technicalHiddenPosition(latestTechnicalDirection,stageResult);
-  const s=$('techSummary');if(s)s.textContent=risk.text;
+  updateTechnicalOverview(latestTechnicalDirection,stageResult);
 }
 function technicalDirectionHeadline(d){
   if(!d)return '--';const p=d.personality?.label||'股性資料不足',s=d.seasonality?.valid?`Q${d.seasonality.quarter}季節性${d.seasonality.median>=0?'偏正向':'偏弱'}`:'季節性樣本不足';
@@ -1476,7 +1501,7 @@ function calculatePlayStyle(r,t){
   const diagnostics={breakout,rangeNoise,crosses,falseBreakout,breakoutPending,healthyTrend,momentumBurst,rhythmShortTrigger,strongShortPersonality,strongSwingPersonality,overheated,stage,sub,ma20Up,ma60Up,weights:{technical:"技術35%",fundamental:"基本面30%",valuation:"估值20%",target:"目標價15%"},shortEngine,personality,targetSignal,swingNews,longEngine};
   const common={scores,eligible,vr,swingWave,shortEngine,personality,targetSignal,swingNews,longEngine,operationProfile,diagnostics};
 
-  // v2.6.1.2：短期／短波／波段／長波／長期只負責顯示；真正主參數是最終核心倉／機動倉比例。
+  // v2.6.1.3：短期／短波／波段／長波／長期只負責顯示；真正主參數是最終核心倉／機動倉比例。
   const key=operationProfile?.key||"swing",period=operationProfile?.period||"波段";
   const action=operationProfile?.note||"依核心／機動比例管理部位";
   const reason=`核心 ${operationProfile?.basePct??50}%｜機動 ${operationProfile?.tacticalPct??50}%｜${operationProfile?.formula||"等待模組資料"}`;
@@ -2267,7 +2292,7 @@ async function loadTechnical(data){
     latestHistory5Y=hraw?markSystemStress(hraw):null;const a=t.analysis||{},price=Number(data?.last??data?.price??data?.regularMarketPrice),historyRows=(latestHistory5Y?.history?.length?latestHistory5Y.history:stageHistory(t));
     latestTechnicalPersonality=calculateStockPersonality(historyRows);latestTechnicalSeasonality=seasonality5Y(historyRows);latestTechnicalDirection=calculateTechnicalDirection(t,price,latestTechnicalPersonality,latestTechnicalSeasonality);
     setText("technicalSource",`Yahoo｜${t.updatedAt||"--"}${latestHistory5Y?.history?.length?`｜5年 ${latestHistory5Y.history.length}筆`:""}`);
-    techSet("techState",latestTechnicalDirection?.direction||"--",latestTechnicalDirection?.tone);setText("techHeadline",technicalDirectionHeadline(latestTechnicalDirection));
+    techSet("techState",latestTechnicalDirection?.direction||"--",latestTechnicalDirection?.tone);updateTechnicalOverview(latestTechnicalDirection,null);
     const stateIcon=document.querySelector('#technical .tech-state-icon');if(stateIcon)stateIcon.textContent=latestTechnicalDirection?.direction==='偏多'?'↑':latestTechnicalDirection?.direction==='偏空'?'↓':'↔';
     setText("overviewTechnicalState",latestTechnicalDirection?.direction||"--");
     setText("overviewTechnicalNote",technicalDirectionHeadline(latestTechnicalDirection));
@@ -2280,10 +2305,8 @@ async function loadTechnical(data){
     techSet("techMomentumState",a.momentum?.state||"--",a.momentum?.tone); setText("techMomentumConclusion",a.momentum?.conclusion||"--"); technicalMetrics("techMomentum",[["RSI",technicalFmt(t.momentum?.rsi14)],["MACD",technicalFmt(t.momentum?.macd)],["Signal",technicalFmt(t.momentum?.signal)],["Histogram",technicalFmt(t.momentum?.histogram)]]);
     const pd=latestTechnicalPersonality||{};techSet("techPersonalityState",pd.label||"資料不足",pd.kind==='reset'?'bad':pd.kind==='range'?'watch':pd.kind==='swing-trend'?'good':'info');setText("techPersonalityConclusion",pd.valid?(pd.detail||"歷史節奏已分析"):"歷史樣本不足");technicalMetrics("techPersonality",[["典型上漲",Number.isFinite(pd.upDays)?`${Math.round(pd.upDays)}日`:"--"],["整理",Number.isFinite(pd.restDays)?`${Math.round(pd.restDays)}日`:"--"],["回檔",Number.isFinite(pd.pullback)?`${pd.pullback.toFixed(1)}%`:"--"],["循環",Number.isFinite(pd.cycles)?`${pd.cycles}次`:"--"]]);
     const sd=latestTechnicalSeasonality||{};const seasonTone=sd.valid?(sd.median>0&&sd.positives/sd.sample>=.6?'good':sd.median<0&&sd.positives/sd.sample<=.4?'bad':'watch'):'neutral';techSet("techSeasonState",sd.valid?`Q${sd.quarter} ${sd.median>=0?'偏正':'偏弱'}`:"樣本不足",seasonTone);setText("techSeasonConclusion",sd.label||"五年正常市場樣本不足");technicalMetrics("techSeason",[["樣本",sd.valid?`${sd.sample}年`:"--"],["上漲",sd.valid?`${sd.positives}/${sd.sample}`:"--"],["中位",sd.valid?stageFmtPct(sd.median):"--"],["影響",latestTechnicalDirection?(latestTechnicalDirection.seasonModifier>1?"輕微偏多":latestTechnicalDirection.seasonModifier<-1?"輕微偏空":"中性"):"--"]]);
-    const df=latestTechnicalDirection?.labels||{},keyPoints=[`均線 ${df.ma?.label||'--'}`,`量價 ${df.volume?.label||'--'}`,`趨勢位置 ${df.trend?.label||'--'}`,`動能 ${df.momentum?.label||'--'}`,`布林 ${df.bollinger?.label||'--'}`,`乖離 ${df.bias?.label||'--'}`];
-    const keyHost=$("techKeyPoints"); if(keyHost)keyHost.innerHTML=keyPoints.slice(0,6).map(x=>`<li>${String(x)}</li>`).join("");
     const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${latestTechnicalDirection?.tone||"neutral"}`);}
-    setText("techSummary",latestTechnicalDirection?.riskText||"--");
+    updateTechnicalOverview(latestTechnicalDirection,null);
     renderFiveStage(t,price);
   }catch(e){console.warn("技術資料更新失敗",e);latestTechnicalDirection=null;latestTechnicalPersonality=null;latestTechnicalSeasonality=null;setText("technicalSource","Yahoo｜取得失敗");resetFiveStage("技術資料取得失敗")}
 }
