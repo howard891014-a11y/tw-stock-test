@@ -3653,3 +3653,25 @@ body.mode-analysis #technical .tech-grid > .tech-tile:nth-child(8){
 }
 </style>
 
+<style id="stockzone-v26111-page-background-fix">
+/*
+  v2.6.1.11 — page-base background fix.
+  Overview and analysis are both body.mode-analysis; only view-overview changes.
+  The old body radial-gradient used an implicit background area tied to document
+  height, so a taller analysis panel made the tint visibly darker.
+  Give both views the same explicit viewport-relative gradient canvas.
+*/
+html{
+  background:#f5f7fb!important;
+}
+body.mode-analysis{
+  background-color:#f5f7fb!important;
+  background-image:
+    radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),transparent 22%),
+    radial-gradient(circle at 100% 0%,rgba(186,124,255,.07),transparent 18%)!important;
+  background-size:100% 260vh,100% 260vh!important;
+  background-position:0 0,0 0!important;
+  background-repeat:no-repeat,no-repeat!important;
+}
+</style>
+
