@@ -2167,6 +2167,59 @@ body.mode-analysis #technical .tech-tile small{border-top-color:#d9e3ef!importan
   body.mode-analysis #technical .tech-title-icon::before{width:14px;height:14px}
 }
 </style>
+
+<style id="stockzone-v2618-tech-card-final-fix">
+/* v2.6.1.8 — 技術分析小卡最終修正：全藍、重畫 icon、移除多餘橫線 */
+body.mode-analysis #technical .tech-tile,
+body.mode-analysis #technical .tech-tile:nth-child(1),
+body.mode-analysis #technical .tech-tile:nth-child(2),
+body.mode-analysis #technical .tech-tile:nth-child(3),
+body.mode-analysis #technical .tech-tile:nth-child(4),
+body.mode-analysis #technical .tech-tile:nth-child(5),
+body.mode-analysis #technical .tech-tile:nth-child(6),
+body.mode-analysis #technical .tech-tile:nth-child(7),
+body.mode-analysis #technical .tech-tile:nth-child(8){
+  background:linear-gradient(180deg,#f7fbff 0%,#edf4ff 100%)!important;
+  border:1px solid #dbe6f3!important;
+}
+body.mode-analysis #technical .tech-tile header b{color:#13233a!important}
+body.mode-analysis #technical .tech-tile p{color:#62758b!important}
+body.mode-analysis #technical .tech-tile small{color:#8798aa!important;border-top:0!important;padding-top:2px!important}
+body.mode-analysis #technical .tech-title-icon{
+  width:32px!important;height:32px!important;min-width:32px!important;
+  border-radius:999px!important;
+  background:linear-gradient(180deg,#edf3ff,#e4edff)!important;
+  box-shadow:inset 0 0 0 1px rgba(100,126,255,.12)!important;
+  color:transparent!important;font-size:0!important;position:relative!important;overflow:hidden!important
+}
+body.mode-analysis #technical .tech-title-icon::before{
+  content:"";display:block;width:17px;height:17px;background:#6b84ff;
+  -webkit-mask:var(--tech-icon) center/contain no-repeat;mask:var(--tech-icon) center/contain no-repeat
+}
+/* 重畫 icon */
+body.mode-analysis #technical .tech-icon-ma{--tech-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 19.5h18M5 15.5l4-4 3 2 5-6 2 1.5' fill='none' stroke='%23000' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M5.5 17.5V13M10 17.5V8.5M14.5 17.5V11M19 17.5V6.5' fill='none' stroke='%23000' stroke-width='2.1' stroke-linecap='round'/%3E%3C/svg%3E")}
+body.mode-analysis #technical .tech-icon-boll{--tech-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 7.5c2.8-2 4.2-2 8 0 3.8 2 5.2 2 8 0M4 12c2.8-2 4.2-2 8 0 3.8 2 5.2 2 8 0M4 16.5c2.8-2 4.2-2 8 0 3.8 2 5.2 2 8 0' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+body.mode-analysis #technical .tech-icon-volume{--tech-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3.5 19.5h17' fill='none' stroke='%23000' stroke-width='2.1' stroke-linecap='round'/%3E%3Crect x='5' y='11.5' width='2.6' height='6' rx='0.8' fill='%23000'/%3E%3Crect x='10.7' y='7.5' width='2.6' height='10' rx='0.8' fill='%23000'/%3E%3Crect x='16.4' y='9.5' width='2.6' height='8' rx='0.8' fill='%23000'/%3E%3C/svg%3E")}
+body.mode-analysis #technical .tech-icon-bias{--tech-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4v16M8.5 7.5 12 4l3.5 3.5M15.5 16.5 12 20l-3.5-3.5' fill='none' stroke='%23000' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M7 12h10' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E")}
+body.mode-analysis #technical .tech-icon-trend{--tech-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='6' fill='none' stroke='%23000' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='2' fill='%23000'/%3E%3Cpath d='M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+body.mode-analysis #technical .tech-icon-momentum{--tech-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 15.5 10 10l3 3 6-7' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M16.5 6H19v2.5' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+body.mode-analysis #technical .tech-icon-personality{--tech-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4 18 7.5V16.5L12 20 6 16.5V7.5L12 4Z' fill='none' stroke='%23000' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M9 12h6M12 9v6' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+body.mode-analysis #technical .tech-icon-season{--tech-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='5.5' width='16' height='14' rx='2.5' fill='none' stroke='%23000' stroke-width='2'/%3E%3Cpath d='M8 3.5v4M16 3.5v4M4 9.5h16M8 13h3M13 13h3' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+/* 修掉每張卡多出來的那條橫線：取消 small 容器自己的上框，只保留明細列之間的分隔線 */
+body.mode-analysis #technical .tech-tile small.tech-metrics{display:flex!important;flex-direction:column!important;gap:0!important;padding-top:0!important;border-top:0!important;margin-top:2px!important}
+body.mode-analysis #technical .tech-metric{display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;padding:10px 0!important;border-top:1px solid #dde6f0!important;border-left:0!important;text-align:left!important}
+body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
+body.mode-analysis #technical .tech-metric span{color:#8a99ab!important;font-size:11px!important;line-height:1.25!important;white-space:nowrap!important}
+body.mode-analysis #technical .tech-metric b{color:#32445b!important;font-size:13px!important;line-height:1.25!important;margin-left:10px!important;text-align:right!important;white-space:nowrap!important}
+@media(max-width:720px){
+  body.mode-analysis #technical .tech-title-icon{width:28px!important;height:28px!important;min-width:28px!important}
+  body.mode-analysis #technical .tech-title-icon::before{width:15px!important;height:15px!important}
+  body.mode-analysis #technical .tech-metric{padding:9px 0!important}
+  body.mode-analysis #technical .tech-metric span{font-size:10px!important}
+  body.mode-analysis #technical .tech-metric b{font-size:12px!important}
+}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
