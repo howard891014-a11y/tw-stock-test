@@ -345,8 +345,8 @@ async function loadFundamentals(stock){
   const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||""),market=stock?.market||stock?.marketLabel||"";
   try{
     const data=await fundamentals(code,market),cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");
-    if(cur&&cur!==code)return;latestFundamentalData=data;const industry=stockIndustryValue(data,data?.company,data?.profile,data?.officialStatement);if(industry&&currentStock){currentStock={...currentStock,industry};setText("stockCodeLabel",stockHeaderMeta(currentStock));rememberStockMeta(currentStock)}if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
-  }catch(e){console.warn("長期基本面更新失敗",e);const cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(!cur||cur===code){latestFundamentalData=null;if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle()}}
+    if(cur&&cur!==code)return;latestFundamentalData=data;renderFundamentalOverview();const industry=stockIndustryValue(data,data?.company,data?.profile,data?.officialStatement);if(industry&&currentStock){currentStock={...currentStock,industry};setText("stockCodeLabel",stockHeaderMeta(currentStock));rememberStockMeta(currentStock)}if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
+  }catch(e){console.warn("長期基本面更新失敗",e);const cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(!cur||cur===code){latestFundamentalData=null;resetFundamentalOverview("資料不足");if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle()}}
 }
 
 function historyDateKey(x){if(x?.date)return dayKey(x.date);const ts=Number(x?.timestamp);return Number.isFinite(ts)?dayKey(new Date(ts*1000).toISOString()):""}
@@ -505,6 +505,61 @@ let latestTechnicalForPlay=null;
 let latestPlayStyleResult=null;
 let latestHistory5Y=null;
 let latestFundamentalData=null;
+
+function resetFundamentalOverview(msg="資料待補"){
+  ["fundamentalEpsYoy","fundamentalRevenueYoy","fundamentalGrossMargin","fundamentalOperatingMargin","fundamentalStability"].forEach(id=>setText(id,"--"));
+  setText("fundamentalEpsDetail",msg==="讀取中"?"讀取中…":"等待資料");
+  setText("fundamentalRevenueDetail",msg==="讀取中"?"讀取中…":"等待資料");
+  setText("fundamentalGrossDetail",msg==="讀取中"?"讀取中…":"等待資料");
+  setText("fundamentalOperatingDetail",msg==="讀取中"?"讀取中…":"等待資料");
+  setText("fundamentalSource","基本面來源待補");
+  const chip=$("fundamentalOverviewChip");
+  if(chip){chip.textContent=msg;chip.classList.remove("is-good","is-watch","is-weak");}
+}
+function fundamentalMainMargin(value){const x=valuationNum(value);return x===null?"--":`${x.toFixed(1)}%`}
+function ppChangeText(delta){const x=valuationNum(delta);return x===null?"年變化待補":`年變化 ${x>=0?"+":""}${x.toFixed(1)}pp`}
+function renderFundamentalOverview(){
+  const host=$("fundamentalOverviewChip");
+  if(!host) return;
+  if(!latestFundamentalData){resetFundamentalOverview("資料待補");return}
+  const fund=longQuantitativeFundamentals(latestValuationData||{}), data=latestFundamentalData||{}, off=data?.officialStatement||null, monthly=data?.monthlyRevenue||null, latest=fund.latest||{};
+  const chip=$("fundamentalOverviewChip");
+  if(chip){
+    chip.classList.remove("is-good","is-watch","is-weak");
+    const s=Number(fund?.score);
+    chip.textContent=!Number.isFinite(s)?"資料待補":s>=76?"穩健成長":s>=64?"基本面佳":s>=50?"基本面普通":"基本面偏弱";
+    if(Number.isFinite(s))chip.classList.add(s>=64?"is-good":s>=50?"is-watch":"is-weak");
+  }
+  setText("fundamentalEpsYoy", fund?.yoyEps?.available ? fund.yoyEps.label : "--");
+  setText("fundamentalEpsDetail", `QoQ ${fund?.qoqEps?.available ? fund.qoqEps.label : "--"}${fund?.ttmPair?.available ? `｜TTM ${fund.ttmPair.label}` : ""}`);
+
+  const revenueMain = valuationNum(monthly?.yoyPct) !== null ? signedPercent(valuationNum(monthly.yoyPct)) : (fund?.yoyRev?.available ? fund.yoyRev.label : "--");
+  const revenueDetail = valuationNum(monthly?.yoyPct) !== null
+    ? `累計 YoY ${valuationNum(monthly?.cumulativeYoyPct) !== null ? signedPercent(valuationNum(monthly.cumulativeYoyPct)) : "--"}${monthly?.period ? `｜${monthly.period}` : ""}`
+    : (fund?.yoyRev?.available ? `近4季 YoY 中位 ${fund?.revTrendPct !== null && Number.isFinite(fund?.revTrendPct) ? signedPercent(fund.revTrendPct) : "--"}` : "營收成長資料不足");
+  setText("fundamentalRevenueYoy", revenueMain);
+  setText("fundamentalRevenueDetail", revenueDetail);
+
+  if(off?.marginApplicable===false){
+    setText("fundamentalGrossMargin", "不適用");
+    setText("fundamentalGrossDetail", `${off?.financialTypeLabel||"金融類"} 不看毛利率`);
+    setText("fundamentalOperatingMargin", "不適用");
+    setText("fundamentalOperatingDetail", `${off?.financialTypeLabel||"金融類"} 不看營益率`);
+  }else{
+    const grossOfficial=valuationNum(off?.grossMargin), opOfficial=valuationNum(off?.operatingMargin), grossLatest=valuationNum(latest?.grossMargin), opLatest=valuationNum(latest?.operatingMargin), grossYearAgo=valuationNum((fund?.rows||[])[4]?.grossMargin), opYearAgo=valuationNum((fund?.rows||[])[4]?.operatingMargin);
+    const grossNow = grossOfficial!==null ? grossOfficial : grossLatest;
+    const opNow = opOfficial!==null ? opOfficial : opLatest;
+    const grossDelta = grossNow!==null && grossYearAgo!==null ? grossNow-grossYearAgo : null;
+    const opDelta = opNow!==null && opYearAgo!==null ? opNow-opYearAgo : null;
+    setText("fundamentalGrossMargin", fundamentalMainMargin(grossNow));
+    setText("fundamentalGrossDetail", grossNow===null ? "毛利率資料不足" : `${ppChangeText(grossDelta)}${off?.period ? `｜${off.period}` : (latest?.period ? `｜${latest.period}` : "")}`);
+    setText("fundamentalOperatingMargin", fundamentalMainMargin(opNow));
+    setText("fundamentalOperatingDetail", opNow===null ? "營益率資料不足" : `${ppChangeText(opDelta)}${off?.period ? `｜${off.period}` : (latest?.period ? `｜${latest.period}` : "")}`);
+  }
+  setText("fundamentalStability", fund?.stabilityText || "獲利穩定度資料不足");
+  setText("fundamentalSource", fund?.sourceText || "基本面來源待補");
+}
+
 function stageNum(v){const n=Number(v);return Number.isFinite(n)?n:null}
 function stagePct(price,base){const p=stageNum(price),b=stageNum(base);return p!==null&&b!==null&&b!==0?(p/b-1)*100:null}
 function stageFmtPct(v){const n=stageNum(v);return n===null?"--":`${n>=0?"+":""}${n.toFixed(1)}%`}
@@ -2461,6 +2516,7 @@ function renderValuation(v){
   setText("valuationNote",usePs?"近四季 EPS 為負時，以 PS（股價營收比）補位 PE；PS 合理價與 PB 合理價共同形成綜合合理價。":"估值用來判斷相對昂貴程度，不直接當作買賣價。");
   setText("valuationTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   const host=$("valuationQuarterGrid");if(host){const q=Array.isArray(v.latest4)?v.latest4:[];host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");}
+  renderFundamentalOverview();
 }
 async function loadValuation(stock){
   const card=$("valuation");card?.classList.add("is-loading");resetValuation("讀取中");
@@ -2488,7 +2544,7 @@ function patchCurrentQuote(x){
   currentStock={...currentStock,...x,name:currentStock.name||x.name,shortName:currentStock.shortName||x.shortName,market:currentStock.market||x.market};renderQuoteFields(currentStock);updateListButtons();renderTradeOutputs();if(["swing","mixed"].includes(latestPlayStyleResult?.key))renderSwingWave(latestPlayStyleResult);return true;
 }
 function renderStock(x){
-  currentStock=x;latestHistory5Y=null;latestFundamentalData=null;resetPlayStyle("讀取分析資料中…");
+  currentStock=x;latestHistory5Y=null;latestFundamentalData=null;resetFundamentalOverview("讀取中");resetPlayStyle("讀取分析資料中…");
   setText("stockName",shortStockName(x.name||x.shortName)||"—");
   setText("stockCodeLabel",stockHeaderMeta(x));
   setText("marketLabel","");
