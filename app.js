@@ -2312,11 +2312,8 @@ async function loadTechnical(data){
       ["典型上漲",Number.isFinite(pd.upDays)?`${Math.round(pd.upDays)}日`:"--"],
       ["整理",Number.isFinite(pd.restDays)?`${Math.round(pd.restDays)}日`:"--"],
       ["回吐前波",Number.isFinite(pd.retrace)?`${pd.retrace.toFixed(0)}%`:"--"],
-      ["實際回檔",Number.isFinite(pd.pullback)?`${pd.pullback.toFixed(1)}%`:"--"],
       ["恢復",Number.isFinite(pd.recoveryDays)?`約${Math.round(pd.recoveryDays)}日`:"--"],
-      ["完整循環",Number.isFinite(completeCycles)?`${completeCycles}次`:"--"],
-      ["深度回吐",Number.isFinite(pd.resetCycles)&&Number.isFinite(completeCycles)?`${pd.resetCycles}/${completeCycles}次`:"--"],
-      ["回吐量",">前波70%"]
+      ["深度回吐",Number.isFinite(pd.resetCycles)&&Number.isFinite(completeCycles)?`${pd.resetCycles}/${completeCycles}次`:"--"]
     ]);
     const sd=latestTechnicalSeasonality||{};const seasonTone=sd.valid?(sd.median>0&&sd.positives/sd.sample>=.6?'good':sd.median<0&&sd.positives/sd.sample<=.4?'bad':'watch'):'neutral';techSet("techSeasonState",sd.valid?`Q${sd.quarter} ${sd.median>=0?'偏正':'偏弱'}`:"樣本不足",seasonTone);setText("techSeasonConclusion",sd.label||"五年正常市場樣本不足");technicalMetrics("techSeason",[["樣本",sd.valid?`${sd.sample}年`:"--"],["上漲",sd.valid?`${sd.positives}/${sd.sample}`:"--"],["中位",sd.valid?stageFmtPct(sd.median):"--"],["影響",latestTechnicalDirection?(latestTechnicalDirection.seasonModifier>1?"輕微偏多":latestTechnicalDirection.seasonModifier<-1?"輕微偏空":"中性"):"--"]]);
     const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${latestTechnicalDirection?.tone||"neutral"}`);}
