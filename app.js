@@ -361,6 +361,8 @@ function markSystemStress(data){
   return {...data,history:rows,stressDays:rows.filter(x=>x.systemStress).length};
 }
 function technicalFmt(n,suffix=""){const x=Number(n);return Number.isFinite(x)?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:"--"}
+function overviewIntFmt(n,suffix=""){const x=Number(n);if(!Number.isFinite(x))return "--";const v=x<0?Math.ceil(x):Math.floor(x);return `${v.toLocaleString("zh-TW")}${suffix}`;}
+function overviewZoneIntText(zone){return Array.isArray(zone)&&zone.length===2?`${overviewIntFmt(zone[0])} ～ ${overviewIntFmt(zone[1])}`:"--"}
 function technicalVolumeFmt(n){const x=Number(n);if(!Number.isFinite(x))return "--";if(Math.abs(x)>=10000){const w=x/10000;return `${w.toLocaleString("zh-TW",{maximumFractionDigits:w>=100?0:1})}萬`;}return x.toLocaleString("zh-TW",{maximumFractionDigits:0});}
 function technicalMetrics(id,items){const el=$(id);if(!el)return;el.classList.add("tech-metrics");el.style.setProperty("--cols",String(items.length));el.innerHTML=items.map(([label,value])=>`<span class="tech-metric"><span>${label}</span><b>${value}</b></span>`).join("")}
 function techTone(el,tone){if(!el)return;el.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral","tone-info","tone-cyan");el.classList.add(`tone-${tone||"neutral"}`)}
@@ -1758,7 +1760,7 @@ function historicalSimilarWinRate(play,price,upsidePct,downsidePct){
 }
 function overviewZoneText(cluster){
   if(!cluster)return "--";const lo=positionNumber(cluster.min),hi=positionNumber(cluster.max),c=positionNumber(cluster.center);if(c===null)return "--";
-  return lo!==null&&hi!==null&&Math.abs(hi/lo-1)>=.005?`${technicalFmt(lo)} ～ ${technicalFmt(hi)}`:technicalFmt(c);
+  return lo!==null&&hi!==null&&Math.abs(hi/lo-1)>=.005?`${overviewIntFmt(lo)} ～ ${overviewIntFmt(hi)}`:overviewIntFmt(c);
 }
 function resetOverviewResonance(note="等待分析資料"){
   setText("overviewResonancePlay","等待資料");setText("overviewPlayMetric","等待資料");setText("overviewStrengthMini","共振強度：--/100");setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength","--");setText("overviewResonanceStrengthNote",note);setText("overviewGrowthUp","--%");setText("overviewGrowthDown","--%");setText("overviewTargetZone","--");
@@ -1828,7 +1830,7 @@ function drawOverviewResonance(play,expected){
   if(Number.isFinite(alt) && (!Number.isFinite(main) || Math.abs(alt-main)/Math.max(1,main)>.004)) nodes.push({title:altTitle, value:alt, v:alt, dot:'#45cb93'});
   if(nodes.length<2) return;
 
-  const left=30,right=730,top=44,bottom=220;
+  const left=28,right=732,top=44,bottom=220;
   const step=nodes.length>1?(right-left)/(nodes.length-1):0;
   nodes.forEach((n,i)=>n.x=left+i*step);
   const vals=nodes.map(n=>n.value).filter(Number.isFinite);
@@ -1837,7 +1839,7 @@ function drawOverviewResonance(play,expected){
   const y=v=>bottom-((v-lo)/(hi-lo))*(bottom-top);
 
   const defs=swingWaveSvg('defs');
-  const lineGrad=swingWaveSvg('linearGradient',{id:'overviewWaveLineGradientV2617',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
+  const lineGrad=swingWaveSvg('linearGradient',{id:'overviewWaveLineGradientV2618',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
   lineGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#4ba6ff'}),swingWaveSvg('stop',{offset:'40%','stop-color':'#7f8fff'}),swingWaveSvg('stop',{offset:'72%','stop-color':'#8b59f6'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#50c7ff'}));
   defs.append(lineGrad); svg.append(defs);
 
@@ -1848,14 +1850,14 @@ function drawOverviewResonance(play,expected){
   if(pathD){
     const areaD=`${pathD} L ${nodes[nodes.length-1].x} ${bottom} L ${nodes[0].x} ${bottom} Z`;
     svg.append(swingWaveSvg('path',{d:areaD,fill:'rgba(143,172,255,0.11)'}));
-    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'rgba(120,145,230,0.25)','stroke-width':'14','stroke-linecap':'round','stroke-linejoin':'round'}));
-    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'url(#overviewWaveLineGradientV2617)','stroke-width':'8','stroke-linecap':'round','stroke-linejoin':'round'}));
+    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'rgba(120,145,230,0.28)','stroke-width':'15','stroke-linecap':'round','stroke-linejoin':'round'}));
+    svg.append(swingWaveSvg('path',{d:pathD,fill:'none',stroke:'url(#overviewWaveLineGradientV2618)','stroke-width':'8.5','stroke-linecap':'round','stroke-linejoin':'round'}));
   }
 
   nodes.forEach(n=>{
     const yy=y(n.value);
-    svg.append(swingWaveSvg('text',{x:n.x,y:yy-36,class:'overview-wave-tag-title','text-anchor':'middle'},n.title));
-    svg.append(swingWaveSvg('text',{x:n.x,y:yy-12,class:'overview-wave-tag-price','text-anchor':'middle'},technicalFmt(n.value)));
+    svg.append(swingWaveSvg('text',{x:n.x,y:yy-42,class:'overview-wave-tag-title','text-anchor':'middle'},n.title));
+    svg.append(swingWaveSvg('text',{x:n.x,y:yy-15,class:'overview-wave-tag-price','text-anchor':'middle'},overviewIntFmt(n.value)));
     svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:9.5,fill:'#ffffff'}));
     svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:6.8,fill:n.dot}));
   });
@@ -1870,10 +1872,10 @@ function renderOverviewResonance(play,expected,decision,risk=null){
   const strengthMini = Number.isFinite(resonanceStrength) ? `共振強度：${Math.round(resonanceStrength)}/100` : "共振強度：--/100";
   setText("overviewStrengthMini", strengthMini);
   const main=expected?.plan?.levels?.[0]?.value,up=main?positionReturn(main,expected.price):null,down=expected?.downside?.levels?.[0]?.value?positionReturn(expected.downside.levels[0].value,expected.price):null;
-  setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?technicalFmt(main):"--"));
-  setText("overviewTrialPrice",targetZoneText(decision?.trial));setText("overviewEntryPrice",decisionEntryText(decision));setText("overviewTrimPrice",targetZoneText(decision?.trim));setText("overviewExitPrice",targetZoneText(decision?.exit));setText("overviewTrimStopPrice",targetZoneText(decision?.trimStop));setText("overviewFullStopPrice",targetZoneText(decision?.fullStop));
+  setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?overviewIntFmt(main):"--"));
+  setText("overviewTrialPrice",overviewZoneIntText(decision?.trial));setText("overviewEntryPrice",overviewZoneIntText(decision?.entryCandidate??decision?.entry));setText("overviewTrimPrice",overviewZoneIntText(decision?.trim));setText("overviewExitPrice",overviewZoneIntText(decision?.exit));setText("overviewTrimStopPrice",overviewZoneIntText(decision?.trimStop));setText("overviewFullStopPrice",overviewZoneIntText(decision?.fullStop));
   setText("overviewFinalDirection",`${play.period||"--"}｜${play.action||"等待訊號"}`);setText("overviewFinalStrategy",`${decision?.mode||play.period||"--"}｜依目標節點與確認條件分批`);
-  const ex=expected?.winRate?.extreme,setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",ex?.valid&&risk?.valid?`${riskText}｜極端壓力 ${signedPercent(ex.far)}`:(risk?.valid?riskText:setRisk));setText("overviewFinalNext",risk?.exitTriggered?"走壞出場條件成立，先處理風險":risk?.trimTriggered?"走壞減碼條件成立，先降部位":main?`先看 ${expected.plan.levels[0].label} ${technicalFmt(main)}`:"等待新目標來源");
+  const ex=expected?.winRate?.extreme,setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",ex?.valid&&risk?.valid?`${riskText}｜極端壓力 ${signedPercent(ex.far)}`:(risk?.valid?riskText:setRisk));setText("overviewFinalNext",risk?.exitTriggered?"走壞出場條件成立，先處理風險":risk?.trimTriggered?"走壞減碼條件成立，先降部位":main?`先看 ${expected.plan.levels[0].label} ${overviewIntFmt(main)}`:"等待新目標來源");
   const host=$("overviewResonanceSources");if(host){host.replaceChildren();const pts=mainCluster?.points||[];const families=new Map();for(const x of pts){if(!families.has(x.family))families.set(x.family,[]);families.get(x.family).push(x)}for(const [family,a] of families){const chip=document.createElement("span");const name={swing:"波段倍率",broker:"券商目標",valuation:"內部估值",shortwave:"短波倍率",pressure:"前高／壓力"}[family]||family;chip.textContent=`${name}｜${a.map(x=>x.label).join("・")}`;host.append(chip)}if(expected?.winRate?.valid){const chip=document.createElement("span");chip.textContent=`5年相似訊號｜${expected.winRate.rate}%・${expected.winRate.sample}次`;host.append(chip)}if(!families.size){const chip=document.createElement("span");chip.textContent="等待可用價格來源";host.append(chip)}}
   drawOverviewResonance(play,expected);
 }
