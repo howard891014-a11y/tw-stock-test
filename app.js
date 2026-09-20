@@ -1059,13 +1059,36 @@ function calculateStockPersonality(rows){
   return result;
 }
 
+function seasonalityQuarter5Y(rows,quarter){
+  const byYear=new Map();
+  for(const r of (rows||[])){
+    const close=playRowClose(r);if(close===null)continue;
+    const key=historyDateKey(r),d=new Date(`${key}T00:00:00Z`);
+    if(Number.isNaN(d.getTime())||Math.floor(d.getUTCMonth()/3)+1!==quarter)continue;
+    const year=d.getUTCFullYear();
+    if(!byYear.has(year))byYear.set(year,[]);
+    byYear.get(year).push(r);
+  }
+  const samples=[];
+  for(const [year,x0] of [...byYear.entries()].sort((a,b)=>a[0]-b[0]).slice(-5)){
+    const x=x0.slice().sort((a,b)=>String(historyDateKey(a)).localeCompare(String(historyDateKey(b))));
+    // 季節性保留真實市場狀況，不再因 systemStress 排除整季；只要求有基本交易資料。
+    if(x.length<15)continue;
+    const first=playRowClose(x[0]),last=playRowClose(x.at(-1)),ret=stagePct(last,first);
+    if(ret!==null)samples.push({year,ret});
+  }
+  if(!samples.length)return {valid:false,quarter,sample:0,positives:0,positiveRate:null,median:null};
+  const positives=samples.filter(x=>x.ret>0).length,median=rhythmMedian(samples.map(x=>x.ret)),positiveRate=Math.round(positives/samples.length*100);
+  return {valid:true,quarter,sample:samples.length,positives,positiveRate,median,samples};
+}
 function seasonality5Y(rows,now=new Date()){
-  const a=(rows||[]).filter(x=>playRowClose(x)!==null),q=Math.floor(now.getMonth()/3)+1,byYear=new Map();
-  for(const r of a){const d=new Date(`${historyDateKey(r)}T00:00:00Z`);if(Number.isNaN(d.getTime())||Math.floor(d.getUTCMonth()/3)+1!==q)continue;const y=d.getUTCFullYear();if(!byYear.has(y))byYear.set(y,[]);byYear.get(y).push(r)}
-  const samples=[];for(const [year,x] of [...byYear.entries()].sort((a,b)=>a[0]-b[0]).slice(-5)){if(x.length<15||x.some(r=>r.systemStress))continue;const first=playRowClose(x[0]),last=playRowClose(x.at(-1)),ret=stagePct(last,first);if(ret!==null)samples.push({year,ret})}
-  if(!samples.length)return {valid:false,quarter:q,sample:0,label:`Q${q} 正常市場樣本不足`};
-  const positives=samples.filter(x=>x.ret>0).length,median=rhythmMedian(samples.map(x=>x.ret));
-  return {valid:true,quarter:q,sample:samples.length,positives,median,label:`近5年Q${q}正常市場 ${positives}/${samples.length} 上漲｜中位 ${stageFmtPct(median)}`};
+  const q=Math.floor(now.getMonth()/3)+1;
+  const quarters={};
+  for(let i=1;i<=4;i++)quarters[i]=seasonalityQuarter5Y(rows,i);
+  const current=quarters[q];
+  if(!current?.valid)return {valid:false,quarter:q,sample:0,quarters,label:`近5年Q${q}｜樣本不足`};
+  const yearsText=current.sample>=5?"近5年":`近5年（${current.sample}年樣本）`;
+  return {...current,quarters,label:`${yearsText}Q${q}｜${current.positiveRate}%上漲｜中位報酬 ${stageFmtPct(current.median)}`};
 }
 
 // v2.5.8.1 — 短線玩法專屬引擎。新聞只做低權重修正，核心資格仍由技術／突破決定。
@@ -2315,7 +2338,9 @@ async function loadTechnical(data){
       ["恢復",Number.isFinite(pd.recoveryDays)?`約${Math.round(pd.recoveryDays)}日`:"--"],
       ["深度回吐",Number.isFinite(pd.resetCycles)&&Number.isFinite(completeCycles)?`${pd.resetCycles}/${completeCycles}次`:"--"]
     ]);
-    const sd=latestTechnicalSeasonality||{};const seasonTone=sd.valid?(sd.median>0&&sd.positives/sd.sample>=.6?'good':sd.median<0&&sd.positives/sd.sample<=.4?'bad':'watch'):'neutral';techSet("techSeasonState",sd.valid?`Q${sd.quarter} ${sd.median>=0?'偏正':'偏弱'}`:"樣本不足",seasonTone);setText("techSeasonConclusion",sd.label||"五年正常市場樣本不足");technicalMetrics("techSeason",[["樣本",sd.valid?`${sd.sample}年`:"--"],["上漲",sd.valid?`${sd.positives}/${sd.sample}`:"--"],["中位",sd.valid?stageFmtPct(sd.median):"--"],["影響",latestTechnicalDirection?(latestTechnicalDirection.seasonModifier>1?"輕微偏多":latestTechnicalDirection.seasonModifier<-1?"輕微偏空":"中性"):"--"]]);
+    const sd=latestTechnicalSeasonality||{};const seasonTone=sd.valid?(sd.median>0&&sd.positiveRate>=60?'good':sd.median<0&&sd.positiveRate<=40?'bad':'watch'):'neutral';techSet("techSeasonState",sd.valid?`Q${sd.quarter} ${sd.median>=0?'偏正':'偏弱'}`:"樣本不足",seasonTone);setText("techSeasonConclusion",sd.label||`近5年Q${sd.quarter||''}｜樣本不足`);
+    const qRows=[1,2,3,4].map(q=>{const x=sd.quarters?.[q];return [`Q${q}`,x?.valid?`${x.positiveRate}%上漲｜${stageFmtPct(x.median)}`:"樣本不足"]});
+    technicalMetrics("techSeason",qRows);
     const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${latestTechnicalDirection?.tone||"neutral"}`);}
     updateTechnicalOverview(latestTechnicalDirection,null);
     renderFiveStage(t,price);
