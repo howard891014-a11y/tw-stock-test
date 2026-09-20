@@ -1893,6 +1893,27 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
 }
 </style>
 
+
+<style id="stockzone-v2628-decision-profit-polish">
+/* v2.6.0.28 — profit exit icon + bold only the six circled decision prices */
+
+/* Keep all decision labels regular, but make the six upper-card price ranges bold. */
+#overviewDecisionCard .overview-decision-row span.overview-metric-label,
+#overviewDecisionCard .overview-final-line span.overview-metric-label,
+#overviewDecisionCard .overview-final-line b.overview-metric-value{
+  font-weight:400!important;
+}
+#overviewDecisionCard .overview-decision-row strong.overview-metric-value{
+  font-weight:700!important;
+}
+
+/* 出場／獲利: replace the running/escape icon with a profit-realization icon (coins + check). */
+#overviewDecisionCard .overview-decision-row > div:nth-child(4) span::before{
+  background-color:#dfd3ff!important;
+  background-image:url("data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%237a45f3'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cellipse%20cx='8'%20cy='7'%20rx='4'%20ry='2.2'/%3E%3Cpath%20d='M4%207v4c0%201.2%201.8%202.2%204%202.2%201.1%200%202.1-.2%202.8-.6'/%3E%3Cpath%20d='M4%2011v4c0%201.2%201.8%202.2%204%202.2%201%200%201.8-.2%202.5-.5'/%3E%3Cpath%20d='M13%2015l2.2%202.2L20%2012.4'/%3E%3C/svg%3E")!important;
+}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
@@ -1920,7 +1941,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.23</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.28</span></button>
   </aside>
 
   <div class="main-shell">
