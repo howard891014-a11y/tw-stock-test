@@ -769,6 +769,35 @@ body{padding-bottom:68px}
   #overviewResonanceCard .overview-wave-tag-price{font-size:27px!important}
 }
 
+
+/* v2.6.0.19 — enlarge resonance icon, reduce strength text, keep wave safely inside frame, and enlarge node labels only */
+#overviewResonanceCard .overview-resonance-head h2{gap:10px!important;align-items:center!important}
+#overviewResonanceCard .overview-title-icon{
+  width:1.95em!important;
+  height:1.15em!important;
+  flex:0 0 1.95em!important;
+  background-size:100% auto!important;
+  margin-right:0!important;
+}
+#overviewResonanceCard .overview-strength-chip strong{
+  font-size:13px!important;
+  font-weight:400!important;
+  line-height:1.2!important;
+  color:#7c8da2!important;
+  letter-spacing:0!important;
+}
+#overviewResonanceCard .overview-wave-shell{padding:8px 12px 4px!important;overflow:hidden!important}
+#overviewResonanceCard .overview-wave-shell svg{min-height:248px!important}
+#overviewResonanceCard .overview-wave-tag-title{font-size:18px!important;font-weight:700!important}
+#overviewResonanceCard .overview-wave-tag-price{font-size:26px!important}
+@media(max-width:720px){
+  #overviewResonanceCard .overview-title-icon{width:1.95em!important;height:1.15em!important;flex-basis:1.95em!important}
+  #overviewResonanceCard .overview-strength-chip strong{font-size:13px!important;font-weight:400!important}
+  #overviewResonanceCard .overview-wave-shell{padding:8px 12px 4px!important}
+  #overviewResonanceCard .overview-wave-tag-title{font-size:18px!important}
+  #overviewResonanceCard .overview-wave-tag-price{font-size:26px!important}
+}
+
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -1397,7 +1426,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.18</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.19</span></button>
   </aside>
 
   <div class="main-shell">

@@ -1830,7 +1830,7 @@ function drawOverviewResonance(play,expected){
   if(Number.isFinite(alt) && (!Number.isFinite(main) || Math.abs(alt-main)/Math.max(1,main)>.004)) nodes.push({title:altTitle, value:alt, v:alt, dot:'#45cb93'});
   if(nodes.length<2) return;
 
-  const left=28,right=732,top=44,bottom=220;
+  const left=44,right=716,top=46,bottom=220;
   const step=nodes.length>1?(right-left)/(nodes.length-1):0;
   nodes.forEach((n,i)=>n.x=left+i*step);
   const vals=nodes.map(n=>n.value).filter(Number.isFinite);
@@ -1856,8 +1856,8 @@ function drawOverviewResonance(play,expected){
 
   nodes.forEach(n=>{
     const yy=y(n.value);
-    svg.append(swingWaveSvg('text',{x:n.x,y:yy-42,class:'overview-wave-tag-title','text-anchor':'middle'},n.title));
-    svg.append(swingWaveSvg('text',{x:n.x,y:yy-15,class:'overview-wave-tag-price','text-anchor':'middle'},overviewIntFmt(n.value)));
+    svg.append(swingWaveSvg('text',{x:n.x,y:yy-46,class:'overview-wave-tag-title','text-anchor':'middle'},n.title));
+    svg.append(swingWaveSvg('text',{x:n.x,y:yy-17,class:'overview-wave-tag-price','text-anchor':'middle'},overviewIntFmt(n.value)));
     svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:9.5,fill:'#ffffff'}));
     svg.append(swingWaveSvg('circle',{cx:n.x,cy:yy,r:6.8,fill:n.dot}));
   });
