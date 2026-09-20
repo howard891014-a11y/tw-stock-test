@@ -1941,7 +1941,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.0.28</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.0</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2989,5 +2989,308 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
     font-size:15px!important;
   }
   .stock-head{margin-top:0!important}
+}
+</style>
+
+
+<style id="stockzone-v2610-analysis-overview-style">
+/* v2.6.1.0 — analysis page adopts the current overview light-card visual language. */
+body.mode-analysis .dashboard-grid > [data-view-panel="analysis"]{
+  background:#fff!important;
+  border:1px solid #e8eef5!important;
+  border-radius:22px!important;
+  box-shadow:0 12px 28px rgba(17,34,61,.05)!important;
+  color:#13233a!important;
+  padding:20px!important;
+  overflow:hidden!important;
+}
+body.mode-analysis .dashboard-grid > [data-view-panel="analysis"] .card-title{
+  color:#13233a!important;
+  font-size:22px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  margin-bottom:14px!important;
+}
+body.mode-analysis .dashboard-grid > [data-view-panel="analysis"] .badge{
+  background:#f4f1ff!important;
+  border:1px solid #e6dbff!important;
+  color:#7d57d8!important;
+  box-shadow:none!important;
+}
+
+/* 技術分析 */
+body.mode-analysis #technical .tech-overview{
+  background:#fff!important;
+  border:1px solid #e8eef5!important;
+  border-radius:20px!important;
+  box-shadow:none!important;
+}
+body.mode-analysis #technical .tech-overview-main{
+  background:linear-gradient(180deg,#effaf5,#e7f7ee)!important;
+  border-right:1px solid #e0ece5!important;
+}
+body.mode-analysis #technical .tech-overview-main:before{background:#35c98a!important}
+body.mode-analysis #technical .tech-overview-main>span,
+body.mode-analysis #technical .tech-score-line>span,
+body.mode-analysis #technical .tech-score-line strong small,
+body.mode-analysis #technical .tech-overview-points p{color:#7c8da2!important}
+body.mode-analysis #technical .tech-state-icon{background:#d8f4e5!important;color:#1fa86a!important}
+body.mode-analysis #technical .tech-state-line strong{color:#1fa86a!important}
+body.mode-analysis #technical .tech-overview-points{background:#fbfdfc!important}
+body.mode-analysis #technical .tech-overview-points li{color:#31445b!important}
+body.mode-analysis #technical .tech-overview-points p{border-top-color:#e8eef5!important}
+body.mode-analysis #technical .tech-grid{gap:10px!important}
+body.mode-analysis #technical .tech-tile{
+  background:#fff!important;
+  border:1px solid #e8eef5!important;
+  border-radius:16px!important;
+  box-shadow:0 8px 20px rgba(17,34,61,.035)!important;
+}
+body.mode-analysis #technical .tech-tile:nth-child(1){background:linear-gradient(180deg,#f7faff,#f2f6ff)!important}
+body.mode-analysis #technical .tech-tile:nth-child(2){background:linear-gradient(180deg,#f5fbff,#eef9ff)!important}
+body.mode-analysis #technical .tech-tile:nth-child(3){background:linear-gradient(180deg,#fffaf0,#fff5df)!important}
+body.mode-analysis #technical .tech-tile:nth-child(4){background:linear-gradient(180deg,#f4fbf8,#ebf8f1)!important}
+body.mode-analysis #technical .tech-tile:nth-child(5){background:linear-gradient(180deg,#f7f3ff,#f2ecff)!important}
+body.mode-analysis #technical .tech-tile:nth-child(6){background:linear-gradient(180deg,#fff5f6,#fff0f2)!important}
+body.mode-analysis #technical .tech-tile header b{color:#13233a!important}
+body.mode-analysis #technical .tech-tile p{color:#65788f!important}
+body.mode-analysis #technical .tech-tile small{color:#8999aa!important;border-top-color:#e6edf5!important}
+body.mode-analysis #technical .tech-metric{border-left-color:#e1e8f0!important}
+body.mode-analysis #technical .tech-metric span{color:#8999aa!important}
+body.mode-analysis #technical .tech-metric b{color:#31445b!important}
+body.mode-analysis #technical .tech-tile header em{
+  background:#fff!important;
+  box-shadow:none!important;
+}
+body.mode-analysis #technical .tech-summary{
+  background:linear-gradient(180deg,#f8fbff,#f4f8fc)!important;
+  border:1px solid #e5edf5!important;
+  border-radius:16px!important;
+  box-shadow:none!important;
+}
+body.mode-analysis #technical .tech-summary::before{color:#7192b5!important}
+body.mode-analysis #technical .tech-summary b{color:#13233a!important}
+body.mode-analysis #technical .tech-summary p{color:#65788f!important}
+body.mode-analysis #technical .tech-summary b::after{color:#c0cbd8!important}
+
+/* 建議玩法 */
+body.mode-analysis #playStyleCard .playstyle-hero{
+  background:linear-gradient(145deg,#f7f3ff,#f4f8ff)!important;
+  border:1px solid #e5dcfb!important;
+  border-radius:18px!important;
+}
+body.mode-analysis #playStyleCard .playstyle-hero>span{color:#7c8da2!important}
+body.mode-analysis #playStyleCard .playstyle-hero>strong{color:#7d57d8!important}
+body.mode-analysis #playStyleCard .playstyle-hero>b{color:#24364c!important}
+body.mode-analysis #playStyleCard .playstyle-hero>p{color:#697b90!important}
+body.mode-analysis #playStyleCard .playstyle-personality,
+body.mode-analysis #playStyleCard .playstyle-position-mode{
+  background:rgba(255,255,255,.72)!important;
+  border:1px solid #e5e8f1!important;
+  border-radius:12px!important;
+}
+body.mode-analysis #playStyleCard .playstyle-personality>span,
+body.mode-analysis #playStyleCard .playstyle-position-mode>span{color:#7c8da2!important}
+body.mode-analysis #playStyleCard .playstyle-personality>b{color:#2f80ff!important}
+body.mode-analysis #playStyleCard .playstyle-position-mode>b{color:#7d57d8!important}
+body.mode-analysis #playStyleCard .playstyle-personality>small,
+body.mode-analysis #playStyleCard .playstyle-position-mode>small{color:#74869a!important}
+body.mode-analysis #playStyleCard .playstyle-fit-row{
+  background:#fff!important;
+  border:1px solid #e8eef5!important;
+  border-radius:14px!important;
+  box-shadow:0 6px 16px rgba(17,34,61,.03)!important;
+}
+body.mode-analysis #playStyleCard .playstyle-fit-row.is-main{
+  background:linear-gradient(180deg,#faf7ff,#f6f0ff)!important;
+  border-color:#d7c4ff!important;
+  box-shadow:inset 0 0 0 1px rgba(139,92,246,.08)!important;
+}
+body.mode-analysis #playStyleCard .playstyle-fit-head span{color:#24364c!important}
+body.mode-analysis #playStyleCard .playstyle-fit-head b{color:#708298!important}
+body.mode-analysis #playStyleCard .playstyle-fit-row em{color:#7c8da2!important}
+body.mode-analysis #playStyleCard .playstyle-bar{background:#e8eef6!important}
+body.mode-analysis #playStyleCard .playstyle-note,
+body.mode-analysis #playStyleCard .playstyle-short-foot,
+body.mode-analysis #playStyleCard .swing-wave-foot,
+body.mode-analysis #playStyleCard .playstyle-long-foot{color:#7b8da1!important}
+
+body.mode-analysis #playStyleCard .playstyle-short-analysis{
+  background:linear-gradient(180deg,#f4fbff,#eef8ff)!important;
+  border:1px solid #d9edf9!important;
+  border-radius:18px!important;
+}
+body.mode-analysis #playStyleCard .playstyle-short-head>div span,
+body.mode-analysis #playStyleCard .playstyle-long-head>div span,
+body.mode-analysis #playStyleCard .playstyle-swing-head>div span{color:#24364c!important}
+body.mode-analysis #playStyleCard .playstyle-short-head>div strong{color:#2f80ff!important}
+body.mode-analysis #playStyleCard .playstyle-short-head>em{color:#4786af!important;border-color:#c9e2f1!important;background:#fff!important}
+body.mode-analysis #playStyleCard .short-engine-grid>div{
+  background:#fff!important;border:1px solid #e2edf5!important;border-radius:12px!important;
+}
+body.mode-analysis #playStyleCard .short-engine-grid span{color:#8294a8!important}
+body.mode-analysis #playStyleCard .short-engine-grid b{color:#24364c!important}
+body.mode-analysis #playStyleCard .short-wave-mini{
+  background:#fff!important;border:1px solid #dce9f3!important;border-radius:14px!important;
+}
+body.mode-analysis #playStyleCard .short-wave-mini-head>span{color:#2f80ff!important}
+body.mode-analysis #playStyleCard .short-wave-mini-head>b{color:#24364c!important}
+body.mode-analysis #playStyleCard .short-wave-mini-head>small{color:#7a8da2!important}
+body.mode-analysis #playStyleCard .short-wave-grid{stroke:#dce6ef!important}
+body.mode-analysis #playStyleCard .short-wave-label{fill:#65788f!important}
+body.mode-analysis #playStyleCard .short-wave-target-label{fill:#7d57d8!important}
+
+body.mode-analysis #playStyleCard .playstyle-swing-analysis{
+  background:linear-gradient(180deg,#faf7ff,#f6f1ff)!important;
+  border:1px solid #e6dcfa!important;
+  border-radius:18px!important;
+}
+body.mode-analysis #playStyleCard .playstyle-swing-head>div strong{color:#7d57d8!important}
+body.mode-analysis #playStyleCard .playstyle-swing-head>em{color:#7d57d8!important;border-color:#dfd1fa!important;background:#fff!important}
+body.mode-analysis #playStyleCard .playstyle-swing-sub{color:#7c8da2!important}
+body.mode-analysis #playStyleCard .swing-wave-chart,
+body.mode-analysis #playStyleCard .swing-wave-legend{
+  background:#fff!important;border-color:#e4eaf2!important;
+}
+body.mode-analysis #playStyleCard .swing-wave-grid{stroke:#e2eaf2!important}
+body.mode-analysis #playStyleCard .swing-wave-axis{fill:#8294a8!important}
+body.mode-analysis #playStyleCard .swing-wave-legend div{color:#728499!important}
+body.mode-analysis #playStyleCard .swing-wave-legend b{color:#24364c!important}
+
+body.mode-analysis #playStyleCard .playstyle-long-analysis{
+  background:linear-gradient(180deg,#f8f6ff,#f2efff)!important;
+  border:1px solid #e4dcf6!important;
+  border-radius:18px!important;
+}
+body.mode-analysis #playStyleCard .playstyle-long-head>div strong{color:#7d57d8!important}
+body.mode-analysis #playStyleCard .playstyle-long-head>div small{color:#7c8da2!important}
+body.mode-analysis #playStyleCard .playstyle-long-head>em{color:#7d57d8!important;border-color:#dfd1fa!important;background:#fff!important}
+body.mode-analysis #playStyleCard .long-engine-grid>div{
+  background:#fff!important;border:1px solid #e5e8f1!important;border-radius:12px!important;
+}
+body.mode-analysis #playStyleCard .long-engine-grid span{color:#8192a6!important}
+body.mode-analysis #playStyleCard .long-engine-grid b{color:#24364c!important}
+
+/* 預計成長空間 */
+body.mode-analysis #expectedUpsideCard .expected-hero>span,
+body.mode-analysis #expectedUpsideCard .expected-hero>small{color:#7c8da2!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div{
+  border:1px solid #e8eef5!important;
+  border-radius:16px!important;
+  box-shadow:none!important;
+}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(1){background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(2){background:linear-gradient(180deg,#fff3f5,#ffedf0)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(3){background:linear-gradient(180deg,#effaf5,#e7f7ee)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(4){background:linear-gradient(180deg,#fff8eb,#fff2da)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid small,
+body.mode-analysis #expectedUpsideCard .expected-growth-grid em{color:#7c8da2!important}
+body.mode-analysis #expectedUpsideCard .expected-position{
+  background:#f8fafc!important;border:1px solid #e6edf5!important;border-radius:14px!important;
+}
+body.mode-analysis #expectedUpsideCard .expected-position span{color:#7c8da2!important}
+body.mode-analysis #expectedUpsideCard .expected-position b{color:#24364c!important}
+body.mode-analysis #expectedUpsideCard .expected-target{
+  background:#fff!important;border:1px solid #e8eef5!important;border-radius:16px!important;box-shadow:0 6px 16px rgba(17,34,61,.03)!important;
+}
+body.mode-analysis #expectedUpsideCard .expected-target:nth-child(1){background:linear-gradient(180deg,#f7faff,#f2f6ff)!important}
+body.mode-analysis #expectedUpsideCard .expected-target:nth-child(2){background:linear-gradient(180deg,#f7f3ff,#f2ecff)!important}
+body.mode-analysis #expectedUpsideCard .expected-target:nth-child(3){background:linear-gradient(180deg,#effaf5,#e7f7ee)!important}
+body.mode-analysis #expectedUpsideCard .expected-target>span{color:#7c8da2!important}
+body.mode-analysis #expectedUpsideCard .expected-target>small{color:#60758d!important}
+body.mode-analysis #expectedUpsideCard .expected-foot{color:#7b8da1!important}
+
+/* 五階段位置 */
+body.mode-analysis #stagePositionCard .stage-progress-line{background:#dfe8f2!important}
+body.mode-analysis #stagePositionCard .stage-step{color:#8b9aac!important}
+body.mode-analysis #stagePositionCard .stage-step i{
+  background:#fff!important;border-color:#c9d7e5!important;color:#60758d!important;box-shadow:none!important;
+}
+body.mode-analysis #stagePositionCard .stage-step.done{color:#60758d!important}
+body.mode-analysis #stagePositionCard .stage-step.done i{background:#f8fbff!important;color:#506b86!important;border-color:var(--stage-color)!important}
+body.mode-analysis #stagePositionCard .stage-step.active{color:var(--stage-color)!important}
+body.mode-analysis #stagePositionCard .stage-step.active i{background:var(--stage-color)!important;color:#fff!important;box-shadow:0 0 0 4px rgba(47,128,255,.07)!important}
+body.mode-analysis #stagePositionCard .stage-summary{
+  background:linear-gradient(180deg,#f8fbff,#f3f7fb)!important;border:1px solid #e1eaf3!important;border-radius:16px!important;
+}
+body.mode-analysis #stagePositionCard .stage-summary strong{color:#13233a!important}
+body.mode-analysis #stagePositionCard .stage-summary p{color:#5f7288!important}
+body.mode-analysis #stagePositionCard .stage-summary small{color:#7f91a5!important}
+
+/* 買賣決策：沿用總覽的白底＋淡色卡片語言 */
+body.mode-analysis #decision .decision-position-note{
+  background:#f8fbff!important;border:1px solid #e4ebf3!important;border-radius:14px!important;color:#60758d!important;
+}
+body.mode-analysis #decision .decision-grid>div{
+  border:1px solid #e8eef5!important;border-radius:16px!important;box-shadow:none!important;
+}
+body.mode-analysis #decision .decision-grid>div:nth-child(1){background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important;border-color:#dfe9ff!important}
+body.mode-analysis #decision .decision-grid>div:nth-child(2){background:linear-gradient(180deg,#effaf5,#e7f7ee)!important;border-color:#d6f4e5!important}
+body.mode-analysis #decision .decision-grid>div:nth-child(3){background:linear-gradient(180deg,#fff8eb,#fff2da)!important;border-color:#ffe7bb!important}
+body.mode-analysis #decision .decision-grid>div:nth-child(4){background:linear-gradient(180deg,#f6f0ff,#f1e9ff)!important;border-color:#e5d8ff!important}
+body.mode-analysis #decision .decision-grid>div:nth-child(5),
+body.mode-analysis #decision .decision-grid>div:nth-child(6){background:linear-gradient(180deg,#fff3f5,#ffedf0)!important;border-color:#ffdce3!important}
+body.mode-analysis #decision .decision-grid span{color:#74879c!important}
+body.mode-analysis #decision .decision-grid small{color:#8495a8!important}
+body.mode-analysis #decision .decision-grid>div:nth-child(1) strong{color:#2f80ff!important}
+body.mode-analysis #decision .decision-grid>div:nth-child(2) strong{color:#1fa86a!important}
+body.mode-analysis #decision .decision-grid>div:nth-child(3) strong{color:#d59a1a!important}
+body.mode-analysis #decision .decision-grid>div:nth-child(4) strong{color:#7d57d8!important}
+body.mode-analysis #decision .decision-grid>div:nth-child(5) strong,
+body.mode-analysis #decision .decision-grid>div:nth-child(6) strong{color:#d9534f!important}
+body.mode-analysis #decision .adaptive-stop-panel{
+  background:linear-gradient(180deg,#f8fbff,#f4f8fc)!important;border:1px solid #e1eaf3!important;border-radius:16px!important;
+}
+body.mode-analysis #decision .adaptive-stop-head span,
+body.mode-analysis #decision .adaptive-stop-head small{color:#7c8da2!important}
+body.mode-analysis #decision .adaptive-stop-head b{color:#24364c!important}
+body.mode-analysis #decision .adaptive-stop-grid>div{
+  background:#fff!important;border:1px solid #e3eaf2!important;border-radius:14px!important;
+}
+body.mode-analysis #decision .adaptive-stop-grid>div:first-child{border-color:#d8eadf!important}
+body.mode-analysis #decision .adaptive-stop-grid>div:last-child{border-color:#dddff0!important}
+body.mode-analysis #decision .adaptive-stop-grid span{color:#75889c!important}
+body.mode-analysis #decision .adaptive-stop-grid b{color:#24364c!important}
+body.mode-analysis #decision .adaptive-stop-grid small{color:#8294a8!important}
+body.mode-analysis #decision .adaptive-stop-note,
+body.mode-analysis #decision .decision-foot{color:#7b8da1!important}
+body.mode-analysis #decision .decision-risk-badge{background:#fff3f5!important;color:#c94d5a!important;border-color:#f1cfd4!important}
+
+@media(max-width:720px){
+  body.mode-analysis .dashboard-grid > [data-view-panel="analysis"]{
+    padding:16px 14px!important;
+    border-radius:22px!important;
+  }
+  body.mode-analysis .dashboard-grid > [data-view-panel="analysis"] .card-title{
+    font-size:20px!important;
+    margin-bottom:12px!important;
+  }
+  body.mode-analysis #technical .tech-overview{border-radius:18px!important}
+  body.mode-analysis #technical .tech-tile,
+  body.mode-analysis #playStyleCard .playstyle-fit-row,
+  body.mode-analysis #expectedUpsideCard .expected-growth-grid>div,
+  body.mode-analysis #expectedUpsideCard .expected-target,
+  body.mode-analysis #decision .decision-grid>div{border-radius:14px!important}
+  body.mode-analysis #playStyleCard .playstyle-hero,
+  body.mode-analysis #playStyleCard .playstyle-short-analysis,
+  body.mode-analysis #playStyleCard .playstyle-swing-analysis,
+  body.mode-analysis #playStyleCard .playstyle-long-analysis{border-radius:16px!important}
+}
+</style>
+<style id="stockzone-v2610-analysis-technical-hard-fix">
+/* hard override for the legacy ID-level dark technical container */
+body.mode-analysis #technical.technical-card{
+  background:#fff!important;
+  border:1px solid #e8eef5!important;
+  border-radius:22px!important;
+  box-shadow:0 12px 28px rgba(17,34,61,.05)!important;
+  color:#13233a!important;
+  padding:20px!important;
+}
+@media(max-width:720px){
+  body.mode-analysis #technical.technical-card{
+    padding:16px 14px!important;
+    border-radius:22px!important;
+  }
 }
 </style>
