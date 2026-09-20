@@ -1941,7 +1941,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.1</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.2</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2030,9 +2030,9 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
           <div class="card-title">技術分析 <span class="badge" id="technicalSource">Yahoo｜--</span></div>
           <section class="tech-overview" id="techOverview">
             <div class="tech-overview-main">
-              <span>技術狀態</span>
-              <div class="tech-state-line"><i class="tech-state-icon" aria-hidden="true">↑</i><strong id="techState">--</strong></div>
-              <div class="tech-score-line"><span>技術分數</span><strong><b id="techScore">--</b><small>/ 100</small></strong></div>
+              <span>方向</span>
+              <div class="tech-state-line"><i class="tech-state-icon" aria-hidden="true">↔</i><strong id="techState">--</strong></div>
+              <small class="tech-direction-note">均線・量價・布林・乖離・趨勢位置・動能綜合判斷</small>
             </div>
             <div class="tech-overview-points">
               <ul id="techKeyPoints"><li>--</li></ul>
@@ -2046,8 +2046,10 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
             <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">↕</span>乖離率</b><em id="techBiasState">--</em></header><p id="techBiasConclusion">--</p><small id="techBias">--</small></div>
             <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">⌖</span>趨勢位置</b><em id="techTrendState">--</em></header><p id="techTrendConclusion">--</p><small id="techTrend">--</small></div>
             <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">⚡︎</span>動能</b><em id="techMomentumState">--</em></header><p id="techMomentumConclusion">--</p><small id="techMomentum">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">◈</span>股性</b><em id="techPersonalityState">--</em></header><p id="techPersonalityConclusion">--</p><small id="techPersonality">--</small></div>
+            <div class="tech-tile"><header><b><span class="tech-title-icon" aria-hidden="true">◷</span>季節性</b><em id="techSeasonState">--</em></header><p id="techSeasonConclusion">--</p><small id="techSeason">--</small></div>
           </section>
-          <section class="tech-summary"><b>技術總結</b><p id="techSummary">--</p></section>
+          <section class="tech-summary"><b>風險評語</b><p id="techSummary">--</p></section>
         </article>
 
         <article class="card detail-panel valuation-card" id="valuation" data-view-panel="valuation">
@@ -2121,19 +2123,13 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         </article>
 
         <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
-      <div class="card-title">建議玩法 <span class="badge">v9</span></div>
+      <div class="card-title">建議玩法 <span class="badge">v10</span></div>
       <div class="playstyle-hero">
         <span>主建議玩法</span>
         <strong id="playMainPeriod">--</strong>
         <b id="playMainAction">搜尋股票後判讀</b>
-        <p id="playReason">短期、波段、長期各自獨立計分；最高分為主玩法，進場時機另外判斷。</p>
-        <div class="playstyle-personality"><span>股性節奏</span><b id="playPersonality">--</b><small id="playPersonalityNote">等待歷史日K分析</small></div>
-        <div class="playstyle-position-mode"><span>操作型態</span><b id="playPositionMode">--</b><small id="playPositionModeNote">等待部位策略分流</small></div>
-      </div>
-      <div class="playstyle-fit" aria-label="三週期適配度">
-        <div class="playstyle-fit-row" data-play="short"><div class="playstyle-fit-head"><span>短期</span><b id="playShortLabel">--</b></div><div class="playstyle-bar"><i id="playShortBar"></i></div><em id="playShortScore">--</em></div>
-        <div class="playstyle-fit-row" data-play="swing"><div class="playstyle-fit-head"><span>波段</span><b id="playSwingLabel">--</b></div><div class="playstyle-bar"><i id="playSwingBar"></i></div><em id="playSwingScore">--</em></div>
-        <div class="playstyle-fit-row" data-play="long"><div class="playstyle-fit-head"><span>長期</span><b id="playLongLabel">--</b></div><div class="playstyle-bar"><i id="playLongBar"></i></div><em id="playLongScore">--</em></div>
+        <p id="playReason">玩法名稱由最終核心倉／機動倉比例轉換。</p>
+        <div class="playstyle-position-mode"><span>部位結構</span><b id="playPositionMode">--</b><small id="playPositionModeNote">等待技術／基本面／估值／目標價整合</small></div>
       </div>
       <section class="playstyle-short-analysis" id="playShortAnalysis" hidden>
         <div class="playstyle-short-head">
@@ -2186,7 +2182,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
         </div>
         <small class="playstyle-long-foot" id="playLongNote">基本面優先使用 TWSE／TPEx 官方財報與月營收；Yahoo 僅補歷史季度。</small>
       </section>
-      <small class="playstyle-note" id="playStyleNote">三玩法永遠同時計分且使用不同核心資料；分數是適配度，不是勝率。待確認會直接寫出缺少的條件。</small>
+      <small class="playstyle-note" id="playStyleNote">技術、基本面、估值與目標價先換算核心倉傾向，再整合成最終核心／機動比例；短期、短波、波段、長波、長期只是比例對應的顯示名稱。</small>
     </article>
     <article class="card detail-panel expected-card" data-view-panel="analysis" id="expectedUpsideCard">
       <div class="card-title">預計成長空間 <span class="badge" id="expectedModeBadge">依玩法</span></div>
@@ -2389,7 +2385,7 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.1"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.2"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -3072,6 +3068,23 @@ body.mode-analysis #technical .tech-summary::before{color:#7192b5!important}
 body.mode-analysis #technical .tech-summary b{color:#13233a!important}
 body.mode-analysis #technical .tech-summary p{color:#65788f!important}
 body.mode-analysis #technical .tech-summary b::after{color:#c0cbd8!important}
+
+
+/* v2.6.1.2 — technical direction architecture */
+body.mode-analysis #technical .tech-direction-note{display:block;margin-top:10px;color:#71859b!important;font-size:12px;line-height:1.55;text-align:center;max-width:220px}
+body.mode-analysis #technical .tech-overview-main{justify-content:center!important}
+body.mode-analysis #technical .tech-state-line strong{font-size:34px!important}
+body.mode-analysis #technical .tech-overview.tone-bad .tech-state-icon{transform:none!important}
+body.mode-analysis #technical .tech-tile:nth-child(7){background:linear-gradient(180deg,#f3f9ff,#edf6ff)!important}
+body.mode-analysis #technical .tech-tile:nth-child(8){background:linear-gradient(180deg,#f8f5ff,#f3efff)!important}
+body.mode-analysis #technical .tech-summary b::after{content:""!important;margin:0!important}
+@media(max-width:720px){
+  body.mode-analysis #technical .tech-direction-note{font-size:10px;line-height:1.45;margin-top:7px;max-width:170px}
+  body.mode-analysis #technical .tech-state-line strong{font-size:28px!important}
+}
+
+/* v2.6.1.2 — strategy name is a display label derived from the final core/tactical ratio; no public short/swing/long score bars. */
+body.mode-analysis #playStyleCard .playstyle-hero{margin-bottom:0!important}
 
 /* 建議玩法 */
 body.mode-analysis #playStyleCard .playstyle-hero{
