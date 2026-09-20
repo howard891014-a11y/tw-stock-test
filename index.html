@@ -1794,6 +1794,46 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
 }
 </style>
 
+<style id="stockzone-v2626-hard-shared-type-hierarchy">
+/* v2.6.0.26 — hard 1:1 typography mapping.
+   Use selectors with higher specificity than legacy decision rules so the
+   mobile 20/12/14 hierarchy actually wins instead of being blocked by old
+   26/15/17 !important selectors. */
+#overviewResonanceCard .overview-resonance-head h2.overview-section-title,
+#overviewDecisionCard .overview-decision-head h2.overview-section-title{
+  font-size:26px!important;
+  line-height:1.15!important;
+}
+#overviewResonanceCard .overview-resonance-metrics span.overview-metric-label,
+#overviewDecisionCard .overview-decision-row span.overview-metric-label,
+#overviewDecisionCard .overview-final-line span.overview-metric-label{
+  font-size:15px!important;
+  line-height:1.2!important;
+}
+#overviewResonanceCard .overview-resonance-metrics strong.overview-metric-value,
+#overviewDecisionCard .overview-decision-row strong.overview-metric-value,
+#overviewDecisionCard .overview-final-line b.overview-metric-value{
+  font-size:17px!important;
+  line-height:1.35!important;
+}
+@media(max-width:720px){
+  #overviewResonanceCard .overview-resonance-head h2.overview-section-title,
+  #overviewDecisionCard .overview-decision-head h2.overview-section-title{
+    font-size:20px!important;
+  }
+  #overviewResonanceCard .overview-resonance-metrics span.overview-metric-label,
+  #overviewDecisionCard .overview-decision-row span.overview-metric-label,
+  #overviewDecisionCard .overview-final-line span.overview-metric-label{
+    font-size:12px!important;
+  }
+  #overviewResonanceCard .overview-resonance-metrics strong.overview-metric-value,
+  #overviewDecisionCard .overview-decision-row strong.overview-metric-value,
+  #overviewDecisionCard .overview-final-line b.overview-metric-value{
+    font-size:14px!important;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
