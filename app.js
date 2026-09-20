@@ -1036,7 +1036,7 @@ function calculateStockPersonalitySegment(rows){
   if(stressCycleRows.length)parts.push(`系統性回檔排除 ${stressCycleRows.length}次`);
 
   return {valid:true,kind,label,detail:parts.join('｜')||'歷史節奏已分析',shortBias,swingBias,shortFit,swingFit,longFit,
-    upDays,restDays,upGain,pullback,retrace,recoveryDays,cycles:completedCycles,ret60,ret120,above20,cross20,max5,medianRange,threshold,
+    upDays,restDays,upGain,pullback,retrace,recoveryDays,cycles:completedCycles,completeCycles:cycleRows.length,ret60,ret120,above20,cross20,max5,medianRange,threshold,
     shortRhythmScore,shortCycle,hybridRhythm,swingTrend,range,burst,deepRhythm,structuralReset,deepPullbacks,recoveredDeep,qualifyingShortCycles,shortLikeCycles,resetCycles,strongShort,strongSwing,stressCycles:stressCycleRows.length};
 }
 function calculateStockPersonality(rows){
@@ -1053,7 +1053,9 @@ function calculateStockPersonality(rows){
   // 股性「種類」仍由最近160日決定；舊資料只提供適性分數的歷史底色，避免多年以前的節奏硬改現在分類。
   const result={...pr,shortFit:blend('shortFit'),swingFit:blend('swingFit'),longFit:blend('longFit'),windowDays:all.length,recentWeight:wRecent,olderWeight:wOld,historyWeight:wHistory,historySegments:histSegments.length,
     historicalBaseline:histValid?{shortFit:Math.round(histMedian('shortFit')),swingFit:Math.round(histMedian('swingFit')),longFit:Math.round(histMedian('longFit'))}:null};
-  result.detail=`股性加權｜近160日 ${wRecent}%${wOld?`／前80日 ${wOld}%`:""}${wHistory?`／更早歷史 ${wHistory}%（${histSegments.length}段）`:""}${pr.detail?`｜${pr.detail}`:""}`;
+  const historyYears=Math.min(5,Math.max(1,Math.round(all.length/252)));
+  result.weightingDetail=`近160日 ${wRecent}%${wOld?`／前80日 ${wOld}%`:""}${wHistory?`／更早歷史 ${wHistory}%（${histSegments.length}段）`:""}`;
+  result.detail=`歷史資料${historyYears}年｜完整循環 ${Number.isFinite(pr.completeCycles)?pr.completeCycles:(pr.cycles||0)}次｜系統性回檔排除 ${pr.stressCycles||0}次`;
   return result;
 }
 
@@ -2306,7 +2308,16 @@ async function loadTechnical(data){
     const biasState=a.bias?.state||"--", biasTone=biasState.includes("超跌")?"cyan":biasState.includes("偏低")?"info":a.bias?.tone; techSet("techBiasState",biasState,biasTone); setText("techBiasConclusion",a.bias?.conclusion||"--"); technicalMetrics("techBias",[["5MA",technicalFmt(t.bias?.ma5,"%")],["10MA",technicalFmt(t.bias?.ma10,"%")],["20MA",technicalFmt(t.bias?.ma20,"%")],["60MA",technicalFmt(t.bias?.ma60,"%")]]);
     techSet("techTrendState",a.trend?.state||"--",a.trend?.tone); setText("techTrendConclusion",a.trend?.conclusion||"--"); technicalMetrics("techTrend",[["60日高",technicalFmt(t.trend?.high60)],["60日低",technicalFmt(t.trend?.low60)],["距高",technicalFmt(t.trend?.fromHigh60Pct,"%")],["距低",technicalFmt(t.trend?.fromLow60Pct,"%")]]);
     techSet("techMomentumState",a.momentum?.state||"--",a.momentum?.tone); setText("techMomentumConclusion",a.momentum?.conclusion||"--"); technicalMetrics("techMomentum",[["RSI",technicalFmt(t.momentum?.rsi14)],["MACD",technicalFmt(t.momentum?.macd)],["Signal",technicalFmt(t.momentum?.signal)],["Histogram",technicalFmt(t.momentum?.histogram)]]);
-    const pd=latestTechnicalPersonality||{};techSet("techPersonalityState",pd.label||"資料不足",pd.kind==='reset'?'bad':pd.kind==='range'?'watch':pd.kind==='swing-trend'?'good':'info');setText("techPersonalityConclusion",pd.valid?(pd.detail||"歷史節奏已分析"):"歷史樣本不足");technicalMetrics("techPersonality",[["典型上漲",Number.isFinite(pd.upDays)?`${Math.round(pd.upDays)}日`:"--"],["整理",Number.isFinite(pd.restDays)?`${Math.round(pd.restDays)}日`:"--"],["回檔",Number.isFinite(pd.pullback)?`${pd.pullback.toFixed(1)}%`:"--"],["循環",Number.isFinite(pd.cycles)?`${pd.cycles}次`:"--"]]);
+    const pd=latestTechnicalPersonality||{};techSet("techPersonalityState",pd.label||"資料不足",pd.kind==='reset'?'bad':pd.kind==='range'?'watch':pd.kind==='swing-trend'?'good':'info');setText("techPersonalityConclusion",pd.valid?(pd.detail||"歷史節奏已分析"):"歷史樣本不足");const completeCycles=Number.isFinite(pd.completeCycles)?pd.completeCycles:(Number.isFinite(pd.cycles)?pd.cycles:null);technicalMetrics("techPersonality",[
+      ["典型上漲",Number.isFinite(pd.upDays)?`${Math.round(pd.upDays)}日`:"--"],
+      ["整理",Number.isFinite(pd.restDays)?`${Math.round(pd.restDays)}日`:"--"],
+      ["回吐前波",Number.isFinite(pd.retrace)?`${pd.retrace.toFixed(0)}%`:"--"],
+      ["實際回檔",Number.isFinite(pd.pullback)?`${pd.pullback.toFixed(1)}%`:"--"],
+      ["恢復",Number.isFinite(pd.recoveryDays)?`約${Math.round(pd.recoveryDays)}日`:"--"],
+      ["完整循環",Number.isFinite(completeCycles)?`${completeCycles}次`:"--"],
+      ["深度回吐",Number.isFinite(pd.resetCycles)&&Number.isFinite(completeCycles)?`${pd.resetCycles}/${completeCycles}次`:"--"],
+      ["回吐量",">前波70%"]
+    ]);
     const sd=latestTechnicalSeasonality||{};const seasonTone=sd.valid?(sd.median>0&&sd.positives/sd.sample>=.6?'good':sd.median<0&&sd.positives/sd.sample<=.4?'bad':'watch'):'neutral';techSet("techSeasonState",sd.valid?`Q${sd.quarter} ${sd.median>=0?'偏正':'偏弱'}`:"樣本不足",seasonTone);setText("techSeasonConclusion",sd.label||"五年正常市場樣本不足");technicalMetrics("techSeason",[["樣本",sd.valid?`${sd.sample}年`:"--"],["上漲",sd.valid?`${sd.positives}/${sd.sample}`:"--"],["中位",sd.valid?stageFmtPct(sd.median):"--"],["影響",latestTechnicalDirection?(latestTechnicalDirection.seasonModifier>1?"輕微偏多":latestTechnicalDirection.seasonModifier<-1?"輕微偏空":"中性"):"--"]]);
     const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${latestTechnicalDirection?.tone||"neutral"}`);}
     updateTechnicalOverview(latestTechnicalDirection,null);
