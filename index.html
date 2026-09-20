@@ -1761,6 +1761,39 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
 }
 </style>
 
+<style id="stockzone-v2625-shared-type-hierarchy">
+/* v2.6.0.25 — same hierarchy = same type size in resonance + decision sections */
+#overviewResonanceCard,
+#overviewDecisionCard{
+  --overview-section-title-size:26px;
+  --overview-metric-label-size:15px;
+  --overview-metric-value-size:17px;
+}
+#overviewResonanceCard .overview-section-title,
+#overviewDecisionCard .overview-section-title{
+  font-size:var(--overview-section-title-size)!important;
+  line-height:1.15!important;
+}
+#overviewResonanceCard .overview-metric-label,
+#overviewDecisionCard .overview-metric-label{
+  font-size:var(--overview-metric-label-size)!important;
+  line-height:1.2!important;
+}
+#overviewResonanceCard .overview-metric-value,
+#overviewDecisionCard .overview-metric-value{
+  font-size:var(--overview-metric-value-size)!important;
+  line-height:1.35!important;
+}
+@media(max-width:720px){
+  #overviewResonanceCard,
+  #overviewDecisionCard{
+    --overview-section-title-size:20px;
+    --overview-metric-label-size:12px;
+    --overview-metric-value-size:14px;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
@@ -1840,14 +1873,14 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
       <section class="overview-outline" data-view-panel="overview">
         <article class="card overview-resonance-card" id="overviewResonanceCard">
           <header class="overview-resonance-head">
-            <div><span>總覽最終路徑</span><h2><i class="overview-title-icon" aria-hidden="true"></i>共振分析</h2><small>價格看共振，技術／五階段決定路徑與達成條件</small></div>
+            <div><span>總覽最終路徑</span><h2 class="overview-section-title"><i class="overview-title-icon" aria-hidden="true"></i>共振分析</h2><small>價格看共振，技術／五階段決定路徑與達成條件</small></div>
             <div class="overview-head-side"><b id="overviewResonancePlay" hidden aria-hidden="true">等待資料</b><div class="overview-strength-chip"><strong id="overviewStrengthMini">共振強度：--/100</strong></div></div>
           </header>
           <div class="overview-resonance-metrics">
-            <div class="metric-play"><span class="metric-title"><i class="metric-badge metric-badge-play" aria-hidden="true"></i><em>建議玩法</em></span><strong id="overviewPlayMetric">--</strong></div>
-            <div class="metric-target"><span class="metric-title"><i class="metric-badge metric-badge-target" aria-hidden="true"></i><em>主要目標區</em></span><strong id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
-            <div class="metric-up"><span class="metric-title"><i class="metric-badge metric-badge-up" aria-hidden="true"></i><em>預計上漲空間</em></span><strong id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
-            <div class="metric-down"><span class="metric-title"><i class="metric-badge metric-badge-down" aria-hidden="true"></i><em>正常下跌空間</em></span><strong id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
+            <div class="metric-play"><span class="metric-title overview-metric-label"><i class="metric-badge metric-badge-play" aria-hidden="true"></i><em>建議玩法</em></span><strong class="overview-metric-value" id="overviewPlayMetric">--</strong></div>
+            <div class="metric-target"><span class="metric-title overview-metric-label"><i class="metric-badge metric-badge-target" aria-hidden="true"></i><em>主要目標區</em></span><strong class="overview-metric-value" id="overviewTargetZone">--</strong><small>連續式多來源價格整合</small></div>
+            <div class="metric-up"><span class="metric-title overview-metric-label"><i class="metric-badge metric-badge-up" aria-hidden="true"></i><em>預計上漲空間</em></span><strong class="overview-metric-value" id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
+            <div class="metric-down"><span class="metric-title overview-metric-label"><i class="metric-badge metric-badge-down" aria-hidden="true"></i><em>正常下跌空間</em></span><strong class="overview-metric-value" id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
           </div>
           <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 340" role="img" aria-label="共振價格路徑"></svg></div>
           <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
@@ -1855,19 +1888,19 @@ body{background-image:radial-gradient(circle at 20% 0%,rgba(120,158,255,.08),tra
 
         <article class="card overview-decision-card" id="overviewDecisionCard">
           <header class="overview-resonance-head overview-decision-head">
-            <div><h2><i class="overview-decision-title-icon" aria-hidden="true"></i>買賣決策</h2></div>
+            <div><h2 class="overview-section-title"><i class="overview-decision-title-icon" aria-hidden="true"></i>買賣決策</h2></div>
           </header>
           <div class="overview-decision-row">
-            <div><span>小量試單</span><strong id="overviewTrialPrice">--</strong></div>
-            <div><span>大量進場</span><strong id="overviewEntryPrice">--</strong></div>
-            <div><span>減碼／止盈</span><strong id="overviewTrimPrice">--</strong></div>
-            <div><span>出場／獲利</span><strong id="overviewExitPrice">--</strong></div>
-            <div><span id="overviewTrimStopLabel">現價買減碼止損</span><strong id="overviewTrimStopPrice">--</strong></div>
-            <div><span id="overviewFullStopLabel">現價買全部止損</span><strong id="overviewFullStopPrice">--</strong></div>
+            <div><span class="overview-metric-label">小量試單</span><strong class="overview-metric-value" id="overviewTrialPrice">--</strong></div>
+            <div><span class="overview-metric-label">大量進場</span><strong class="overview-metric-value" id="overviewEntryPrice">--</strong></div>
+            <div><span class="overview-metric-label">減碼／止盈</span><strong class="overview-metric-value" id="overviewTrimPrice">--</strong></div>
+            <div><span class="overview-metric-label">出場／獲利</span><strong class="overview-metric-value" id="overviewExitPrice">--</strong></div>
+            <div><span class="overview-metric-label" id="overviewTrimStopLabel">現價買減碼止損</span><strong class="overview-metric-value" id="overviewTrimStopPrice">--</strong></div>
+            <div><span class="overview-metric-label" id="overviewFullStopLabel">現價買全部止損</span><strong class="overview-metric-value" id="overviewFullStopPrice">--</strong></div>
           </div>
           <footer class="overview-final-line">
-            <div><span>主要風險</span><b id="overviewFinalRisk">--</b></div>
-            <div><span>下一步</span><b id="overviewFinalNext">--</b></div>
+            <div><span class="overview-metric-label">主要風險</span><b class="overview-metric-value" id="overviewFinalRisk">--</b></div>
+            <div><span class="overview-metric-label">下一步</span><b class="overview-metric-value" id="overviewFinalNext">--</b></div>
           </footer>
         </article>
       </section>
