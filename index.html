@@ -2081,9 +2081,9 @@ body.mode-analysis #technical .tech-overview-insight p{
 
 
 <style id="stockzone-v2614-analysis-tech-refresh">
-body.mode-analysis #technical .card-title{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important}
-body.mode-analysis #technical .analysis-title-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:34px!important;height:34px!important;border-radius:12px!important;background:linear-gradient(180deg,#eef4ff,#e8f1ff)!important;color:#5c7cff!important;box-shadow:inset 0 0 0 1px rgba(92,124,255,.10)!important;flex:0 0 auto}
-body.mode-analysis #technical .analysis-title-icon svg{width:20px!important;height:20px!important;display:block!important}
+body.mode-analysis #technical .card-title{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;flex-wrap:wrap!important}
+body.mode-analysis #technical .analysis-title-group{display:inline-flex!important;align-items:center!important;gap:10px!important;min-width:0!important}
+body.mode-analysis #technical .analysis-title-icon{display:inline-block!important;width:1.28em!important;height:1.12em!important;flex:0 0 1.28em!important;background:#415269!important;-webkit-mask-repeat:no-repeat!important;mask-repeat:no-repeat!important;-webkit-mask-position:center!important;mask-position:center!important;-webkit-mask-size:contain!important;mask-size:contain!important;-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 28h26'/%3E%3Cpath d='M6 28v-7h4v7M13 28V14h4v14M20 28V18h4v10M27 28V10h2v18'/%3E%3Cpath d='M7 14l8-7 6 4 7-7'/%3E%3Ccircle cx='7' cy='14' r='2'/%3E%3Ccircle cx='15' cy='7' r='2'/%3E%3Ccircle cx='21' cy='11' r='2'/%3E%3Ccircle cx='28' cy='4' r='2'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 28h26'/%3E%3Cpath d='M6 28v-7h4v7M13 28V14h4v14M20 28V18h4v10M27 28V10h2v18'/%3E%3Cpath d='M7 14l8-7 6 4 7-7'/%3E%3Ccircle cx='7' cy='14' r='2'/%3E%3Ccircle cx='15' cy='7' r='2'/%3E%3Ccircle cx='21' cy='11' r='2'/%3E%3Ccircle cx='28' cy='4' r='2'/%3E%3C/g%3E%3C/svg%3E")!important;}
 body.mode-analysis #technical .tech-overview{background:linear-gradient(180deg,#f8fcfb,#f5fbf7)!important;border-color:#e1ece7!important}
 body.mode-analysis #technical .tech-overview-v2-inner{padding:20px 18px!important}
 body.mode-analysis #technical .tech-overview-kicker{display:block!important;margin-bottom:6px!important;text-align:center!important;color:#7c8da2!important;font-size:13px!important;font-weight:700!important}
@@ -2107,8 +2107,8 @@ body.mode-analysis #technical .tech-tile p{color:#65788f!important}
 body.mode-analysis #technical .tech-tile small{color:#8999aa!important;border-top-color:#e1eaf5!important}
 body.mode-analysis #technical .tech-tile header em{background:#fff!important;box-shadow:none!important}
 @media(max-width:720px){
-  body.mode-analysis #technical .analysis-title-icon{width:30px!important;height:30px!important;border-radius:10px!important}
-  body.mode-analysis #technical .analysis-title-icon svg{width:18px!important;height:18px!important}
+  body.mode-analysis #technical .analysis-title-group{gap:9px!important}
+  body.mode-analysis #technical .analysis-title-icon{width:1.24em!important;height:1.08em!important;flex-basis:1.24em!important}
   body.mode-analysis #technical .tech-overview-v2-inner{padding:16px 14px!important}
   body.mode-analysis #technical .tech-stage-scale .tech-scale-item span{font-size:10px!important}
   body.mode-analysis #technical .tech-overview-risk{padding:10px 12px!important;gap:10px!important}
@@ -2230,7 +2230,7 @@ body.mode-analysis #technical .tech-tile header em{background:#fff!important;box
 
       <section class="dashboard-grid">
         <article class="card detail-panel technical-card" id="technical" data-view-panel="analysis">
-          <div class="card-title"><span class="analysis-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 20H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6 17V13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 17V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 17V12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 17V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 8.5L10 5L14 9L19 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="10" cy="5" r="1.2" fill="currentColor"/><circle cx="14" cy="9" r="1.2" fill="currentColor"/><circle cx="19" cy="4.5" r="1.2" fill="currentColor"/></svg></span>技術分析 <span class="badge" id="technicalSource">Yahoo｜--</span></div>
+          <div class="card-title"><span class="analysis-title-group"><i class="analysis-title-icon" aria-hidden="true"></i><span>技術分析</span></span><span class="badge" id="technicalSource">Yahoo｜--</span></div>
           <section class="tech-overview tech-overview-v2" id="techOverview">
             <div class="tech-overview-v2-inner">
               <span class="tech-overview-kicker">綜合判斷</span>
