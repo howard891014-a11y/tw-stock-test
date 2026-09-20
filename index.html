@@ -2220,6 +2220,27 @@ body.mode-analysis #technical .tech-metric b{color:#32445b!important;font-size:1
 }
 </style>
 
+
+<style id="stockzone-v2619-six-cards-blue-fix">
+/* v2.6.1.9 — 將技術分析前 6 張小卡統一改成藍色；順便把 7/8 也統一成同色避免再被舊規則蓋掉 */
+body.mode-analysis #technical .tech-tile,
+body.mode-analysis #technical .tech-tile:nth-child(1),
+body.mode-analysis #technical .tech-tile:nth-child(2),
+body.mode-analysis #technical .tech-tile:nth-child(3),
+body.mode-analysis #technical .tech-tile:nth-child(4),
+body.mode-analysis #technical .tech-tile:nth-child(5),
+body.mode-analysis #technical .tech-tile:nth-child(6),
+body.mode-analysis #technical .tech-tile:nth-child(7),
+body.mode-analysis #technical .tech-tile:nth-child(8){
+  background:linear-gradient(180deg,#f7fbff 0%,#edf4ff 100%)!important;
+  border:1px solid #dbe6f3!important;
+}
+body.mode-analysis #technical .tech-tile p{color:#62758b!important}
+body.mode-analysis #technical .tech-tile small{color:#8798aa!important}
+body.mode-analysis #technical .tech-metric{border-top:1px solid #dde6f0!important}
+body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
