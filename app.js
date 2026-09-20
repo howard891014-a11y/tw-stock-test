@@ -459,7 +459,9 @@ function calculateTechnicalDirection(t,price,personality=null,seasonality=null){
   const risk=technicalRiskAssessment(result,null);result.riskLevel=risk.level;result.riskTone=risk.tone;result.riskText=risk.text;result.hiddenPosition=technicalHiddenPosition(result,null);
   return result;
 }
-function technicalDirectionScaleLevel(d){
+function technicalDirectionScaleLevel(d,stageResult=null){
+  const stage=Number(stageResult?.stage);
+  if(Number.isFinite(stage)&&stage>=1&&stage<=5)return stage;
   const x=Number(d?.index)||0;
   if(x>=58)return 5;
   if(x>=18)return 4;
@@ -469,20 +471,21 @@ function technicalDirectionScaleLevel(d){
 }
 function technicalOverviewPositionLabel(stageResult){
   const stage=Number(stageResult?.stage);
-  return ({1:'低檔',2:'修復段',3:'中段',4:'加速段',5:'高檔'})[stage]||'目前區間';
+  return ({1:'築底整理',2:'轉強修復',3:'趨勢爬坡',4:'主升加速',5:'高檔過熱'})[stage]||'五階段判讀中';
 }
 function technicalOverviewInsight(d,stageResult=null){
   if(!d)return '--';
-  const pos=technicalOverviewPositionLabel(stageResult),dir=d.direction==='整理'?'方向整理':`短線${d.direction}`;
-  const raw=String(d.riskText||'').replace(/^(低|中|高)\s*[｜|]\s*/,'').replace(/[。.]$/,'');
-  return `目前位於${pos}，${dir}${raw?`，${raw}`:''}。`;
+  const raw=String(d.riskText||'').replace(/[。.]$/,'');
+  return raw||'暫無明顯額外風險';
 }
 function updateTechnicalOverview(d,stageResult=null){
   if(!d)return;
-  setText('techDirectionSummary',`均線、量價、布林、乖離、趨勢位置與動能等指標綜合判斷${d.direction}。`);
   setText('techSummary',technicalOverviewInsight(d,stageResult));
-  const scale=$('techDirectionScale'),level=technicalDirectionScaleLevel(d);
-  if(scale){scale.dataset.level=String(level);scale.querySelectorAll('.tech-scale-item').forEach(el=>el.classList.toggle('is-active',Number(el.dataset.level)===level));}
+  const scale=$('techDirectionScale'),level=technicalDirectionScaleLevel(d,stageResult);
+  if(scale){
+    scale.dataset.level=String(level);
+    scale.querySelectorAll('.tech-scale-item').forEach(el=>el.classList.toggle('is-active',Number(el.dataset.level)===level));
+  }
 }
 function refreshTechnicalDirectionAfterStage(stageResult){
   if(!latestTechnicalDirection)return;
