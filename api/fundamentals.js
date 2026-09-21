@@ -1,4 +1,4 @@
-// StockZone v2.6.1.22
+// StockZone v2.6.1.23
 // Fundamental-only route. This file intentionally does not import or modify disposal logic.
 
 const TWSE_BASE = "https://openapi.twse.com.tw/v1/opendata";
