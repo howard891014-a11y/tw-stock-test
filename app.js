@@ -324,20 +324,45 @@ async function history5Y(query,market){
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v2598",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26119",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
+function fundamentalRowsHaveMargins(data){
+  const rows=Array.isArray(data?.quarters)?data.quarters:[];
+  const off=data?.officialStatement||null;
+  const hasGross=fundamentalMarginValue(off,"gross")!==null||rows.some(x=>fundamentalMarginValue(x,"gross")!==null);
+  const hasOperating=fundamentalMarginValue(off,"operating")!==null||rows.some(x=>fundamentalMarginValue(x,"operating")!==null);
+  return hasGross&&hasOperating;
+}
+function mergeFundamentalPayload(primary,fallback){
+  const a=primary&&typeof primary==="object"?primary:{},b=fallback&&typeof fallback==="object"?fallback:{};
+  const mergeObj=(x,y)=>({...((y&&typeof y==="object")?y:{}),...((x&&typeof x==="object")?x:{})});
+  const aq=Array.isArray(a.quarters)?a.quarters:[],bq=Array.isArray(b.quarters)?b.quarters:[];
+  const rowKey=(x,i)=>String(x?.period||x?.quarter||x?.date||x?.yearQuarter||`#${i}`);
+  const bmap=new Map(bq.map((x,i)=>[rowKey(x,i),x]));
+  const mergedQ=aq.map((x,i)=>mergeObj(x,bmap.get(rowKey(x,i))));
+  const seen=new Set(aq.map((x,i)=>rowKey(x,i)));
+  bq.forEach((x,i)=>{if(!seen.has(rowKey(x,i)))mergedQ.push(x)});
+  const source=[a.source,b.source].filter(Boolean).join("＋");
+  return {...b,...a,quarters:mergedQ.length?mergedQ:(aq.length?aq:bq),officialStatement:mergeObj(a.officialStatement,b.officialStatement),monthlyRevenue:mergeObj(a.monthlyRevenue,b.monthlyRevenue),company:mergeObj(a.company,b.company),profile:mergeObj(a.profile,b.profile),financialData:mergeObj(a.financialData,b.financialData),source:source||a.source||b.source};
+}
 async function fundamentals(query,market){
   const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`${code}|${String(market||"")}`,all=readFundamentalsCache(),cached=all[key];
   if(cached&&Date.now()-Number(cached.savedAt||0)<FUNDAMENTALS_CACHE_MS&&Array.isArray(cached.data?.quarters))return cached.data;
   const params=new URLSearchParams({q:code,market:String(market||"")});
-  let data;
+  const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
+  let data=null;
   try{
     data=await readJson(await fetch(`/api/fundamentals?${params.toString()}`,{cache:"default"}),"長期基本面");
+    if(!fundamentalRowsHaveMargins(data)){
+      try{
+        const supplement=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"長期基本面補充");
+        data=mergeFundamentalPayload(data,supplement);
+      }catch(supplementError){console.warn("基本面毛利率／營益率補充失敗",supplementError)}
+    }
   }catch(primaryError){
     console.warn("官方基本面獨立路由失敗，改用 Yahoo 基本面 fallback",primaryError);
-    const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
-    data=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"default"}),"長期基本面 fallback");
+    data=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"長期基本面 fallback");
   }
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(12))delete all[k];writeFundamentalsCache(all);return data;
 }
@@ -518,22 +543,47 @@ function resetFundamentalOverview(msg="資料待補"){
 }
 function fundamentalMainMargin(value){const x=valuationNum(value);return x===null?"--":`${x.toFixed(1)}%`}
 function ppChangeText(delta){const x=valuationNum(delta);return x===null?"年變化待補":`年變化 ${x>=0?"+":""}${x.toFixed(1)}pp`}
-function fundamentalMarginValue(row,kind){
-  if(!row||typeof row!=="object")return null;
+function fundamentalScalar(v){
+  if(v===null||v===undefined||v==="")return null;
+  if(typeof v==="object"){
+    for(const key of ["raw","value","number","amount"]){const n=fundamentalScalar(v?.[key]);if(n!==null)return n}
+    if(typeof v?.fmt==="string"){const n=fundamentalScalar(v.fmt);if(n!==null)return n}
+    return null;
+  }
+  if(typeof v==="string"){
+    const s=v.replace(/,/g,"").trim(),pct=s.endsWith("%");
+    const n=Number(pct?s.slice(0,-1):s);return Number.isFinite(n)?n:null;
+  }
+  const n=Number(v);return Number.isFinite(n)?n:null;
+}
+function fundamentalMarginValue(row,kind,depth=0,seen=new Set()){
+  if(!row||typeof row!=="object"||depth>4||seen.has(row))return null;
+  seen.add(row);
   const isGross=kind==="gross";
   const directKeys=isGross
-    ?["grossMargin","grossMarginPct","grossProfitMargin","grossProfitMarginPct","gross_margin","gross_margin_pct"]
-    :["operatingMargin","operatingMarginPct","operatingProfitMargin","operatingProfitMarginPct","operating_margin","operating_margin_pct"];
-  for(const key of directKeys){const n=valuationNum(row?.[key]);if(n!==null)return Math.abs(n)<=1.5?n*100:n}
-  const revenueKeys=["revenue","totalRevenue","operatingRevenue","netRevenue","sales","salesRevenue"];
+    ?["grossMargin","grossMargins","grossMarginPct","grossProfitMargin","grossProfitMargins","grossProfitMarginPct","gross_margin","gross_margins","gross_margin_pct"]
+    :["operatingMargin","operatingMargins","operatingMarginPct","operatingProfitMargin","operatingProfitMargins","operatingProfitMarginPct","operating_margin","operating_margins","operating_margin_pct"];
+  for(const key of directKeys){const n=fundamentalScalar(row?.[key]);if(n!==null)return Math.abs(n)<=1.5?n*100:n}
+  const revenueKeys=["revenue","totalRevenue","operatingRevenue","netRevenue","sales","salesRevenue","revenueTotal"];
   const profitKeys=isGross
-    ?["grossProfit","grossIncome","gross_profit"]
-    :["operatingIncome","operatingProfit","incomeFromOperations","operating_income","operating_profit"];
+    ?["grossProfit","grossIncome","gross_profit","grossProfitAmount"]
+    :["operatingIncome","operatingProfit","incomeFromOperations","operating_income","operating_profit","operatingIncomeLoss"];
   let revenue=null,profit=null;
-  for(const key of revenueKeys){const n=valuationNum(row?.[key]);if(n!==null&&n!==0){revenue=n;break}}
-  for(const key of profitKeys){const n=valuationNum(row?.[key]);if(n!==null){profit=n;break}}
-  return revenue!==null&&profit!==null?profit/revenue*100:null;
+  for(const key of revenueKeys){const n=fundamentalScalar(row?.[key]);if(n!==null&&n!==0){revenue=n;break}}
+  for(const key of profitKeys){const n=fundamentalScalar(row?.[key]);if(n!==null){profit=n;break}}
+  if(revenue!==null&&profit!==null)return profit/revenue*100;
+  const preferred=["financialData","summaryDetail","defaultKeyStatistics","incomeStatement","incomeStatementHistory","quarterlyFinancials","financials","data","result","quoteSummary"];
+  for(const key of preferred){const child=row?.[key];if(child&&typeof child==="object"){const n=fundamentalMarginValue(child,kind,depth+1,seen);if(n!==null)return n}}
+  for(const child of Object.values(row)){
+    if(child&&typeof child==="object"){
+      if(Array.isArray(child)){for(const item of child.slice(0,12)){const n=fundamentalMarginValue(item,kind,depth+1,seen);if(n!==null)return n}}
+      else{const n=fundamentalMarginValue(child,kind,depth+1,seen);if(n!==null)return n}
+    }
+  }
+  return null;
 }
+function fundamentalMarginFromSources(kind,...sources){for(const source of sources){const n=fundamentalMarginValue(source,kind);if(n!==null)return n}return null;}
+
 function renderFundamentalOverview(){
   const host=$("fundamentalOverviewChip");
   if(!host) return;
@@ -563,8 +613,8 @@ function renderFundamentalOverview(){
     setText("fundamentalOperatingDetail", `${off?.financialTypeLabel||"金融類"} 不看營益率`);
   }else{
     const grossOfficial=fundamentalMarginValue(off,"gross"), opOfficial=fundamentalMarginValue(off,"operating"), grossLatest=fundamentalMarginValue(latest,"gross"), opLatest=fundamentalMarginValue(latest,"operating"), grossYearAgo=fundamentalMarginValue((fund?.rows||[])[4],"gross"), opYearAgo=fundamentalMarginValue((fund?.rows||[])[4],"operating");
-    const grossNow = grossOfficial!==null ? grossOfficial : grossLatest;
-    const opNow = opOfficial!==null ? opOfficial : opLatest;
+    const grossNow = fundamentalMarginFromSources("gross",off,latest,data?.financialData,data?.company,data?.profile,data,latestValuationData);
+    const opNow = fundamentalMarginFromSources("operating",off,latest,data?.financialData,data?.company,data?.profile,data,latestValuationData);
     const grossDelta = grossNow!==null && grossYearAgo!==null ? grossNow-grossYearAgo : null;
     const opDelta = opNow!==null && opYearAgo!==null ? opNow-opYearAgo : null;
     setText("fundamentalGrossMargin", fundamentalMainMargin(grossNow));
