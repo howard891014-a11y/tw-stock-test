@@ -2294,6 +2294,16 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   #fundamentalPanel .fundamental-overview-foot{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
   #fundamentalPanel .fundamental-source{max-width:none!important;text-align:left!important}
 }
+
+#fundamentalPanel .fundamental-signal-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin-top:12px!important;padding-top:12px!important;border-top:1px solid #edf2f7!important}
+#fundamentalPanel .fundamental-signal{min-width:0!important;padding:10px 11px!important;border:1px solid #edf1f6!important;border-radius:14px!important;background:#fff!important}
+#fundamentalPanel .fundamental-signal>span{display:block!important;color:#7c8da2!important;font-size:11px!important;line-height:1.25!important}
+#fundamentalPanel .fundamental-signal>b{display:block!important;margin-top:5px!important;color:#17304c!important;font-size:15px!important;font-weight:800!important;line-height:1.25!important}
+#fundamentalPanel .fundamental-signal>small{display:block!important;margin-top:4px!important;color:#8b9bae!important;font-size:9.5px!important;line-height:1.35!important}
+#fundamentalPanel .fundamental-signal[data-tone="good"]>b{color:#1d9f66!important}
+#fundamentalPanel .fundamental-signal[data-tone="watch"]>b{color:#bd7d08!important}
+#fundamentalPanel .fundamental-signal[data-tone="bad"]>b{color:#d94f63!important}
+@media(max-width:720px){#fundamentalPanel .fundamental-signal-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}#fundamentalPanel .fundamental-signal{padding:9px 10px!important}#fundamentalPanel .fundamental-signal>b{font-size:14px!important}#fundamentalPanel .fundamental-signal>small{font-size:9px!important}}
 </style>
 
 </head>
@@ -2323,7 +2333,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.22</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.23</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2468,9 +2478,17 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <small class="fundamental-metric-detail" id="fundamentalOperatingDetail">等待資料</small>
               </div>
             </div>
+            <div class="fundamental-signal-grid" aria-label="基本面判讀">
+              <div class="fundamental-signal"><span>成長強度</span><b id="fundamentalGrowthStrength">--</b><small id="fundamentalGrowthStrengthNote">等待資料</small></div>
+              <div class="fundamental-signal"><span>成長趨勢</span><b id="fundamentalGrowthTrend">--</b><small id="fundamentalGrowthTrendNote">等待資料</small></div>
+              <div class="fundamental-signal"><span>獲利品質</span><b id="fundamentalProfitQuality">--</b><small id="fundamentalProfitQualityNote">等待資料</small></div>
+              <div class="fundamental-signal"><span>穩定度</span><b id="fundamentalStabilityScore">--</b><small id="fundamentalStabilityScoreNote">等待資料</small></div>
+              <div class="fundamental-signal"><span>基本面風險</span><b id="fundamentalRisk">--</b><small id="fundamentalRiskNote">等待資料</small></div>
+              <div class="fundamental-signal"><span>資料可信度</span><b id="fundamentalConfidence">--</b><small id="fundamentalConfidenceNote">營運＋估值資料</small></div>
+            </div>
             <div class="fundamental-overview-foot">
               <div>
-                <small>獲利穩定度</small>
+                <small>基本面摘要</small>
                 <strong id="fundamentalStability">--</strong>
               </div>
               <div class="fundamental-source">
@@ -2481,7 +2499,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           </section>
         </article>
         <article class="card detail-panel valuation-card" id="valuation" data-view-panel="valuation">
-          <div class="card-title">估值分析 <span class="badge" id="valuationBadge" hidden></span></div>
+          <div class="card-title">基本面估值 <span class="badge" id="valuationBadge" hidden></span></div>
           <div class="valuation-summary-grid">
             <div class="valuation-summary-main">
               <span class="fair-label">綜合合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看綜合合理價公式">i</button></span>
@@ -2610,7 +2628,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         </div>
         <small class="playstyle-long-foot" id="playLongNote">基本面優先使用 TWSE／TPEx 官方財報與月營收；Yahoo 僅補歷史季度。</small>
       </section>
-      <small class="playstyle-note" id="playStyleNote">技術、基本面、估值與目標價先換算核心倉傾向，再整合成最終核心／機動比例；短期、短波、波段、長波、長期只是比例對應的顯示名稱。</small>
+      <small class="playstyle-note" id="playStyleNote">技術、基本面（營運＋估值）與目標價先換算核心倉傾向，再整合成最終核心／機動比例；短期、短波、波段、長波、長期只是比例對應的顯示名稱。</small>
     </article>
     <article class="card detail-panel expected-card" data-view-panel="analysis" id="expectedUpsideCard">
       <div class="card-title">預計成長空間 <span class="badge" id="expectedModeBadge">依玩法</span></div>
