@@ -2577,21 +2577,33 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <article class="card detail-panel valuation-card valuation-card-v26131" id="valuation" data-view-panel="valuation">
           <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-valuation" aria-hidden="true"></i><span>基本面估值</span></span><span class="badge" id="valuationBadge" hidden></span></div>
 
-          <section class="valuation-output-hero" aria-label="估值核心輸出">
-            <div class="valuation-center-fair">
-              <span class="valuation-output-label">中心合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看中心合理價說明">i</button></span>
-              <strong id="valuationCompositeFair">--</strong>
-              <b id="valuationCompositeGap">--</b>
-            </div>
-            <div class="valuation-position-output" id="valuationPositionCard">
-              <span class="valuation-output-label">估值位置</span>
-              <strong id="valuationStatus">--</strong>
-              <small id="valuationStatusDetail">等待估值資料</small>
-            </div>
-            <div class="valuation-range-output" id="valuationRangeCard">
-              <span class="valuation-output-label">合理價區間</span>
-              <strong id="valuationFairRange">--</strong>
-              <small id="valuationFairRangeNote">等待估值模型</small>
+          <section class="valuation-summary-modern" aria-label="估值核心輸出">
+            <div class="valuation-summary-grid">
+              <div class="valuation-summary-card valuation-summary-card-main">
+                <span class="valuation-summary-label">綜合合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看綜合合理價說明">i</button></span>
+                <strong id="valuationCompositeFair">--</strong>
+                <small id="valuationCompositeGap">--</small>
+              </div>
+              <div class="valuation-summary-card">
+                <span class="valuation-summary-label">營運合理價</span>
+                <strong id="valuationOperatingFairDisplay">--</strong>
+                <small id="valuationOperatingFairGapDisplay">等待 PE 估值</small>
+              </div>
+              <div class="valuation-summary-card">
+                <span class="valuation-summary-label">PB 合理股價</span>
+                <strong id="valuationPbFairDisplay">--</strong>
+                <small id="valuationPbFairGapDisplay">等待 PB 估值</small>
+              </div>
+              <div class="valuation-summary-card" id="valuationPositionCard">
+                <span class="valuation-summary-label">估值位置</span>
+                <strong id="valuationStatus">--</strong>
+                <small id="valuationStatusDetail">等待估值資料</small>
+              </div>
+              <div class="valuation-summary-card valuation-summary-card-bps">
+                <span class="valuation-summary-label">每股淨值</span>
+                <strong id="valuationSummaryBpsDisplay">--</strong>
+                <small id="valuationBpsNote">每股淨資產</small>
+              </div>
             </div>
           </section>
 
@@ -2610,6 +2622,29 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
               <span>估值可信度</span>
               <b id="valuationEstimateConfidence">--</b>
               <small id="valuationEstimateConfidenceNote">等待模型一致性</small>
+            </div>
+          </section>
+
+          <section class="valuation-model-tiles" aria-label="估值模型小卡">
+            <div class="valuation-tech-tile valuation-tech-tile-eps">
+              <header><b><span class="valuation-tech-icon valuation-tech-icon-eps" aria-hidden="true">▥</span>EPS</b><em id="valuationMiniEpsState">--</em></header>
+              <p id="valuationMiniEpsLead">等待 EPS 資料</p>
+              <small id="valuationMiniEpsDetail">--</small>
+            </div>
+            <div class="valuation-tech-tile valuation-tech-tile-pe">
+              <header><b><span class="valuation-tech-icon valuation-tech-icon-pe" aria-hidden="true">PE</span>本益比</b><em id="valuationMiniPeState">--</em></header>
+              <p id="valuationMiniPeLead">等待 PE 資料</p>
+              <small id="valuationMiniPeDetail">--</small>
+            </div>
+            <div class="valuation-tech-tile valuation-tech-tile-ps">
+              <header><b><span class="valuation-tech-icon valuation-tech-icon-ps" aria-hidden="true">PS</span>股價營收比</b><em id="valuationMiniPsState">--</em></header>
+              <p id="valuationMiniPsLead">等待 PS 資料</p>
+              <small id="valuationMiniPsDetail">--</small>
+            </div>
+            <div class="valuation-tech-tile valuation-tech-tile-pb">
+              <header><b><span class="valuation-tech-icon valuation-tech-icon-pb" aria-hidden="true">PB</span>股價淨值比</b><em id="valuationMiniPbState">--</em></header>
+              <p id="valuationMiniPbLead">等待 PB 資料</p>
+              <small id="valuationMiniPbDetail">--</small>
             </div>
           </section>
 
@@ -3094,6 +3129,110 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 #valuationScenario>.card-title{display:flex!important;align-items:center!important;gap:7px!important}
 #valuationScenario>.card-title .formula-info{flex:0 0 auto!important}
 @media(max-width:720px){.disposal-summary-card .disposal-summary-head{transform:translateX(6px)!important}}
+</style>
+
+<script id="v26132-valuation-restore">
+(function(){
+  function txt(id){var el=document.getElementById(id);return el?String(el.textContent||'').replace(/\s+/g,' ').trim():'';}
+  function set(id,v){var el=document.getElementById(id);if(el && el.textContent!==v)el.textContent=v;}
+  function num(v){if(!v)return NaN; var m=String(v).replace(/,/g,'').match(/-?\d+(?:\.\d+)?/); return m?parseFloat(m[0]):NaN;}
+  function tone(diff){
+    if(!isFinite(diff)) return ['--','tone-neutral'];
+    if(diff<=-5) return ['安全','tone-good'];
+    if(diff<8) return ['中性','tone-neutral'];
+    return ['偏高','tone-bad'];
+  }
+  function sync(){
+    set('valuationOperatingFairDisplay', txt('valuationPeFair') || txt('valuationEvidencePeFair') || '--');
+    set('valuationOperatingFairGapDisplay', txt('valuationPeFairGap') || '等待 PE 估值');
+    set('valuationPbFairDisplay', txt('valuationPbFair') || txt('valuationEvidencePbFair') || '--');
+    set('valuationPbFairGapDisplay', txt('valuationPbFairGap') || '等待 PB 估值');
+    set('valuationSummaryBpsDisplay', txt('valuationSummaryBps') || txt('valuationBookValue') || '--');
+
+    var quarterBox=document.getElementById('valuationQuarterGrid');
+    var chips=quarterBox?quarterBox.querySelectorAll('.valuation-eps-chip'):[];
+    var latestLabel='--', latestValue='--', detailParts=[];
+    chips.forEach(function(chip,idx){
+      var label=(chip.querySelector('span')||{}).textContent||'';
+      var value=(chip.querySelector('b')||{}).textContent||'';
+      label=label.replace(/\s+/g,' ').trim();
+      value=value.replace(/\s+/g,' ').trim();
+      if(!label && !value) return;
+      if(idx===0){latestLabel=label||latestLabel; latestValue=value||latestValue;}
+      else if(detailParts.length<3){detailParts.push(label+' '+value);}
+    });
+    var ttm=txt('valuationTtmEps') || txt('valuationEvidenceTtmEps') || '--';
+    set('valuationMiniEpsState', 'TTM '+ttm);
+    set('valuationMiniEpsLead', (latestLabel!=='--'||latestValue!=='--') ? ('最新季度 '+latestLabel+'｜'+latestValue) : '等待 EPS 資料');
+    set('valuationMiniEpsDetail', detailParts.length?('其餘季度：'+detailParts.join('｜')):'等待季度 EPS');
+
+    var curPe=num(txt('valuationCurrentPe')), peerPe=num(txt('valuationPeerPe'));
+    var peDiff=isFinite(curPe)&&isFinite(peerPe)&&peerPe!==0?((curPe-peerPe)/peerPe*100):NaN;
+    var peTone=tone(peDiff); var peState=document.getElementById('valuationMiniPeState'); if(peState){peState.textContent=peTone[0]; peState.className=peTone[1];}
+    set('valuationMiniPeLead', '目前 '+(txt('valuationCurrentPe')||'--')+'｜同業 '+(txt('valuationPeerPe')||'--'));
+    set('valuationMiniPeDetail', '合理價 '+(txt('valuationEvidencePeFair')||txt('valuationPeFair')||'--')+'｜相對同業 '+(isFinite(peDiff)?((peDiff>0?'+':'')+peDiff.toFixed(2)+'%'):'--'));
+
+    var curPs=num(txt('valuationEvidenceCurrentPs')), peerPs=num(txt('valuationEvidencePeerPs'));
+    var psDiff=isFinite(curPs)&&isFinite(peerPs)&&peerPs!==0?((curPs-peerPs)/peerPs*100):NaN;
+    var psTone=tone(psDiff); var psState=document.getElementById('valuationMiniPsState'); if(psState){psState.textContent=psTone[0]; psState.className=psTone[1];}
+    set('valuationMiniPsLead', '目前 '+(txt('valuationEvidenceCurrentPs')||'--')+'｜同業 '+(txt('valuationEvidencePeerPs')||'--'));
+    set('valuationMiniPsDetail', '合理價 '+(txt('valuationEvidencePsFair')||'--')+'｜權重 '+(txt('valuationPsWeight')||'--'));
+
+    var curPb=num(txt('valuationCurrentPb')), peerPb=num(txt('valuationPeerPb'));
+    var pbDiff=isFinite(curPb)&&isFinite(peerPb)&&peerPb!==0?((curPb-peerPb)/peerPb*100):NaN;
+    var pbTone=tone(pbDiff); var pbState=document.getElementById('valuationMiniPbState'); if(pbState){pbState.textContent=pbTone[0]; pbState.className=pbTone[1];}
+    set('valuationMiniPbLead', '目前 '+(txt('valuationCurrentPb')||'--')+'｜同業 '+(txt('valuationPeerPb')||'--'));
+    set('valuationMiniPbDetail', '合理價 '+(txt('valuationEvidencePbFair')||txt('valuationPbFair')||'--')+'｜相對同業 '+(isFinite(pbDiff)?((pbDiff>0?'+':'')+pbDiff.toFixed(2)+'%'):'--'));
+  }
+  document.addEventListener('DOMContentLoaded', function(){ sync(); setInterval(sync,900); });
+})();
+</script>
+<style id="v26132-valuation-restore-style">
+#valuation.valuation-card-v26131{padding:18px 16px!important;background:#fff!important}
+#valuation .valuation-summary-modern{margin-top:8px!important}
+#valuation .valuation-summary-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+#valuation .valuation-summary-card{background:linear-gradient(180deg,#f8fbff,#f2f7ff)!important;border:1px solid #dfe8f5!important;border-radius:18px!important;padding:14px 14px 13px!important;box-shadow:0 8px 20px rgba(17,34,61,.035)!important;min-width:0!important}
+#valuation .valuation-summary-card-main{grid-column:1/-1!important;background:linear-gradient(180deg,#f6fbf8,#eef8f2)!important;border-color:#dceee1!important}
+#valuation .valuation-summary-card strong{display:block!important;margin-top:8px!important;color:#13233a!important;font-size:26px!important;line-height:1.1!important;font-weight:800!important;word-break:break-word!important}
+#valuation .valuation-summary-card small{display:block!important;margin-top:8px!important;color:#8294a8!important;font-size:11px!important;line-height:1.4!important}
+#valuation .valuation-summary-card .valuation-summary-label{display:flex!important;align-items:center!important;gap:6px!important;color:#6e8298!important;font-size:12px!important;font-weight:700!important}
+#valuation .valuation-summary-card-main strong{font-size:38px!important}
+#valuation #valuationPositionCard strong{font-size:20px!important}
+#valuation .valuation-signal-grid{margin-top:10px!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+#valuation .valuation-signal-card{padding:12px!important;border:1px solid #e2eaf3!important;border-radius:16px!important;background:#fff!important;box-shadow:0 8px 18px rgba(17,34,61,.025)!important}
+#valuation .valuation-signal-card>span{display:block!important;color:#75889b!important;font-size:11px!important;font-weight:700!important}
+#valuation .valuation-signal-card>b{display:block!important;margin-top:7px!important;color:#13233a!important;font-size:18px!important;font-weight:800!important}
+#valuation .valuation-signal-card>small{display:block!important;margin-top:6px!important;color:#8a9bad!important;font-size:10px!important;line-height:1.4!important}
+#valuation .valuation-model-tiles{margin-top:10px!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+#valuation .valuation-tech-tile{padding:11px 11px 10px!important;border:1px solid #dfe8f5!important;border-radius:18px!important;background:#eef5ff!important;box-shadow:0 8px 20px rgba(17,34,61,.035)!important;min-width:0!important}
+#valuation .valuation-tech-tile header{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important}
+#valuation .valuation-tech-tile header b{display:inline-flex!important;align-items:center!important;gap:8px!important;color:#13233a!important;font-size:15px!important;font-weight:800!important;line-height:1.2!important;min-width:0!important}
+#valuation .valuation-tech-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:32px!important;min-width:32px!important;border-radius:999px!important;background:#e8efff!important;color:#6182ff!important;font-size:13px!important;line-height:1!important;box-shadow:inset 0 0 0 1px rgba(97,130,255,.10)!important}
+#valuation .valuation-tech-icon-eps{font-size:12px!important;letter-spacing:-.5px!important}
+#valuation .valuation-tech-tile header em{font-style:normal!important;font-size:10px!important;font-weight:800!important;padding:3px 7px!important;border-radius:999px!important;background:#fff!important;color:#5e7f9f!important;border:1px solid #d6e1ec!important;white-space:nowrap!important}
+#valuation .valuation-tech-tile header em.tone-good{color:#2f8f6b!important;border-color:#8cc4ac!important}
+#valuation .valuation-tech-tile header em.tone-neutral{color:#5e7f9f!important;border-color:#91a7bb!important}
+#valuation .valuation-tech-tile header em.tone-bad{color:#b95763!important;border-color:#d0a0a6!important}
+#valuation .valuation-tech-tile p{margin:8px 0 6px!important;color:#65788f!important;font-size:11px!important;line-height:1.4!important;min-height:31px!important}
+#valuation .valuation-tech-tile small{display:block!important;padding-top:7px!important;border-top:1px solid #d9e3ef!important;color:#8999aa!important;font-size:9px!important;line-height:1.45!important}
+#valuation .valuation-evidence-card{margin-top:10px!important}
+#valuation .valuation-output-note{margin-top:10px!important}
+@media(max-width:720px){
+  #valuation.valuation-card-v26131{padding:16px 14px!important}
+  #valuation .valuation-summary-grid{gap:8px!important}
+  #valuation .valuation-summary-card{padding:12px 12px 11px!important;border-radius:16px!important}
+  #valuation .valuation-summary-card-main strong{font-size:34px!important}
+  #valuation .valuation-summary-card strong{font-size:23px!important}
+  #valuation #valuationPositionCard strong{font-size:18px!important}
+  #valuation .valuation-signal-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  #valuation .valuation-confidence-output{grid-column:1/-1!important}
+  #valuation .valuation-model-tiles{gap:8px!important}
+  #valuation .valuation-tech-tile{padding:10px 9px 9px!important;border-radius:16px!important}
+  #valuation .valuation-tech-tile header b{font-size:13px!important;gap:6px!important}
+  #valuation .valuation-tech-icon{width:28px!important;height:28px!important;min-width:28px!important;font-size:12px!important}
+  #valuation .valuation-tech-tile p{font-size:10px!important;min-height:28px!important}
+  #valuation .valuation-tech-tile small{font-size:8px!important}
+}
 </style>
 </body>
 </html>
@@ -4518,5 +4657,44 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .
   #valuation .valuation-evidence-body{padding:10px!important}
   #valuation .valuation-evidence-row{grid-template-columns:.6fr .9fr .9fr 1.15fr!important;padding:0 7px!important;column-gap:5px!important}
   #valuation .valuation-evidence-row>*{font-size:9px!important}
+}
+</style>
+<style id="v26132-valuation-restore-style-final">
+#valuation.valuation-card-v26131{padding:18px 16px!important;background:#fff!important;border:1px solid #e8eef5!important;border-radius:22px!important;box-shadow:0 12px 28px rgba(17,34,61,.05)!important;color:#13233a!important}
+#valuation .valuation-summary-modern .valuation-summary-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-template-rows:none!important;gap:10px!important;min-height:0!important;margin:0!important;border:0!important;border-radius:0!important;background:none!important;overflow:visible!important;position:static!important;box-shadow:none!important}
+#valuation .valuation-summary-modern .valuation-summary-card{background:linear-gradient(180deg,#f8fbff,#f2f7ff)!important;border:1px solid #dfe8f5!important;border-radius:18px!important;padding:14px 14px 13px!important;box-shadow:0 8px 20px rgba(17,34,61,.035)!important;min-width:0!important}
+#valuation .valuation-summary-modern .valuation-summary-card-main{grid-column:1/-1!important;background:linear-gradient(180deg,#f6fbf8,#eef8f2)!important;border-color:#dceee1!important}
+#valuation .valuation-summary-modern .valuation-summary-card::before{content:none!important;display:none!important}
+#valuation .valuation-summary-modern .valuation-summary-card strong{display:block!important;margin-top:8px!important;color:#13233a!important;font-size:26px!important;line-height:1.1!important;font-weight:800!important;word-break:break-word!important}
+#valuation .valuation-summary-modern .valuation-summary-card small{display:block!important;margin-top:8px!important;color:#8294a8!important;font-size:11px!important;line-height:1.4!important}
+#valuation .valuation-summary-modern .valuation-summary-label{display:flex!important;align-items:center!important;gap:6px!important;color:#6e8298!important;font-size:12px!important;font-weight:700!important}
+#valuation .valuation-summary-modern .valuation-summary-card-main strong{font-size:38px!important}
+#valuation .valuation-summary-modern #valuationPositionCard strong{font-size:20px!important;color:#1fa86a!important}
+#valuation .valuation-model-tiles{margin-top:10px!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+#valuation .valuation-model-tiles .valuation-tech-tile{padding:11px 11px 10px!important;border:1px solid #dfe8f5!important;border-radius:18px!important;background:#eef5ff!important;box-shadow:0 8px 20px rgba(17,34,61,.035)!important;min-width:0!important}
+#valuation .valuation-model-tiles .valuation-tech-tile header{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important}
+#valuation .valuation-model-tiles .valuation-tech-tile header b{display:inline-flex!important;align-items:center!important;gap:8px!important;color:#13233a!important;font-size:15px!important;font-weight:800!important;line-height:1.2!important;min-width:0!important}
+#valuation .valuation-model-tiles .valuation-tech-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:32px!important;min-width:32px!important;border-radius:999px!important;background:#e8efff!important;color:#6182ff!important;font-size:13px!important;line-height:1!important;box-shadow:inset 0 0 0 1px rgba(97,130,255,.10)!important}
+#valuation .valuation-model-tiles .valuation-tech-tile header em{font-style:normal!important;font-size:10px!important;font-weight:800!important;padding:3px 7px!important;border-radius:999px!important;background:#fff!important;color:#5e7f9f!important;border:1px solid #d6e1ec!important;white-space:nowrap!important}
+#valuation .valuation-model-tiles .valuation-tech-tile header em.tone-good{color:#2f8f6b!important;border-color:#8cc4ac!important}
+#valuation .valuation-model-tiles .valuation-tech-tile header em.tone-neutral{color:#5e7f9f!important;border-color:#91a7bb!important}
+#valuation .valuation-model-tiles .valuation-tech-tile header em.tone-bad{color:#b95763!important;border-color:#d0a0a6!important}
+#valuation .valuation-model-tiles .valuation-tech-tile p{margin:8px 0 6px!important;color:#65788f!important;font-size:11px!important;line-height:1.4!important;min-height:31px!important}
+#valuation .valuation-model-tiles .valuation-tech-tile small{display:block!important;padding-top:7px!important;border-top:1px solid #d9e3ef!important;color:#8999aa!important;font-size:9px!important;line-height:1.45!important}
+@media(max-width:720px){
+#valuation.valuation-card-v26131{padding:16px 14px!important}
+#valuation .valuation-summary-modern .valuation-summary-grid{gap:8px!important}
+#valuation .valuation-summary-modern .valuation-summary-card{padding:12px 12px 11px!important;border-radius:16px!important}
+#valuation .valuation-summary-modern .valuation-summary-card-main strong{font-size:34px!important}
+#valuation .valuation-summary-modern .valuation-summary-card strong{font-size:23px!important}
+#valuation .valuation-summary-modern #valuationPositionCard strong{font-size:18px!important}
+#valuation .valuation-signal-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+#valuation .valuation-confidence-output{grid-column:1/-1!important}
+#valuation .valuation-model-tiles{gap:8px!important}
+#valuation .valuation-model-tiles .valuation-tech-tile{padding:10px 9px 9px!important;border-radius:16px!important}
+#valuation .valuation-model-tiles .valuation-tech-tile header b{font-size:13px!important;gap:6px!important}
+#valuation .valuation-model-tiles .valuation-tech-icon{width:28px!important;height:28px!important;min-width:28px!important;font-size:12px!important}
+#valuation .valuation-model-tiles .valuation-tech-tile p{font-size:10px!important;min-height:28px!important}
+#valuation .valuation-model-tiles .valuation-tech-tile small{font-size:8px!important}
 }
 </style>
