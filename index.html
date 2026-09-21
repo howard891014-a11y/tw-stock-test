@@ -4091,3 +4091,88 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .
   mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5' width='24' height='18' rx='3'/%3E%3Cpath d='M9 19l5-5 4 3 5-7'/%3E%3Cpath d='M12 27h8M16 23v4'/%3E%3C/g%3E%3C/svg%3E")!important;
 }
 </style>
+
+<style id="stockzone-v26128-valuation-light-refresh">
+/* v2.6.1.28 — 基本面估值全面改成目前 StockZone 淺色視覺語言；只改 UI，不改資料與計算。 */
+#valuation.valuation-card{
+  padding:16px 14px!important;
+  background:#fff!important;
+  border:1px solid #e8eef5!important;
+  border-radius:22px!important;
+  box-shadow:0 12px 28px rgba(17,34,61,.05)!important;
+  color:#13233a!important;
+}
+#valuation>.card-title.theme-white-card-title{
+  color:#13233A!important;
+  font-size:20px!important;
+  font-weight:800!important;
+  line-height:1.2!important;
+  margin:0 0 14px!important;
+}
+#valuation>.card-title .theme-title-group{gap:9px!important}
+#valuation .valuation-assessment-grid{gap:10px!important;margin:0 0 12px!important}
+#valuation .valuation-assessment-card{padding:12px 14px!important;border:1px solid #e5ebf3!important;border-radius:16px!important;background:linear-gradient(180deg,#ffffff,#f8fbff)!important;box-shadow:none!important}
+#valuation .valuation-assessment-card span{color:#7c8da2!important}
+#valuation .valuation-assessment-card b{color:#17304c!important}
+#valuation .valuation-assessment-card small{color:#8b9bae!important}
+#valuation .valuation-summary-grid{border:1px solid #d9e9e4!important;border-radius:18px!important;background:linear-gradient(135deg,#f2faf7 0%,#edf7f3 100%)!important;box-shadow:none!important;overflow:hidden!important}
+#valuation .valuation-summary-main{border-right:1px solid #d4e7df!important;background:linear-gradient(160deg,#eaf8f2,#f5fbf8)!important}
+#valuation .valuation-summary-main:before{width:7px!important;background:#27c995!important}
+#valuation .valuation-summary-main span,#valuation .valuation-summary-cell span{color:#7a8e9f!important;font-weight:500!important}
+#valuation .valuation-summary-main strong{color:#17304c!important}
+#valuation .valuation-summary-cell{background:rgba(255,255,255,.30)!important}
+#valuation .valuation-summary-cell:nth-of-type(2),#valuation .valuation-summary-cell:nth-of-type(4){border-right:1px solid #dfe8ee!important}
+#valuation .valuation-summary-cell:nth-of-type(2),#valuation .valuation-summary-cell:nth-of-type(3){border-bottom:1px solid #dfe8ee!important}
+#valuation .valuation-summary-cell strong{color:#24364c!important}
+#valuation .valuation-summary-status strong{color:#1fa86a!important}
+#valuation .valuation-summary-bps strong{color:#24364c!important}
+#valuation .fair-up{color:#d95364!important;background:#fff0f3!important}
+#valuation .fair-down{color:#1b9d68!important;background:#eaf8f1!important}
+#valuation .fair-flat{color:#6d7f94!important;background:#eef3f8!important}
+#valuation .valuation-section{margin-top:10px!important;padding:12px!important;border:1px solid #e3eaf2!important;border-radius:18px!important;box-shadow:none!important;color:#13233a!important}
+#valuation .valuation-eps-section{background:linear-gradient(180deg,#f5f9ff,#eef5ff)!important;border-color:#dfe8f5!important}
+#valuation .valuation-pe-section{background:linear-gradient(180deg,#f8fbff,#f3f7fc)!important;border-color:#e1e9f2!important}
+#valuation .valuation-pb-section{background:linear-gradient(180deg,#faf7ff,#f4efff)!important;border-color:#e8def8!important}
+#valuation .valuation-section-title{min-height:28px!important;margin-bottom:10px!important;gap:8px!important;color:#13233a!important;font-size:15px!important;font-weight:800!important}
+#valuation #valuationOperatingTitle{color:#13233a!important;font-weight:800!important}
+#valuation .formula-info{border-color:#9aabba!important;color:#7f91a5!important;background:#fff!important}
+#valuation .val-icon{color:#4b8edb!important}
+#valuation .val-icon svg{fill:#4b8edb!important;stroke:#4b8edb!important}
+#valuation .val-icon-pe{background:#dfeaff!important;color:#347fda!important;border:1px solid #cfe0fb!important}
+#valuation .valuation-pb-section .val-icon{color:#7c5be5!important}
+#valuation .valuation-pb-section .val-icon svg{fill:#7c5be5!important;stroke:#7c5be5!important}
+#valuation .valuation-quarter-chip{border:1px solid #dce6f2!important;border-radius:12px!important;background:rgba(255,255,255,.78)!important;box-shadow:none!important}
+#valuation .valuation-quarter-chip span{color:#7c8da2!important}
+#valuation .valuation-quarter-chip b{color:#24364c!important}
+#valuation .valuation-quarter-chip.is-latest{border:2px solid #4cb6ef!important;background:#f7fcff!important;box-shadow:0 0 0 3px rgba(76,182,239,.07)!important}
+#valuation .valuation-quarter-chip em{background:#4cb6ef!important;color:#fff!important}
+#valuation .valuation-eps-divider{background:#dce6ef!important}
+#valuation .valuation-ttm span{color:#7c8da2!important}
+#valuation .valuation-ttm b{color:#24364c!important}
+#valuation .valuation-mini{background:transparent!important}
+#valuation .valuation-mini+.valuation-mini:before{background:#dfe7ef!important}
+#valuation .valuation-mini span{color:#7c8da2!important}
+#valuation .valuation-mini b{color:#24364c!important}
+#valuation .valuation-mini:last-child b.valuation-premium-high,#valuation .valuation-mini:last-child b.risk-danger{color:#d95364!important}
+#valuation .valuation-mini:last-child b.valuation-premium-low,#valuation .valuation-mini:last-child b.risk-safe{color:#1b9d68!important}
+#valuation .valuation-mini:last-child b.risk-watch{color:#bd7d08!important}
+#valuation .valuation-mini:last-child b.valuation-premium-high:after,#valuation .valuation-mini:last-child b.risk-danger:after{background:#fff0f3!important;color:#d95364!important}
+#valuation .valuation-mini:last-child b.valuation-premium-low:after,#valuation .valuation-mini:last-child b.risk-safe:after{background:#eaf8f1!important;color:#1b9d68!important}
+#valuation .valuation-mini:last-child b.risk-watch:after{background:#fff7e7!important;color:#bd7d08!important}
+#valuation .risk-text-safe{color:#1b9d68!important}
+#valuation .risk-text-watch{color:#bd7d08!important}
+#valuation .risk-text-danger{color:#d95364!important}
+#valuation .risk-text-neutral,#valuation .valuation-not-applicable{color:#60758d!important}
+#valuation .formula-popover{border:1px solid #dfe7f0!important;background:#fff!important;box-shadow:0 18px 48px rgba(17,34,61,.18)!important;color:#13233a!important}
+#valuation .formula-popover strong{color:#13233a!important}
+#valuation .formula-popover div{color:#60758d!important}
+#valuation .formula-popover-close{color:#718399!important}
+@media(max-width:720px){
+  #valuation.valuation-card{padding:16px 14px!important}
+  #valuation .valuation-assessment-grid{gap:8px!important}
+  #valuation .valuation-assessment-card{padding:10px 11px!important}
+  #valuation .valuation-summary-grid{border-radius:16px!important}
+  #valuation .valuation-section{padding:11px!important;border-radius:16px!important}
+}
+</style>
+
