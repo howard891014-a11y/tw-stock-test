@@ -2375,6 +2375,17 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 }
 </style>
 
+
+<style id="stockzone-v26130-valuation-output-refine">
+#valuation .valuation-range-card b{font-size:15px!important;letter-spacing:-.02em!important;white-space:nowrap!important}
+#valuation .valuation-confidence-card b{font-variant-numeric:tabular-nums!important}
+#valuation .valuation-assessment-card[data-tone="neutral"] b{color:#60758d!important}
+#valuation .valuation-assessment-card[data-tone="good"] b{color:#1b9d68!important}
+#valuation .valuation-assessment-card[data-tone="watch"] b{color:#bd7d08!important}
+#valuation .valuation-assessment-card[data-tone="bad"] b{color:#d95364!important}
+@media(max-width:720px){#valuation .valuation-range-card b{font-size:14px!important}}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
@@ -2568,6 +2579,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <div class="valuation-assessment-grid" aria-label="估值判讀">
             <div class="valuation-assessment-card" id="valuationPressureCard"><span>估值壓力</span><b id="fundamentalValuationPressure">--</b><small id="fundamentalValuationPressureNote">等待估值資料</small></div>
             <div class="valuation-assessment-card" id="valuationAttractivenessCard"><span>價格吸引力</span><b id="fundamentalPriceAttractiveness">--</b><small id="fundamentalPriceAttractivenessNote">等待估值資料</small></div>
+            <div class="valuation-assessment-card valuation-range-card" id="valuationRangeCard"><span>合理價區間</span><b id="valuationFairRange">--</b><small id="valuationFairRangeNote">等待估值模型</small></div>
+            <div class="valuation-assessment-card valuation-confidence-card" id="valuationConfidenceCard"><span>估值可信度</span><b id="valuationEstimateConfidence">--</b><small id="valuationEstimateConfidenceNote">等待模型一致性</small></div>
           </div>
           <div class="valuation-model-card" aria-label="估值模型權重">
             <div class="valuation-model-head"><span>估值模型權重</span><button class="formula-info definition-info" type="button" data-formula="modeldef" aria-label="查看估值模型權重說明">i</button><b id="valuationPrimaryModel">--</b></div>
@@ -2591,7 +2604,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
               <span class="fair-label">PB 合理股價 <button class="formula-info" type="button" data-formula="pb" aria-label="查看 PB 合理價公式">i</button></span><strong id="valuationPbFair">--</strong><b id="valuationPbFairGap">--</b>
             </div>
             <div class="valuation-summary-cell valuation-summary-status">
-              <span>相對估值</span><strong id="valuationStatus">--</strong>
+              <span>估值位置</span><strong id="valuationStatus">--</strong>
             </div>
             <div class="valuation-summary-cell valuation-summary-bps">
               <span>每股淨值</span><strong id="valuationSummaryBps">--</strong>

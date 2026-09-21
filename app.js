@@ -1675,13 +1675,18 @@ function fundamentalRiskAssessment(fund,trend,quality){
   return {score:points,label,tone,items:risks,note:risks.length?risks.slice(0,3).join("、"):"暫無明顯基本面惡化訊號"};
 }
 function valuationFundamentalAssessment(v=latestValuationData||{}){
-  const vr=playValuationResult(),scenario=latestValuationScenario,price=valuationNum(scenario?.P??v?.last),fair=valuationNum(scenario?.F),gap=price&&fair?(fair/price-1)*100:null;
-  let attractiveness=50;if(gap!==null)attractiveness=gap>=30?90:gap>=15?82:gap>=5?72:gap>=-5?60:gap>=-15?46:gap>=-25?32:20;
-  const state=vr?.state||"估值資料不足";if(["明顯高估","全面高估"].includes(state))attractiveness=Math.min(attractiveness,28);if(["低估偏多","雙重低估"].includes(state))attractiveness=Math.max(attractiveness,78);if(vr?.confidence==='低')attractiveness=Math.round((attractiveness+50)/2);
-  attractiveness=Math.round(playClamp(attractiveness));const pressure=100-attractiveness,pressureLabel=pressure>=70?"高":pressure>=48?"中":"低";
-  const fields=[scenario?.P,scenario?.O,scenario?.B,scenario?.F,v?.ttm,v?.bookValue].filter(x=>valuationNum(x)!==null).length,confidence=Math.round(fields/6*100);
-  return {available:gap!==null||!!vr,attractiveness,pressure,pressureLabel,state,gap,confidence,note:gap===null?state:`${state}｜合理價空間 ${signedPercent(gap)}`};
+  const vr=playValuationResult(),scenario=latestValuationScenario,profile=scenario?.profile||null,price=valuationNum(scenario?.P??v?.last),fair=valuationNum(profile?.center??scenario?.F),gap=price&&fair?(fair/price-1)*100:null;
+  let attractiveness=Number.isFinite(profile?.attractiveness)?profile.attractiveness:50;
+  if(!Number.isFinite(profile?.attractiveness)){
+    if(gap!==null)attractiveness=gap>=30?90:gap>=15?82:gap>=5?72:gap>=-5?60:gap>=-15?46:gap>=-25?32:20;
+    const legacyState=vr?.state||"估值資料不足";if(["明顯高估","全面高估"].includes(legacyState))attractiveness=Math.min(attractiveness,28);if(["低估偏多","雙重低估"].includes(legacyState))attractiveness=Math.max(attractiveness,78);if(vr?.confidence==='低')attractiveness=Math.round((attractiveness+50)/2);
+  }
+  attractiveness=Math.round(playClamp(attractiveness));const pressure=Number.isFinite(profile?.pressure)?profile.pressure:100-attractiveness,pressureLabel=profile?.pressureLabel||(pressure>=70?"高":pressure>=48?"中":"低"),state=profile?.position||vr?.state||"估值資料不足";
+  const fields=[scenario?.P,scenario?.O,scenario?.B,scenario?.F,v?.ttm,v?.bookValue].filter(x=>valuationNum(x)!==null).length,dataCoverage=Math.round(fields/6*100),estimateConfidence=Number.isFinite(profile?.confidence)?profile.confidence:null;
+  const rangeText=profile?.available&&profile.low>0&&profile.high>0?`${valuationFmt(profile.low)}～${valuationFmt(profile.high)}`:null;
+  return {available:gap!==null||!!vr,attractiveness,pressure,pressureLabel,state,gap,confidence:dataCoverage,estimateConfidence,range:profile,note:gap===null?state:`${state}｜合理價空間 ${signedPercent(gap)}${rangeText?`｜合理區 ${rangeText}`:""}`};
 }
+
 function buildFundamentalAssessment(fund=longQuantitativeFundamentals(latestValuationData||{}),v=latestValuationData||{}){
   const growthParts=[[fund?.epsScore,.55],[fund?.revenueScore,.45]].filter(x=>Number.isFinite(x[0])),gw=growthParts.reduce((s,x)=>s+x[1],0),growthStrength=gw?Math.round(playClamp(growthParts.reduce((s,x)=>s+x[0]*x[1],0)/gw)):50;
   const trend=fundamentalTrendAssessment(fund),quality=fundamentalProfitQuality(fund),stability=fundamentalStabilityAssessment(fund),risk=fundamentalRiskAssessment(fund,trend,quality),valuation=valuationFundamentalAssessment(v);
@@ -2643,7 +2648,7 @@ function valuationRiskByPeer(premium){
 function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
   ["valuationCompositeFair","valuationCompositeGap","valuationPeFair","valuationPeFairGap","valuationPbFair","valuationPbFairGap","valuationSummaryBps"].forEach(id=>setText(id,"--"));
-  ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap","valuationPeWeight","valuationPsWeight","valuationPbWeight","valuationPeSuitability","valuationPsSuitability","valuationPbSuitability","valuationPrimaryModel","valuationModelReason"].forEach(id=>setText(id,"--"));
+  ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap","valuationPeWeight","valuationPsWeight","valuationPbWeight","valuationPeSuitability","valuationPsSuitability","valuationPbSuitability","valuationPrimaryModel","valuationModelReason","valuationFairRange","valuationFairRangeNote","valuationEstimateConfidence","valuationEstimateConfidenceNote"].forEach(id=>setText(id,"--"));
   setText("overviewCompositeFair","--");latestValuationScenario=null;latestValuationData=null;setText("overviewValuationScenario","--");setText("overviewValuationScenarioNote","估值情境判讀");
   const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");
 }
@@ -2678,10 +2683,10 @@ function renderValuationScenario(){
   const x=latestValuationScenario;if(!x)return;
   const T=currentTargetPrice(),r=scenarioClassify(x.P,x.O,x.B,x.F,T),card=$("valuationScenario");
   card?.classList.remove("scenario-tone-watch","scenario-tone-danger");if(r.tone==="watch")card?.classList.add("scenario-tone-watch");if(r.tone==="danger")card?.classList.add("scenario-tone-danger");
-  setText("valuationScenarioSummary",`估值可信度：${r.confidence}｜${r.summary}${r.hasTarget===false?" 無券商目標價，本次以內部估值判讀。":""}`);
+  setText("valuationScenarioSummary",`模型共識：${r.confidence}｜${r.summary}${r.hasTarget===false?" 無券商目標價，本次以內部估值判讀。":""}`);
   document.querySelectorAll("#valuationScenario .scenario-cell").forEach(el=>el.classList.toggle("is-active",Number(el.dataset.scenario)===r.n));
   const active=document.querySelector(`#valuationScenario .scenario-cell[data-scenario="${r.n}"]`);if(active){const w=active.querySelector(".scenario-weight");if(w)w.textContent=`估值 ${r.valuationWeight}%｜目標價 ${r.targetWeight}%${r.hasTarget===false?"（無資料）":""}`;}
-  setText("overviewValuationScenario",r.state);setText("overviewValuationScenarioNote",`${r.consensus}｜可信度${r.confidence}`);renderPlayStyle();
+  setText("overviewValuationScenario",r.state);setText("overviewValuationScenarioNote",`${r.consensus}｜模型共識${r.confidence}`);renderPlayStyle();
 }
 // v2.6.1.29 — PE / PS / PB 動態適用度引擎。
 // 原則：先判斷「這個估值工具對目前公司有多適用」，再把可用模型正規化成權重；
@@ -2744,6 +2749,45 @@ function valuationModelSuitability(v,fairs){
   if(primary==="pe"&&explosive)reason="PE 仍為主，但已因 EPS 低基期／高波動降低適用度";
   return {methods:{pe,ps,pb},weights,primary,primaryLabel:labels[primary]||"--",confidence,reason,metrics:{positiveRatio,epsStability,revenueGrowth,revStability,grossNow,opNow,roe,industry,assetScore,maturity,earningsImmaturity}};
 }
+
+// v2.6.1.30 — 把 PE / PS / PB 合成「合理價區間、估值位置、估值可信度」。
+// 估值可信度只描述內部估值本身是否穩健；目前不額外改變價格共振權重。
+function valuationFairProfile(v,fairs,model,price){
+  const weights=model?.weights||{},methods=model?.methods||{},center=valuationWeightedFair(fairs,weights),keys=["pe","ps","pb"];
+  const rows=keys.map(k=>({key:k,fair:valuationNum(fairs?.[k]),weight:Number(weights?.[k])||0,score:Number(methods?.[k]?.score),coverage:Number(methods?.[k]?.coverage)})).filter(x=>x.fair>0&&x.weight>0);
+  if(!(center>0)&&!rows.length)return {available:false,center:null,low:null,high:null,confidence:0,position:"資料不足",positionRisk:"neutral",dispersionPct:null,halfWidthPct:null,count:0,attractiveness:50,pressure:50,pressureLabel:"中"};
+  const totalW=rows.reduce((s,x)=>s+x.weight,0)||1;
+  const dispersionPct=center>0&&rows.length?Math.sqrt(rows.reduce((s,x)=>s+Math.pow((x.fair/center-1)*100,2)*x.weight,0)/totalW):0;
+  const agreementScore=Math.round(stageClamp(100-dispersionPct*2.35,15,100));
+  const suitability=rows.length?rows.reduce((s,x)=>s+(Number.isFinite(x.score)?x.score:45)*x.weight,0)/totalW:45;
+  const modelCoverage=stageClamp(Number(model?.confidence)||0,0,100);
+  const fund=longQuantitativeFundamentals(v||{}),fundCoverage=Math.round(stageClamp((Number(fund?.coverage)||0)/40*100,0,100));
+  const count=rows.length,countScore=count>=3?100:count===2?78:count===1?48:0;
+  let confidence=Math.round(stageClamp(modelCoverage*.25+suitability*.25+agreementScore*.25+countScore*.10+fundCoverage*.15,0,100));
+  if(count===1)confidence=Math.min(confidence,65);else if(count===2)confidence=Math.min(confidence,88);
+  const extra=count===1?8:count===2?2:0,halfWidthPct=stageClamp(7+dispersionPct*.70+(100-confidence)*.10+extra,8,32);
+  const low=center*(1-halfWidthPct/100),high=center*(1+halfWidthPct/100),p=valuationNum(price);
+  let position="資料不足",positionRisk="neutral";
+  if(p>0){
+    if(p<low*.90){position="明顯低估";positionRisk="safe"}
+    else if(p<low){position="偏低估";positionRisk="safe"}
+    else if(p<=high){position="接近合理";positionRisk="watch"}
+    else if(p<=high*1.12){position="成長預期區";positionRisk="watch"}
+    else if(p<=high*1.28){position="偏高估";positionRisk="danger"}
+    else {position="明顯高估";positionRisk="danger"}
+  }
+  const centerGap=p>0?(center/p-1)*100:null;
+  let attractiveness=centerGap===null?50:centerGap>=30?90:centerGap>=15?82:centerGap>=5?72:centerGap>=-5?60:centerGap>=-15?46:centerGap>=-25?32:20;
+  if(position==="明顯低估")attractiveness=Math.max(attractiveness,88);
+  else if(position==="偏低估")attractiveness=Math.max(attractiveness,74);
+  else if(position==="接近合理")attractiveness=stageClamp(attractiveness,52,70);
+  else if(position==="成長預期區")attractiveness=Math.min(attractiveness,50);
+  else if(position==="偏高估")attractiveness=Math.min(attractiveness,36);
+  else if(position==="明顯高估")attractiveness=Math.min(attractiveness,22);
+  attractiveness=Math.round(attractiveness*(confidence/100)+50*(1-confidence/100));
+  const pressure=Math.round(100-attractiveness),pressureLabel=pressure>=70?"高":pressure>=48?"中":"低";
+  return {available:true,center,low,high,confidence,position,positionRisk,dispersionPct,agreementScore,suitability:Math.round(suitability),modelCoverage,fundCoverage,halfWidthPct,count,centerGap,attractiveness,pressure,pressureLabel};
+}
 function renderValuationModel(model){
   if(!model)return;const m=model.methods||{},w=model.weights||{};
   setText("valuationPeWeight",`${w.pe||0}%`);setText("valuationPsWeight",`${w.ps||0}%`);setText("valuationPbWeight",`${w.pb||0}%`);
@@ -2761,16 +2805,21 @@ function renderValuation(v){
   const model=valuationModelSuitability(v,{pe:peFair,ps:psFair,pb:pbFair}),weights=model.weights||{},primary=model.primary;
   renderValuationModel(model);
   const usePs=primary==="ps" || (primary!=="pe"&&!(peFair>0)&&psFair>0),operatingPremium=usePs?v.psPremiumPct:v.pePremiumPct;
-  const operatingFair=valuationWeightedFair({pe:peFair,ps:psFair},weights,["pe","ps"]),compositeFair=valuationWeightedFair({pe:peFair,ps:psFair,pb:pbFair},weights);
+  const operatingFair=valuationWeightedFair({pe:peFair,ps:psFair},weights,["pe","ps"]),compositeFair=valuationWeightedFair({pe:peFair,ps:psFair,pb:pbFair},weights),profile=valuationFairProfile(v,{pe:peFair,ps:psFair,pb:pbFair},model,last);
   setText("valuationOperatingFairLabel","營運合理價");
   const operatingFairInfo=$("valuationOperatingFairLabel")?.parentElement?.querySelector?.(".formula-info");if(operatingFairInfo){operatingFairInfo.dataset.formula="pe";operatingFairInfo.setAttribute("aria-label","查看營運合理價公式");}
   setText("valuationOperatingIcon",usePs?"PS":"PE");setText("valuationOperatingTitle",usePs?"股價營收比":"本益比");
   const operatingInfo=document.querySelector('#valuation .valuation-section-title [data-formula="pedef"], #valuation .valuation-section-title [data-formula="psdef"]');if(operatingInfo){operatingInfo.dataset.formula=usePs?"psdef":"pedef";operatingInfo.setAttribute("aria-label",usePs?"查看股價營收比定義":"查看本益比定義");}
   setText("valuationOperatingCurrentLabel",usePs?"目前 PS":"目前本益比");setText("valuationOperatingPeerLabel",usePs?"同業 PS 中位數":"同業平均本益比");
-  latestValuationScenario={P:last,O:operatingFair,B:pbFair,F:compositeFair,usePs,model,peFair,psFair,pbFair};renderValuationScenario();
+  latestValuationScenario={P:last,O:operatingFair,B:pbFair,F:compositeFair,usePs,model,peFair,psFair,pbFair,profile};renderValuationScenario();
   const fairGap=x=>(last!==null&&last>0&&Number.isFinite(x))?(x/last-1)*100:null;
   const renderFair=(valueId,gapId,value)=>{const el=$(gapId),gap=fairGap(value);setText(valueId,Number.isFinite(value)?valuationFmt(value,""):"資料不足");if(!el)return;el.classList.remove("risk-safe","risk-watch","risk-danger","risk-neutral");if(gap===null){el.textContent="--";el.classList.add("risk-neutral");return;}el.textContent=`較現價 ${gap>=0?"+":"-"}${valuationPercent(Math.abs(gap))}`;el.classList.add(`risk-${valuationRiskByCurrentFair(last,value)}`);};
   renderFair("valuationPeFair","valuationPeFairGap",operatingFair);renderFair("valuationPbFair","valuationPbFairGap",pbFair);renderFair("valuationCompositeFair","valuationCompositeGap",compositeFair);
+  const profileTone=(id,tone)=>{const el=$(id);if(el)el.dataset.tone=tone||"neutral"};
+  setText("valuationFairRange",profile?.available?`${valuationFmt(profile.low)}～${valuationFmt(profile.high)}`:"資料不足");
+  setText("valuationFairRangeNote",profile?.available?`中心 ${valuationFmt(profile.center)}｜區間 ±${profile.halfWidthPct.toFixed(1)}%`:"可用估值模型不足");profileTone("valuationRangeCard","neutral");
+  setText("valuationEstimateConfidence",profile?.available?`${profile.confidence}%`:"資料不足");
+  setText("valuationEstimateConfidenceNote",profile?.available?`${profile.count} 模型｜分歧 ${profile.dispersionPct.toFixed(1)}%｜資料 ${profile.fundCoverage}%`:"等待模型一致性");profileTone("valuationConfidenceCard",profile?.confidence>=75?"good":profile?.confidence>=55?"watch":"bad");
   setText("overviewCompositeFair",Number.isFinite(compositeFair)?valuationFmt(compositeFair):"--");setText("valuationSummaryBps",bps!==null?valuationMetric(bps,""):"資料不足");
   setText("valuationCurrentPe",usePs?valuationMetric(v.currentPs," 倍","資料不足"):valuationMetric(v.currentPe," 倍","資料不足"));
   setText("valuationPeerPe",usePs?valuationMetric(v.peerPs," 倍","資料不足"):valuationMetric(v.peerPe," 倍","資料不足"));
@@ -2779,11 +2828,11 @@ function renderValuation(v){
   const peGap=$("valuationPeGap"),pbGap=$("valuationPbGap");
   const applyPeerRisk=(el,premium)=>{if(!el)return;el.classList.remove("valuation-premium-high","valuation-premium-low","risk-safe","risk-watch","risk-danger","risk-neutral","valuation-not-applicable");el.removeAttribute("data-tag");if(!Number.isFinite(Number(premium))){if(el.textContent.includes("不適用"))el.classList.add("valuation-not-applicable");return;}const risk=valuationRiskByPeer(premium);el.classList.add(`risk-${risk}`);el.dataset.tag=risk==="safe"?"安全":risk==="watch"?"注意":"危險";};
   applyPeerRisk(peGap,operatingPremium);applyPeerRisk(pbGap,v.pbPremiumPct);
-  const statusRisk=valuationRiskByCurrentFair(last,compositeFair);let statusLabel=statusRisk==="safe"?"相對低估":statusRisk==="watch"?"接近合理":"相對高估";if(compositeFair===null)statusLabel="資料不足";
-  setText("valuationStatus",statusLabel);setText("valuationStatusDetail",`PE ${weights.pe||0}%｜PS ${weights.ps||0}%｜PB ${weights.pb||0}%｜${model.primaryLabel} 主導`);
-  const statusEl=$("valuationStatus");if(statusEl){statusEl.classList.remove("risk-text-safe","risk-text-watch","risk-text-danger","risk-text-neutral","valuation-not-applicable");statusEl.classList.add(`risk-text-${compositeFair===null?"neutral":statusRisk}`);if(statusEl.textContent.includes("不適用"))statusEl.classList.add("valuation-not-applicable");}
+  const statusRisk=profile?.available?profile.positionRisk:valuationRiskByCurrentFair(last,compositeFair),statusLabel=profile?.available?profile.position:(compositeFair===null?"資料不足":statusRisk==="safe"?"偏低估":statusRisk==="watch"?"接近合理":"偏高估");
+  setText("valuationStatus",statusLabel);setText("valuationStatusDetail",`PE ${weights.pe||0}%｜PS ${weights.ps||0}%｜PB ${weights.pb||0}%｜估值可信度 ${profile?.available?profile.confidence+"%":"--"}`);
+  const statusEl=$("valuationStatus");if(statusEl){statusEl.classList.remove("risk-text-safe","risk-text-watch","risk-text-danger","risk-text-neutral","valuation-not-applicable");statusEl.classList.add(`risk-text-${profile?.available?statusRisk:(compositeFair===null?"neutral":statusRisk)}`);if(statusEl.textContent.includes("不適用"))statusEl.classList.add("valuation-not-applicable");}
   setText("valuationMethod",`PE／PS／PB 適用度自動加權：PE ${weights.pe||0}%、PS ${weights.ps||0}%、PB ${weights.pb||0}%`);
-  setText("valuationNote",`估值模型會依 EPS 穩定性、EPS 正值比例、營收成長／穩定性、毛利率、營益率、ROE 代理值與產業資產特性自動調整 PE／PS／PB 權重。`);
+  setText("valuationNote",`PE／PS／PB 先依適用度動態加權形成中心合理價，再依模型分歧、適用度、資料完整度形成合理價區間與估值可信度。`);
   setText("valuationTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   const host=$("valuationQuarterGrid");if(host){const q=Array.isArray(v.latest4)?v.latest4:[];host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");}
   renderFundamentalOverview();
@@ -3471,8 +3520,8 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
  const formulas={
   pe:{title:"營運合理價",text:"PE 合理價＝近四季 EPS × 同業 PE；PS 合理價＝每股營收 × 同業 PS。系統依 EPS 成熟度、營收品質與資料完整度自動給 PE／PS 權重，再形成營運合理價。"},
   pb:{title:"PB 合理價",text:"每股淨值（BPS）× 同業平均 PB"},
-  composite:{title:"綜合合理價",text:"PE、PS、PB 不再固定等權。系統先用 EPS 穩定性、EPS 正值比例、營收成長／穩定性、毛利率、營益率、ROE 代理值與產業資產特性計算三種模型適用度，再依可用資料正規化成權重後合成合理價。"},
-  modeldef:{title:"PE／PS／PB 模型權重",text:"PE 重視獲利成熟度與 EPS 穩定性；PS 重視營收成長、營收穩定與毛利品質，獲利尚未成熟時權重會提高；PB 重視淨值、ROE 代理值與產業資產特性。缺少合理價的模型不參與加權。"},
+  composite:{title:"綜合合理價",text:"PE、PS、PB 先依公司目前的獲利成熟度、營收品質、ROE 與資產特性計算適用度，再正規化成權重後合成中心合理價。合理價區間會再依三種模型的價格分歧、適用度、資料完整度與可用模型數量自動放寬或收窄。"},
+  modeldef:{title:"PE／PS／PB 模型權重",text:"PE 重視獲利成熟度與 EPS 穩定性；PS 重視營收成長、營收穩定與毛利品質，獲利尚未成熟時權重會提高；PB 重視淨值、ROE 代理值與產業資產特性。缺少合理價的模型不參與加權。估值可信度另外評估模型適用度、模型間價格分歧、資料完整度與可用模型數量。"},
   epsdef:{title:"EPS 獲利能力",text:"EPS 是每股盈餘，代表公司每一股普通股能分配到多少獲利；數值越高，代表每股獲利能力越強。"},
   pedef:{title:"本益比",text:"本益比＝股價 ÷ 每股盈餘（EPS），代表市場願意用多少倍的價格購買公司目前的每股獲利。"},
   psdef:{title:"股價營收比",text:"股價營收比（PS）＝股價 ÷ 每股營收，代表市場願意用多少倍的價格購買公司每股所創造的營收；除了虧損公司，當 EPS 剛轉盈、低基期失真或營收成長比短期獲利更有代表性時，PS 權重也會提高。"},
