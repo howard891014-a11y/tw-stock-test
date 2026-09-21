@@ -2647,10 +2647,10 @@ function valuationRiskByPeer(premium){
 }
 function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
-  ["valuationCompositeFair","valuationCompositeGap","valuationPeFair","valuationPeFairGap","valuationPbFair","valuationPbFairGap","valuationSummaryBps"].forEach(id=>setText(id,"--"));
+  ["valuationCompositeFair","valuationCompositeGap","valuationPeFair","valuationPeFairGap","valuationPbFair","valuationPbFairGap","valuationSummaryBps","valuationCompositeScenarioLine"].forEach(id=>setText(id,"--"));
   ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap","valuationPeWeight","valuationPsWeight","valuationPbWeight","valuationPeSuitability","valuationPsSuitability","valuationPbSuitability","valuationPrimaryModel","valuationModelReason","valuationFairRange","valuationFairRangeNote","valuationEstimateConfidence","valuationEstimateConfidenceNote","valuationEvidenceCurrentPe","valuationEvidencePeerPe","valuationEvidencePeFair","valuationEvidenceCurrentPs","valuationEvidencePeerPs","valuationEvidencePsFair","valuationEvidenceCurrentPb","valuationEvidencePeerPb","valuationEvidencePbFair","valuationEvidenceTtmEps"].forEach(id=>setText(id,"--"));
   setText("overviewCompositeFair","--");latestValuationScenario=null;latestValuationData=null;setText("overviewValuationScenario","--");setText("overviewValuationScenarioNote","估值情境判讀");
-  const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");
+  const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");setText("valuationCompositeReasonLine","等待估值判讀");
 }
 let latestValuationScenario=null,latestValuationData=null;
 function currentTargetPrice(){const main=preferredMainTarget();return main?valuationNum(targetPriceValue(main.latest)):null}
@@ -2681,11 +2681,9 @@ function scenarioClassify(P,O,B,F,T){
 }
 function renderValuationScenario(){
   const x=latestValuationScenario;if(!x)return;
-  const T=currentTargetPrice(),r=scenarioClassify(x.P,x.O,x.B,x.F,T),card=$("valuationScenario");
-  card?.classList.remove("scenario-tone-watch","scenario-tone-danger");if(r.tone==="watch")card?.classList.add("scenario-tone-watch");if(r.tone==="danger")card?.classList.add("scenario-tone-danger");
-  setText("valuationScenarioSummary",`模型共識：${r.confidence}｜${r.summary}${r.hasTarget===false?" 無券商目標價，本次以內部估值判讀。":""}`);
-  document.querySelectorAll("#valuationScenario .scenario-cell").forEach(el=>el.classList.toggle("is-active",Number(el.dataset.scenario)===r.n));
-  const active=document.querySelector(`#valuationScenario .scenario-cell[data-scenario="${r.n}"]`);if(active){const w=active.querySelector(".scenario-weight");if(w)w.textContent=`估值 ${r.valuationWeight}%｜目標價 ${r.targetWeight}%${r.hasTarget===false?"（無資料）":""}`;}
+  const T=currentTargetPrice(),r=scenarioClassify(x.P,x.O,x.B,x.F,T);
+  setText("valuationCompositeScenarioLine",r.state||"--");
+  setText("valuationCompositeReasonLine",`模型共識：${r.confidence}｜${r.summary}${r.hasTarget===false?" 無券商目標價，本次以內部估值判讀。":""}`);
   setText("overviewValuationScenario",r.state);setText("overviewValuationScenarioNote",`${r.consensus}｜模型共識${r.confidence}`);renderPlayStyle();
 }
 // v2.6.1.29 — PE / PS / PB 動態適用度引擎。
@@ -2845,7 +2843,7 @@ function renderValuation(v){
   setText("valuationEvidencePbFair",pbFair>0?valuationFmt(pbFair):"資料不足");
   setText("valuationEvidenceTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   setText("valuationTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
-  const host=$("valuationQuarterGrid");if(host){const q=Array.isArray(v.latest4)?v.latest4:[];host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");}
+  const host=$("valuationQuarterGrid");if(host){const q=Array.isArray(v.latest4)?v.latest4:[];host.innerHTML=q.slice(0,4).map(x=>`<div class="valuation-quarter-chip"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b></div>`).join("");}
   renderFundamentalOverview();
 }
 async function loadValuation(stock){

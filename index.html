@@ -2586,7 +2586,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <div class="valuation-summary-subblock">
                   <div class="valuation-data-row compact"><span>模型依據</span><b id="valuationCompositeModelLine">--</b></div>
                   <div class="valuation-data-row compact"><span>權重</span><b id="valuationCompositeWeightLine">PE --｜PS --｜PB --</b></div>
-                  <div class="valuation-summary-reason" id="valuationCompositeReasonLine">等待模型資料</div>
+                  <div class="valuation-data-row compact"><span>九情境判讀</span><b id="valuationCompositeScenarioLine">--</b></div>
+                  <div class="valuation-summary-reason" id="valuationCompositeReasonLine">等待估值判讀</div>
                 </div>
               </div>
               <div class="valuation-summary-card">
@@ -2722,23 +2723,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div id="valuationFormulaText"></div>
           </div>
           <small class="valuation-note valuation-output-note" id="valuationNote">估值模組會綜合 PE／PS／PB 自動生成綜合合理價與估值訊號。</small>
-        </article>
-
-        <!-- 九情境已退到後台。保留節點供舊邏輯相容，主畫面不再顯示。 -->
-        <article class="card detail-panel valuation-scenario-card valuation-scenario-backstage" id="valuationScenario" data-view-panel="valuation" hidden aria-hidden="true">
-          <div class="card-title">九情境估值判讀</div>
-          <div class="scenario-grid" aria-label="九情境">
-            <div class="scenario-cell" data-scenario="1"><b>低估偏多</b><span>P &lt; F &lt; T；O ≈ B</span><small class="scenario-weight"></small></div>
-            <div class="scenario-cell" data-scenario="2"><b>合理偏多</b><span>P ≈ F &lt; T；O ≈ B</span><small class="scenario-weight"></small></div>
-            <div class="scenario-cell" data-scenario="3"><b>溢價偏多</b><span>F &lt; P &lt; T；O ≈ B</span><small class="scenario-weight"></small></div>
-            <div class="scenario-cell" data-scenario="4"><b>接近目標價</b><span>F &lt; P ≈ T；O ≈ B</span><small class="scenario-weight"></small></div>
-            <div class="scenario-cell" data-scenario="5"><b>明顯高估</b><span>F &lt; T &lt; P；O ≈ B</span><small class="scenario-weight"></small></div>
-            <div class="scenario-cell" data-scenario="6"><b>雙重低估</b><span>P &lt; O、B；O ≠ B</span><small class="scenario-weight"></small></div>
-            <div class="scenario-cell" data-scenario="7"><b>估值分歧</b><span>P 位於 O、B 之間</span><small class="scenario-weight"></small></div>
-            <div class="scenario-cell" data-scenario="8"><b>成長預期區</b><span>P &gt; O、B；P &lt; T</span><small class="scenario-weight"></small></div>
-            <div class="scenario-cell" data-scenario="9"><b>全面高估</b><span>P &gt; O、B、T</span><small class="scenario-weight"></small></div>
-          </div>
-          <p id="valuationScenarioSummary">--</p>
         </article>
 
         <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
