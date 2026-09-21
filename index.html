@@ -2725,9 +2725,9 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       <small class="expected-foot" id="expectedFoot">持股會改用均價計算報酬與預估損益；觀察股維持現價基準。</small>
     </article>
     <article class="card detail-panel simple-detail" data-view-panel="screening"><div class="card-title">智慧選股 <span class="badge">待接功能</span></div><div class="hero-value"><span>全市場自動篩選</span><strong>✦</strong><small>之後加入低點／剛站回／接近買點篩選</small></div></article>
-    <article class="card detail-panel simple-detail" data-view-panel="fundflow"><div class="card-title">資金流向 <span class="badge">待接功能</span></div><div class="hero-value"><span>市場資金流向</span><strong>↔</strong><small>之後接入零股、法人與族群資金流向</small></div></article>
-    <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title">近期精選 <span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
-    <article class="card detail-panel simple-detail" data-view-panel="simulation"><div class="card-title">模擬交易 <span class="badge">待接功能</span></div><div class="hero-value"><span>模擬交易績效</span><strong>◎</strong><small>之後接入智慧選股模擬交易與績效回饋</small></div></article>
+    <article class="card detail-panel simple-detail" data-view-panel="fundflow"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-fundflow" aria-hidden="true"></i><span>資金流向</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>市場資金流向</span><strong>↔</strong><small>之後接入零股、法人與族群資金流向</small></div></article>
+    <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-featured" aria-hidden="true"></i><span>近期精選</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
+    <article class="card detail-panel simple-detail" data-view-panel="simulation"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-simulation" aria-hidden="true"></i><span>模擬交易</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>模擬交易績效</span><strong>◎</strong><small>之後接入智慧選股模擬交易與績效回饋</small></div></article>
     <article class="card stage-card detail-panel" data-view-panel="analysis" id="stagePositionCard">
           <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-stage" aria-hidden="true"></i><span>五階段位置</span></span></div>
           <div class="stage-progress" id="stageSteps">
@@ -3979,3 +3979,115 @@ body.mode-analysis{
 }
 </style>
 
+
+<style id="stockzone-v26127-title-final-fix">
+/* v2.6.1.27 — final title lock: overview + smart-select titles */
+:root{
+  --theme-title-color:#13233A;
+  --theme-title-icon-color:#415269;
+  --theme-title-size:20px;
+  --theme-title-weight:800;
+  --theme-title-gap:9px;
+  --theme-title-icon-w:24.8px;
+  --theme-title-icon-h:21.6px;
+}
+/* The old overview rule targets every span inside the heading and shrinks it to 10px.
+   Lock the title text itself, not only the h2. */
+#overviewResonanceCard .overview-resonance-head h2.theme-white-card-title,
+#overviewDecisionCard .overview-decision-head h2.theme-white-card-title{
+  margin:0!important;
+  padding:0!important;
+  color:var(--theme-title-color)!important;
+  font-size:20px!important;
+  font-weight:800!important;
+  line-height:1.2!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:9px!important;
+}
+#overviewResonanceCard .overview-resonance-head h2.theme-white-card-title>span,
+#overviewDecisionCard .overview-decision-head h2.theme-white-card-title>span{
+  display:inline!important;
+  color:var(--theme-title-color)!important;
+  font-size:20px!important;
+  font-weight:800!important;
+  line-height:1.2!important;
+  letter-spacing:0!important;
+}
+#overviewResonanceCard,
+#overviewDecisionCard{padding:16px 14px!important;}
+#overviewResonanceCard .overview-resonance-head,
+#overviewDecisionCard .overview-decision-head{margin:0!important;padding:0!important;}
+#overviewResonanceCard .overview-resonance-head>div:first-child,
+#overviewDecisionCard .overview-decision-head>div:first-child{margin:0!important;padding:0!important;}
+
+/* Technical-analysis icon is the visual standard: same box, color and line-weight family. */
+#overviewResonanceCard .theme-title-icon,
+#overviewDecisionCard .theme-title-icon,
+body.mode-analysis #technical .analysis-title-icon,
+.theme-title-icon{
+  width:24.8px!important;
+  height:21.6px!important;
+  flex:0 0 24.8px!important;
+  background:#415269!important;
+  -webkit-mask-repeat:no-repeat!important;mask-repeat:no-repeat!important;
+  -webkit-mask-position:center!important;mask-position:center!important;
+  -webkit-mask-size:contain!important;mask-size:contain!important;
+}
+/* Resonance: full-height oscillating signal, drawn to occupy the same visual box as 技術分析. */
+.theme-icon-resonance{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17h4l3-9 4 18 4-20 4 15 3-9 4 5'/%3E%3Ccircle cx='10' cy='8' r='1.7'/%3E%3Ccircle cx='18' cy='6' r='1.7'/%3E%3Ccircle cx='25' cy='12' r='1.7'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17h4l3-9 4 18 4-20 4 15 3-9 4 5'/%3E%3Ccircle cx='10' cy='8' r='1.7'/%3E%3Ccircle cx='18' cy='6' r='1.7'/%3E%3Ccircle cx='25' cy='12' r='1.7'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+/* Decision: opposing action arrows around a decision point; same stroke style as 技術分析. */
+.theme-icon-decision{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='16' cy='16' r='3'/%3E%3Cpath d='M4 10h8M8 6l4 4-4 4'/%3E%3Cpath d='M28 22h-8M24 18l-4 4 4 4'/%3E%3Cpath d='M16 4v7M16 21v7'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='16' cy='16' r='3'/%3E%3Cpath d='M4 10h8M8 6l4 4-4 4'/%3E%3Cpath d='M28 22h-8M24 18l-4 4 4 4'/%3E%3Cpath d='M16 4v7M16 21v7'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+/* Cleaner strategy / play-style icon: route with waypoints and destination arrow. */
+.theme-icon-playstyle{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='23' r='2.5'/%3E%3Ccircle cx='16' cy='15' r='2.5'/%3E%3Cpath d='M8.5 22c3.5-.7 4.5-5.1 7.5-5.1 4 0 4-5.8 8-6.4'/%3E%3Cpath d='M21 7.5 27 10l-4.5 4'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='23' r='2.5'/%3E%3Ccircle cx='16' cy='15' r='2.5'/%3E%3Cpath d='M8.5 22c3.5-.7 4.5-5.1 7.5-5.1 4 0 4-5.8 8-6.4'/%3E%3Cpath d='M21 7.5 27 10l-4.5 4'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+/* Smart-select cards */
+body.mode-screening .dashboard-grid>[data-view-panel="fundflow"],
+body.mode-screening .dashboard-grid>[data-view-panel="featured"],
+body.mode-screening .dashboard-grid>[data-view-panel="simulation"]{
+  padding:16px 14px!important;
+}
+body.mode-screening .dashboard-grid>[data-view-panel="fundflow"]>.card-title.theme-white-card-title,
+body.mode-screening .dashboard-grid>[data-view-panel="featured"]>.card-title.theme-white-card-title,
+body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title.theme-white-card-title{
+  margin:0 0 14px!important;
+  color:#13233A!important;
+  font-size:20px!important;
+  font-weight:800!important;
+  line-height:1.2!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+}
+body.mode-screening .dashboard-grid>[data-view-panel="fundflow"]>.card-title .theme-title-group,
+body.mode-screening .dashboard-grid>[data-view-panel="featured"]>.card-title .theme-title-group,
+body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .theme-title-group{
+  display:inline-flex!important;align-items:center!important;gap:9px!important;min-width:0!important;
+}
+body.mode-screening .dashboard-grid>[data-view-panel="fundflow"]>.card-title .theme-title-group>span,
+body.mode-screening .dashboard-grid>[data-view-panel="featured"]>.card-title .theme-title-group>span,
+body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .theme-title-group>span{
+  color:#13233A!important;font-size:20px!important;font-weight:800!important;line-height:1.2!important;
+}
+.theme-icon-fundflow{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='10' cy='9' rx='6' ry='3'/%3E%3Cpath d='M4 9v6c0 1.7 2.7 3 6 3 1.3 0 2.5-.2 3.5-.6M4 15v6c0 1.7 2.7 3 6 3 1.6 0 3-.3 4.1-.8'/%3E%3Cpath d='M18 10h8M23 6l4 4-4 4M26 22h-8M21 18l-4 4 4 4'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='10' cy='9' rx='6' ry='3'/%3E%3Cpath d='M4 9v6c0 1.7 2.7 3 6 3 1.3 0 2.5-.2 3.5-.6M4 15v6c0 1.7 2.7 3 6 3 1.6 0 3-.3 4.1-.8'/%3E%3Cpath d='M18 10h8M23 6l4 4-4 4M26 22h-8M21 18l-4 4 4 4'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+.theme-icon-featured{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m16 4 2.4 6.2L25 12l-5.3 4 1.5 6.7L16 19l-5.2 3.7 1.5-6.7L7 12l6.6-1.8z'/%3E%3Cpath d='M25 5v4M23 7h4M6 22v4M4 24h4'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m16 4 2.4 6.2L25 12l-5.3 4 1.5 6.7L16 19l-5.2 3.7 1.5-6.7L7 12l6.6-1.8z'/%3E%3Cpath d='M25 5v4M23 7h4M6 22v4M4 24h4'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+.theme-icon-simulation{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5' width='24' height='18' rx='3'/%3E%3Cpath d='M9 19l5-5 4 3 5-7'/%3E%3Cpath d='M12 27h8M16 23v4'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5' width='24' height='18' rx='3'/%3E%3Cpath d='M9 19l5-5 4 3 5-7'/%3E%3Cpath d='M12 27h8M16 23v4'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+</style>
