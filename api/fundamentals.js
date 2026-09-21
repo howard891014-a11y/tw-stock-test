@@ -1,8 +1,9 @@
-// StockZone v2.6.1.21
+// StockZone v2.6.1.22
 // Fundamental-only route. This file intentionally does not import or modify disposal logic.
 
 const TWSE_BASE = "https://openapi.twse.com.tw/v1/opendata";
 const TPEX_BASE = "https://www.tpex.org.tw/openapi/v1";
+const MOPS_CSV_BASE = "https://mopsfin.twse.com.tw/opendata";
 
 const INCOME_TYPES = [
   ["ci", "一般業", true],
@@ -26,12 +27,28 @@ function scalar(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+function normalizeFieldKey(v) {
+  return String(v || "")
+    .replace(/^\uFEFF/, "")
+    .replace(/[\s　]/g, "")
+    .replace(/[（]/g, "(")
+    .replace(/[）]/g, ")")
+    .replace(/％/g, "%")
+    .trim();
+}
+
 function first(row, keys) {
+  if (!row || typeof row !== "object") return null;
   for (const k of keys) {
-    if (row && Object.prototype.hasOwnProperty.call(row, k)) {
+    if (Object.prototype.hasOwnProperty.call(row, k)) {
       const v = row[k];
       if (v !== null && v !== undefined && String(v).trim() !== "") return v;
     }
+  }
+  const wanted = new Set(keys.map(normalizeFieldKey));
+  for (const [rk, rv] of Object.entries(row)) {
+    if (!wanted.has(normalizeFieldKey(rk))) continue;
+    if (rv !== null && rv !== undefined && String(rv).trim() !== "") return rv;
   }
   return null;
 }
@@ -41,11 +58,27 @@ function num(row, keys) {
 }
 
 function codeOf(row) {
-  return cleanCode(first(row, ["公司代號", "公司代碼", "Code", "code", "stock_id", "symbol"]));
+  return cleanCode(first(row, ["公司代號", "公司代碼", "公司代號 ", "Code", "code", "CompanyCode", "SecuritiesCompanyCode", "SecuritiesCode", "stock_id", "symbol"]));
+}
+
+function rowPeriodStamp(row) {
+  const yRaw = scalar(first(row, ["年度", "year", "Year"]));
+  const qRaw = scalar(first(row, ["季別", "quarter", "Quarter"]));
+  if (yRaw !== null && qRaw !== null) {
+    const y = yRaw < 1911 ? yRaw + 1911 : yRaw;
+    return y * 10 + qRaw;
+  }
+  const ym = String(first(row, ["資料年月", "年月", "period"]) || "").replace(/\D/g, "");
+  if (/^\d{5}$/.test(ym)) return (Number(ym.slice(0, 3)) + 1911) * 100 + Number(ym.slice(3));
+  if (/^\d{6}$/.test(ym)) return Number(ym.slice(0, 4)) * 100 + Number(ym.slice(4));
+  return -Infinity;
 }
 
 function findCode(rows, code) {
-  return Array.isArray(rows) ? rows.find((r) => codeOf(r) === code) || null : null;
+  if (!Array.isArray(rows)) return null;
+  const matches = rows.filter((r) => codeOf(r) === code);
+  if (!matches.length) return null;
+  return matches.sort((a, b) => rowPeriodStamp(b) - rowPeriodStamp(a))[0] || null;
 }
 
 function rocYearToAd(v) {
@@ -67,22 +100,109 @@ function periodText(row) {
 
 async function fetchJson(url) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 9000);
+  const timer = setTimeout(() => controller.abort(), 18000);
   try {
     const r = await fetch(url, {
       signal: controller.signal,
+      redirect: "follow",
       headers: {
         Accept: "application/json,text/plain,*/*",
-        "User-Agent": "StockZone/2.6.1.21",
+        "User-Agent": "StockZone/2.6.1.22",
       },
     });
     if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    const ct = String(r.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("text/html")) throw new Error("official API redirected to HTML");
     const data = await r.json();
     if (!Array.isArray(data)) throw new Error("official payload is not an array");
     return data;
   } finally {
     clearTimeout(timer);
   }
+}
+
+function parseCsv(text) {
+  const src = String(text || "").replace(/^\uFEFF/, "");
+  const rows = [];
+  let row = [], field = "", quoted = false;
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (quoted) {
+      if (ch === '"' && src[i + 1] === '"') { field += '"'; i++; }
+      else if (ch === '"') quoted = false;
+      else field += ch;
+    } else {
+      if (ch === '"') quoted = true;
+      else if (ch === ',') { row.push(field); field = ""; }
+      else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+      else if (ch !== '\r') field += ch;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  if (!rows.length) return [];
+  const headers = rows.shift().map((x) => String(x || "").replace(/^\uFEFF/, "").trim());
+  return rows.filter((r) => r.some((v) => String(v || "").trim() !== "")).map((r) => {
+    const out = {};
+    headers.forEach((h, i) => { if (h) out[h] = r[i] ?? ""; });
+    return out;
+  });
+}
+
+async function fetchCsv(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 18000);
+  try {
+    const r = await fetch(url, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: {
+        Accept: "text/csv,text/plain,*/*",
+        "User-Agent": "StockZone/2.6.1.22",
+      },
+    });
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    const text = await r.text();
+    const rows = parseCsv(text);
+    if (!rows.length) throw new Error("official CSV is empty");
+    return rows;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchOfficialRows(jsonUrl, csvUrl) {
+  try {
+    const rows = await fetchJson(jsonUrl);
+    if (rows.length) return rows;
+  } catch (e) {
+    console.warn(`[fundamentals] JSON fallback to CSV: ${jsonUrl}`, e?.message || e);
+  }
+  if (!csvUrl) return [];
+  return await fetchCsv(csvUrl);
+}
+
+async function fetchOfficialMatch(source, code) {
+  const jsonUrl = source?.json;
+  const csvUrl = source?.csv;
+  if (jsonUrl) {
+    try {
+      const rows = await fetchJson(jsonUrl);
+      const found = findCode(rows, code);
+      if (found) return found;
+      console.warn(`[fundamentals] code ${code} not matched in JSON, trying CSV: ${jsonUrl}`);
+    } catch (e) {
+      console.warn(`[fundamentals] JSON failed, trying CSV: ${jsonUrl}`, e?.message || e);
+    }
+  }
+  if (csvUrl) {
+    try {
+      const rows = await fetchCsv(csvUrl);
+      return findCode(rows, code);
+    } catch (e) {
+      console.warn(`[fundamentals] CSV failed: ${csvUrl}`, e?.message || e);
+    }
+  }
+  return null;
 }
 
 function marketOrder(market) {
@@ -95,29 +215,27 @@ function marketOrder(market) {
 function urlsFor(exchange) {
   if (exchange === "TWSE") {
     return {
-      revenue: `${TWSE_BASE}/t187ap05_L`,
-      margin: `${TWSE_BASE}/t187ap17_L`,
-      income: INCOME_TYPES.map(([type]) => [type, `${TWSE_BASE}/t187ap06_L_${type}`]),
+      revenue: { json: `${TWSE_BASE}/t187ap05_L`, csv: `${MOPS_CSV_BASE}/t187ap05_L.csv` },
+      margin: { json: `${TWSE_BASE}/t187ap17_L`, csv: `${MOPS_CSV_BASE}/t187ap17_L.csv` },
+      income: INCOME_TYPES.map(([type]) => [type, { json: `${TWSE_BASE}/t187ap06_L_${type}`, csv: `${MOPS_CSV_BASE}/t187ap06_L_${type}.csv` }]),
     };
   }
   return {
-    revenue: `${TPEX_BASE}/mopsfin_t187ap05_O`,
-    margin: `${TPEX_BASE}/mopsfin_187ap17_O`,
-    income: INCOME_TYPES.map(([type]) => [type, `${TPEX_BASE}/mopsfin_t187ap06_O_${type}`]),
+    revenue: { json: `${TPEX_BASE}/mopsfin_t187ap05_O`, csv: `${MOPS_CSV_BASE}/t187ap05_O.csv` },
+    margin: { json: `${TPEX_BASE}/mopsfin_187ap17_O`, csv: `${MOPS_CSV_BASE}/t187ap17_O.csv` },
+    income: INCOME_TYPES.map(([type]) => [type, { json: `${TPEX_BASE}/mopsfin_t187ap06_O_${type}`, csv: `${MOPS_CSV_BASE}/t187ap06_O_${type}.csv` }]),
   };
 }
 
 async function resolveExchange(exchange, code) {
   const urls = urlsFor(exchange);
   const [revenueResult, marginResult] = await Promise.allSettled([
-    fetchJson(urls.revenue),
-    fetchJson(urls.margin),
+    fetchOfficialMatch(urls.revenue, code),
+    fetchOfficialMatch(urls.margin, code),
   ]);
 
-  const revenueRows = revenueResult.status === "fulfilled" ? revenueResult.value : [];
-  const marginRows = marginResult.status === "fulfilled" ? marginResult.value : [];
-  const revenueRow = findCode(revenueRows, code);
-  const marginRow = findCode(marginRows, code);
+  const revenueRow = revenueResult.status === "fulfilled" ? revenueResult.value : null;
+  const marginRow = marginResult.status === "fulfilled" ? marginResult.value : null;
 
   // Only download income-statement families after this exchange actually contains the company.
   if (!revenueRow && !marginRow) return null;
@@ -129,17 +247,17 @@ async function resolveExchange(exchange, code) {
   const generalIncome = urls.income.find(([type]) => type === "ci");
   if (generalIncome) {
     try {
-      incomeRow = findCode(await fetchJson(generalIncome[1]), code);
+      incomeRow = await fetchOfficialMatch(generalIncome[1], code);
       if (incomeRow) incomeType = "ci";
     } catch (_) {}
   }
   if (!incomeRow) {
     const rest = urls.income.filter(([type]) => type !== "ci");
-    const incomeResults = await Promise.allSettled(rest.map(([, url]) => fetchJson(url)));
+    const incomeResults = await Promise.allSettled(rest.map(([, source]) => fetchOfficialMatch(source, code)));
     for (let i = 0; i < incomeResults.length; i++) {
       const r = incomeResults[i];
       if (r.status !== "fulfilled") continue;
-      const found = findCode(r.value, code);
+      const found = r.value;
       if (found) {
         incomeRow = found;
         incomeType = rest[i][0];
@@ -178,23 +296,29 @@ function buildStatement(match) {
     "毛利率(%)",
     "毛利率",
   ]);
-  const operatingMargin = num(margin, [
+  let operatingMargin = num(margin, [
     "營業利益率(%)(營業利益)/(營業收入)",
     "營業利益率(%)",
     "營益率(%)",
     "營業利益率",
     "營益率",
   ]);
+  const incomeRevenue = num(income, ["營業收入", "收入", "收益"]);
+  const incomeGross = num(income, ["營業毛利（毛損）淨額", "營業毛利（毛損）", "營業毛利(毛損)淨額", "營業毛利"]);
+  const incomeOperating = num(income, ["營業利益（損失）", "營業利益(損失)", "營業利益", "營業淨利"]);
+  let resolvedGrossMargin = grossMargin;
+  if (resolvedGrossMargin === null && incomeRevenue !== null && incomeRevenue !== 0 && incomeGross !== null) resolvedGrossMargin = incomeGross / incomeRevenue * 100;
+  if (operatingMargin === null && incomeRevenue !== null && incomeRevenue !== 0 && incomeOperating !== null) operatingMargin = incomeOperating / incomeRevenue * 100;
 
   return {
     period: periodText(match.marginRow || match.incomeRow),
     year: rocYearToAd(first(match.marginRow || match.incomeRow, ["年度", "year"])),
     quarterNo: scalar(first(match.marginRow || match.incomeRow, ["季別", "quarter"])),
     eps: num(income, ["基本每股盈餘（元）", "基本每股盈餘(元)", "基本每股盈餘", "每股盈餘", "EPS"]),
-    revenue: num(income, ["營業收入", "收入", "收益"]),
-    grossProfit: num(income, ["營業毛利（毛損）淨額", "營業毛利（毛損）", "營業毛利(毛損)淨額", "營業毛利"]),
-    operatingIncome: num(income, ["營業利益（損失）", "營業利益(損失)", "營業利益", "營業淨利"]),
-    grossMargin,
+    revenue: incomeRevenue,
+    grossProfit: incomeGross,
+    operatingIncome: incomeOperating,
+    grossMargin: resolvedGrossMargin,
     operatingMargin,
     preTaxMargin: num(margin, ["稅前純益率(%)(稅前純益)/(營業收入)", "稅前純益率(%)"]),
     netMargin: num(margin, ["稅後純益率(%)(稅後純益)/(營業收入)", "稅後純益率(%)"]),
