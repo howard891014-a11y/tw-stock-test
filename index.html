@@ -2346,6 +2346,35 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 }
 </style>
 
+
+<style id="v26125-fundamental-settings-refine">
+/* v2.6.1.25 — unify company quality / growth persistence with white signal cards and refresh settings modal */
+#fundamentalPanel .fundamental-core-grid{display:none!important}
+#fundamentalPanel .fundamental-signal-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#fundamentalPanel #fundamentalCompanyCard,#fundamentalPanel #fundamentalContinuationCard{background:#fff!important;border:1px solid #edf1f6!important;box-shadow:none!important}
+#fundamentalPanel #fundamentalCompanyCard>span,#fundamentalPanel #fundamentalContinuationCard>span{color:#7c8da2!important}
+#fundamentalPanel #fundamentalCompanyCard>b,#fundamentalPanel #fundamentalContinuationCard>b{font-size:15px!important;font-weight:800!important}
+#fundamentalPanel #fundamentalCompanyCard>small,#fundamentalPanel #fundamentalContinuationCard>small{font-size:9.5px!important}
+
+#settingsModal{background:rgba(18,36,58,.34)!important;backdrop-filter:blur(5px)!important;-webkit-backdrop-filter:blur(5px)!important}
+#settingsModal .settings-card{width:min(460px,calc(100vw - 28px))!important;padding:18px!important;border:1px solid #e6edf5!important;border-radius:24px!important;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)!important;box-shadow:0 24px 64px rgba(17,34,61,.20)!important;color:#13233a!important}
+#settingsModal .modal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:2px 2px 14px!important;border-bottom:1px solid #edf2f7!important}
+#settingsModal .modal-head strong{display:flex!important;align-items:center!important;gap:8px!important;color:#13233a!important;font-size:20px!important;font-weight:900!important}
+#settingsModal .modal-head strong::before{content:"";display:inline-block;width:20px;height:20px;background:#5f7691;-webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M19.4 13a7.4 7.4 0 0 0 .05-1 7.4 7.4 0 0 0-.05-1l2.1-1.64-2-3.46-2.52 1.01a7.1 7.1 0 0 0-1.73-1L14.87 3h-4l-.38 2.91a7.1 7.1 0 0 0-1.73 1L6.24 5.9l-2 3.46L6.34 11a7.4 7.4 0 0 0-.05 1 7.4 7.4 0 0 0 .05 1l-2.1 1.64 2 3.46 2.52-1.01a7.1 7.1 0 0 0 1.73 1L10.87 21h4l.38-2.91a7.1 7.1 0 0 0 1.73-1l2.52 1.01 2-3.46L19.4 13zM12.87 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z'/></svg>") center/contain no-repeat;mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M19.4 13a7.4 7.4 0 0 0 .05-1 7.4 7.4 0 0 0-.05-1l2.1-1.64-2-3.46-2.52 1.01a7.1 7.1 0 0 0-1.73-1L14.87 3h-4l-.38 2.91a7.1 7.1 0 0 0-1.73 1L6.24 5.9l-2 3.46L6.34 11a7.4 7.4 0 0 0-.05 1 7.4 7.4 0 0 0 .05 1l-2.1 1.64 2 3.46 2.52-1.01a7.1 7.1 0 0 0 1.73 1L10.87 21h4l.38-2.91a7.1 7.1 0 0 0 1.73-1l2.52 1.01 2-3.46L19.4 13zM12.87 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z'/></svg>") center/contain no-repeat!important}
+#settingsModal .modal-head button{display:grid!important;place-items:center!important;width:34px!important;height:34px!important;padding:0!important;border:1px solid #e5ebf2!important;border-radius:50%!important;background:#f4f7fb!important;color:#5d7189!important;font-size:24px!important;line-height:1!important}
+#settingsModal .settings-row{display:grid!important;grid-template-columns:minmax(92px,.8fr) minmax(0,1.6fr)!important;gap:14px!important;align-items:center!important;margin-top:10px!important;padding:13px 14px!important;border:1px solid #e9eef5!important;border-radius:16px!important;background:#fff!important}
+#settingsModal .settings-row span{color:#7a8da3!important;font-size:13px!important;font-weight:600!important}
+#settingsModal .settings-row strong{max-width:none!important;text-align:right!important;color:#20344d!important;font-size:12px!important;font-weight:700!important;line-height:1.45!important;overflow-wrap:anywhere!important}
+@media(max-width:720px){
+  #fundamentalPanel #fundamentalCompanyCard>b,#fundamentalPanel #fundamentalContinuationCard>b{font-size:14px!important}
+  #settingsModal .settings-card{padding:15px!important;border-radius:22px!important}
+  #settingsModal .modal-head strong{font-size:18px!important}
+  #settingsModal .settings-row{grid-template-columns:94px minmax(0,1fr)!important;padding:12px!important;gap:10px!important}
+  #settingsModal .settings-row span{font-size:12px!important}
+  #settingsModal .settings-row strong{font-size:11px!important}
+}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
@@ -2373,7 +2402,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.24</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.25</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2518,23 +2547,13 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <small class="fundamental-metric-detail" id="fundamentalOperatingDetail">等待資料</small>
               </div>
             </div>
-            <div class="fundamental-core-grid" aria-label="公司品質與延續性">
-              <div class="fundamental-metric metric-company" id="fundamentalCompanyCard">
-                <span class="fundamental-metric-title"><i class="fundamental-metric-badge fundamental-metric-badge-company" aria-hidden="true"></i><em>公司品質</em></span>
-                <strong class="fundamental-metric-value" id="fundamentalCompanyQuality">--</strong>
-                <small class="fundamental-metric-detail" id="fundamentalCompanyQualityNote">等待資料</small>
-              </div>
-              <div class="fundamental-metric metric-continuation" id="fundamentalContinuationCard">
-                <span class="fundamental-metric-title"><i class="fundamental-metric-badge fundamental-metric-badge-continuation" aria-hidden="true"></i><em>成長延續性</em></span>
-                <strong class="fundamental-metric-value" id="fundamentalContinuation">--</strong>
-                <small class="fundamental-metric-detail" id="fundamentalContinuationNote">等待資料</small>
-              </div>
-            </div>
             <div class="fundamental-signal-grid" aria-label="基本面判讀">
+              <div class="fundamental-signal" id="fundamentalCompanyCard"><span>公司品質</span><b id="fundamentalCompanyQuality">--</b><small id="fundamentalCompanyQualityNote">等待資料</small></div>
+              <div class="fundamental-signal" id="fundamentalContinuationCard"><span>成長持續力</span><b id="fundamentalContinuation">--</b><small id="fundamentalContinuationNote">等待資料</small></div>
               <div class="fundamental-signal"><span>成長強度</span><b id="fundamentalGrowthStrength">--</b><small id="fundamentalGrowthStrengthNote">等待資料</small></div>
               <div class="fundamental-signal"><span>成長趨勢</span><b id="fundamentalGrowthTrend">--</b><small id="fundamentalGrowthTrendNote">等待資料</small></div>
               <div class="fundamental-signal"><span>獲利品質</span><b id="fundamentalProfitQuality">--</b><small id="fundamentalProfitQualityNote">等待資料</small></div>
-              <div class="fundamental-signal"><span>營運穩定</span><b id="fundamentalStabilityScore">--</b><small id="fundamentalStabilityScoreNote">等待資料</small></div>
+              <div class="fundamental-signal"><span>營運穩定性</span><b id="fundamentalStabilityScore">--</b><small id="fundamentalStabilityScoreNote">等待資料</small></div>
               <div class="fundamental-signal"><span>基本面風險</span><b id="fundamentalRisk">--</b><small id="fundamentalRiskNote">等待資料</small></div>
               <div class="fundamental-signal"><span>資料完整度</span><b id="fundamentalConfidence">--</b><small id="fundamentalConfidenceNote">營運＋估值資料</small></div>
             </div>
@@ -2882,7 +2901,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.24"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.25"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

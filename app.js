@@ -653,7 +653,7 @@ function fundamentalMarginFromSources(kind,...sources){for(const source of sourc
 function fundamentalComment(assessment){
   if(!assessment)return "基本面資料不足，暫時無法完成評語。";
   const company=assessment.companyQuality>=78?"公司本身體質強":assessment.companyQuality>=64?"公司本身不差":assessment.companyQuality>=50?"公司體質普通":"公司體質偏弱";
-  const continuation=assessment.continuation>=76?"目前成長延續性高":assessment.continuation>=58?"目前成長還有一定延續性":"目前成長延續性偏弱";
+  const continuation=assessment.continuation>=76?"目前成長持續力高":assessment.continuation>=58?"目前成長仍有一定持續力":"目前成長持續力偏弱";
   const trend=assessment.trend?.label||"";
   let tail="";
   if(trend==="加速成長")tail="，而且成長動能仍在加速";
@@ -705,8 +705,8 @@ function renderFundamentalOverview(){
   const signalTone=(id,tone)=>{const el=$(id)?.closest?.(".fundamental-signal");if(el)el.dataset.tone=tone||""};
   const cardTone=(id,tone)=>{const el=$(id);if(el)el.dataset.tone=tone||""};
   const scoreTone=n=>n>=70?"good":n>=50?"watch":"bad";
-  setText("fundamentalCompanyQuality",`${assessment.companyQuality} / 100`);setText("fundamentalCompanyQualityNote",assessment.companyQuality>=78?"公司體質強":assessment.companyQuality>=64?"公司體質中上":assessment.companyQuality>=50?"公司體質普通":"公司體質偏弱");cardTone("fundamentalCompanyCard",scoreTone(assessment.companyQuality));
-  setText("fundamentalContinuation",`${assessment.continuation} / 100`);setText("fundamentalContinuationNote",`${assessment.continuationLabel}｜${assessment.trend.label}`);cardTone("fundamentalContinuationCard",scoreTone(assessment.continuation));
+  setText("fundamentalCompanyQuality",`${assessment.companyQuality} / 100`);setText("fundamentalCompanyQualityNote",assessment.companyQuality>=78?"公司體質強":assessment.companyQuality>=64?"公司體質中上":assessment.companyQuality>=50?"公司體質普通":"公司體質偏弱");signalTone("fundamentalCompanyQuality",scoreTone(assessment.companyQuality));
+  setText("fundamentalContinuation",`${assessment.continuation} / 100`);setText("fundamentalContinuationNote",assessment.continuation>=76?"持續力高":assessment.continuation>=58?"持續力中":"持續力偏弱");signalTone("fundamentalContinuation",scoreTone(assessment.continuation));
   setText("fundamentalGrowthStrength",`${assessment.growthStrength} / 100`);setText("fundamentalGrowthStrengthNote",assessment.growthStrength>=78?"成長強勁":assessment.growthStrength>=64?"成長良好":assessment.growthStrength>=50?"成長普通":"成長偏弱");signalTone("fundamentalGrowthStrength",scoreTone(assessment.growthStrength));
   setText("fundamentalGrowthTrend",assessment.trend.label);setText("fundamentalGrowthTrendNote",assessment.trend.note);signalTone("fundamentalGrowthTrend",assessment.trend.score>=70?"good":assessment.trend.score>=50?"watch":"bad");
   setText("fundamentalProfitQuality",`${assessment.profitQuality.score} / 100`);setText("fundamentalProfitQualityNote",assessment.profitQuality.label);signalTone("fundamentalProfitQuality",scoreTone(assessment.profitQuality.score));
