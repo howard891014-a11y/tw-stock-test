@@ -205,89 +205,6 @@ async function fetchOfficialMatch(source, code) {
   return null;
 }
 
-
-function yahooSymbol(code, exchange) {
-  return `${cleanCode(code)}${exchange === "TPEX" ? ".TWO" : ".TW"}`;
-}
-
-function yahooQuarterStamp(asOfDate) {
-  const d = new Date(String(asOfDate || ""));
-  if (!Number.isFinite(d.getTime())) return null;
-  const year = d.getUTCFullYear();
-  const quarter = Math.floor(d.getUTCMonth() / 3) + 1;
-  return { year, quarter, stamp: year * 10 + quarter, period: `${year} Q${quarter}` };
-}
-
-async function fetchYahooQuarterlyEps(code, exchange) {
-  const symbol = yahooSymbol(code, exchange);
-  const period2 = Math.floor(Date.now() / 1000) + 86400;
-  const period1 = period2 - 4 * 366 * 86400;
-  const params = new URLSearchParams({
-    symbol,
-    type: "quarterlyDilutedEPS,quarterlyBasicEPS",
-    period1: String(period1),
-    period2: String(period2),
-    padTimeSeries: "true",
-    merge: "false",
-    corsDomain: "finance.yahoo.com",
-  });
-  const hosts = ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"];
-  let lastError = null;
-  for (const host of hosts) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 12000);
-    try {
-      const url = `${host}/ws/fundamentals-timeseries/v1/finance/timeseries/${encodeURIComponent(symbol)}?${params.toString()}`;
-      const r = await fetch(url, {
-        signal: controller.signal,
-        redirect: "follow",
-        headers: {
-          Accept: "application/json,text/plain,*/*",
-          "User-Agent": "Mozilla/5.0 StockZone/2.6.1.36",
-        },
-      });
-      if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-      const payload = await r.json();
-      const results = Array.isArray(payload?.timeseries?.result) ? payload.timeseries.result : [];
-      const byQuarter = new Map();
-      for (const result of results) {
-        for (const type of ["quarterlyDilutedEPS", "quarterlyBasicEPS"]) {
-          const list = Array.isArray(result?.[type]) ? result[type] : [];
-          for (const item of list) {
-            const info = yahooQuarterStamp(item?.asOfDate);
-            const eps = scalar(item?.reportedValue?.raw ?? item?.reportedValue?.fmt);
-            if (!info || eps === null) continue;
-            const existing = byQuarter.get(info.stamp);
-            const rank = type === "quarterlyDilutedEPS" ? 2 : 1;
-            if (!existing || rank > existing.rank) {
-              byQuarter.set(info.stamp, {
-                year: info.year,
-                quarterNo: info.quarter,
-                period: info.period,
-                eps,
-                sourceType: "yahoo-quarterly",
-                yahooType: type,
-                rank,
-              });
-            }
-          }
-        }
-      }
-      const rows = [...byQuarter.values()]
-        .sort((a, b) => (b.year * 10 + b.quarterNo) - (a.year * 10 + a.quarterNo))
-        .slice(0, 8)
-        .map(({ rank, ...row }) => row);
-      if (rows.length) return rows;
-      throw new Error("Yahoo quarterly EPS returned no usable rows");
-    } catch (e) {
-      lastError = e;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-  throw lastError || new Error("Yahoo quarterly EPS unavailable");
-}
-
 function marketOrder(market) {
   const m = String(market || "").toLowerCase();
   if (/上櫃|otc|tpex|two/.test(m)) return ["TPEX", "TWSE"];
@@ -413,7 +330,7 @@ function buildStatement(match) {
   };
 }
 
-function buildPayload(match, code, historicalQuarters = []) {
+function buildPayload(match, code) {
   const revenueRow = match.revenueRow;
   const statement = buildStatement(match);
   const exchangeLabel = match.exchange === "TWSE" ? "上市官方" : "上櫃官方";
@@ -437,9 +354,9 @@ function buildPayload(match, code, historicalQuarters = []) {
     },
     officialStatement: statement,
     monthlyRevenue: buildMonthly(revenueRow),
-    // OpenAPI is a current-period snapshot; Yahoo timeseries supplies individual historical quarter EPS.
-    // Do not derive historical single-quarter EPS from cumulative MOPS EPS.
-    quarters: Array.isArray(historicalQuarters) ? historicalQuarters : [],
+    // OpenAPI financial statements are current-period snapshots. Historical quarter series is intentionally
+    // left to the existing Yahoo supplement so cumulative EPS is not mistaken for single-quarter EPS.
+    quarters: [],
     source: sourceParts.join("＋") || `${exchangeLabel}OpenAPI`,
     sourceType: "official",
     fetchedAt: new Date().toISOString(),
@@ -471,15 +388,8 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    let historicalQuarters = [];
-    try {
-      historicalQuarters = await fetchYahooQuarterlyEps(code, match.exchange);
-    } catch (e) {
-      console.warn(`[fundamentals] Yahoo quarterly EPS failed for ${code}`, e?.message || e);
-    }
-
     res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=21600");
-    res.status(200).json(buildPayload(match, code, historicalQuarters));
+    res.status(200).json(buildPayload(match, code));
   } catch (e) {
     console.error("[fundamentals] route failed", e);
     res.status(502).json({ error: "official fundamental source failed", detail: String(e?.message || e) });
