@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.1-34",
+  "version": "2.6.1-36",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"
