@@ -517,6 +517,23 @@ function resetFundamentalOverview(msg="資料待補"){
   if(chip){chip.textContent=msg;chip.classList.remove("is-good","is-watch","is-weak");}
 }
 function fundamentalMainMargin(value){const x=valuationNum(value);return x===null?"--":`${x.toFixed(1)}%`}
+function fundamentalFirstNumber(obj,keys){
+  for(const key of keys||[]){const v=valuationNum(obj?.[key]);if(v!==null)return v}
+  return null;
+}
+function fundamentalMarginValue(row,kind){
+  if(!row||typeof row!=="object")return null;
+  const isGross=kind==="gross";
+  const direct=fundamentalFirstNumber(row,isGross
+    ?["grossMargin","grossMarginPct","grossProfitMargin","gross_margin","gross_margin_pct"]
+    :["operatingMargin","operatingMarginPct","operatingProfitMargin","operating_margin","operating_margin_pct"]);
+  if(direct!==null)return direct;
+  const revenue=fundamentalFirstNumber(row,["revenue","totalRevenue","operatingRevenue","netRevenue","operating_revenue","total_revenue","net_revenue"]);
+  const profit=fundamentalFirstNumber(row,isGross
+    ?["grossProfit","grossProfitLoss","grossProfitFromOperations","grossProfitLossFromOperations","gross_profit","gross_profit_loss"]
+    :["operatingIncome","operatingProfit","operatingIncomeLoss","incomeFromOperations","operatingProfitLoss","operating_income","operating_profit","operating_income_loss"]);
+  return revenue!==null&&revenue!==0&&profit!==null ? profit/revenue*100 : null;
+}
 function ppChangeText(delta){const x=valuationNum(delta);return x===null?"年變化待補":`年變化 ${x>=0?"+":""}${x.toFixed(1)}pp`}
 function renderFundamentalOverview(){
   const host=$("fundamentalOverviewChip");
@@ -546,7 +563,7 @@ function renderFundamentalOverview(){
     setText("fundamentalOperatingMargin", "不適用");
     setText("fundamentalOperatingDetail", `${off?.financialTypeLabel||"金融類"} 不看營益率`);
   }else{
-    const grossOfficial=valuationNum(off?.grossMargin), opOfficial=valuationNum(off?.operatingMargin), grossLatest=valuationNum(latest?.grossMargin), opLatest=valuationNum(latest?.operatingMargin), grossYearAgo=valuationNum((fund?.rows||[])[4]?.grossMargin), opYearAgo=valuationNum((fund?.rows||[])[4]?.operatingMargin);
+    const grossOfficial=fundamentalMarginValue(off,"gross"), opOfficial=fundamentalMarginValue(off,"operating"), grossLatest=fundamentalMarginValue(latest,"gross"), opLatest=fundamentalMarginValue(latest,"operating"), grossYearAgo=fundamentalMarginValue((fund?.rows||[])[4],"gross"), opYearAgo=fundamentalMarginValue((fund?.rows||[])[4],"operating");
     const grossNow = grossOfficial!==null ? grossOfficial : grossLatest;
     const opNow = opOfficial!==null ? opOfficial : opLatest;
     const grossDelta = grossNow!==null && grossYearAgo!==null ? grossNow-grossYearAgo : null;
@@ -1426,7 +1443,7 @@ function fundamentalPctSignal(pct,kind="revenue"){
 }
 function longQuantitativeFundamentals(v){
   const data=latestFundamentalData||{},rows=(Array.isArray(data?.quarters)?data.quarters:[]).filter(x=>x&&typeof x==="object"),off=data?.officialStatement||null,monthly=data?.monthlyRevenue||null;
-  const eps=rows.map(x=>valuationNum(x.eps)),rev=rows.map(x=>valuationNum(x.revenue)),gm=rows.map(x=>valuationNum(x.grossMargin)),om=rows.map(x=>valuationNum(x.operatingMargin));
+  const eps=rows.map(x=>valuationNum(x.eps)),rev=rows.map(x=>valuationNum(x.revenue)),gm=rows.map(x=>fundamentalMarginValue(x,"gross")),om=rows.map(x=>fundamentalMarginValue(x,"operating"));
   const yoyEps=fundamentalPair(eps[0],eps[4],"eps"),qoqEps=fundamentalPair(eps[0],eps[1],"eps"),ttmNow=eps.slice(0,4).filter(Number.isFinite),ttmPrev=eps.slice(4,8).filter(Number.isFinite),ttmPair=ttmNow.length===4&&ttmPrev.length===4?fundamentalPair(ttmNow.reduce((a,b)=>a+b,0),ttmPrev.reduce((a,b)=>a+b,0),"eps"):{available:false,score:50,label:"--",pct:null};
   const epsSignals=[[yoyEps,.65],[qoqEps,.20],[ttmPair,.15]].filter(x=>x[0].available),epsW=epsSignals.reduce((a,x)=>a+x[1],0),officialEps=valuationNum(off?.eps);
   let epsScore=epsW?Math.round(epsSignals.reduce((a,x)=>a+x[0].score*x[1],0)/epsW):null;
@@ -1439,7 +1456,7 @@ function longQuantitativeFundamentals(v){
   const officialRevSignals=[[monthYoy,.7],[cumYoy,.3]].filter(x=>x[0].available),officialRevW=officialRevSignals.reduce((a,x)=>a+x[1],0),officialRevenueScore=officialRevW?Math.round(officialRevSignals.reduce((a,x)=>a+x[0].score*x[1],0)/officialRevW):null;
   let revenueScore=officialRevenueScore!==null?(quarterlyRevenueScore!==null?Math.round(officialRevenueScore*.75+quarterlyRevenueScore*.25):officialRevenueScore):quarterlyRevenueScore;
 
-  const marginApplicable=off?.marginApplicable!==false,officialGm=valuationNum(off?.grossMargin),officialOm=valuationNum(off?.operatingMargin),seriesGross=marginSignal(gm[0],gm[4]),seriesOperating=marginSignal(om[0],om[4]);
+  const marginApplicable=off?.marginApplicable!==false,officialGm=fundamentalMarginValue(off,"gross"),officialOm=fundamentalMarginValue(off,"operating"),seriesGross=marginSignal(gm[0],gm[4]),seriesOperating=marginSignal(om[0],om[4]);
   let gross={available:false,score:50,delta:null},operating={available:false,score:50,delta:null};
   if(marginApplicable){
     if(seriesGross.available)gross=seriesGross;else if(officialGm!==null)gross={available:true,score:50,delta:null};
