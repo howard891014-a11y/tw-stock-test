@@ -324,27 +324,81 @@ async function history5Y(query,market){
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26119",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26120",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
+function fundamentalQuarterInfo(row){
+  if(!row||typeof row!=="object")return null;
+  let year=Number(row?.year),quarter=Number(row?.quarterNo??row?.q);
+  if(Number.isFinite(year)&&year<1911)year+=1911;
+  if(!(quarter>=1&&quarter<=4))quarter=null;
+  if(Number.isFinite(year)&&quarter)return {year,quarter,key:`${year}Q${quarter}`,stamp:year*10+quarter};
+  const raw=String(row?.period??row?.quarter??row?.yearQuarter??row?.date??"").trim();
+  let m=raw.match(/(\d{3,4})\D*[Qq季]\s*([1-4])/);
+  if(!m)m=raw.match(/(\d{3,4})\s*[-/]?\s*([1-4])\s*[Qq季]/);
+  if(m){year=Number(m[1]);if(year<1911)year+=1911;quarter=Number(m[2]);return {year,quarter,key:`${year}Q${quarter}`,stamp:year*10+quarter};}
+  const d=new Date(raw);
+  if(Number.isFinite(d.getTime())){year=d.getFullYear();quarter=Math.floor(d.getMonth()/3)+1;return {year,quarter,key:`${year}Q${quarter}`,stamp:year*10+quarter};}
+  const ts=Number(row?.timestamp);
+  if(Number.isFinite(ts)){const dt=new Date(ts>1e12?ts:ts*1000);if(Number.isFinite(dt.getTime())){year=dt.getFullYear();quarter=Math.floor(dt.getMonth()/3)+1;return {year,quarter,key:`${year}Q${quarter}`,stamp:year*10+quarter};}}
+  return null;
+}
+function fundamentalSortedRows(data){
+  const rows=(Array.isArray(data?.quarters)?data.quarters:[]).filter(x=>x&&typeof x==="object");
+  return rows.slice().sort((a,b)=>(fundamentalQuarterInfo(b)?.stamp??-Infinity)-(fundamentalQuarterInfo(a)?.stamp??-Infinity));
+}
+function fundamentalRevenueValue(row){
+  if(!row||typeof row!=="object")return null;
+  const keys=["revenue","totalRevenue","operatingRevenue","netRevenue","sales","salesRevenue","revenueTotal","quarterlyRevenue","revenueAmount"];
+  for(const key of keys){const n=fundamentalScalar(row?.[key]);if(n!==null)return n}
+  for(const key of ["financialData","incomeStatement","quarterlyFinancials","financials","data"]){const child=row?.[key];if(child&&typeof child==="object"){const n=fundamentalRevenueValue(child);if(n!==null)return n}}
+  return null;
+}
+function fundamentalMonthlyPct(monthly,kind="yoy"){
+  if(!monthly||typeof monthly!=="object")return null;
+  const keys=kind==="cumulative"
+    ?["cumulativeYoyPct","cumulativeYoYPct","cumulativeYoy","cumulativeYoY","cumYoyPct","cumYoYPct","cumYoy","cumYoY","accumulatedYoyPct","yearToDateYoyPct","ytdYoyPct"]
+    :["yoyPct","yoYPct","yoy","yoY","revenueYoyPct","revenueYoYPct","revenueYoy","revenueYoY","yearOverYearPct","yearOverYear","growthYoyPct","growthYoYPct"];
+  for(const key of keys){const n=fundamentalScalar(monthly?.[key]);if(n!==null)return n}
+  if(kind==="yoy"){
+    const cur=fundamentalScalar(monthly?.revenue??monthly?.currentRevenue??monthly?.thisMonthRevenue),prev=fundamentalScalar(monthly?.lastYearRevenue??monthly?.yearAgoRevenue??monthly?.previousYearRevenue??monthly?.sameMonthLastYearRevenue);
+    if(cur!==null&&prev!==null&&prev!==0)return (cur/prev-1)*100;
+  }
+  return null;
+}
+function fundamentalValueFilled(v){return !(v===null||v===undefined||v==="")}
+function mergeFundamentalObject(primary,fallback){
+  const a=primary&&typeof primary==="object"?primary:{},b=fallback&&typeof fallback==="object"?fallback:{};
+  const out={...b};
+  for(const [k,v] of Object.entries(a)){
+    if(!fundamentalValueFilled(v))continue;
+    if(v&&typeof v==="object"&&!Array.isArray(v)&&b?.[k]&&typeof b[k]==="object"&&!Array.isArray(b[k]))out[k]=mergeFundamentalObject(v,b[k]);
+    else out[k]=v;
+  }
+  return out;
+}
 function fundamentalRowsHaveMargins(data){
-  const rows=Array.isArray(data?.quarters)?data.quarters:[];
-  const off=data?.officialStatement||null;
-  const hasGross=fundamentalMarginValue(off,"gross")!==null||rows.some(x=>fundamentalMarginValue(x,"gross")!==null);
-  const hasOperating=fundamentalMarginValue(off,"operating")!==null||rows.some(x=>fundamentalMarginValue(x,"operating")!==null);
+  const rows=fundamentalSortedRows(data),off=data?.officialStatement||null;
+  const valid=n=>n!==null&&Number.isFinite(n)&&Math.abs(n)>=0.05;
+  const hasGross=valid(fundamentalMarginValue(off,"gross"))||rows.some(x=>valid(fundamentalMarginValue(x,"gross")));
+  const hasOperating=valid(fundamentalMarginValue(off,"operating"))||rows.some(x=>valid(fundamentalMarginValue(x,"operating")));
   return hasGross&&hasOperating;
+}
+function fundamentalPayloadNeedsSupplement(data){
+  const rows=fundamentalSortedRows(data),eps=rows.map(x=>valuationNum(x?.eps)).filter(Number.isFinite),rev=rows.map(fundamentalRevenueValue).filter(Number.isFinite),monthly=data?.monthlyRevenue||null;
+  const hasMonthly=fundamentalMonthlyPct(monthly,"yoy")!==null;
+  return !fundamentalRowsHaveMargins(data)||(!hasMonthly&&rev.length<5)||eps.length<5;
 }
 function mergeFundamentalPayload(primary,fallback){
   const a=primary&&typeof primary==="object"?primary:{},b=fallback&&typeof fallback==="object"?fallback:{};
-  const mergeObj=(x,y)=>({...((y&&typeof y==="object")?y:{}),...((x&&typeof x==="object")?x:{})});
   const aq=Array.isArray(a.quarters)?a.quarters:[],bq=Array.isArray(b.quarters)?b.quarters:[];
-  const rowKey=(x,i)=>String(x?.period||x?.quarter||x?.date||x?.yearQuarter||`#${i}`);
+  const rowKey=(x,i)=>fundamentalQuarterInfo(x)?.key||String(x?.period||x?.quarter||x?.date||x?.yearQuarter||`#${i}`);
   const bmap=new Map(bq.map((x,i)=>[rowKey(x,i),x]));
-  const mergedQ=aq.map((x,i)=>mergeObj(x,bmap.get(rowKey(x,i))));
+  const mergedQ=aq.map((x,i)=>mergeFundamentalObject(x,bmap.get(rowKey(x,i))));
   const seen=new Set(aq.map((x,i)=>rowKey(x,i)));
   bq.forEach((x,i)=>{if(!seen.has(rowKey(x,i)))mergedQ.push(x)});
-  const source=[a.source,b.source].filter(Boolean).join("＋");
-  return {...b,...a,quarters:mergedQ.length?mergedQ:(aq.length?aq:bq),officialStatement:mergeObj(a.officialStatement,b.officialStatement),monthlyRevenue:mergeObj(a.monthlyRevenue,b.monthlyRevenue),company:mergeObj(a.company,b.company),profile:mergeObj(a.profile,b.profile),financialData:mergeObj(a.financialData,b.financialData),source:source||a.source||b.source};
+  const source=[a.source,b.source].filter(Boolean).filter((x,i,arr)=>arr.indexOf(x)===i).join("＋");
+  return {...b,...a,quarters:fundamentalSortedRows({quarters:mergedQ.length?mergedQ:(aq.length?aq:bq)}),officialStatement:mergeFundamentalObject(a.officialStatement,b.officialStatement),monthlyRevenue:mergeFundamentalObject(a.monthlyRevenue,b.monthlyRevenue),company:mergeFundamentalObject(a.company,b.company),profile:mergeFundamentalObject(a.profile,b.profile),financialData:mergeFundamentalObject(a.financialData,b.financialData),source:source||a.source||b.source};
 }
 async function fundamentals(query,market){
   const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`${code}|${String(market||"")}`,all=readFundamentalsCache(),cached=all[key];
@@ -353,8 +407,8 @@ async function fundamentals(query,market){
   const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
   let data=null;
   try{
-    data=await readJson(await fetch(`/api/fundamentals?${params.toString()}`,{cache:"default"}),"長期基本面");
-    if(!fundamentalRowsHaveMargins(data)){
+    data=await readJson(await fetch(`/api/fundamentals?${params.toString()}`,{cache:"no-store"}),"長期基本面");
+    if(fundamentalPayloadNeedsSupplement(data)){
       try{
         const supplement=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"長期基本面補充");
         data=mergeFundamentalPayload(data,supplement);
@@ -557,30 +611,35 @@ function fundamentalScalar(v){
   const n=Number(v);return Number.isFinite(n)?n:null;
 }
 function fundamentalMarginValue(row,kind,depth=0,seen=new Set()){
-  if(!row||typeof row!=="object"||depth>4||seen.has(row))return null;
+  if(!row||typeof row!=="object"||depth>3||seen.has(row))return null;
   seen.add(row);
   const isGross=kind==="gross";
   const directKeys=isGross
     ?["grossMargin","grossMargins","grossMarginPct","grossProfitMargin","grossProfitMargins","grossProfitMarginPct","gross_margin","gross_margins","gross_margin_pct"]
     :["operatingMargin","operatingMargins","operatingMarginPct","operatingProfitMargin","operatingProfitMargins","operatingProfitMarginPct","operating_margin","operating_margins","operating_margin_pct"];
-  for(const key of directKeys){const n=fundamentalScalar(row?.[key]);if(n!==null)return Math.abs(n)<=1.5?n*100:n}
-  const revenueKeys=["revenue","totalRevenue","operatingRevenue","netRevenue","sales","salesRevenue","revenueTotal"];
+  let zeroCandidate=false;
+  for(const key of directKeys){
+    const n=fundamentalScalar(row?.[key]);
+    if(n===null)continue;
+    const pct=Math.abs(n)<=1.5?n*100:n;
+    if(Math.abs(pct)<0.05){zeroCandidate=true;continue}
+    if(Number.isFinite(pct))return pct;
+  }
+  const revenue=fundamentalRevenueValue(row);
   const profitKeys=isGross
     ?["grossProfit","grossIncome","gross_profit","grossProfitAmount"]
     :["operatingIncome","operatingProfit","incomeFromOperations","operating_income","operating_profit","operatingIncomeLoss"];
-  let revenue=null,profit=null;
-  for(const key of revenueKeys){const n=fundamentalScalar(row?.[key]);if(n!==null&&n!==0){revenue=n;break}}
+  let profit=null;
   for(const key of profitKeys){const n=fundamentalScalar(row?.[key]);if(n!==null){profit=n;break}}
-  if(revenue!==null&&profit!==null)return profit/revenue*100;
-  const preferred=["financialData","summaryDetail","defaultKeyStatistics","incomeStatement","incomeStatementHistory","quarterlyFinancials","financials","data","result","quoteSummary"];
-  for(const key of preferred){const child=row?.[key];if(child&&typeof child==="object"){const n=fundamentalMarginValue(child,kind,depth+1,seen);if(n!==null)return n}}
-  for(const child of Object.values(row)){
-    if(child&&typeof child==="object"){
-      if(Array.isArray(child)){for(const item of child.slice(0,12)){const n=fundamentalMarginValue(item,kind,depth+1,seen);if(n!==null)return n}}
-      else{const n=fundamentalMarginValue(child,kind,depth+1,seen);if(n!==null)return n}
-    }
+  if(revenue!==null&&revenue!==0&&profit!==null){
+    const pct=profit/revenue*100;
+    if(Math.abs(pct)>=0.05)return pct;
+    zeroCandidate=true;
   }
-  return null;
+  const preferred=["financialData","summaryDetail","defaultKeyStatistics","incomeStatement","incomeStatementHistory","quarterlyFinancials","financials"];
+  for(const key of preferred){const child=row?.[key];if(child&&typeof child==="object"){const n=fundamentalMarginValue(child,kind,depth+1,seen);if(n!==null)return n}}
+  // Exact 0 from Yahoo is often a placeholder for a missing margin. Do not present it as real 0.0% unless a future source explicitly marks it as valid.
+  return zeroCandidate?null:null;
 }
 function fundamentalMarginFromSources(kind,...sources){for(const source of sources){const n=fundamentalMarginValue(source,kind);if(n!==null)return n}return null;}
 
@@ -596,13 +655,14 @@ function renderFundamentalOverview(){
     chip.textContent=!Number.isFinite(s)?"資料待補":s>=76?"穩健成長":s>=64?"基本面佳":s>=50?"基本面普通":"基本面偏弱";
     if(Number.isFinite(s))chip.classList.add(s>=64?"is-good":s>=50?"is-watch":"is-weak");
   }
-  setText("fundamentalEpsYoy", fund?.yoyEps?.available ? fund.yoyEps.label : "--");
-  setText("fundamentalEpsDetail", `QoQ ${fund?.qoqEps?.available ? fund.qoqEps.label : "--"}${fund?.ttmPair?.available ? `｜TTM ${fund.ttmPair.label}` : ""}`);
+  setText("fundamentalEpsYoy", fund?.yoyEps?.available && Number.isFinite(fund?.yoyEps?.pct) ? signedPercent(fund.yoyEps.pct) : "--");
+  setText("fundamentalEpsDetail", `QoQ ${fund?.qoqEps?.available && Number.isFinite(fund?.qoqEps?.pct) ? signedPercent(fund.qoqEps.pct) : "--"}${fund?.ttmPair?.available && Number.isFinite(fund?.ttmPair?.pct) ? `｜TTM ${signedPercent(fund.ttmPair.pct)}` : ""}`);
 
-  const revenueMain = valuationNum(monthly?.yoyPct) !== null ? signedPercent(valuationNum(monthly.yoyPct)) : (fund?.yoyRev?.available ? fund.yoyRev.label : "--");
-  const revenueDetail = valuationNum(monthly?.yoyPct) !== null
-    ? `累計 YoY ${valuationNum(monthly?.cumulativeYoyPct) !== null ? signedPercent(valuationNum(monthly.cumulativeYoyPct)) : "--"}${monthly?.period ? `｜${monthly.period}` : ""}`
-    : (fund?.yoyRev?.available ? `近4季 YoY 中位 ${fund?.revTrendPct !== null && Number.isFinite(fund?.revTrendPct) ? signedPercent(fund.revTrendPct) : "--"}` : "營收成長資料不足");
+  const monthlyYoy=fundamentalMonthlyPct(monthly,"yoy"),monthlyCum=fundamentalMonthlyPct(monthly,"cumulative");
+  const revenueMain = monthlyYoy!==null ? signedPercent(monthlyYoy) : (fund?.yoyRev?.available && Number.isFinite(fund?.yoyRev?.pct) ? signedPercent(fund.yoyRev.pct) : "--");
+  const revenueDetail = monthlyYoy!==null
+    ? `累計 YoY ${monthlyCum!==null ? signedPercent(monthlyCum) : "--"}${monthly?.period ? `｜${monthly.period}` : ""}`
+    : (fund?.yoyRev?.available && Number.isFinite(fund?.yoyRev?.pct) ? `近4季 YoY 中位 ${fund?.revTrendPct !== null && Number.isFinite(fund?.revTrendPct) ? signedPercent(fund.revTrendPct) : "--"}` : "營收成長資料不足");
   setText("fundamentalRevenueYoy", revenueMain);
   setText("fundamentalRevenueDetail", revenueDetail);
 
@@ -613,8 +673,8 @@ function renderFundamentalOverview(){
     setText("fundamentalOperatingDetail", `${off?.financialTypeLabel||"金融類"} 不看營益率`);
   }else{
     const grossOfficial=fundamentalMarginValue(off,"gross"), opOfficial=fundamentalMarginValue(off,"operating"), grossLatest=fundamentalMarginValue(latest,"gross"), opLatest=fundamentalMarginValue(latest,"operating"), grossYearAgo=fundamentalMarginValue((fund?.rows||[])[4],"gross"), opYearAgo=fundamentalMarginValue((fund?.rows||[])[4],"operating");
-    const grossNow = fundamentalMarginFromSources("gross",off,latest,data?.financialData,data?.company,data?.profile,data,latestValuationData);
-    const opNow = fundamentalMarginFromSources("operating",off,latest,data?.financialData,data?.company,data?.profile,data,latestValuationData);
+    const grossNow = fundamentalMarginFromSources("gross",off,latest,data?.financialData);
+    const opNow = fundamentalMarginFromSources("operating",off,latest,data?.financialData);
     const grossDelta = grossNow!==null && grossYearAgo!==null ? grossNow-grossYearAgo : null;
     const opDelta = opNow!==null && opYearAgo!==null ? opNow-opYearAgo : null;
     setText("fundamentalGrossMargin", fundamentalMainMargin(grossNow));
@@ -1468,16 +1528,19 @@ function longFundamentalNewsSignal(){
   return {score,label,detail,count:fresh.length,positive:p,negative:n,categories:cats,available:fresh.length>0};
 }
 function fundamentalPair(cur,base,kind="eps"){
-  const c=valuationNum(cur),b=valuationNum(base);if(c===null||b===null)return {available:false,score:50,label:"--",pct:null};
+  const c=valuationNum(cur),b=valuationNum(base);if(c===null||b===null)return {available:false,score:50,label:"--",pct:null,state:null};
   if(kind==="eps"){
-    if(c>0&&b<=0)return {available:true,score:92,label:"轉盈",pct:null};
-    if(c<=0&&b>0)return {available:true,score:12,label:"轉虧",pct:null};
-    if(c<=0&&b<=0)return {available:true,score:c>b?58:28,label:c>b?"虧損收斂":"虧損擴大",pct:null};
-  }else if(!(b>0))return {available:false,score:50,label:"--",pct:null};
-  const pct=(c/b-1)*100;let score;
-  if(kind==="revenue")score=pct>=30?90:pct>=15?82:pct>=5?72:pct>=0?62:pct>=-5?50:pct>=-15?35:20;
-  else score=pct>=50?92:pct>=25?85:pct>=10?76:pct>=0?64:pct>=-10?50:pct>=-25?35:20;
-  return {available:true,score,label:signedPercent(pct),pct};
+    if(b===0)return {available:false,score:c>0?92:c<0?12:50,label:"--",pct:null,state:c>0?"轉盈":c<0?"轉虧":"持平"};
+    const pct=b<0?(c-b)/Math.abs(b)*100:(c/b-1)*100;
+    if(c>0&&b<0)return {available:true,score:92,label:signedPercent(pct),pct,state:"轉盈"};
+    if(c<=0&&b>0)return {available:true,score:12,label:signedPercent(pct),pct,state:"轉虧"};
+    if(c<=0&&b<0)return {available:true,score:c>b?58:28,label:signedPercent(pct),pct,state:c>b?"虧損收斂":"虧損擴大"};
+    const score=pct>=50?92:pct>=25?85:pct>=10?76:pct>=0?64:pct>=-10?50:pct>=-25?35:20;
+    return {available:true,score,label:signedPercent(pct),pct,state:null};
+  }
+  if(!(b>0))return {available:false,score:50,label:"--",pct:null,state:null};
+  const pct=(c/b-1)*100,score=pct>=30?90:pct>=15?82:pct>=5?72:pct>=0?62:pct>=-5?50:pct>=-15?35:20;
+  return {available:true,score,label:signedPercent(pct),pct,state:null};
 }
 function marginSignal(cur,yearAgo){
   const c=valuationNum(cur),b=valuationNum(yearAgo);if(c===null)return {available:false,score:50,delta:null};if(b===null)return {available:true,score:50,delta:null};
@@ -1491,8 +1554,8 @@ function fundamentalPctSignal(pct,kind="revenue"){
   return {available:true,score,label:signedPercent(p),pct:p};
 }
 function longQuantitativeFundamentals(v){
-  const data=latestFundamentalData||{},rows=(Array.isArray(data?.quarters)?data.quarters:[]).filter(x=>x&&typeof x==="object"),off=data?.officialStatement||null,monthly=data?.monthlyRevenue||null;
-  const eps=rows.map(x=>valuationNum(x.eps)),rev=rows.map(x=>valuationNum(x.revenue)),gm=rows.map(x=>fundamentalMarginValue(x,"gross")),om=rows.map(x=>fundamentalMarginValue(x,"operating"));
+  const data=latestFundamentalData||{},rows=fundamentalSortedRows(data),off=data?.officialStatement||null,monthly=data?.monthlyRevenue||null;
+  const eps=rows.map(x=>valuationNum(x.eps)),rev=rows.map(fundamentalRevenueValue),gm=rows.map(x=>fundamentalMarginValue(x,"gross")),om=rows.map(x=>fundamentalMarginValue(x,"operating"));
   const yoyEps=fundamentalPair(eps[0],eps[4],"eps"),qoqEps=fundamentalPair(eps[0],eps[1],"eps"),ttmNow=eps.slice(0,4).filter(Number.isFinite),ttmPrev=eps.slice(4,8).filter(Number.isFinite),ttmPair=ttmNow.length===4&&ttmPrev.length===4?fundamentalPair(ttmNow.reduce((a,b)=>a+b,0),ttmPrev.reduce((a,b)=>a+b,0),"eps"):{available:false,score:50,label:"--",pct:null};
   const epsSignals=[[yoyEps,.65],[qoqEps,.20],[ttmPair,.15]].filter(x=>x[0].available),epsW=epsSignals.reduce((a,x)=>a+x[1],0),officialEps=valuationNum(off?.eps);
   let epsScore=epsW?Math.round(epsSignals.reduce((a,x)=>a+x[0].score*x[1],0)/epsW):null;
@@ -1501,7 +1564,7 @@ function longQuantitativeFundamentals(v){
   const yoyRev=fundamentalPair(rev[0],rev[4],"revenue"),revYoys=[];for(let i=0;i<Math.min(4,rev.length-4);i++){const z=fundamentalPair(rev[i],rev[i+4],"revenue");if(z.available&&Number.isFinite(z.pct))revYoys.push(z.pct)}
   const revTrendPct=medianNums(revYoys),revTrendScore=revTrendPct===null?null:(revTrendPct>=20?86:revTrendPct>=10?78:revTrendPct>=3?68:revTrendPct>=0?60:revTrendPct>=-8?46:30);
   const quarterlyRevenueScore=yoyRev.available?Math.round(revTrendScore===null?yoyRev.score:yoyRev.score*.7+revTrendScore*.3):null;
-  const monthYoy=fundamentalPctSignal(monthly?.yoyPct,"revenue"),cumYoy=fundamentalPctSignal(monthly?.cumulativeYoyPct,"revenue");
+  const monthYoy=fundamentalPctSignal(fundamentalMonthlyPct(monthly,"yoy"),"revenue"),cumYoy=fundamentalPctSignal(fundamentalMonthlyPct(monthly,"cumulative"),"revenue");
   const officialRevSignals=[[monthYoy,.7],[cumYoy,.3]].filter(x=>x[0].available),officialRevW=officialRevSignals.reduce((a,x)=>a+x[1],0),officialRevenueScore=officialRevW?Math.round(officialRevSignals.reduce((a,x)=>a+x[0].score*x[1],0)/officialRevW):null;
   let revenueScore=officialRevenueScore!==null?(quarterlyRevenueScore!==null?Math.round(officialRevenueScore*.75+quarterlyRevenueScore*.25):officialRevenueScore):quarterlyRevenueScore;
 
@@ -1533,7 +1596,7 @@ function longQuantitativeFundamentals(v){
 
   const epsText=epsCount>=2?`YoY ${yoyEps.label}｜QoQ ${qoqEps.label}${ttmPair.available?`｜TTM ${ttmPair.label}`:""}`:officialEps!==null?`官方累計 EPS ${valuationEpsFmt(officialEps)}${off?.period?`｜${off.period}`:""}`:(fallbackQ.length?`近4季 ${fallbackQ.filter(x=>x>0).length}/${fallbackQ.length} 季為正${fallbackTtm!==null?`｜TTM ${valuationEpsFmt(fallbackTtm)}`:""}`:"EPS資料不足");
   let revenueText="營收成長資料不足";if(monthYoy.available||cumYoy.available)revenueText=`月營收 YoY ${monthYoy.label}${cumYoy.available?`｜累計 YoY ${cumYoy.label}`:""}${monthly?.period?`｜${monthly.period}`:""}`;else if(yoyRev.available)revenueText=`季營收 YoY ${yoyRev.label}${revTrendPct!==null?`｜近4季YoY中位 ${signedPercent(revTrendPct)}`:""}`;
-  const gm0=valuationNum(gm[0]),om0=valuationNum(om[0]);
+  const gm0=Number.isFinite(gm[0])&&Math.abs(gm[0])>=0.05?gm[0]:null,om0=Number.isFinite(om[0])&&Math.abs(om[0])>=0.05?om[0]:null;
   let marginText;if(off?.marginApplicable===false)marginText=`${off?.financialTypeLabel||"金融類"}｜毛利率／營益率不適用`;else if(officialGm!==null||officialOm!==null)marginText=`毛利 ${officialGm!==null?`${officialGm.toFixed(1)}%`:"--"}｜營益 ${officialOm!==null?`${officialOm.toFixed(1)}%`:"--"}｜官方累計${off?.period?` ${off.period}`:""}`;else if(gm0!==null||om0!==null)marginText=`毛利 ${gm0!==null?`${gm0.toFixed(1)}%${seriesGross.delta!==null?` (${seriesGross.delta>=0?"+":""}${seriesGross.delta.toFixed(1)}pp)`:""}`:"--"}｜營益 ${om0!==null?`${om0.toFixed(1)}%${seriesOperating.delta!==null?` (${seriesOperating.delta>=0?"+":""}${seriesOperating.delta.toFixed(1)}pp)`:""}`:"--"}`;else marginText="利潤率資料不足";
   const stabilityText=posEps.length>=4?`近${posEps.length}季 ${positive}/${posEps.length} 季EPS為正${ttmPair.available?`｜TTM ${ttmPair.label}`:""}`:fallbackQ.length>=4?`近4季 ${fallbackQ.filter(x=>x>0).length}/4 季EPS為正`:"獲利穩定度資料不足";
   const sourceText=data?.source||([off||monthly?"TWSE／TPEx官方":"",rows.length?"Yahoo歷史補充":""].filter(Boolean).join("＋")||"基本面來源待補");
