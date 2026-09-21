@@ -424,7 +424,7 @@ async function loadFundamentals(stock){
   const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||""),market=stock?.market||stock?.marketLabel||"";
   try{
     const data=await fundamentals(code,market),cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");
-    if(cur&&cur!==code)return;latestFundamentalData=data;renderFundamentalOverview();const industry=stockIndustryValue(data,data?.company,data?.profile,data?.officialStatement);if(industry&&currentStock){currentStock={...currentStock,industry};setText("stockCodeLabel",stockHeaderMeta(currentStock));rememberStockMeta(currentStock)}if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
+    if(cur&&cur!==code)return;latestFundamentalData=data;renderFundamentalOverview();const industry=stockIndustryValue(data,data?.company,data?.profile,data?.officialStatement);if(industry&&currentStock){currentStock={...currentStock,industry};setText("stockCodeLabel",stockHeaderMeta(currentStock));rememberStockMeta(currentStock)}if(latestValuationData)renderValuation(latestValuationData);if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
   }catch(e){console.warn("長期基本面更新失敗",e);const cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(!cur||cur===code){latestFundamentalData=null;resetFundamentalOverview("資料不足");if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle()}}
 }
 
@@ -2618,7 +2618,7 @@ function valuationTrunc(n){
   const x=valuationNum(n);return x===null?null:Math.trunc(x);
 }
 function valuationFmt(n,suffix=""){
-  // Only prices calculated by StockZone (PE/PB/composite fair price) are truncated.
+  // Only prices calculated by StockZone (PE/PS/PB/composite fair price) are truncated.
   const x=valuationTrunc(n);return x!==null?`${x.toLocaleString("zh-TW")}${suffix}`:"--";
 }
 function valuationMetric(n,suffix="",na="--"){
@@ -2643,7 +2643,7 @@ function valuationRiskByPeer(premium){
 function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
   ["valuationCompositeFair","valuationCompositeGap","valuationPeFair","valuationPeFairGap","valuationPbFair","valuationPbFairGap","valuationSummaryBps"].forEach(id=>setText(id,"--"));
-  ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap"].forEach(id=>setText(id,"--"));
+  ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap","valuationPeWeight","valuationPsWeight","valuationPbWeight","valuationPeSuitability","valuationPsSuitability","valuationPbSuitability","valuationPrimaryModel","valuationModelReason"].forEach(id=>setText(id,"--"));
   setText("overviewCompositeFair","--");latestValuationScenario=null;latestValuationData=null;setText("overviewValuationScenario","--");setText("overviewValuationScenarioNote","估值情境判讀");
   const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");
 }
@@ -2683,26 +2683,91 @@ function renderValuationScenario(){
   const active=document.querySelector(`#valuationScenario .scenario-cell[data-scenario="${r.n}"]`);if(active){const w=active.querySelector(".scenario-weight");if(w)w.textContent=`估值 ${r.valuationWeight}%｜目標價 ${r.targetWeight}%${r.hasTarget===false?"（無資料）":""}`;}
   setText("overviewValuationScenario",r.state);setText("overviewValuationScenarioNote",`${r.consensus}｜可信度${r.confidence}`);renderPlayStyle();
 }
+// v2.6.1.29 — PE / PS / PB 動態適用度引擎。
+// 原則：先判斷「這個估值工具對目前公司有多適用」，再把可用模型正規化成權重；
+// 不把 PE / PS / PB 固定等權，也不因單一模型缺值把缺值當成 0 元合理價。
+function valuationModelWeightedScore(parts,neutral=45){
+  const rows=(parts||[]).filter(x=>Number.isFinite(Number(x?.[0]))&&Number(x?.[1])>0),total=(parts||[]).reduce((s,x)=>s+(Number(x?.[1])>0?Number(x[1]):0),0),used=rows.reduce((s,x)=>s+Number(x[1]),0);
+  if(!used||!total)return {score:neutral,coverage:0};
+  const raw=rows.reduce((s,x)=>s+Number(x[0])*Number(x[1]),0)/used,coverage=stageClamp(used/total,0,1);
+  return {score:Math.round(stageClamp(raw*coverage+neutral*(1-coverage),0,100)),coverage};
+}
+function valuationMarginLevelScore(v,kind){
+  const x=valuationNum(v);if(x===null)return null;
+  if(kind==="gross")return x>=50?90:x>=40?84:x>=30?76:x>=20?66:x>=10?52:x>=0?38:18;
+  return x>=25?90:x>=18?82:x>=12?73:x>=7?62:x>=3?52:x>=0?42:18;
+}
+function valuationGrowthStabilityScore(std){
+  const x=valuationNum(std);if(x===null)return null;return x<=10?92:x<=20?82:x<=35?70:x<=50?58:x<=80?44:30;
+}
+function valuationRoeScores(roe){
+  const x=valuationNum(roe);if(x===null)return {pe:null,pb:null};
+  const pe=x<0?15:x<5?42:x<10?62:x<20?76:x<=40?90:82;
+  const pb=x<0?20:x<5?48:x<10?66:x<20?82:x<=30?90:x<=50?76:60;
+  return {pe,pb};
+}
+function valuationIndustryAssetScore(industry){
+  const s=String(industry||"");
+  if(/水泥|鋼鐵|航運|營建|建材|塑膠|化學|玻璃|造紙|橡膠|紡織|汽車|電機機械|電器電纜|油電燃氣|貿易百貨/.test(s))return 82;
+  if(/半導體|電子零組件|電腦|周邊|光電|通信|網路|資訊服務|數位雲端|軟體|生技|醫療/.test(s))return 28;
+  return 48;
+}
+function valuationNormalizeModelWeights(methods){
+  const available=Object.entries(methods).filter(([,m])=>m?.available&&Number.isFinite(m?.score));
+  if(!available.length)return {pe:0,ps:0,pb:0};
+  const raw=available.map(([k,m])=>[k,Math.max(1,m.score)*(0.65+0.35*stageClamp(m.coverage??0,0,1))]),sum=raw.reduce((s,x)=>s+x[1],0);
+  const exact=Object.fromEntries(raw.map(([k,v])=>[k,v/sum*100])),rounded=Object.fromEntries(Object.keys(methods).map(k=>[k,Math.round(exact[k]||0)]));
+  let diff=100-Object.values(rounded).reduce((s,n)=>s+n,0);
+  if(diff){const lead=raw.slice().sort((a,b)=>b[1]-a[1])[0]?.[0];if(lead)rounded[lead]+=diff;}
+  return {pe:rounded.pe||0,ps:rounded.ps||0,pb:rounded.pb||0};
+}
+function valuationWeightedFair(fairs,weights,keys=["pe","ps","pb"]){
+  const rows=keys.map(k=>[valuationNum(fairs?.[k]),Number(weights?.[k])||0]).filter(x=>x[0]>0&&x[1]>0),sum=rows.reduce((s,x)=>s+x[1],0);
+  return sum?rows.reduce((s,x)=>s+x[0]*x[1],0)/sum:null;
+}
+function valuationModelSuitability(v,fairs){
+  const fund=longQuantitativeFundamentals(v||{}),rows=fund?.rows||[],fallback=(Array.isArray(v?.latest4)?v.latest4:[]),epsRows=rows.map(x=>valuationNum(x?.eps)).filter(Number.isFinite).slice(0,8),eps=epsRows.length>=4?epsRows:fallback.map(x=>valuationNum(x?.eps)).filter(Number.isFinite).slice(0,8);
+  const positiveRatio=eps.length?eps.filter(x=>x>0).length/eps.length:null,positiveScore=positiveRatio===null?null:Math.round(20+80*positiveRatio),stability=fundamentalStabilityAssessment(fund),epsStability=eps.length>=4?stability.score:null;
+  const revYoy=fundamentalYoySeries(rows,fundamentalRevenueValue,"revenue"),revStd=fundamentalStd(revYoy),revStability=valuationGrowthStabilityScore(revStd),revenueGrowth=Number.isFinite(fund?.revenueScore)?fund.revenueScore:null;
+  const off=fund?.officialStatement||latestFundamentalData?.officialStatement||{},latest=fund?.latest||rows[0]||{},grossNow=fundamentalMarginFromSources("gross",off,latest,latestFundamentalData?.financialData),opNow=fundamentalMarginFromSources("operating",off,latest,latestFundamentalData?.financialData),grossQuality=valuationMarginLevelScore(grossNow,"gross"),opQuality=valuationMarginLevelScore(opNow,"operating");
+  const ttm=valuationNum(v?.ttm),bps=valuationNum(v?.bookValue),roe=ttm!==null&&bps!==null&&bps>0?ttm/bps*100:null,roeScores=valuationRoeScores(roe),yoy=fund?.yoyEps||{},explosive=Number.isFinite(yoy?.pct)&&Math.abs(yoy.pct)>=200;
+  let maturity=ttm!==null&&ttm>0?86:12;if(yoy?.state==="轉盈")maturity=Math.min(maturity,48);if(yoy?.state==="轉虧")maturity=10;if(explosive&&maturity>55)maturity-=12;if(positiveRatio!==null&&positiveRatio<.75)maturity=Math.min(maturity,55);
+  const earningsImmaturity=Math.round(stageClamp(105-maturity,25,95)),industry=stockIndustryValue(currentStock,latestFundamentalData,latestFundamentalData?.company,latestFundamentalData?.profile,off),assetScore=valuationIndustryAssetScore(industry);
+
+  const pe=valuationModelWeightedScore([[positiveScore,.28],[epsStability,.24],[opQuality,.18],[roeScores.pe,.15],[maturity,.15]]);
+  const ps=valuationModelWeightedScore([[revenueGrowth,.28],[revStability,.22],[grossQuality,.20],[opQuality,.12],[earningsImmaturity,.18]]);
+  const pb=valuationModelWeightedScore([[assetScore,.38],[bps!==null&&bps>0?100:null,.17],[roeScores.pb,.22],[epsStability,.13],[opQuality,.10]]);
+  pe.available=valuationNum(fairs?.pe)>0;ps.available=valuationNum(fairs?.ps)>0;pb.available=valuationNum(fairs?.pb)>0;
+  const weights=valuationNormalizeModelWeights({pe,ps,pb}),primary=Object.entries(weights).sort((a,b)=>b[1]-a[1])[0]?.[0]||"--",labels={pe:"PE",ps:"PS",pb:"PB"};
+  const confidence=Math.round(stageClamp((pe.coverage*(weights.pe||0)+ps.coverage*(weights.ps||0)+pb.coverage*(weights.pb||0)),0,100));
+  let reason=primary==="pe"?"獲利成熟度與 EPS 穩定性較有代表性":primary==="ps"?"營收成長／穩定性比短期 EPS 更有代表性":primary==="pb"?"資產與淨值對目前估值較有代表性":"估值資料不足";
+  if(primary==="pe"&&explosive)reason="PE 仍為主，但已因 EPS 低基期／高波動降低適用度";
+  return {methods:{pe,ps,pb},weights,primary,primaryLabel:labels[primary]||"--",confidence,reason,metrics:{positiveRatio,epsStability,revenueGrowth,revStability,grossNow,opNow,roe,industry,assetScore,maturity,earningsImmaturity}};
+}
+function renderValuationModel(model){
+  if(!model)return;const m=model.methods||{},w=model.weights||{};
+  setText("valuationPeWeight",`${w.pe||0}%`);setText("valuationPsWeight",`${w.ps||0}%`);setText("valuationPbWeight",`${w.pb||0}%`);
+  setText("valuationPeSuitability",m.pe?.available?`適用度 ${m.pe.score}/100`:`資料不足`);setText("valuationPsSuitability",m.ps?.available?`適用度 ${m.ps.score}/100`:`資料不足`);setText("valuationPbSuitability",m.pb?.available?`適用度 ${m.pb.score}/100`:`資料不足`);
+  setText("valuationPrimaryModel",`${model.primaryLabel} 主導`);setText("valuationModelReason",`${model.reason}｜模型資料 ${model.confidence}%`);
+}
+
 function renderValuation(v){
   latestValuationData=v||null;
-  const profitable=v.profitable===true || Number(v.ttm)>0;
-  const usePs=!profitable;
-  const operatingPremium=usePs?v.psPremiumPct:v.pePremiumPct;
-  const operatingPeer=usePs?v.peerPs:v.peerPe;
-  setText("valuationOperatingFairLabel",usePs?"PS 合理股價":"PE 合理股價");
-  setText("valuationOperatingIcon",usePs?"PS":"PE");
-  setText("valuationOperatingTitle",usePs?"股價營收比":"本益比");
-  const operatingInfo=document.querySelector('#valuation .valuation-section-title [data-formula="pedef"], #valuation .valuation-section-title [data-formula="psdef"]'); if(operatingInfo){operatingInfo.dataset.formula=usePs?"psdef":"pedef"; operatingInfo.setAttribute("aria-label",usePs?"查看股價營收比定義":"查看本益比定義");}
-  setText("valuationOperatingCurrentLabel",usePs?"目前 PS":"目前本益比");
-  setText("valuationOperatingPeerLabel",usePs?"同業 PS 中位數":"同業平均本益比");
-  const last=valuationNum(v.last), ttm=valuationNum(v.ttm), bps=valuationNum(v.bookValue), peerPb=valuationNum(v.peerPb);
+  const last=valuationNum(v.last),ttm=valuationNum(v.ttm),bps=valuationNum(v.bookValue),peerPb=valuationNum(v.peerPb);
   const peFair=(ttm!==null&&ttm>0&&valuationNum(v.peerPe)>0)?ttm*valuationNum(v.peerPe):null;
-  const psFair=(valuationNum(v.salesPerShare)>0&&valuationNum(v.peerPs)>0)?valuationNum(v.salesPerShare)*valuationNum(v.peerPs):null;
-  const operatingFair=usePs?psFair:peFair;
+  const currentPs=valuationNum(v.currentPs),peerPs=valuationNum(v.peerPs),salesPerShare=valuationNum(v.salesPerShare)??(last>0&&currentPs>0?last/currentPs:null);
+  const psFair=(salesPerShare>0&&peerPs>0)?salesPerShare*peerPs:null;
   const pbFair=(bps!==null&&bps>0&&peerPb!==null&&peerPb>0)?bps*peerPb:null;
-  const fairVals=[operatingFair,pbFair].filter(x=>Number.isFinite(x)&&x>0);
-  const compositeFair=fairVals.length?fairVals.reduce((a,b)=>a+b,0)/fairVals.length:null;
-  latestValuationScenario={P:last,O:operatingFair,B:pbFair,F:compositeFair,usePs};renderValuationScenario();
+  const model=valuationModelSuitability(v,{pe:peFair,ps:psFair,pb:pbFair}),weights=model.weights||{},primary=model.primary;
+  renderValuationModel(model);
+  const usePs=primary==="ps" || (primary!=="pe"&&!(peFair>0)&&psFair>0),operatingPremium=usePs?v.psPremiumPct:v.pePremiumPct;
+  const operatingFair=valuationWeightedFair({pe:peFair,ps:psFair},weights,["pe","ps"]),compositeFair=valuationWeightedFair({pe:peFair,ps:psFair,pb:pbFair},weights);
+  setText("valuationOperatingFairLabel","營運合理價");
+  const operatingFairInfo=$("valuationOperatingFairLabel")?.parentElement?.querySelector?.(".formula-info");if(operatingFairInfo){operatingFairInfo.dataset.formula="pe";operatingFairInfo.setAttribute("aria-label","查看營運合理價公式");}
+  setText("valuationOperatingIcon",usePs?"PS":"PE");setText("valuationOperatingTitle",usePs?"股價營收比":"本益比");
+  const operatingInfo=document.querySelector('#valuation .valuation-section-title [data-formula="pedef"], #valuation .valuation-section-title [data-formula="psdef"]');if(operatingInfo){operatingInfo.dataset.formula=usePs?"psdef":"pedef";operatingInfo.setAttribute("aria-label",usePs?"查看股價營收比定義":"查看本益比定義");}
+  setText("valuationOperatingCurrentLabel",usePs?"目前 PS":"目前本益比");setText("valuationOperatingPeerLabel",usePs?"同業 PS 中位數":"同業平均本益比");
+  latestValuationScenario={P:last,O:operatingFair,B:pbFair,F:compositeFair,usePs,model,peFair,psFair,pbFair};renderValuationScenario();
   const fairGap=x=>(last!==null&&last>0&&Number.isFinite(x))?(x/last-1)*100:null;
   const renderFair=(valueId,gapId,value)=>{const el=$(gapId),gap=fairGap(value);setText(valueId,Number.isFinite(value)?valuationFmt(value,""):"資料不足");if(!el)return;el.classList.remove("risk-safe","risk-watch","risk-danger","risk-neutral");if(gap===null){el.textContent="--";el.classList.add("risk-neutral");return;}el.textContent=`較現價 ${gap>=0?"+":"-"}${valuationPercent(Math.abs(gap))}`;el.classList.add(`risk-${valuationRiskByCurrentFair(last,value)}`);};
   renderFair("valuationPeFair","valuationPeFairGap",operatingFair);renderFair("valuationPbFair","valuationPbFairGap",pbFair);renderFair("valuationCompositeFair","valuationCompositeGap",compositeFair);
@@ -2715,10 +2780,10 @@ function renderValuation(v){
   const applyPeerRisk=(el,premium)=>{if(!el)return;el.classList.remove("valuation-premium-high","valuation-premium-low","risk-safe","risk-watch","risk-danger","risk-neutral","valuation-not-applicable");el.removeAttribute("data-tag");if(!Number.isFinite(Number(premium))){if(el.textContent.includes("不適用"))el.classList.add("valuation-not-applicable");return;}const risk=valuationRiskByPeer(premium);el.classList.add(`risk-${risk}`);el.dataset.tag=risk==="safe"?"安全":risk==="watch"?"注意":"危險";};
   applyPeerRisk(peGap,operatingPremium);applyPeerRisk(pbGap,v.pbPremiumPct);
   const statusRisk=valuationRiskByCurrentFair(last,compositeFair);let statusLabel=statusRisk==="safe"?"相對低估":statusRisk==="watch"?"接近合理":"相對高估";if(compositeFair===null)statusLabel="資料不足";
-  setText("valuationStatus",statusLabel);setText("valuationStatusDetail",usePs?"虧損公司以 PS 取代 PE，與 PB 共同估值":(v.statusDetail||"--"));
+  setText("valuationStatus",statusLabel);setText("valuationStatusDetail",`PE ${weights.pe||0}%｜PS ${weights.ps||0}%｜PB ${weights.pb||0}%｜${model.primaryLabel} 主導`);
   const statusEl=$("valuationStatus");if(statusEl){statusEl.classList.remove("risk-text-safe","risk-text-watch","risk-text-danger","risk-text-neutral","valuation-not-applicable");statusEl.classList.add(`risk-text-${compositeFair===null?"neutral":statusRisk}`);if(statusEl.textContent.includes("不適用"))statusEl.classList.add("valuation-not-applicable");}
-  setText("valuationMethod",usePs?"Yahoo 營收／股數計算 PS；同業 PS 採中位數；再與 PB 合併":"Yahoo PE 同業比較＋PB 同業比較");
-  setText("valuationNote",usePs?"近四季 EPS 為負時，以 PS（股價營收比）補位 PE；PS 合理價與 PB 合理價共同形成綜合合理價。":"估值用來判斷相對昂貴程度，不直接當作買賣價。");
+  setText("valuationMethod",`PE／PS／PB 適用度自動加權：PE ${weights.pe||0}%、PS ${weights.ps||0}%、PB ${weights.pb||0}%`);
+  setText("valuationNote",`估值模型會依 EPS 穩定性、EPS 正值比例、營收成長／穩定性、毛利率、營益率、ROE 代理值與產業資產特性自動調整 PE／PS／PB 權重。`);
   setText("valuationTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   const host=$("valuationQuarterGrid");if(host){const q=Array.isArray(v.latest4)?v.latest4:[];host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");}
   renderFundamentalOverview();
@@ -3404,14 +3469,15 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
 // v2.5.1.11 valuation formula and definition info
 (function(){
  const formulas={
-  pe:{title:"PE／PS 合理價",text:"獲利公司：近四季 EPS × 同業平均 PE；近四季虧損：每股營收 × 同業 PS 中位數"},
+  pe:{title:"營運合理價",text:"PE 合理價＝近四季 EPS × 同業 PE；PS 合理價＝每股營收 × 同業 PS。系統依 EPS 成熟度、營收品質與資料完整度自動給 PE／PS 權重，再形成營運合理價。"},
   pb:{title:"PB 合理價",text:"每股淨值（BPS）× 同業平均 PB"},
-  composite:{title:"綜合合理價",text:"獲利公司使用 PE 合理價；虧損公司以 PS 合理價補位，再與 PB 合理價各 50% 合併。"},
+  composite:{title:"綜合合理價",text:"PE、PS、PB 不再固定等權。系統先用 EPS 穩定性、EPS 正值比例、營收成長／穩定性、毛利率、營益率、ROE 代理值與產業資產特性計算三種模型適用度，再依可用資料正規化成權重後合成合理價。"},
+  modeldef:{title:"PE／PS／PB 模型權重",text:"PE 重視獲利成熟度與 EPS 穩定性；PS 重視營收成長、營收穩定與毛利品質，獲利尚未成熟時權重會提高；PB 重視淨值、ROE 代理值與產業資產特性。缺少合理價的模型不參與加權。"},
   epsdef:{title:"EPS 獲利能力",text:"EPS 是每股盈餘，代表公司每一股普通股能分配到多少獲利；數值越高，代表每股獲利能力越強。"},
   pedef:{title:"本益比",text:"本益比＝股價 ÷ 每股盈餘（EPS），代表市場願意用多少倍的價格購買公司目前的每股獲利。"},
-  psdef:{title:"股價營收比",text:"股價營收比（PS）＝股價 ÷ 每股營收，代表市場願意用多少倍的價格購買公司每股所創造的營收；當近四季 EPS 為負、PE 不適用時，用 PS 作為營運估值的替代指標。"},
+  psdef:{title:"股價營收比",text:"股價營收比（PS）＝股價 ÷ 每股營收，代表市場願意用多少倍的價格購買公司每股所創造的營收；除了虧損公司，當 EPS 剛轉盈、低基期失真或營收成長比短期獲利更有代表性時，PS 權重也會提高。"},
   pbdef:{title:"股價淨值比",text:"股價淨值比＝股價 ÷ 每股淨值（BPS），代表股價相對公司每股帳面淨資產價值的倍數。"},
-  scenariodef:{title:"九情境代號說明",text:"P＝現價；O＝營運合理價（獲利公司使用 PE 合理價，虧損公司使用 PS 合理價）；B＝PB 合理價；F＝綜合合理價；T＝券商目標價；≈＝兩者接近（目前以差距 ±5% 判定）；＜、＞代表價格大小關係。沒有券商目標價時，T 不納入該次判定，目標價權重也不扣分。"}
+  scenariodef:{title:"九情境代號說明",text:"P＝現價；O＝營運合理價（PE／PS 依適用度加權）；B＝PB 合理價；F＝PE／PS／PB 動態加權後的綜合合理價；T＝券商目標價；≈＝兩者接近（目前以差距 ±5% 判定）；＜、＞代表價格大小關係。沒有券商目標價時，T 不納入該次判定。"}
  };
  const pop=$("valuationFormulaPopover"), title=$("valuationFormulaTitle"), text=$("valuationFormulaText");
  document.addEventListener("click",e=>{

@@ -2569,6 +2569,15 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div class="valuation-assessment-card" id="valuationPressureCard"><span>估值壓力</span><b id="fundamentalValuationPressure">--</b><small id="fundamentalValuationPressureNote">等待估值資料</small></div>
             <div class="valuation-assessment-card" id="valuationAttractivenessCard"><span>價格吸引力</span><b id="fundamentalPriceAttractiveness">--</b><small id="fundamentalPriceAttractivenessNote">等待估值資料</small></div>
           </div>
+          <div class="valuation-model-card" aria-label="估值模型權重">
+            <div class="valuation-model-head"><span>估值模型權重</span><button class="formula-info definition-info" type="button" data-formula="modeldef" aria-label="查看估值模型權重說明">i</button><b id="valuationPrimaryModel">--</b></div>
+            <div class="valuation-model-grid">
+              <div class="valuation-model-item pe"><span>PE</span><b id="valuationPeWeight">--</b><small id="valuationPeSuitability">適用度 --</small></div>
+              <div class="valuation-model-item ps"><span>PS</span><b id="valuationPsWeight">--</b><small id="valuationPsSuitability">適用度 --</small></div>
+              <div class="valuation-model-item pb"><span>PB</span><b id="valuationPbWeight">--</b><small id="valuationPbSuitability">適用度 --</small></div>
+            </div>
+            <small class="valuation-model-reason" id="valuationModelReason">--</small>
+          </div>
           <div class="valuation-summary-grid">
             <div class="valuation-summary-main">
               <span class="fair-label">綜合合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看綜合合理價公式">i</button></span>
@@ -2576,7 +2585,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
               <b id="valuationCompositeGap">--</b>
             </div>
             <div class="valuation-summary-cell">
-              <span class="fair-label"><span id="valuationOperatingFairLabel">PE 合理股價</span> <button class="formula-info" type="button" data-formula="pe" aria-label="查看 PE 合理價公式">i</button></span><strong id="valuationPeFair">--</strong><b id="valuationPeFairGap">--</b>
+              <span class="fair-label"><span id="valuationOperatingFairLabel">營運合理價</span> <button class="formula-info" type="button" data-formula="pe" aria-label="查看營運合理價公式">i</button></span><strong id="valuationPeFair">--</strong><b id="valuationPeFairGap">--</b>
             </div>
             <div class="valuation-summary-cell">
               <span class="fair-label">PB 合理股價 <button class="formula-info" type="button" data-formula="pb" aria-label="查看 PB 合理價公式">i</button></span><strong id="valuationPbFair">--</strong><b id="valuationPbFairGap">--</b>
@@ -4173,6 +4182,39 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .
   #valuation .valuation-assessment-card{padding:10px 11px!important}
   #valuation .valuation-summary-grid{border-radius:16px!important}
   #valuation .valuation-section{padding:11px!important;border-radius:16px!important}
+}
+</style>
+
+<style id="stockzone-v26129-valuation-model-engine">
+/* v2.6.1.29 — PE / PS / PB 動態適用度權重顯示 */
+#valuation .valuation-model-card{
+  margin:0 0 12px!important;
+  padding:12px 14px!important;
+  border:1px solid #e5ebf3!important;
+  border-radius:16px!important;
+  background:linear-gradient(180deg,#ffffff,#f8fbff)!important;
+  box-shadow:none!important;
+}
+#valuation .valuation-model-head{display:flex!important;align-items:center!important;gap:7px!important;color:#61758c!important;font-size:12px!important;line-height:1.2!important}
+#valuation .valuation-model-head>b{margin-left:auto!important;color:#17304c!important;font-size:13px!important;font-weight:800!important}
+#valuation .valuation-model-head .formula-info{width:17px!important;height:17px!important;min-width:17px!important;font-size:10px!important;line-height:14px!important;background:#fff!important}
+#valuation .valuation-model-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin-top:10px!important}
+#valuation .valuation-model-item{min-width:0!important;padding:10px 8px!important;border:1px solid #e4eaf2!important;border-radius:13px!important;text-align:center!important;background:#fff!important}
+#valuation .valuation-model-item.pe{background:linear-gradient(180deg,#f3f8ff,#edf4ff)!important;border-color:#dce8f8!important}
+#valuation .valuation-model-item.ps{background:linear-gradient(180deg,#f0faf6,#e9f7f0)!important;border-color:#d8eee3!important}
+#valuation .valuation-model-item.pb{background:linear-gradient(180deg,#f8f4ff,#f1ebff)!important;border-color:#e7def7!important}
+#valuation .valuation-model-item span{display:block!important;color:#7c8da2!important;font-size:11px!important;font-weight:700!important}
+#valuation .valuation-model-item b{display:block!important;margin-top:4px!important;color:#24364c!important;font-size:18px!important;font-weight:800!important;line-height:1.15!important}
+#valuation .valuation-model-item.pe b{color:#347fda!important}
+#valuation .valuation-model-item.ps b{color:#1d9f66!important}
+#valuation .valuation-model-item.pb b{color:#7c5be5!important}
+#valuation .valuation-model-item small{display:block!important;margin-top:4px!important;color:#8a9bad!important;font-size:9px!important;line-height:1.3!important}
+#valuation .valuation-model-reason{display:block!important;margin-top:9px!important;color:#74869a!important;font-size:10px!important;line-height:1.45!important}
+@media(max-width:720px){
+  #valuation .valuation-model-card{padding:10px 11px!important}
+  #valuation .valuation-model-grid{gap:7px!important}
+  #valuation .valuation-model-item{padding:9px 6px!important}
+  #valuation .valuation-model-item b{font-size:17px!important}
 }
 </style>
 
