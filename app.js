@@ -2647,8 +2647,10 @@ function valuationRiskByPeer(premium){
 }
 function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
+  setText("fundamentalValuationPressure","--");setText("fundamentalValuationPressureNote","等待估值資料");
+  setText("fundamentalPriceAttractiveness","--");setText("fundamentalPriceAttractivenessNote","等待估值資料");
   ["valuationCompositeFair","valuationCompositeGap","valuationPeFair","valuationPeFairGap","valuationPbFair","valuationPbFairGap","valuationSummaryBps"].forEach(id=>setText(id,"--"));
-  ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap","valuationPeWeight","valuationPsWeight","valuationPbWeight","valuationPeSuitability","valuationPsSuitability","valuationPbSuitability","valuationPrimaryModel","valuationModelReason","valuationFairRange","valuationFairRangeNote","valuationEstimateConfidence","valuationEstimateConfidenceNote"].forEach(id=>setText(id,"--"));
+  ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap","valuationPeWeight","valuationPsWeight","valuationPbWeight","valuationPeSuitability","valuationPsSuitability","valuationPbSuitability","valuationPrimaryModel","valuationModelReason","valuationFairRange","valuationFairRangeNote","valuationEstimateConfidence","valuationEstimateConfidenceNote","valuationEvidenceCurrentPe","valuationEvidencePeerPe","valuationEvidencePeFair","valuationEvidenceCurrentPs","valuationEvidencePeerPs","valuationEvidencePsFair","valuationEvidenceCurrentPb","valuationEvidencePeerPb","valuationEvidencePbFair","valuationEvidenceTtmEps"].forEach(id=>setText(id,"--"));
   setText("overviewCompositeFair","--");latestValuationScenario=null;latestValuationData=null;setText("overviewValuationScenario","--");setText("overviewValuationScenarioNote","估值情境判讀");
   const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");
 }
@@ -2795,6 +2797,19 @@ function renderValuationModel(model){
   setText("valuationPrimaryModel",`${model.primaryLabel} 主導`);setText("valuationModelReason",`${model.reason}｜模型資料 ${model.confidence}%`);
 }
 
+function valuationPositionNote(label){
+  const notes={
+    "明顯低估":"現價明顯低於模型合理區",
+    "偏低估":"現價低於模型合理區",
+    "接近合理":"現價落在合理估值附近",
+    "成長預期區":"市場正在交易未來成長預期",
+    "偏高估":"現價已高於主要合理區",
+    "明顯高估":"現價明顯高於模型合理區",
+    "資料不足":"估值資料仍不足"
+  };
+  return notes[label]||"依中心合理價與合理區間判讀";
+}
+
 function renderValuation(v){
   latestValuationData=v||null;
   const last=valuationNum(v.last),ttm=valuationNum(v.ttm),bps=valuationNum(v.bookValue),peerPb=valuationNum(v.peerPb);
@@ -2815,6 +2830,16 @@ function renderValuation(v){
   const fairGap=x=>(last!==null&&last>0&&Number.isFinite(x))?(x/last-1)*100:null;
   const renderFair=(valueId,gapId,value)=>{const el=$(gapId),gap=fairGap(value);setText(valueId,Number.isFinite(value)?valuationFmt(value,""):"資料不足");if(!el)return;el.classList.remove("risk-safe","risk-watch","risk-danger","risk-neutral");if(gap===null){el.textContent="--";el.classList.add("risk-neutral");return;}el.textContent=`較現價 ${gap>=0?"+":"-"}${valuationPercent(Math.abs(gap))}`;el.classList.add(`risk-${valuationRiskByCurrentFair(last,value)}`);};
   renderFair("valuationPeFair","valuationPeFairGap",operatingFair);renderFair("valuationPbFair","valuationPbFairGap",pbFair);renderFair("valuationCompositeFair","valuationCompositeGap",compositeFair);
+  setText("valuationEvidenceCurrentPe",valuationMetric(v.currentPe," 倍","資料不足"));
+  setText("valuationEvidencePeerPe",valuationMetric(v.peerPe," 倍","資料不足"));
+  setText("valuationEvidencePeFair",peFair>0?valuationFmt(peFair):"資料不足");
+  setText("valuationEvidenceCurrentPs",valuationMetric(v.currentPs," 倍","資料不足"));
+  setText("valuationEvidencePeerPs",valuationMetric(v.peerPs," 倍","資料不足"));
+  setText("valuationEvidencePsFair",psFair>0?valuationFmt(psFair):"資料不足");
+  setText("valuationEvidenceCurrentPb",valuationMetric(v.currentPb," 倍","資料不足"));
+  setText("valuationEvidencePeerPb",valuationMetric(v.peerPb," 倍","資料不足"));
+  setText("valuationEvidencePbFair",pbFair>0?valuationFmt(pbFair):"資料不足");
+  setText("valuationEvidenceTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   const profileTone=(id,tone)=>{const el=$(id);if(el)el.dataset.tone=tone||"neutral"};
   setText("valuationFairRange",profile?.available?`${valuationFmt(profile.low)}～${valuationFmt(profile.high)}`:"資料不足");
   setText("valuationFairRangeNote",profile?.available?`中心 ${valuationFmt(profile.center)}｜區間 ±${profile.halfWidthPct.toFixed(1)}%`:"可用估值模型不足");profileTone("valuationRangeCard","neutral");
@@ -2829,10 +2854,10 @@ function renderValuation(v){
   const applyPeerRisk=(el,premium)=>{if(!el)return;el.classList.remove("valuation-premium-high","valuation-premium-low","risk-safe","risk-watch","risk-danger","risk-neutral","valuation-not-applicable");el.removeAttribute("data-tag");if(!Number.isFinite(Number(premium))){if(el.textContent.includes("不適用"))el.classList.add("valuation-not-applicable");return;}const risk=valuationRiskByPeer(premium);el.classList.add(`risk-${risk}`);el.dataset.tag=risk==="safe"?"安全":risk==="watch"?"注意":"危險";};
   applyPeerRisk(peGap,operatingPremium);applyPeerRisk(pbGap,v.pbPremiumPct);
   const statusRisk=profile?.available?profile.positionRisk:valuationRiskByCurrentFair(last,compositeFair),statusLabel=profile?.available?profile.position:(compositeFair===null?"資料不足":statusRisk==="safe"?"偏低估":statusRisk==="watch"?"接近合理":"偏高估");
-  setText("valuationStatus",statusLabel);setText("valuationStatusDetail",`PE ${weights.pe||0}%｜PS ${weights.ps||0}%｜PB ${weights.pb||0}%｜估值可信度 ${profile?.available?profile.confidence+"%":"--"}`);
+  setText("valuationStatus",statusLabel);setText("valuationStatusDetail",valuationPositionNote(statusLabel));
   const statusEl=$("valuationStatus");if(statusEl){statusEl.classList.remove("risk-text-safe","risk-text-watch","risk-text-danger","risk-text-neutral","valuation-not-applicable");statusEl.classList.add(`risk-text-${profile?.available?statusRisk:(compositeFair===null?"neutral":statusRisk)}`);if(statusEl.textContent.includes("不適用"))statusEl.classList.add("valuation-not-applicable");}
   setText("valuationMethod",`PE／PS／PB 適用度自動加權：PE ${weights.pe||0}%、PS ${weights.ps||0}%、PB ${weights.pb||0}%`);
-  setText("valuationNote",`PE／PS／PB 先依適用度動態加權形成中心合理價，再依模型分歧、適用度、資料完整度形成合理價區間與估值可信度。`);
+  setText("valuationNote",`中心合理價、合理價區間、估值位置、估值壓力、價格吸引力與估值可信度是估值模組正式輸出；PE／PS／PB 只負責產生與解釋這些結果。`);
   setText("valuationTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   const host=$("valuationQuarterGrid");if(host){const q=Array.isArray(v.latest4)?v.latest4:[];host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");}
   renderFundamentalOverview();

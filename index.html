@@ -2574,89 +2574,110 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             </div>
           </section>
         </article>
-        <article class="card detail-panel valuation-card" id="valuation" data-view-panel="valuation">
+        <article class="card detail-panel valuation-card valuation-card-v26131" id="valuation" data-view-panel="valuation">
           <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-valuation" aria-hidden="true"></i><span>基本面估值</span></span><span class="badge" id="valuationBadge" hidden></span></div>
-          <div class="valuation-assessment-grid" aria-label="估值判讀">
-            <div class="valuation-assessment-card" id="valuationPressureCard"><span>估值壓力</span><b id="fundamentalValuationPressure">--</b><small id="fundamentalValuationPressureNote">等待估值資料</small></div>
-            <div class="valuation-assessment-card" id="valuationAttractivenessCard"><span>價格吸引力</span><b id="fundamentalPriceAttractiveness">--</b><small id="fundamentalPriceAttractivenessNote">等待估值資料</small></div>
-            <div class="valuation-assessment-card valuation-range-card" id="valuationRangeCard"><span>合理價區間</span><b id="valuationFairRange">--</b><small id="valuationFairRangeNote">等待估值模型</small></div>
-            <div class="valuation-assessment-card valuation-confidence-card" id="valuationConfidenceCard"><span>估值可信度</span><b id="valuationEstimateConfidence">--</b><small id="valuationEstimateConfidenceNote">等待模型一致性</small></div>
-          </div>
-          <div class="valuation-model-card" aria-label="估值模型權重">
-            <div class="valuation-model-head"><span>估值模型權重</span><button class="formula-info definition-info" type="button" data-formula="modeldef" aria-label="查看估值模型權重說明">i</button><b id="valuationPrimaryModel">--</b></div>
-            <div class="valuation-model-grid">
-              <div class="valuation-model-item pe"><span>PE</span><b id="valuationPeWeight">--</b><small id="valuationPeSuitability">適用度 --</small></div>
-              <div class="valuation-model-item ps"><span>PS</span><b id="valuationPsWeight">--</b><small id="valuationPsSuitability">適用度 --</small></div>
-              <div class="valuation-model-item pb"><span>PB</span><b id="valuationPbWeight">--</b><small id="valuationPbSuitability">適用度 --</small></div>
-            </div>
-            <small class="valuation-model-reason" id="valuationModelReason">--</small>
-          </div>
-          <div class="valuation-summary-grid">
-            <div class="valuation-summary-main">
-              <span class="fair-label">綜合合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看綜合合理價公式">i</button></span>
+
+          <section class="valuation-output-hero" aria-label="估值核心輸出">
+            <div class="valuation-center-fair">
+              <span class="valuation-output-label">中心合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看中心合理價說明">i</button></span>
               <strong id="valuationCompositeFair">--</strong>
               <b id="valuationCompositeGap">--</b>
             </div>
-            <div class="valuation-summary-cell">
-              <span class="fair-label"><span id="valuationOperatingFairLabel">營運合理價</span> <button class="formula-info" type="button" data-formula="pe" aria-label="查看營運合理價公式">i</button></span><strong id="valuationPeFair">--</strong><b id="valuationPeFairGap">--</b>
+            <div class="valuation-position-output" id="valuationPositionCard">
+              <span class="valuation-output-label">估值位置</span>
+              <strong id="valuationStatus">--</strong>
+              <small id="valuationStatusDetail">等待估值資料</small>
             </div>
-            <div class="valuation-summary-cell">
-              <span class="fair-label">PB 合理股價 <button class="formula-info" type="button" data-formula="pb" aria-label="查看 PB 合理價公式">i</button></span><strong id="valuationPbFair">--</strong><b id="valuationPbFairGap">--</b>
+            <div class="valuation-range-output" id="valuationRangeCard">
+              <span class="valuation-output-label">合理價區間</span>
+              <strong id="valuationFairRange">--</strong>
+              <small id="valuationFairRangeNote">等待估值模型</small>
             </div>
-            <div class="valuation-summary-cell valuation-summary-status">
-              <span>估值位置</span><strong id="valuationStatus">--</strong>
+          </section>
+
+          <section class="valuation-signal-grid" aria-label="估值訊號">
+            <div class="valuation-signal-card" id="valuationPressureCard">
+              <span>估值壓力</span>
+              <b id="fundamentalValuationPressure">--</b>
+              <small id="fundamentalValuationPressureNote">等待估值資料</small>
             </div>
-            <div class="valuation-summary-cell valuation-summary-bps">
-              <span>每股淨值</span><strong id="valuationSummaryBps">--</strong>
+            <div class="valuation-signal-card" id="valuationAttractivenessCard">
+              <span>價格吸引力</span>
+              <b id="fundamentalPriceAttractiveness">--</b>
+              <small id="fundamentalPriceAttractivenessNote">等待估值資料</small>
             </div>
-            <small id="valuationMethod" hidden></small>
+            <div class="valuation-signal-card valuation-confidence-output" id="valuationConfidenceCard">
+              <span>估值可信度</span>
+              <b id="valuationEstimateConfidence">--</b>
+              <small id="valuationEstimateConfidenceNote">等待模型一致性</small>
+            </div>
+          </section>
+
+          <details class="valuation-evidence-card">
+            <summary>
+              <span>模型依據</span>
+              <small>PE／PS／PB 權重與原始估值資料</small>
+              <b id="valuationPrimaryModel">--</b>
+            </summary>
+            <div class="valuation-evidence-body">
+              <div class="valuation-model-headline">
+                <span>自動適用度權重</span>
+                <button class="formula-info definition-info" type="button" data-formula="modeldef" aria-label="查看估值模型權重說明">i</button>
+                <small id="valuationModelReason">--</small>
+              </div>
+              <div class="valuation-model-grid valuation-model-grid-v2">
+                <div class="valuation-model-item pe"><span>PE</span><b id="valuationPeWeight">--</b><small id="valuationPeSuitability">適用度 --</small></div>
+                <div class="valuation-model-item ps"><span>PS</span><b id="valuationPsWeight">--</b><small id="valuationPsSuitability">適用度 --</small></div>
+                <div class="valuation-model-item pb"><span>PB</span><b id="valuationPbWeight">--</b><small id="valuationPbSuitability">適用度 --</small></div>
+              </div>
+              <div class="valuation-evidence-table" role="table" aria-label="估值模型原始資料">
+                <div class="valuation-evidence-row valuation-evidence-head" role="row"><span>模型</span><span>目前</span><span>同業</span><span>模型合理價</span></div>
+                <div class="valuation-evidence-row" role="row"><b>PE</b><span id="valuationEvidenceCurrentPe">--</span><span id="valuationEvidencePeerPe">--</span><strong id="valuationEvidencePeFair">--</strong></div>
+                <div class="valuation-evidence-row" role="row"><b>PS</b><span id="valuationEvidenceCurrentPs">--</span><span id="valuationEvidencePeerPs">--</span><strong id="valuationEvidencePsFair">--</strong></div>
+                <div class="valuation-evidence-row" role="row"><b>PB</b><span id="valuationEvidenceCurrentPb">--</span><span id="valuationEvidencePeerPb">--</span><strong id="valuationEvidencePbFair">--</strong></div>
+              </div>
+              <div class="valuation-evidence-foot">
+                <span>TTM EPS <b id="valuationEvidenceTtmEps">--</b></span>
+                <span>每股淨值 <b id="valuationSummaryBps">--</b></span>
+              </div>
+            </div>
+          </details>
+
+          <!-- 舊估值元件退到後台：保留 DOM ID 供既有計算／相容邏輯使用，不再佔主畫面。 -->
+          <div class="valuation-backstage" hidden aria-hidden="true">
+            <span id="valuationPeFair">--</span><span id="valuationPeFairGap">--</span>
+            <span id="valuationPbFair">--</span><span id="valuationPbFairGap">--</span>
+            <span id="valuationOperatingFairLabel">營運合理價</span>
+            <span id="valuationOperatingIcon">PE</span><span id="valuationOperatingTitle">本益比</span>
+            <span id="valuationOperatingCurrentLabel">目前本益比</span><span id="valuationOperatingPeerLabel">同業平均本益比</span>
+            <span id="valuationCurrentPe">--</span><span id="valuationPeerPe">--</span><span id="valuationPeGap">--</span>
+            <span id="valuationBookValue">--</span><span id="valuationCurrentPb">--</span><span id="valuationPeerPb">--</span><span id="valuationPbGap">--</span>
+            <span id="valuationMethod">--</span><span id="valuationTtmEps">--</span><div id="valuationQuarterGrid"></div>
           </div>
-          <div class="valuation-status-line"><span>判斷依據</span><b id="valuationStatusDetail">--</b></div>
-          <div class="valuation-section valuation-eps-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-eps" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="3" y="17" width="6" height="11" rx="2"/><rect x="13" y="10" width="6" height="18" rx="2"/><rect x="23" y="4" width="6" height="24" rx="2"/></svg></span>EPS 獲利能力 <button class="formula-info definition-info" type="button" data-formula="epsdef" aria-label="查看 EPS 獲利能力定義">i</button></div>
-            <div class="valuation-eps-layout">
-              <div class="valuation-quarter-grid" id="valuationQuarterGrid"></div>
-              <div class="valuation-eps-divider" aria-hidden="true"></div>
-              <div class="valuation-ttm"><span>近四季 EPS</span><b id="valuationTtmEps">--</b></div>
-            </div>
-          </div>
-          <div class="valuation-section valuation-pe-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-pe" id="valuationOperatingIcon" aria-hidden="true">PE</span><span id="valuationOperatingTitle">本益比</span> <button class="formula-info definition-info" type="button" data-formula="pedef" aria-label="查看本益比定義">i</button></div>
-            <div class="valuation-compare">
-              <div class="valuation-mini"><span id="valuationOperatingCurrentLabel">目前本益比</span><b id="valuationCurrentPe">--</b></div>
-              <div class="valuation-mini"><span id="valuationOperatingPeerLabel">同業平均本益比</span><b id="valuationPeerPe">--</b></div>
-              <div class="valuation-mini"><span>相對同業</span><b id="valuationPeGap">--</b></div>
-            </div>
-          </div>
-          <div class="valuation-section valuation-pb-section">
-            <div class="valuation-section-title"><span class="val-icon val-icon-pb" aria-hidden="true"><svg viewBox="0 0 40 32"><path d="M20 2 36 9 20 16 4 9Z"/><path d="M4 15 20 22 36 15" fill="none"/><path d="M4 21 20 28 36 21" fill="none"/></svg></span>股價淨值比 <button class="formula-info definition-info" type="button" data-formula="pbdef" aria-label="查看股價淨值比定義">i</button></div>
-            <div class="valuation-compare">
-              <div class="valuation-mini"><span>目前 PB</span><b id="valuationCurrentPb">--</b></div>
-              <div class="valuation-mini"><span>同業平均 PB</span><b id="valuationPeerPb">--</b></div>
-              <div class="valuation-mini"><span>相對同業</span><b id="valuationPbGap">--</b></div>
-            </div>
-          </div>
+
           <div class="formula-popover" id="valuationFormulaPopover" hidden>
             <button class="formula-popover-close" type="button" aria-label="關閉">×</button>
             <strong id="valuationFormulaTitle"></strong>
             <div id="valuationFormulaText"></div>
           </div>
-          <small class="valuation-note" id="valuationNote">估值只判斷相對昂貴程度，不直接作為買賣價。</small>
+          <small class="valuation-note valuation-output-note" id="valuationNote">中心合理價、合理價區間、估值位置、估值壓力、價格吸引力與估值可信度是估值模組正式輸出；PE／PS／PB 僅作為模型依據。</small>
         </article>
-        <article class="card detail-panel valuation-scenario-card" id="valuationScenario" data-view-panel="valuation">
-          <div class="card-title">九情境估值判讀 <button class="formula-info definition-info" type="button" data-formula="scenariodef" aria-label="查看九情境代號說明">i</button></div>
+
+        <!-- 九情境已退到後台。保留節點供舊邏輯相容，主畫面不再顯示。 -->
+        <article class="card detail-panel valuation-scenario-card valuation-scenario-backstage" id="valuationScenario" data-view-panel="valuation" hidden aria-hidden="true">
+          <div class="card-title">九情境估值判讀</div>
           <div class="scenario-grid" aria-label="九情境">
-            <div class="scenario-cell" data-scenario="1"><b>低估偏多</b><span>P &lt; F &lt; T；O ≈ B</span><small class="scenario-weight">估值 70%｜目標價 30%</small></div>
-            <div class="scenario-cell" data-scenario="2"><b>合理偏多</b><span>P ≈ F &lt; T；O ≈ B</span><small class="scenario-weight">估值 60%｜目標價 40%</small></div>
-            <div class="scenario-cell" data-scenario="3"><b>溢價偏多</b><span>F &lt; P &lt; T；O ≈ B</span><small class="scenario-weight">估值 45%｜目標價 55%</small></div>
-            <div class="scenario-cell" data-scenario="4"><b>接近目標價</b><span>F &lt; P ≈ T；O ≈ B</span><small class="scenario-weight">估值 40%｜目標價 60%</small></div>
-            <div class="scenario-cell" data-scenario="5"><b>明顯高估</b><span>F &lt; T &lt; P；O ≈ B</span><small class="scenario-weight">估值 70%｜目標價 30%</small></div>
-            <div class="scenario-cell" data-scenario="6"><b>雙重低估</b><span>P &lt; O、B；O ≠ B</span><small class="scenario-weight">估值 80%｜目標價 20%</small></div>
-            <div class="scenario-cell" data-scenario="7"><b>估值分歧</b><span>P 位於 O、B 之間</span><small class="scenario-weight">估值 50%｜目標價 50%</small></div>
-            <div class="scenario-cell" data-scenario="8"><b>成長預期區</b><span>P &gt; O、B；P &lt; T</span><small class="scenario-weight">估值 35%｜目標價 65%</small></div>
-            <div class="scenario-cell" data-scenario="9"><b>全面高估</b><span>P &gt; O、B、T</span><small class="scenario-weight">估值 80%｜目標價 20%</small></div>
+            <div class="scenario-cell" data-scenario="1"><b>低估偏多</b><span>P &lt; F &lt; T；O ≈ B</span><small class="scenario-weight"></small></div>
+            <div class="scenario-cell" data-scenario="2"><b>合理偏多</b><span>P ≈ F &lt; T；O ≈ B</span><small class="scenario-weight"></small></div>
+            <div class="scenario-cell" data-scenario="3"><b>溢價偏多</b><span>F &lt; P &lt; T；O ≈ B</span><small class="scenario-weight"></small></div>
+            <div class="scenario-cell" data-scenario="4"><b>接近目標價</b><span>F &lt; P ≈ T；O ≈ B</span><small class="scenario-weight"></small></div>
+            <div class="scenario-cell" data-scenario="5"><b>明顯高估</b><span>F &lt; T &lt; P；O ≈ B</span><small class="scenario-weight"></small></div>
+            <div class="scenario-cell" data-scenario="6"><b>雙重低估</b><span>P &lt; O、B；O ≠ B</span><small class="scenario-weight"></small></div>
+            <div class="scenario-cell" data-scenario="7"><b>估值分歧</b><span>P 位於 O、B 之間</span><small class="scenario-weight"></small></div>
+            <div class="scenario-cell" data-scenario="8"><b>成長預期區</b><span>P &gt; O、B；P &lt; T</span><small class="scenario-weight"></small></div>
+            <div class="scenario-cell" data-scenario="9"><b>全面高估</b><span>P &gt; O、B、T</span><small class="scenario-weight"></small></div>
           </div>
-          <div class="scenario-summary disposal-summary-card"><div class="disposal-summary-head"><span class="disposal-bulb">💡</span><span class="disposal-card-title">系統判讀</span></div><span class="disposal-summary-sep">|</span><p id="valuationScenarioSummary">搜尋股票後判讀。</p></div>
+          <p id="valuationScenarioSummary">--</p>
         </article>
 
         <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
@@ -4231,3 +4252,271 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .
 }
 </style>
 
+
+<style id="stockzone-v26131-valuation-rebuild">
+/* v2.6.1.31 — 基本面估值重整：只把正式輸出放前台；模型權重與原始倍數收進可展開依據。 */
+#valuation.valuation-card-v26131{
+  padding:16px 14px!important;
+  background:#fff!important;
+  border:1px solid #e8eef5!important;
+  border-radius:22px!important;
+  box-shadow:0 12px 28px rgba(17,34,61,.05)!important;
+  color:#13233a!important;
+}
+#valuation .valuation-output-hero{
+  display:grid!important;
+  grid-template-columns:44% 56%!important;
+  grid-template-rows:1fr 1fr!important;
+  min-height:206px!important;
+  margin:0 0 10px!important;
+  border:1px solid #d8ebe5!important;
+  border-radius:18px!important;
+  overflow:hidden!important;
+  background:linear-gradient(135deg,#f1faf6 0%,#f8fcfa 100%)!important;
+}
+#valuation .valuation-center-fair{
+  grid-column:1!important;
+  grid-row:1/3!important;
+  position:relative!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:20px 12px!important;
+  border-right:1px solid #dce9e5!important;
+  text-align:center!important;
+}
+#valuation .valuation-center-fair:before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:7px;
+  background:#2bc995;
+}
+#valuation .valuation-output-label{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+  color:#778ba0!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+  font-weight:600!important;
+}
+#valuation .valuation-center-fair>strong{
+  display:block!important;
+  margin-top:10px!important;
+  color:#17304c!important;
+  font-size:38px!important;
+  line-height:1!important;
+  font-weight:900!important;
+  letter-spacing:-.04em!important;
+}
+#valuation .valuation-center-fair>b{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  margin-top:15px!important;
+  padding:6px 10px!important;
+  border-radius:10px!important;
+  background:#eef3f7!important;
+  color:#6b7d91!important;
+  font-size:11px!important;
+  line-height:1.1!important;
+  font-weight:800!important;
+}
+#valuation .valuation-center-fair>b.risk-safe{background:#eaf8f1!important;color:#1b9d68!important}
+#valuation .valuation-center-fair>b.risk-watch{background:#fff7e7!important;color:#bd7d08!important}
+#valuation .valuation-center-fair>b.risk-danger{background:#fff0f3!important;color:#d95364!important}
+#valuation .valuation-position-output,
+#valuation .valuation-range-output{
+  min-width:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:12px 10px!important;
+  text-align:center!important;
+  background:rgba(255,255,255,.25)!important;
+}
+#valuation .valuation-position-output{border-bottom:1px solid #e0ebe7!important}
+#valuation .valuation-position-output>strong,
+#valuation .valuation-range-output>strong{
+  display:block!important;
+  margin-top:7px!important;
+  color:#24364c!important;
+  font-size:20px!important;
+  line-height:1.15!important;
+  font-weight:900!important;
+}
+#valuation .valuation-position-output>small,
+#valuation .valuation-range-output>small{
+  display:block!important;
+  margin-top:5px!important;
+  color:#8a9bad!important;
+  font-size:9px!important;
+  line-height:1.35!important;
+}
+#valuation .valuation-range-output>strong{font-size:17px!important;white-space:nowrap!important}
+#valuation .valuation-position-output .risk-text-safe{color:#1b9d68!important}
+#valuation .valuation-position-output .risk-text-watch{color:#bd7d08!important}
+#valuation .valuation-position-output .risk-text-danger{color:#d95364!important}
+
+#valuation .valuation-signal-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:9px!important;
+  margin:0 0 10px!important;
+}
+#valuation .valuation-signal-card{
+  min-width:0!important;
+  padding:12px 13px!important;
+  border:1px solid #e5ebf3!important;
+  border-radius:16px!important;
+  background:linear-gradient(180deg,#fff,#f8fbff)!important;
+}
+#valuation .valuation-signal-card>span{
+  display:block!important;
+  color:#7c8da2!important;
+  font-size:12px!important;
+  line-height:1.25!important;
+}
+#valuation .valuation-signal-card>b{
+  display:block!important;
+  margin-top:6px!important;
+  color:#17304c!important;
+  font-size:19px!important;
+  line-height:1.15!important;
+  font-weight:900!important;
+}
+#valuation .valuation-signal-card>small{
+  display:block!important;
+  margin-top:4px!important;
+  color:#8b9bae!important;
+  font-size:10px!important;
+  line-height:1.4!important;
+}
+#valuation .valuation-signal-card[data-tone="good"]>b{color:#1b9d68!important}
+#valuation .valuation-signal-card[data-tone="watch"]>b{color:#bd7d08!important}
+#valuation .valuation-signal-card[data-tone="bad"]>b{color:#d95364!important}
+#valuation .valuation-confidence-output{grid-column:1/3!important}
+#valuation .valuation-confidence-output{
+  display:grid!important;
+  grid-template-columns:1fr auto!important;
+  grid-template-rows:auto auto!important;
+  column-gap:12px!important;
+  align-items:center!important;
+}
+#valuation .valuation-confidence-output>span{grid-column:1!important;grid-row:1!important}
+#valuation .valuation-confidence-output>b{grid-column:2!important;grid-row:1/3!important;margin:0!important;font-size:24px!important}
+#valuation .valuation-confidence-output>small{grid-column:1!important;grid-row:2!important}
+
+#valuation .valuation-evidence-card{
+  margin:0!important;
+  border:1px solid #e5ebf3!important;
+  border-radius:16px!important;
+  overflow:hidden!important;
+  background:#fff!important;
+}
+#valuation .valuation-evidence-card>summary{
+  list-style:none!important;
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:1fr auto!important;
+  grid-template-rows:auto auto!important;
+  align-items:center!important;
+  gap:3px 10px!important;
+  padding:12px 36px 12px 13px!important;
+  cursor:pointer!important;
+}
+#valuation .valuation-evidence-card>summary::-webkit-details-marker{display:none!important}
+#valuation .valuation-evidence-card>summary:after{
+  content:"⌄";
+  position:absolute;
+  right:14px;top:50%;
+  transform:translateY(-50%);
+  color:#7f91a5;
+  font-size:17px;
+  transition:transform .18s ease;
+}
+#valuation .valuation-evidence-card[open]>summary:after{transform:translateY(-50%) rotate(180deg)}
+#valuation .valuation-evidence-card>summary>span{
+  grid-column:1!important;grid-row:1!important;
+  color:#24364c!important;font-size:13px!important;font-weight:800!important;
+}
+#valuation .valuation-evidence-card>summary>small{
+  grid-column:1!important;grid-row:2!important;
+  color:#8a9bad!important;font-size:9px!important;line-height:1.3!important;
+}
+#valuation .valuation-evidence-card>summary>b{
+  grid-column:2!important;grid-row:1/3!important;
+  color:#52677e!important;font-size:12px!important;font-weight:800!important;
+}
+#valuation .valuation-evidence-body{
+  padding:12px!important;
+  border-top:1px solid #edf1f5!important;
+  background:#fbfcfe!important;
+}
+#valuation .valuation-model-headline{
+  display:flex!important;align-items:center!important;gap:7px!important;flex-wrap:wrap!important;
+  color:#64788f!important;font-size:11px!important;font-weight:700!important;
+}
+#valuation .valuation-model-headline>small{
+  flex:1 1 100%!important;color:#8798aa!important;font-size:9px!important;font-weight:500!important;line-height:1.4!important;
+}
+#valuation .valuation-model-grid-v2{margin-top:9px!important}
+#valuation .valuation-evidence-table{
+  margin-top:10px!important;
+  border:1px solid #e6ebf2!important;
+  border-radius:13px!important;
+  overflow:hidden!important;
+  background:#fff!important;
+}
+#valuation .valuation-evidence-row{
+  display:grid!important;
+  grid-template-columns:.65fr 1fr 1fr 1.15fr!important;
+  align-items:center!important;
+  min-height:38px!important;
+  padding:0 9px!important;
+  border-top:1px solid #eef2f6!important;
+  column-gap:7px!important;
+}
+#valuation .valuation-evidence-row:first-child{border-top:0!important}
+#valuation .valuation-evidence-row>*{min-width:0!important;text-align:right!important;font-size:10px!important;color:#60758d!important;white-space:nowrap!important}
+#valuation .valuation-evidence-row>*:first-child{text-align:left!important}
+#valuation .valuation-evidence-row>b{color:#24364c!important;font-weight:800!important}
+#valuation .valuation-evidence-row>strong{color:#24364c!important;font-weight:900!important}
+#valuation .valuation-evidence-head{min-height:32px!important;background:#f6f8fb!important}
+#valuation .valuation-evidence-head>span{color:#8a9bad!important;font-size:9px!important;font-weight:700!important}
+#valuation .valuation-evidence-foot{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;
+  margin-top:9px!important;padding:0 2px!important;
+  color:#7c8da2!important;font-size:10px!important;
+}
+#valuation .valuation-evidence-foot b{margin-left:4px!important;color:#24364c!important;font-weight:900!important}
+#valuation .valuation-output-note{
+  display:block!important;
+  margin:9px 2px 0!important;
+  color:#8a9bad!important;
+  font-size:9px!important;
+  line-height:1.45!important;
+}
+#valuation .valuation-backstage{display:none!important}
+#valuationScenario.valuation-scenario-backstage{display:none!important}
+
+@media(max-width:720px){
+  #valuation.valuation-card-v26131{padding:16px 14px!important}
+  #valuation .valuation-output-hero{grid-template-columns:44% 56%!important;min-height:188px!important}
+  #valuation .valuation-center-fair{padding:16px 8px!important}
+  #valuation .valuation-center-fair>strong{font-size:34px!important}
+  #valuation .valuation-position-output>strong{font-size:18px!important}
+  #valuation .valuation-range-output>strong{font-size:15px!important}
+  #valuation .valuation-signal-grid{gap:8px!important}
+  #valuation .valuation-signal-card{padding:11px!important}
+  #valuation .valuation-signal-card>b{font-size:17px!important}
+  #valuation .valuation-confidence-output>b{font-size:22px!important}
+  #valuation .valuation-evidence-body{padding:10px!important}
+  #valuation .valuation-evidence-row{grid-template-columns:.6fr .9fr .9fr 1.15fr!important;padding:0 7px!important;column-gap:5px!important}
+  #valuation .valuation-evidence-row>*{font-size:9px!important}
+}
+</style>
