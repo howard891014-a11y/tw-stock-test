@@ -2586,34 +2586,12 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <div class="valuation-summary-subblock">
                   <div class="valuation-data-row compact"><span>模型依據</span><b id="valuationCompositeModelLine">--</b></div>
                   <div class="valuation-data-row compact"><span>權重</span><b id="valuationCompositeWeightLine">PE --｜PS --｜PB --</b></div>
-                  <div class="valuation-data-row compact"><span>九情境判讀</span><b id="valuationCompositeScenarioLine">--</b></div>
+                  <div class="valuation-data-row compact"><span>合理價區間</span><b id="valuationCompositeRangeLine">--</b></div>
+                  <div class="valuation-data-row compact"><span>估值位置</span><b id="valuationCompositeScenarioLine">--</b></div>
+                  <div class="valuation-data-row compact"><span>價格吸引力</span><b id="valuationCompositeAttractivenessLine">--</b></div>
+                  <div class="valuation-data-row compact"><span>估值可信度</span><b id="valuationCompositeConfidenceLine">--</b></div>
                   <div class="valuation-summary-reason" id="valuationCompositeReasonLine">等待估值判讀</div>
                 </div>
-              </div>
-              <div class="valuation-summary-card">
-                <span class="valuation-summary-label">營運合理價</span>
-                <strong id="valuationOperatingFairDisplay">--</strong>
-                <small id="valuationOperatingFairGapDisplay">等待 PE 估值</small>
-              </div>
-              <div class="valuation-summary-card" id="valuationPositionCard">
-                <span class="valuation-summary-label">估值位置</span>
-                <strong id="valuationStatus">--</strong>
-                <small id="valuationStatusDetail">等待估值資料</small>
-              </div>
-              <div class="valuation-summary-card" id="valuationPressureCardModern">
-                <span class="valuation-summary-label">估值壓力</span>
-                <strong id="fundamentalValuationPressureModern">--</strong>
-                <small id="fundamentalValuationPressureNoteModern">等待估值資料</small>
-              </div>
-              <div class="valuation-summary-card" id="valuationAttractivenessCardModern">
-                <span class="valuation-summary-label">價格吸引力</span>
-                <strong id="fundamentalPriceAttractivenessModern">--</strong>
-                <small id="fundamentalPriceAttractivenessNoteModern">等待估值資料</small>
-              </div>
-              <div class="valuation-summary-card valuation-summary-card-confidence" id="valuationConfidenceCardModern">
-                <span class="valuation-summary-label">估值可信度</span>
-                <strong id="valuationEstimateConfidenceModern">--</strong>
-                <small id="valuationEstimateConfidenceNoteModern">等待模型一致性</small>
               </div>
             </div>
           </section>
@@ -2714,6 +2692,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <span id="valuationOperatingCurrentLabel">目前本益比</span><span id="valuationOperatingPeerLabel">同業平均本益比</span>
             <span id="valuationCurrentPe">--</span><span id="valuationPeerPe">--</span><span id="valuationPeGap">--</span>
             <span id="valuationBookValue">--</span><span id="valuationCurrentPb">--</span><span id="valuationPeerPb">--</span><span id="valuationPbGap">--</span>
+            <span id="valuationFairRange">--</span><span id="valuationFairRangeNote">--</span>
+            <span id="valuationStatus">--</span><span id="valuationStatusDetail">--</span>
             <span id="valuationMethod">--</span>
           </div>
 
@@ -2989,7 +2969,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.35"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.40"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -3156,25 +3136,21 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   }
   function setTone(id, arr){ var el=document.getElementById(id); if(el){ el.textContent=arr[0]; el.className=arr[1]; } }
   function sync(){
-    var pressure=txt('fundamentalValuationPressure')||'--';
-    var pressureNote=txt('fundamentalValuationPressureNote')||'等待估值資料';
     var attract=txt('fundamentalPriceAttractiveness')||'--';
-    var attractNote=txt('fundamentalPriceAttractivenessNote')||'等待估值資料';
     var conf=txt('valuationEstimateConfidence')||'--';
     var confNote=txt('valuationEstimateConfidenceNote')||'等待模型一致性';
-    set('fundamentalValuationPressureModern', pressure);
-    set('fundamentalValuationPressureNoteModern', pressureNote);
-    set('fundamentalPriceAttractivenessModern', attract);
-    set('fundamentalPriceAttractivenessNoteModern', attractNote);
-    set('valuationEstimateConfidenceModern', conf);
-    set('valuationEstimateConfidenceNoteModern', confNote);
-
-    set('valuationOperatingFairDisplay', usable('valuationPeFair') || usable('valuationEvidencePeFair') || '--');
-    set('valuationOperatingFairGapDisplay', usable('valuationPeFairGap') || '等待 PE 估值');
+    var fairRange=txt('valuationFairRange')||'--';
+    var fairRangeNote=txt('valuationFairRangeNote')||'';
+    var position=txt('valuationStatus')||'--';
+    var positionDetail=txt('valuationStatusDetail')||'';
 
     set('valuationCompositeModelLine', usable('valuationPrimaryModel') || '--');
     set('valuationCompositeWeightLine', 'PE '+(txt('valuationPeWeight')||'--')+'｜PS '+(usable('valuationPsWeight')||'--')+'｜PB '+(txt('valuationPbWeight')||'--'));
-    set('valuationCompositeReasonLine', usable('valuationModelReason') || '等待模型資料');
+    set('valuationCompositeRangeLine', fairRange);
+    set('valuationCompositeScenarioLine', position);
+    set('valuationCompositeAttractivenessLine', attract);
+    set('valuationCompositeConfidenceLine', conf);
+    set('valuationCompositeReasonLine', [fairRangeNote, positionDetail, confNote].filter(Boolean).join('｜') || usable('valuationModelReason') || '等待模型資料');
 
     var curPeTxt=usable('valuationCurrentPe')||usable('valuationEvidenceCurrentPe')||'--';
     var peerPeTxt=usable('valuationPeerPe')||usable('valuationEvidencePeerPe')||'--';
