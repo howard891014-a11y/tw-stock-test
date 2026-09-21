@@ -2639,13 +2639,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div class="valuation-tech-tile valuation-tech-tile-eps">
               <header><b><span class="valuation-tech-icon valuation-tech-icon-eps" aria-hidden="true">▥</span>EPS</b></header>
               <p id="valuationMiniEpsLead">近四季獲利能力</p>
-              <div class="valuation-rows">
-                <div class="valuation-data-row"><span id="valuationMiniEpsRow1Label">最新季度</span><b id="valuationMiniEpsRow1Value">--</b></div>
-                <div class="valuation-data-row"><span id="valuationMiniEpsRow2Label">前一季度</span><b id="valuationMiniEpsRow2Value">--</b></div>
-                <div class="valuation-data-row"><span id="valuationMiniEpsRow3Label">前二季度</span><b id="valuationMiniEpsRow3Value">--</b></div>
-                <div class="valuation-data-row"><span id="valuationMiniEpsRow4Label">前三季度</span><b id="valuationMiniEpsRow4Value">--</b></div>
-                <div class="valuation-data-row"><span id="valuationMiniEpsRow5Label">近四季 EPS</span><b id="valuationMiniEpsRow5Value">--</b></div>
-              </div>
+              <div class="valuation-quarter-grid valuation-quarter-row-grid" id="valuationQuarterGrid"></div>
+              <div class="valuation-data-row valuation-ttm-direct"><span>近四季 EPS</span><b id="valuationTtmEps">--</b></div>
             </div>
             <div class="valuation-tech-tile valuation-tech-tile-pe">
               <header><b><span class="valuation-tech-icon valuation-tech-icon-pe" aria-hidden="true">PE</span>本益比</b><em id="valuationMiniPeState">--</em></header>
@@ -2718,7 +2713,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <span id="valuationOperatingCurrentLabel">目前本益比</span><span id="valuationOperatingPeerLabel">同業平均本益比</span>
             <span id="valuationCurrentPe">--</span><span id="valuationPeerPe">--</span><span id="valuationPeGap">--</span>
             <span id="valuationBookValue">--</span><span id="valuationCurrentPb">--</span><span id="valuationPeerPb">--</span><span id="valuationPbGap">--</span>
-            <span id="valuationMethod">--</span><span id="valuationTtmEps">--</span><div id="valuationQuarterGrid"></div>
+            <span id="valuationMethod">--</span>
           </div>
 
           <div class="formula-popover" id="valuationFormulaPopover" hidden>
@@ -3010,7 +3005,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.36"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.35"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -3197,25 +3192,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     set('valuationCompositeWeightLine', 'PE '+(txt('valuationPeWeight')||'--')+'｜PS '+(usable('valuationPsWeight')||'--')+'｜PB '+(txt('valuationPbWeight')||'--'));
     set('valuationCompositeReasonLine', usable('valuationModelReason') || '等待模型資料');
 
-    var qbox=document.getElementById('valuationQuarterGrid');
-    var chips=qbox?qbox.querySelectorAll('.valuation-eps-chip'):[];
-    var quarters=[];
-    chips.forEach(function(ch){
-      var l=(ch.querySelector('span')||{}).textContent||'';
-      var v=(ch.querySelector('b')||{}).textContent||'';
-      l=l.replace(/\s+/g,' ').trim();
-      v=v.replace(/\s+/g,' ').trim();
-      if(l||v) quarters.push({label:l||'--', value:v||'--'});
-    });
-    var ttm=usable('valuationTtmEps') || usable('valuationEvidenceTtmEps') || '--';
-    var rows=[quarters[0], quarters[1], quarters[2], quarters[3], {label:'近四季 EPS', value:ttm}];
-    for(var i=0;i<5;i++){
-      var r=rows[i]||{label:'--',value:'--'};
-      set('valuationMiniEpsRow'+(i+1)+'Label', r.label);
-      set('valuationMiniEpsRow'+(i+1)+'Value', r.value);
-    }
-    if(quarters[0]) set('valuationMiniEpsLead','近四季獲利能力｜最新 '+quarters[0].label);
-
     var curPeTxt=usable('valuationCurrentPe')||usable('valuationEvidenceCurrentPe')||'--';
     var peerPeTxt=usable('valuationPeerPe')||usable('valuationEvidencePeerPe')||'--';
     var fairPeTxt=usable('valuationEvidencePeFair')||usable('valuationPeFair')||'--';
@@ -3348,6 +3324,22 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   #valuation .valuation-data-row{padding:9px 0!important}
   #valuation .valuation-data-row span{font-size:10px!important}
   #valuation .valuation-data-row b{font-size:13px!important}
+}
+</style>
+
+<style id="v26137-eps-direct-binding">
+#valuation .valuation-quarter-row-grid{display:block!important;border-top:1px solid #d9e3ef!important;margin-top:4px!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip{position:relative!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;min-height:0!important;padding:10px 0!important;border:0!important;border-bottom:1px solid #d9e3ef!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;text-align:left!important;overflow:visible!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip:last-child{border-bottom:0!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip span{display:block!important;color:#7f91a3!important;font-size:11px!important;line-height:1.35!important;white-space:nowrap!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip b{display:block!important;margin:0!important;color:#13233a!important;font-size:14px!important;line-height:1.2!important;font-weight:800!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip.is-latest{border:0!important;border-bottom:1px solid #d9e3ef!important;background:transparent!important;box-shadow:none!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip em{position:static!important;transform:none!important;order:-1!important;display:none!important}
+#valuation .valuation-ttm-direct{margin-top:0!important;padding-top:10px!important;border-top:1px solid #d9e3ef!important}
+@media(max-width:720px){
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip{padding:9px 0!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip span{font-size:10px!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip b{font-size:13px!important}
 }
 </style>
 </body>

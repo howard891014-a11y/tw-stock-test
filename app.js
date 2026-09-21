@@ -324,7 +324,7 @@ async function history5Y(query,market){
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26136",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26123",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
 function fundamentalQuarterInfo(row){
@@ -402,7 +402,7 @@ function mergeFundamentalPayload(primary,fallback){
 }
 async function fundamentals(query,market){
   const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`${code}|${String(market||"")}`,all=readFundamentalsCache(),cached=all[key];
-  if(cached&&Date.now()-Number(cached.savedAt||0)<FUNDAMENTALS_CACHE_MS&&Array.isArray(cached.data?.quarters)&&!fundamentalPayloadNeedsSupplement(cached.data))return cached.data;
+  if(cached&&Date.now()-Number(cached.savedAt||0)<FUNDAMENTALS_CACHE_MS&&Array.isArray(cached.data?.quarters))return cached.data;
   const params=new URLSearchParams({q:code,market:String(market||"")});
   const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
   let data=null;
@@ -2636,34 +2636,6 @@ function valuationEpsFmt(n){
   const x=valuationNum(n);
   return x!==null?x.toLocaleString("zh-TW",{maximumFractionDigits:2,minimumFractionDigits:0}):"--";
 }
-// v2.6.1.34 — 估值頁季度 EPS 不再只依賴 valuation API 的 latest4。
-// 官方基本面本身只放當期快照；歷史單季 EPS 會由 fundamentals 的 Yahoo 補充資料進 quarters。
-// 這裡把 fundamentals quarters 與 valuation latest4 合併，避免出現 TTM 有值但四季全部空白。
-function valuationQuarterEpsRows(v){
-  const out=[],seen=new Set();
-  const push=(period,eps,key)=>{
-    const n=valuationNum(eps);if(n===null)return;
-    const label=String(period||"").trim()||"--",k=String(key||label||`#${out.length}`);
-    if(seen.has(k))return;seen.add(k);out.push({period:label,eps:n});
-  };
-  const fundRows=fundamentalSortedRows(latestFundamentalData||{});
-  for(const row of fundRows){
-    const info=fundamentalQuarterInfo(row),period=info?`${info.year} Q${info.quarter}`:String(row?.period||row?.quarter||row?.yearQuarter||"");
-    push(period,row?.eps,info?.key||period);
-    if(out.length>=4)break;
-  }
-  for(const row of (Array.isArray(v?.latest4)?v.latest4:[])){
-    const info=fundamentalQuarterInfo(row),period=info?`${info.year} Q${info.quarter}`:String(row?.period||row?.quarter||row?.yearQuarter||"");
-    push(period,row?.eps,info?.key||period);
-    if(out.length>=4)break;
-  }
-  return out.slice(0,4);
-}
-function valuationResolvedTtm(v,quarterRows){
-  const direct=valuationNum(v?.ttm);if(direct!==null)return direct;
-  const q=(quarterRows||[]).map(x=>valuationNum(x?.eps)).filter(Number.isFinite).slice(0,4);
-  return q.length===4?q.reduce((a,b)=>a+b,0):null;
-}
 function valuationRiskByCurrentFair(current,fair){
   if(!(current>0&&fair>0))return "neutral";
   const premium=(current/fair-1)*100;
@@ -2825,7 +2797,7 @@ function renderValuationModel(model){
 
 function renderValuation(v){
   latestValuationData=v||null;
-  const quarterEpsRows=valuationQuarterEpsRows(v),ttm=valuationResolvedTtm(v,quarterEpsRows),last=valuationNum(v.last),bps=valuationNum(v.bookValue),peerPb=valuationNum(v.peerPb);
+  const last=valuationNum(v.last),ttm=valuationNum(v.ttm),bps=valuationNum(v.bookValue),peerPb=valuationNum(v.peerPb);
   const peFair=(ttm!==null&&ttm>0&&valuationNum(v.peerPe)>0)?ttm*valuationNum(v.peerPe):null;
   const currentPs=valuationNum(v.currentPs),peerPs=valuationNum(v.peerPs),salesPerShare=valuationNum(v.salesPerShare)??(last>0&&currentPs>0?last/currentPs:null);
   const psFair=(salesPerShare>0&&peerPs>0)?salesPerShare*peerPs:null;
@@ -2873,7 +2845,7 @@ function renderValuation(v){
   setText("valuationEvidencePbFair",pbFair>0?valuationFmt(pbFair):"資料不足");
   setText("valuationEvidenceTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   setText("valuationTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
-  const host=$("valuationQuarterGrid");if(host){host.innerHTML=quarterEpsRows.map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");}
+  const host=$("valuationQuarterGrid");if(host){const q=Array.isArray(v.latest4)?v.latest4:[];host.innerHTML=q.slice(0,4).map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");}
   renderFundamentalOverview();
 }
 async function loadValuation(stock){
