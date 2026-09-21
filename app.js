@@ -586,14 +586,17 @@ let latestHistory5Y=null;
 let latestFundamentalData=null;
 
 function resetFundamentalOverview(msg="資料待補"){
-  ["fundamentalEpsYoy","fundamentalRevenueYoy","fundamentalGrossMargin","fundamentalOperatingMargin","fundamentalStability","fundamentalGrowthStrength","fundamentalGrowthTrend","fundamentalProfitQuality","fundamentalStabilityScore","fundamentalRisk","fundamentalConfidence"].forEach(id=>setText(id,"--"));
-  ["fundamentalGrowthStrengthNote","fundamentalGrowthTrendNote","fundamentalProfitQualityNote","fundamentalStabilityScoreNote","fundamentalRiskNote"].forEach(id=>setText(id,msg==="讀取中"?"讀取中…":"等待資料"));
+  ["fundamentalEpsYoy","fundamentalRevenueYoy","fundamentalGrossMargin","fundamentalOperatingMargin","fundamentalStability","fundamentalCompanyQuality","fundamentalContinuation","fundamentalGrowthStrength","fundamentalGrowthTrend","fundamentalProfitQuality","fundamentalStabilityScore","fundamentalRisk","fundamentalConfidence","fundamentalValuationPressure","fundamentalPriceAttractiveness"].forEach(id=>setText(id,"--"));
+  ["fundamentalCompanyQualityNote","fundamentalContinuationNote","fundamentalGrowthStrengthNote","fundamentalGrowthTrendNote","fundamentalProfitQualityNote","fundamentalStabilityScoreNote","fundamentalRiskNote"].forEach(id=>setText(id,msg==="讀取中"?"讀取中…":"等待資料"));
   setText("fundamentalConfidenceNote","營運＋估值資料");
+  setText("fundamentalValuationPressureNote","等待估值資料");
+  setText("fundamentalPriceAttractivenessNote","等待估值資料");
   setText("fundamentalEpsDetail",msg==="讀取中"?"讀取中…":"等待資料");
   setText("fundamentalRevenueDetail",msg==="讀取中"?"讀取中…":"等待資料");
   setText("fundamentalGrossDetail",msg==="讀取中"?"讀取中…":"等待資料");
   setText("fundamentalOperatingDetail",msg==="讀取中"?"讀取中…":"等待資料");
   setText("fundamentalSource","基本面來源待補");
+  ["fundamentalCompanyCard","fundamentalContinuationCard","valuationPressureCard","valuationAttractivenessCard"].forEach(id=>{const el=$(id);if(el)delete el.dataset.tone});
   const chip=$("fundamentalOverviewChip");
   if(chip){chip.textContent=msg;chip.classList.remove("is-good","is-watch","is-weak");}
 }
@@ -647,6 +650,20 @@ function fundamentalMarginValue(row,kind,depth=0,seen=new Set()){
 }
 function fundamentalMarginFromSources(kind,...sources){for(const source of sources){const n=fundamentalMarginValue(source,kind);if(n!==null)return n}return null;}
 
+function fundamentalComment(assessment){
+  if(!assessment)return "基本面資料不足，暫時無法完成評語。";
+  const company=assessment.companyQuality>=78?"公司本身體質強":assessment.companyQuality>=64?"公司本身不差":assessment.companyQuality>=50?"公司體質普通":"公司體質偏弱";
+  const continuation=assessment.continuation>=76?"目前成長延續性高":assessment.continuation>=58?"目前成長還有一定延續性":"目前成長延續性偏弱";
+  const trend=assessment.trend?.label||"";
+  let tail="";
+  if(trend==="加速成長")tail="，而且成長動能仍在加速";
+  else if(trend==="成長減速")tail="，但成長動能正在減速";
+  else if(trend==="衰退改善")tail="，營運則正在改善";
+  else if(trend==="持續衰退")tail="，目前仍處於衰退階段";
+  if(assessment.risk?.label==="高")tail+="，基本面風險偏高";
+  else if(assessment.risk?.label==="中")tail+="，仍有部分基本面風險需要留意";
+  return `${company}，${continuation}${tail}。`;
+}
 function renderFundamentalOverview(){
   const host=$("fundamentalOverviewChip");
   if(!host) return;
@@ -686,14 +703,19 @@ function renderFundamentalOverview(){
     setText("fundamentalOperatingDetail", opNow===null ? "營益率資料不足" : `${ppChangeText(opDelta)}${off?.period ? `｜${off.period}` : (latest?.period ? `｜${latest.period}` : "")}`);
   }
   const signalTone=(id,tone)=>{const el=$(id)?.closest?.(".fundamental-signal");if(el)el.dataset.tone=tone||""};
+  const cardTone=(id,tone)=>{const el=$(id);if(el)el.dataset.tone=tone||""};
   const scoreTone=n=>n>=70?"good":n>=50?"watch":"bad";
+  setText("fundamentalCompanyQuality",`${assessment.companyQuality} / 100`);setText("fundamentalCompanyQualityNote",assessment.companyQuality>=78?"公司體質強":assessment.companyQuality>=64?"公司體質中上":assessment.companyQuality>=50?"公司體質普通":"公司體質偏弱");cardTone("fundamentalCompanyCard",scoreTone(assessment.companyQuality));
+  setText("fundamentalContinuation",`${assessment.continuation} / 100`);setText("fundamentalContinuationNote",`${assessment.continuationLabel}｜${assessment.trend.label}`);cardTone("fundamentalContinuationCard",scoreTone(assessment.continuation));
   setText("fundamentalGrowthStrength",`${assessment.growthStrength} / 100`);setText("fundamentalGrowthStrengthNote",assessment.growthStrength>=78?"成長強勁":assessment.growthStrength>=64?"成長良好":assessment.growthStrength>=50?"成長普通":"成長偏弱");signalTone("fundamentalGrowthStrength",scoreTone(assessment.growthStrength));
   setText("fundamentalGrowthTrend",assessment.trend.label);setText("fundamentalGrowthTrendNote",assessment.trend.note);signalTone("fundamentalGrowthTrend",assessment.trend.score>=70?"good":assessment.trend.score>=50?"watch":"bad");
   setText("fundamentalProfitQuality",`${assessment.profitQuality.score} / 100`);setText("fundamentalProfitQualityNote",assessment.profitQuality.label);signalTone("fundamentalProfitQuality",scoreTone(assessment.profitQuality.score));
   setText("fundamentalStabilityScore",`${assessment.stability.score} / 100`);setText("fundamentalStabilityScoreNote",assessment.stability.label);signalTone("fundamentalStabilityScore",scoreTone(assessment.stability.score));
   setText("fundamentalRisk",`${assessment.risk.label}風險`);setText("fundamentalRiskNote",assessment.risk.note);signalTone("fundamentalRisk",assessment.risk.tone);
   setText("fundamentalConfidence",`${assessment.dataConfidence}%`);setText("fundamentalConfidenceNote",`營運 ${assessment.operationalConfidence}%｜估值 ${assessment.valuation.confidence}%`);signalTone("fundamentalConfidence",assessment.dataConfidence>=75?"good":assessment.dataConfidence>=55?"watch":"bad");
-  setText("fundamentalStability", `公司品質 ${assessment.companyQuality}/100｜延續性${assessment.continuationLabel} ${assessment.continuation}/100｜估值壓力${assessment.valuation.pressureLabel}｜價格吸引力 ${assessment.priceAttractiveness}/100`);
+  setText("fundamentalValuationPressure",`${assessment.valuation.pressureLabel}壓力`);setText("fundamentalValuationPressureNote",assessment.valuation.state||"估值資料不足");cardTone("valuationPressureCard",assessment.valuation.pressureLabel==="低"?"good":assessment.valuation.pressureLabel==="中"?"watch":"bad");
+  setText("fundamentalPriceAttractiveness",`${assessment.priceAttractiveness} / 100`);setText("fundamentalPriceAttractivenessNote",assessment.priceAttractiveness>=70?"目前價格具吸引力":assessment.priceAttractiveness>=50?"目前價格吸引力普通":"目前價格吸引力偏低");cardTone("valuationAttractivenessCard",scoreTone(assessment.priceAttractiveness));
+  setText("fundamentalStability",fundamentalComment(assessment));
   setText("fundamentalSource", fund?.sourceText || "基本面來源待補");
 }
 

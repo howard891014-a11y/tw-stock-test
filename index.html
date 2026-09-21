@@ -2306,6 +2306,46 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 @media(max-width:720px){#fundamentalPanel .fundamental-signal-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}#fundamentalPanel .fundamental-signal{padding:9px 10px!important}#fundamentalPanel .fundamental-signal>b{font-size:14px!important}#fundamentalPanel .fundamental-signal>small{font-size:9px!important}}
 </style>
 
+
+<style id="v26124-fundamental-layout">
+/* v2.6.1.24 — fundamental presentation refinement */
+#fundamentalPanel .fundamental-core-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin-top:10px!important}
+#fundamentalPanel .fundamental-core-grid .fundamental-metric{padding:14px 14px 12px!important}
+#fundamentalPanel .fundamental-metric.metric-company{background:linear-gradient(180deg,#eef8ff,#e8f3ff)!important}
+#fundamentalPanel .fundamental-metric.metric-continuation{background:linear-gradient(180deg,#f1faf5,#e8f7ef)!important}
+#fundamentalPanel .fundamental-metric-badge-company{background:#dcecff!important;color:#377fd7!important}
+#fundamentalPanel .fundamental-metric-badge-company::before{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M12 2.5 20 6v5.7c0 5-3.4 8.3-8 9.8-4.6-1.5-8-4.8-8-9.8V6l8-3.5zm0 3-5 2.2v4c0 3.4 2 5.7 5 6.9 3-1.2 5-3.5 5-6.9v-4L12 5.5zm-1.1 3.2h2.2v2.1h2.1V13h-2.1v2.1h-2.2V13H8.8v-2.2h2.1V8.7z'/></svg>")!important;mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M12 2.5 20 6v5.7c0 5-3.4 8.3-8 9.8-4.6-1.5-8-4.8-8-9.8V6l8-3.5zm0 3-5 2.2v4c0 3.4 2 5.7 5 6.9 3-1.2 5-3.5 5-6.9v-4L12 5.5zm-1.1 3.2h2.2v2.1h2.1V13h-2.1v2.1h-2.2V13H8.8v-2.2h2.1V8.7z'/></svg>")!important}
+#fundamentalPanel .fundamental-metric-badge-continuation{background:#d9f2e5!important;color:#1e9d68!important}
+#fundamentalPanel .fundamental-metric-badge-continuation::before{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M4 16.5 9.2 11l3.2 3.1L20 6.5V11h2V3h-8v2h4.5l-6.1 6.1-3.2-3.2L2.5 15z'/><path fill='black' d='M4 19h16v2H4z'/></svg>")!important;mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M4 16.5 9.2 11l3.2 3.1L20 6.5V11h2V3h-8v2h4.5l-6.1 6.1-3.2-3.2L2.5 15z'/><path fill='black' d='M4 19h16v2H4z'/></svg>")!important}
+#fundamentalPanel .fundamental-metric.metric-company .fundamental-metric-value{color:#377fd7!important}
+#fundamentalPanel .fundamental-metric.metric-continuation .fundamental-metric-value{color:#1e9d68!important}
+#fundamentalPanel .fundamental-metric.metric-company[data-tone="watch"] .fundamental-metric-value,#fundamentalPanel .fundamental-metric.metric-continuation[data-tone="watch"] .fundamental-metric-value{color:#bd7d08!important}
+#fundamentalPanel .fundamental-metric.metric-company[data-tone="bad"] .fundamental-metric-value,#fundamentalPanel .fundamental-metric.metric-continuation[data-tone="bad"] .fundamental-metric-value{color:#d94f63!important}
+#fundamentalPanel .fundamental-signal-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#fundamentalPanel .fundamental-comment{margin-top:12px!important;padding-top:12px!important;border-top:1px solid #edf2f7!important}
+#fundamentalPanel .fundamental-comment small{display:block!important;color:#7c8da2!important;font-size:11px!important;line-height:1.45!important}
+#fundamentalPanel .fundamental-comment strong{display:block!important;margin-top:5px!important;color:#13233a!important;font-size:13px!important;line-height:1.65!important;font-weight:700!important}
+#valuation .valuation-assessment-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin:0 0 12px!important}
+#valuation .valuation-assessment-card{min-width:0!important;padding:12px 14px!important;border:1px solid #e8eef5!important;border-radius:16px!important;background:linear-gradient(180deg,#fff,#f8fbff)!important}
+#valuation .valuation-assessment-card span{display:block!important;color:#7c8da2!important;font-size:12px!important;line-height:1.25!important}
+#valuation .valuation-assessment-card b{display:block!important;margin-top:6px!important;font-size:17px!important;line-height:1.25!important;color:#17304c!important}
+#valuation .valuation-assessment-card small{display:block!important;margin-top:4px!important;color:#8b9bae!important;font-size:10px!important;line-height:1.4!important}
+#valuation .valuation-assessment-card[data-tone="good"] b{color:#1d9f66!important}
+#valuation .valuation-assessment-card[data-tone="watch"] b{color:#bd7d08!important}
+#valuation .valuation-assessment-card[data-tone="bad"] b{color:#d94f63!important}
+.settings-card .settings-row{gap:18px!important;align-items:flex-start!important}
+.settings-card .settings-row strong{max-width:64%!important;text-align:right!important;line-height:1.4!important;overflow-wrap:anywhere!important}
+@media(max-width:720px){
+  #fundamentalPanel .fundamental-core-grid{gap:8px!important}
+  #fundamentalPanel .fundamental-core-grid .fundamental-metric{padding:12px 11px 10px!important}
+  #fundamentalPanel .fundamental-comment strong{font-size:12px!important}
+  #valuation .valuation-assessment-grid{gap:8px!important}
+  #valuation .valuation-assessment-card{padding:10px 11px!important}
+  #valuation .valuation-assessment-card b{font-size:15px!important}
+  .settings-card .settings-row strong{max-width:60%!important;font-size:12px!important}
+}
+</style>
+
 </head>
 <body>
 <div class="app-shell">
@@ -2333,7 +2373,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.23</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.24</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2478,28 +2518,38 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <small class="fundamental-metric-detail" id="fundamentalOperatingDetail">等待資料</small>
               </div>
             </div>
+            <div class="fundamental-core-grid" aria-label="公司品質與延續性">
+              <div class="fundamental-metric metric-company" id="fundamentalCompanyCard">
+                <span class="fundamental-metric-title"><i class="fundamental-metric-badge fundamental-metric-badge-company" aria-hidden="true"></i><em>公司品質</em></span>
+                <strong class="fundamental-metric-value" id="fundamentalCompanyQuality">--</strong>
+                <small class="fundamental-metric-detail" id="fundamentalCompanyQualityNote">等待資料</small>
+              </div>
+              <div class="fundamental-metric metric-continuation" id="fundamentalContinuationCard">
+                <span class="fundamental-metric-title"><i class="fundamental-metric-badge fundamental-metric-badge-continuation" aria-hidden="true"></i><em>成長延續性</em></span>
+                <strong class="fundamental-metric-value" id="fundamentalContinuation">--</strong>
+                <small class="fundamental-metric-detail" id="fundamentalContinuationNote">等待資料</small>
+              </div>
+            </div>
             <div class="fundamental-signal-grid" aria-label="基本面判讀">
               <div class="fundamental-signal"><span>成長強度</span><b id="fundamentalGrowthStrength">--</b><small id="fundamentalGrowthStrengthNote">等待資料</small></div>
               <div class="fundamental-signal"><span>成長趨勢</span><b id="fundamentalGrowthTrend">--</b><small id="fundamentalGrowthTrendNote">等待資料</small></div>
               <div class="fundamental-signal"><span>獲利品質</span><b id="fundamentalProfitQuality">--</b><small id="fundamentalProfitQualityNote">等待資料</small></div>
-              <div class="fundamental-signal"><span>穩定度</span><b id="fundamentalStabilityScore">--</b><small id="fundamentalStabilityScoreNote">等待資料</small></div>
+              <div class="fundamental-signal"><span>營運穩定</span><b id="fundamentalStabilityScore">--</b><small id="fundamentalStabilityScoreNote">等待資料</small></div>
               <div class="fundamental-signal"><span>基本面風險</span><b id="fundamentalRisk">--</b><small id="fundamentalRiskNote">等待資料</small></div>
-              <div class="fundamental-signal"><span>資料可信度</span><b id="fundamentalConfidence">--</b><small id="fundamentalConfidenceNote">營運＋估值資料</small></div>
+              <div class="fundamental-signal"><span>資料完整度</span><b id="fundamentalConfidence">--</b><small id="fundamentalConfidenceNote">營運＋估值資料</small></div>
             </div>
-            <div class="fundamental-overview-foot">
-              <div>
-                <small>基本面摘要</small>
-                <strong id="fundamentalStability">--</strong>
-              </div>
-              <div class="fundamental-source">
-                <small>資料來源</small>
-                <strong id="fundamentalSource">基本面來源待補</strong>
-              </div>
+            <div class="fundamental-comment">
+              <small>基本面評語</small>
+              <strong id="fundamentalStability">--</strong>
             </div>
           </section>
         </article>
         <article class="card detail-panel valuation-card" id="valuation" data-view-panel="valuation">
           <div class="card-title">基本面估值 <span class="badge" id="valuationBadge" hidden></span></div>
+          <div class="valuation-assessment-grid" aria-label="估值判讀">
+            <div class="valuation-assessment-card" id="valuationPressureCard"><span>估值壓力</span><b id="fundamentalValuationPressure">--</b><small id="fundamentalValuationPressureNote">等待估值資料</small></div>
+            <div class="valuation-assessment-card" id="valuationAttractivenessCard"><span>價格吸引力</span><b id="fundamentalPriceAttractiveness">--</b><small id="fundamentalPriceAttractivenessNote">等待估值資料</small></div>
+          </div>
           <div class="valuation-summary-grid">
             <div class="valuation-summary-main">
               <span class="fair-label">綜合合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看綜合合理價公式">i</button></span>
@@ -2824,14 +2874,15 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <div class="overlay" id="overlay"></div>
 <div class="modal-backdrop hidden" id="settingsModal"><div class="modal-card settings-card">
 <div class="modal-head"><strong>設定</strong><button id="closeSettings" type="button">×</button></div>
-<div class="settings-row"><span>資料來源</span><strong>Yahoo Finance</strong></div>
+<div class="settings-row"><span>市場資料</span><strong>Yahoo Finance</strong></div>
+<div class="settings-row"><span>基本面來源</span><strong id="fundamentalSource">基本面來源待補</strong></div>
 </div></div>
 <div class="modal-backdrop hidden" id="targetEditModal"><div class="modal-card">
 <div class="modal-head"><strong>修改目標價資料</strong><button id="closeTargetEdit" type="button">×</button></div>
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.2"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.24"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
