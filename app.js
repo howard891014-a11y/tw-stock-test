@@ -517,24 +517,23 @@ function resetFundamentalOverview(msg="資料待補"){
   if(chip){chip.textContent=msg;chip.classList.remove("is-good","is-watch","is-weak");}
 }
 function fundamentalMainMargin(value){const x=valuationNum(value);return x===null?"--":`${x.toFixed(1)}%`}
-function fundamentalFirstNumber(obj,keys){
-  for(const key of keys||[]){const v=valuationNum(obj?.[key]);if(v!==null)return v}
-  return null;
-}
+function ppChangeText(delta){const x=valuationNum(delta);return x===null?"年變化待補":`年變化 ${x>=0?"+":""}${x.toFixed(1)}pp`}
 function fundamentalMarginValue(row,kind){
   if(!row||typeof row!=="object")return null;
   const isGross=kind==="gross";
-  const direct=fundamentalFirstNumber(row,isGross
-    ?["grossMargin","grossMarginPct","grossProfitMargin","gross_margin","gross_margin_pct"]
-    :["operatingMargin","operatingMarginPct","operatingProfitMargin","operating_margin","operating_margin_pct"]);
-  if(direct!==null)return direct;
-  const revenue=fundamentalFirstNumber(row,["revenue","totalRevenue","operatingRevenue","netRevenue","operating_revenue","total_revenue","net_revenue"]);
-  const profit=fundamentalFirstNumber(row,isGross
-    ?["grossProfit","grossProfitLoss","grossProfitFromOperations","grossProfitLossFromOperations","gross_profit","gross_profit_loss"]
-    :["operatingIncome","operatingProfit","operatingIncomeLoss","incomeFromOperations","operatingProfitLoss","operating_income","operating_profit","operating_income_loss"]);
-  return revenue!==null&&revenue!==0&&profit!==null ? profit/revenue*100 : null;
+  const directKeys=isGross
+    ?["grossMargin","grossMarginPct","grossProfitMargin","grossProfitMarginPct","gross_margin","gross_margin_pct"]
+    :["operatingMargin","operatingMarginPct","operatingProfitMargin","operatingProfitMarginPct","operating_margin","operating_margin_pct"];
+  for(const key of directKeys){const n=valuationNum(row?.[key]);if(n!==null)return Math.abs(n)<=1.5?n*100:n}
+  const revenueKeys=["revenue","totalRevenue","operatingRevenue","netRevenue","sales","salesRevenue"];
+  const profitKeys=isGross
+    ?["grossProfit","grossIncome","gross_profit"]
+    :["operatingIncome","operatingProfit","incomeFromOperations","operating_income","operating_profit"];
+  let revenue=null,profit=null;
+  for(const key of revenueKeys){const n=valuationNum(row?.[key]);if(n!==null&&n!==0){revenue=n;break}}
+  for(const key of profitKeys){const n=valuationNum(row?.[key]);if(n!==null){profit=n;break}}
+  return revenue!==null&&profit!==null?profit/revenue*100:null;
 }
-function ppChangeText(delta){const x=valuationNum(delta);return x===null?"年變化待補":`年變化 ${x>=0?"+":""}${x.toFixed(1)}pp`}
 function renderFundamentalOverview(){
   const host=$("fundamentalOverviewChip");
   if(!host) return;
