@@ -3010,7 +3010,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.34"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.1.35"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -3165,6 +3165,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <script id="v26133-valuation-relayout">
 (function(){
   function txt(id){var el=document.getElementById(id);return el?String(el.textContent||'').replace(/\s+/g,' ').trim():'';}
+  function usable(id){var v=txt(id);return (!v||v==='--'||v==='資料不足'||v.indexOf('等待')===0)?'':v;}
   function set(id,v){var el=document.getElementById(id); if(el && el.textContent!==v) el.textContent=v;}
   function num(v){ if(!v) return NaN; var m=String(v).replace(/,/g,'').match(/-?\d+(?:\.\d+)?/); return m?parseFloat(m[0]):NaN; }
   function pctText(n){ return isFinite(n)?((n>0?'+':'')+n.toFixed(2)+'%'):'--'; }
@@ -3189,12 +3190,12 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     set('valuationEstimateConfidenceModern', conf);
     set('valuationEstimateConfidenceNoteModern', confNote);
 
-    set('valuationOperatingFairDisplay', txt('valuationPeFair') || txt('valuationEvidencePeFair') || '--');
-    set('valuationOperatingFairGapDisplay', txt('valuationPeFairGap') || '等待 PE 估值');
+    set('valuationOperatingFairDisplay', usable('valuationPeFair') || usable('valuationEvidencePeFair') || '--');
+    set('valuationOperatingFairGapDisplay', usable('valuationPeFairGap') || '等待 PE 估值');
 
-    set('valuationCompositeModelLine', txt('valuationPrimaryModel') || '--');
-    set('valuationCompositeWeightLine', 'PE '+(txt('valuationPeWeight')||'--')+'｜PS '+(txt('valuationPsWeight')||'--')+'｜PB '+(txt('valuationPbWeight')||'--'));
-    set('valuationCompositeReasonLine', txt('valuationModelReason') || '等待模型資料');
+    set('valuationCompositeModelLine', usable('valuationPrimaryModel') || '--');
+    set('valuationCompositeWeightLine', 'PE '+(txt('valuationPeWeight')||'--')+'｜PS '+(usable('valuationPsWeight')||'--')+'｜PB '+(txt('valuationPbWeight')||'--'));
+    set('valuationCompositeReasonLine', usable('valuationModelReason') || '等待模型資料');
 
     var qbox=document.getElementById('valuationQuarterGrid');
     var chips=qbox?qbox.querySelectorAll('.valuation-eps-chip'):[];
@@ -3206,7 +3207,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       v=v.replace(/\s+/g,' ').trim();
       if(l||v) quarters.push({label:l||'--', value:v||'--'});
     });
-    var ttm=txt('valuationTtmEps') || txt('valuationEvidenceTtmEps') || '--';
+    var ttm=usable('valuationTtmEps') || usable('valuationEvidenceTtmEps') || '--';
     var rows=[quarters[0], quarters[1], quarters[2], quarters[3], {label:'近四季 EPS', value:ttm}];
     for(var i=0;i<5;i++){
       var r=rows[i]||{label:'--',value:'--'};
@@ -3215,9 +3216,9 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     }
     if(quarters[0]) set('valuationMiniEpsLead','近四季獲利能力｜最新 '+quarters[0].label);
 
-    var curPeTxt=txt('valuationCurrentPe')||txt('valuationEvidenceCurrentPe')||'--';
-    var peerPeTxt=txt('valuationPeerPe')||txt('valuationEvidencePeerPe')||'--';
-    var fairPeTxt=txt('valuationEvidencePeFair')||txt('valuationPeFair')||'--';
+    var curPeTxt=usable('valuationCurrentPe')||usable('valuationEvidenceCurrentPe')||'--';
+    var peerPeTxt=usable('valuationPeerPe')||usable('valuationEvidencePeerPe')||'--';
+    var fairPeTxt=usable('valuationEvidencePeFair')||usable('valuationPeFair')||'--';
     var curPe=num(curPeTxt), peerPe=num(peerPeTxt);
     var peDiff=isFinite(curPe)&&isFinite(peerPe)&&peerPe!==0?((curPe-peerPe)/peerPe*100):NaN;
     setTone('valuationMiniPeState', tone(peDiff));
@@ -3226,21 +3227,21 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     set('valuationMiniPeFair', fairPeTxt);
     set('valuationMiniPeDiff', pctText(peDiff));
 
-    var curPsTxt=txt('valuationEvidenceCurrentPs')||'--';
-    var peerPsTxt=txt('valuationEvidencePeerPs')||'--';
-    var fairPsTxt=txt('valuationEvidencePsFair')||'--';
+    var curPsTxt=usable('valuationEvidenceCurrentPs')||'--';
+    var peerPsTxt=usable('valuationEvidencePeerPs')||'--';
+    var fairPsTxt=usable('valuationEvidencePsFair')||'--';
     var curPs=num(curPsTxt), peerPs=num(peerPsTxt);
     var psDiff=isFinite(curPs)&&isFinite(peerPs)&&peerPs!==0?((curPs-peerPs)/peerPs*100):NaN;
     setTone('valuationMiniPsState', tone(psDiff));
     set('valuationMiniPsCurrent', curPsTxt);
     set('valuationMiniPsPeer', peerPsTxt);
     set('valuationMiniPsFair', fairPsTxt);
-    set('valuationMiniPsWeight', txt('valuationPsWeight')||'--');
+    set('valuationMiniPsWeight', usable('valuationPsWeight')||'--');
 
-    var curPbTxt=txt('valuationCurrentPb')||txt('valuationEvidenceCurrentPb')||'--';
-    var peerPbTxt=txt('valuationPeerPb')||txt('valuationEvidencePeerPb')||'--';
-    var fairPbTxt=txt('valuationEvidencePbFair')||txt('valuationPbFair')||'--';
-    var bpsTxt=txt('valuationSummaryBps')||txt('valuationBookValue')||'--';
+    var curPbTxt=usable('valuationCurrentPb')||usable('valuationEvidenceCurrentPb')||'--';
+    var peerPbTxt=usable('valuationPeerPb')||usable('valuationEvidencePeerPb')||'--';
+    var fairPbTxt=usable('valuationEvidencePbFair')||usable('valuationPbFair')||'--';
+    var bpsTxt=usable('valuationSummaryBps')||usable('valuationBookValue')||'--';
     var curPb=num(curPbTxt), peerPb=num(peerPbTxt);
     var pbDiff=isFinite(curPb)&&isFinite(peerPb)&&peerPb!==0?((curPb-peerPb)/peerPb*100):NaN;
     setTone('valuationMiniPbState', tone(pbDiff));

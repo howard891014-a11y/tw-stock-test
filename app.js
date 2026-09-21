@@ -324,7 +324,7 @@ async function history5Y(query,market){
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26123",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26135",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
 function fundamentalQuarterInfo(row){
@@ -402,7 +402,7 @@ function mergeFundamentalPayload(primary,fallback){
 }
 async function fundamentals(query,market){
   const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`${code}|${String(market||"")}`,all=readFundamentalsCache(),cached=all[key];
-  if(cached&&Date.now()-Number(cached.savedAt||0)<FUNDAMENTALS_CACHE_MS&&Array.isArray(cached.data?.quarters))return cached.data;
+  if(cached&&Date.now()-Number(cached.savedAt||0)<FUNDAMENTALS_CACHE_MS&&Array.isArray(cached.data?.quarters)&&!fundamentalPayloadNeedsSupplement(cached.data))return cached.data;
   const params=new URLSearchParams({q:code,market:String(market||"")});
   const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
   let data=null;
@@ -2676,7 +2676,7 @@ function valuationRiskByPeer(premium){
 function resetValuation(msg="--"){
   setText("valuationStatus",msg);setText("valuationStatusDetail","--");
   ["valuationCompositeFair","valuationCompositeGap","valuationPeFair","valuationPeFairGap","valuationPbFair","valuationPbFairGap","valuationSummaryBps"].forEach(id=>setText(id,"--"));
-  ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap","valuationPeWeight","valuationPsWeight","valuationPbWeight","valuationPeSuitability","valuationPsSuitability","valuationPbSuitability","valuationPrimaryModel","valuationModelReason","valuationFairRange","valuationFairRangeNote","valuationEstimateConfidence","valuationEstimateConfidenceNote"].forEach(id=>setText(id,"--"));
+  ["valuationCurrentPe","valuationPeerPe","valuationPeGap","valuationBookValue","valuationCurrentPb","valuationPeerPb","valuationPbGap","valuationPeWeight","valuationPsWeight","valuationPbWeight","valuationPeSuitability","valuationPsSuitability","valuationPbSuitability","valuationPrimaryModel","valuationModelReason","valuationFairRange","valuationFairRangeNote","valuationEstimateConfidence","valuationEstimateConfidenceNote","valuationEvidenceCurrentPe","valuationEvidencePeerPe","valuationEvidencePeFair","valuationEvidenceCurrentPs","valuationEvidencePeerPs","valuationEvidencePsFair","valuationEvidenceCurrentPb","valuationEvidencePeerPb","valuationEvidencePbFair","valuationEvidenceTtmEps"].forEach(id=>setText(id,"--"));
   setText("overviewCompositeFair","--");latestValuationScenario=null;latestValuationData=null;setText("overviewValuationScenario","--");setText("overviewValuationScenarioNote","估值情境判讀");
   const qhost=$("valuationQuarterGrid");if(qhost)qhost.innerHTML="";setText("valuationTtmEps","--");
 }
@@ -2861,6 +2861,17 @@ function renderValuation(v){
   const statusEl=$("valuationStatus");if(statusEl){statusEl.classList.remove("risk-text-safe","risk-text-watch","risk-text-danger","risk-text-neutral","valuation-not-applicable");statusEl.classList.add(`risk-text-${profile?.available?statusRisk:(compositeFair===null?"neutral":statusRisk)}`);if(statusEl.textContent.includes("不適用"))statusEl.classList.add("valuation-not-applicable");}
   setText("valuationMethod",`PE／PS／PB 適用度自動加權：PE ${weights.pe||0}%、PS ${weights.ps||0}%、PB ${weights.pb||0}%`);
   setText("valuationNote",`PE／PS／PB 先依適用度動態加權形成中心合理價，再依模型分歧、適用度、資料完整度形成合理價區間與估值可信度。`);
+  // v2.6.1.35 — 估值小卡直接吃真實模型資料，不再靠未填值的 evidence placeholder。
+  setText("valuationEvidenceCurrentPe",valuationMetric(v.currentPe," 倍","資料不足"));
+  setText("valuationEvidencePeerPe",valuationMetric(v.peerPe," 倍","資料不足"));
+  setText("valuationEvidencePeFair",peFair>0?valuationFmt(peFair):"資料不足");
+  setText("valuationEvidenceCurrentPs",valuationMetric(v.currentPs," 倍","資料不足"));
+  setText("valuationEvidencePeerPs",valuationMetric(v.peerPs," 倍","資料不足"));
+  setText("valuationEvidencePsFair",psFair>0?valuationFmt(psFair):"資料不足");
+  setText("valuationEvidenceCurrentPb",valuationMetric(v.currentPb," 倍","資料不足"));
+  setText("valuationEvidencePeerPb",valuationMetric(v.peerPb," 倍","資料不足"));
+  setText("valuationEvidencePbFair",pbFair>0?valuationFmt(pbFair):"資料不足");
+  setText("valuationEvidenceTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   setText("valuationTtmEps",ttm!==null?valuationEpsFmt(ttm):"資料不足");
   const host=$("valuationQuarterGrid");if(host){host.innerHTML=quarterEpsRows.map((x,i)=>`<div class="valuation-quarter-chip${i===0?" is-latest":""}"><span>${String(x.period||"")}</span><b>${valuationEpsFmt(x.eps)}</b>${i===0?'<em>最新</em>':''}</div>`).join("");}
   renderFundamentalOverview();
