@@ -324,7 +324,7 @@ async function history5Y(query,market){
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26121",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26122",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
 function fundamentalQuarterInfo(row){
