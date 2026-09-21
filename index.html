@@ -2648,7 +2648,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
               <div class="valuation-rows">
                 <div class="valuation-data-row"><span>目前</span><b id="valuationMiniPeCurrent">--</b></div>
                 <div class="valuation-data-row"><span>同業</span><b id="valuationMiniPePeer">--</b></div>
-                <div class="valuation-data-row"><span>營運合理價</span><b id="valuationMiniPeFair">--</b></div>
+                <div class="valuation-data-row"><span>PE 合理股價</span><b id="valuationMiniPeFair">--</b></div>
                 <div class="valuation-data-row"><span>相對同業</span><b id="valuationMiniPeDiff">--</b></div>
               </div>
             </div>
@@ -3340,6 +3340,29 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 #valuation .valuation-quarter-row-grid .valuation-quarter-chip{padding:9px 0!important}
 #valuation .valuation-quarter-row-grid .valuation-quarter-chip span{font-size:10px!important}
 #valuation .valuation-quarter-row-grid .valuation-quarter-chip b{font-size:13px!important}
+}
+</style>
+
+<style id="v26138-valuation-layout-fix">
+/* v2.6.1.38 — tidy valuation card layout and PE fair price label */
+#valuation .valuation-model-tiles{align-items:stretch!important}
+#valuation .valuation-model-tiles .valuation-tech-tile{display:flex!important;flex-direction:column!important;height:100%!important}
+#valuation .valuation-model-tiles .valuation-tech-tile p{margin:0 0 8px!important;color:#65788f!important;font-size:11px!important;line-height:1.4!important;min-height:0!important}
+#valuation .valuation-model-tiles .valuation-tech-tile .valuation-rows,
+#valuation .valuation-model-tiles .valuation-tech-tile .valuation-quarter-row-grid{margin-top:2px!important;border-top:1px solid #d9e3ef!important}
+#valuation .valuation-quarter-row-grid{display:block!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"period value" "tag value"!important;align-items:center!important;column-gap:10px!important;row-gap:2px!important;min-height:0!important;padding:10px 0!important;border:0!important;border-bottom:1px solid #d9e3ef!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;text-align:left!important;overflow:visible!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip:last-child{border-bottom:0!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip span{grid-area:period!important;display:block!important;color:#7f91a3!important;font-size:11px!important;line-height:1.35!important;white-space:nowrap!important;text-align:left!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip b{grid-area:value!important;display:block!important;margin:0!important;color:#13233a!important;font-size:14px!important;line-height:1.2!important;font-weight:800!important;text-align:right!important;white-space:nowrap!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip.is-latest{border:0!important;border-bottom:1px solid #d9e3ef!important;background:transparent!important;box-shadow:none!important}
+#valuation .valuation-quarter-row-grid .valuation-quarter-chip em{grid-area:tag!important;position:static!important;left:auto!important;bottom:auto!important;transform:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:start!important;justify-self:start!important;margin:0!important;padding:2px 6px!important;border-radius:999px!important;background:#edf8ff!important;color:#2b8fb7!important;border:1px solid #cfe8f4!important;font-size:8px!important;font-style:normal!important;white-space:nowrap!important}
+#valuation .valuation-ttm-direct{margin-top:auto!important;padding-top:10px!important}
+@media(max-width:720px){
+  #valuation .valuation-model-tiles .valuation-tech-tile p{font-size:10px!important}
+  #valuation .valuation-quarter-row-grid .valuation-quarter-chip{padding:9px 0!important}
+  #valuation .valuation-quarter-row-grid .valuation-quarter-chip span{font-size:10px!important}
+  #valuation .valuation-quarter-row-grid .valuation-quarter-chip b{font-size:13px!important}
 }
 </style>
 </body>
