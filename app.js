@@ -324,7 +324,7 @@ async function history5Y(query,market){
   all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26120",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26121",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
 function fundamentalQuarterInfo(row){
@@ -379,7 +379,7 @@ function mergeFundamentalObject(primary,fallback){
 }
 function fundamentalRowsHaveMargins(data){
   const rows=fundamentalSortedRows(data),off=data?.officialStatement||null;
-  const valid=n=>n!==null&&Number.isFinite(n)&&Math.abs(n)>=0.05;
+  const valid=n=>n!==null&&Number.isFinite(n);
   const hasGross=valid(fundamentalMarginValue(off,"gross"))||rows.some(x=>valid(fundamentalMarginValue(x,"gross")));
   const hasOperating=valid(fundamentalMarginValue(off,"operating"))||rows.some(x=>valid(fundamentalMarginValue(x,"operating")));
   return hasGross&&hasOperating;
@@ -622,7 +622,8 @@ function fundamentalMarginValue(row,kind,depth=0,seen=new Set()){
     const n=fundamentalScalar(row?.[key]);
     if(n===null)continue;
     const pct=Math.abs(n)<=1.5?n*100:n;
-    if(Math.abs(pct)<0.05){zeroCandidate=true;continue}
+    const officialZero=row?.marginSource==="official"||row?.sourceType==="official"||row?.official===true;
+    if(Math.abs(pct)<0.05&&!officialZero){zeroCandidate=true;continue}
     if(Number.isFinite(pct))return pct;
   }
   const revenue=fundamentalRevenueValue(row);
@@ -633,7 +634,8 @@ function fundamentalMarginValue(row,kind,depth=0,seen=new Set()){
   for(const key of profitKeys){const n=fundamentalScalar(row?.[key]);if(n!==null){profit=n;break}}
   if(revenue!==null&&revenue!==0&&profit!==null){
     const pct=profit/revenue*100;
-    if(Math.abs(pct)>=0.05)return pct;
+    const officialZero=row?.marginSource==="official"||row?.sourceType==="official"||row?.official===true;
+    if(Math.abs(pct)>=0.05||officialZero)return pct;
     zeroCandidate=true;
   }
   const preferred=["financialData","summaryDetail","defaultKeyStatistics","incomeStatement","incomeStatementHistory","quarterlyFinancials","financials"];
