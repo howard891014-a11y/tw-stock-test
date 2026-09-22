@@ -1,4 +1,4 @@
-// StockZone v2.6.2.7
+// StockZone v2.6.2.10
 // Official institutional-flow route: TWSE T86 + TPEx daily institutional report.
 // Values are normalized to shares. The route deliberately fails open on individual
 // historical dates so one unavailable trading day does not break the whole card.
@@ -51,10 +51,10 @@ function taipeiTodayUtc() {
   return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
 }
 
-function recentWeekdays(max = 27) {
+function recentWeekdays(max = 32, anchor = taipeiTodayUtc()) {
   const out = [];
-  const d = taipeiTodayUtc();
-  for (let i = 0; out.length < max && i < 45; i++) {
+  const d = anchor instanceof Date ? anchor : taipeiTodayUtc();
+  for (let i = 0; out.length < max && i < 55; i++) {
     const x = new Date(d.getTime() - i * 86400000);
     const day = x.getUTCDay();
     if (day !== 0 && day !== 6) out.push(x);
@@ -62,27 +62,41 @@ function recentWeekdays(max = 27) {
   return out;
 }
 
-async function fetchJson(url, timeoutMs = 5000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const r = await fetch(url, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: {
-        Accept: "application/json,text/plain,*/*",
-        "User-Agent": "StockZone/2.6.2.7",
-        Referer: String(url).includes("tpex.org.tw") ? "https://www.tpex.org.tw/" : "https://www.twse.com.tw/",
-      },
-    });
-    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-    const text = await r.text();
-    if (!text.trim()) return null;
-    try { return JSON.parse(text); }
-    catch { throw new Error("official payload is not JSON"); }
-  } finally {
-    clearTimeout(timer);
+function isoToUtcDate(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : null;
+}
+
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+async function fetchJson(url, timeoutMs = 4500, attempts = 3) {
+  let lastError = null;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const r = await fetch(url, {
+        signal: controller.signal,
+        redirect: "follow",
+        headers: {
+          Accept: "application/json,text/plain,*/*",
+          "User-Agent": "StockZone/2.6.2.10",
+          Referer: String(url).includes("tpex.org.tw") ? "https://www.tpex.org.tw/" : "https://www.twse.com.tw/",
+        },
+      });
+      if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+      const text = await r.text();
+      if (!text.trim()) throw new Error("official payload is empty");
+      try { return JSON.parse(text); }
+      catch { throw new Error("official payload is not JSON"); }
+    } catch (e) {
+      lastError = e;
+      if (attempt + 1 < attempts) await sleep(140 * (attempt + 1));
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  throw lastError || new Error("official request failed");
 }
 
 function fieldIndex(fields, names) {
@@ -214,6 +228,15 @@ async function fetchTwseDay(code, d) {
   catch (e) { console.warn(`[institutional] TWSE ${ymd} failed`, e?.message || e); return null; }
 }
 
+async function fetchTwseLatest(code) {
+  // No date parameter = TWSE latest published T86 snapshot.  Use it as the
+  // freshness anchor so a transient failure on one historical date cannot make
+  // one stock appear to be several sessions behind another stock.
+  const url = `${TWSE_T86}?response=json&selectType=ALLBUT0999`;
+  try { return parseTwse(await fetchJson(url, 4500, 3), code, ""); }
+  catch (e) { console.warn("[institutional] TWSE latest snapshot failed", e?.message || e); return null; }
+}
+
 async function fetchTpexDay(code, d) {
   const requestedRocDate = rocDate(d);
   const modern = new URLSearchParams({ type: "Daily", sect: "EW", date: requestedRocDate, id: "", response: "json" });
@@ -230,7 +253,7 @@ async function fetchTpexDay(code, d) {
 }
 
 async function fetchTpexLatest(code) {
-  try { return parseTpexOpenApi(await fetchJson(TPEX_OPENAPI), code); }
+  try { return parseTpexOpenApi(await fetchJson(TPEX_OPENAPI, 4500, 3), code); }
   catch (e) { console.warn("[institutional] TPEx OpenAPI fallback failed", e?.message || e); return null; }
 }
 
@@ -242,25 +265,35 @@ function marketOrder(market) {
 }
 
 async function collectHistory(exchange, code, cache) {
-  const candidates = recentWeekdays(27);
+  // Always start from the exchange's latest published snapshot.  Previously the
+  // route only used TPEx OpenAPI when *all* historical requests failed, so a
+  // partial failure could leave one stock at 9/16 while another was already at
+  // 9/21.  The latest snapshot is now authoritative for asOfDate.
+  const latest = exchange === "TWSE" ? await fetchTwseLatest(code) : await fetchTpexLatest(code);
+  const rows = [];
+  if (latest?.date) rows.push(latest);
+
+  const anchor = isoToUtcDate(latest?.date) || taipeiTodayUtc();
+  const candidates = recentWeekdays(34, anchor).filter((d) => !latest?.date || fmtYmd(d) !== String(latest.date).replace(/\D/g, ""));
   const fetchOne = async (d) => {
-    const key = `${exchange}:${fmtYmd(d)}`;
+    const key = `${exchange}:${fmtYmd(d)}:${code}`;
     if (!cache.has(key)) cache.set(key, exchange === "TWSE" ? fetchTwseDay(code, d) : fetchTpexDay(code, d));
     return cache.get(key);
   };
-  const rows = [];
-  const batchSize = exchange === "TPEX" ? 4 : 7;
+
+  // Small batches are deliberate.  T86/TPEx are whole-market reports; large
+  // bursts are more likely to be throttled and used to create random date gaps.
+  const batchSize = exchange === "TPEX" ? 3 : 4;
   for (let i = 0; i < candidates.length && rows.length < 20; i += batchSize) {
     const batch = candidates.slice(i, i + batchSize);
     const got = await Promise.all(batch.map(fetchOne));
-    for (const row of got) if (row?.date && !rows.some((x) => x.date === row.date)) rows.push(row);
+    for (const row of got) {
+      if (row?.date && !rows.some((x) => x.date === row.date)) rows.push(row);
+    }
   }
+
   rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  if (exchange === "TPEX" && !rows.length) {
-    const latest = await fetchTpexLatest(code);
-    if (latest?.date) rows.push(latest);
-  }
-  return rows.slice(0, 20);
+  return { rows: rows.slice(0, 20), freshnessVerified: !!latest?.date, latestDate: latest?.date || "" };
 }
 
 function sumRows(rows, count) {
@@ -365,7 +398,7 @@ function buildSignal(periods, streaks) {
   };
 }
 
-function buildPayload(exchange, code, rows) {
+function buildPayload(exchange, code, rows, freshness = {}) {
   const periods = { "1": sumRows(rows, 1), "5": sumRows(rows, 5), "10": sumRows(rows, 10), "20": sumRows(rows, 20) };
   const streaks = {
     foreign: streak(rows, "foreign"),
@@ -388,6 +421,8 @@ function buildPayload(exchange, code, rows) {
     periods,
     streaks,
     signal: buildSignal(periods, streaks),
+    freshnessVerified: !!freshness.freshnessVerified,
+    latestPublishedDate: freshness.latestDate || rows[0]?.date || "",
     fetchedAt: new Date().toISOString(),
   };
 }
@@ -404,16 +439,17 @@ module.exports = async function handler(req, res) {
     const cache = new Map();
     let selected = null;
     let history = [];
+    let freshness = { freshnessVerified: false, latestDate: "" };
     for (const exchange of marketOrder(market)) {
-      const rows = await collectHistory(exchange, code, cache);
-      if (rows.length) { selected = exchange; history = rows; break; }
+      const result = await collectHistory(exchange, code, cache);
+      if (result.rows.length) { selected = exchange; history = result.rows; freshness = result; break; }
     }
     if (!selected || !history.length) {
       res.status(404).json({ ok: false, error: "official institutional data not found", code });
       return;
     }
-    res.setHeader("Cache-Control", "s-maxage=900, stale-while-revalidate=7200");
-    res.status(200).json(buildPayload(selected, code, history));
+    res.setHeader("Cache-Control", freshness.freshnessVerified ? "s-maxage=300, stale-while-revalidate=60" : "no-store");
+    res.status(200).json(buildPayload(selected, code, history, freshness));
   } catch (e) {
     console.error("[institutional] route failed", e);
     res.status(502).json({ ok: false, error: "official institutional source failed", detail: String(e?.message || e) });
