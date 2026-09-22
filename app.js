@@ -2863,8 +2863,8 @@ async function loadValuation(stock){
 }
 
 
-// v2.6.2.7 — 法人動向保留官方三大法人核心；短線券商／分點玩法已移除。
-const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v2627",INSTITUTIONAL_CACHE_MS=20*60*1000;
+// v2.6.2.10 — 法人最新交易日以官方最新快照錨定，避免不同股票卡在不同日期。
+const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v26210",INSTITUTIONAL_CACHE_MS=20*60*1000;
 let latestInstitutionalData=null;
 function readInstitutionalCache(){try{return JSON.parse(localStorage.getItem(INSTITUTIONAL_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeInstitutionalCache(x){try{localStorage.setItem(INSTITUTIONAL_CACHE_KEY,JSON.stringify(x))}catch{}}
