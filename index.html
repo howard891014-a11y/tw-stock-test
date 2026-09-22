@@ -2434,6 +2434,46 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 @media(max-width:900px){.institutional-flow-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.institutional-detail-grid{grid-template-columns:1fr;}}
 @media(max-width:520px){#institutionalTrend>.card-title{align-items:flex-start!important}.institutional-head-meta{width:100%;justify-content:flex-start!important}.institutional-flow-grid{gap:8px}.institutional-flow-card{padding:11px 10px 10px}.institutional-flow-card>strong{font-size:17px}.institutional-periods{gap:2px}.institutional-periods b{font-size:9.5px}.institutional-judgement{grid-template-columns:54px 1fr;padding:10px}.institutional-source-note{display:block}.institutional-source-note span{display:block;margin-top:2px}}
 </style>
+
+<style id="stockzone-v2624-institutional-blue-cards">
+#institutionalTrend .institutional-head-meta{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important;justify-content:flex-end!important}
+#institutionalTrend .institutional-strength-chip{display:inline-flex!important;align-items:center!important;min-height:28px!important;padding:4px 10px!important;border-radius:999px!important;background:#fff!important;border:1px solid #d8e2ec!important;color:#64778e!important;font-size:11px!important;font-weight:800!important;white-space:nowrap!important}
+#institutionalTrend .institutional-strength-chip.tone-good{color:#2f8f6b!important;border-color:#8cc4ac!important}
+#institutionalTrend .institutional-strength-chip.tone-bad{color:#b95763!important;border-color:#d0a0a6!important}
+#institutionalTrend .institutional-strength-chip.tone-watch{color:#9a7a30!important;border-color:#d6c08c!important}
+#institutionalTrend .institutional-flow-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
+#institutionalTrend .institutional-flow-card{display:flex!important;flex-direction:column!important;min-width:0!important;padding:12px!important;border:1px solid #dfe8f5!important;border-radius:18px!important;background:#eef5ff!important;box-shadow:0 8px 20px rgba(17,34,61,.035)!important}
+#institutionalTrend .institutional-total-card{background:#eef5ff!important}
+#institutionalTrend .institutional-flow-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important;margin-bottom:8px!important}
+#institutionalTrend .institutional-flow-title{display:flex!important;align-items:center!important;gap:8px!important;color:#13233a!important;font-size:15px!important;font-weight:800!important;line-height:1.2!important;min-width:0!important}
+#institutionalTrend .institutional-mini-icon{width:28px!important;height:28px!important;border-radius:10px!important;background:#e3edff!important;flex:0 0 28px!important}
+#institutionalTrend .institutional-flow-head em{font-style:normal!important;font-size:10px!important;font-weight:800!important;padding:3px 7px!important;border-radius:999px!important;background:#fff!important;color:#5e7f9f!important;border:1px solid #d6e1ec!important;white-space:nowrap!important}
+#institutionalTrend .institutional-flow-head em.tone-good{color:#2f8f6b!important;border-color:#8cc4ac!important}
+#institutionalTrend .institutional-flow-head em.tone-bad{color:#b95763!important;border-color:#d0a0a6!important}
+#institutionalTrend .institutional-flow-head em.tone-neutral{color:#5e7f9f!important;border-color:#91a7bb!important}
+#institutionalTrend .institutional-flow-card>p{margin:0 0 8px!important;color:#65788f!important;font-size:11px!important;line-height:1.45!important;min-height:32px!important}
+#institutionalTrend .institutional-flow-rows{margin-top:auto!important;border-top:1px solid #d9e3ef!important}
+#institutionalTrend .institutional-flow-rows>div{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;min-height:35px!important;border-bottom:1px solid #d9e3ef!important}
+#institutionalTrend .institutional-flow-rows>div:last-child{border-bottom:0!important}
+#institutionalTrend .institutional-flow-rows span{color:#8a9aab!important;font-size:11px!important;white-space:nowrap!important}
+#institutionalTrend .institutional-flow-rows b{min-width:0!important;color:#20334d!important;font-size:12px!important;font-weight:800!important;white-space:nowrap!important;text-align:right!important;font-variant-numeric:tabular-nums!important;letter-spacing:-.015em!important}
+#institutionalTrend .institutional-flow-rows b.flow-up{color:#1b9365!important}
+#institutionalTrend .institutional-flow-rows b.flow-down{color:#d05265!important}
+#institutionalTrend .institutional-detail-card{border-color:#dfe8f5!important;background:#f8fbff!important}
+#institutionalTrend .institutional-judgement{border-color:#dfe8f5!important;background:#f2f7ff!important}
+@media(max-width:900px){#institutionalTrend .institutional-flow-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:520px){
+  #institutionalTrend .institutional-head-meta{width:100%!important;justify-content:flex-start!important}
+  #institutionalTrend .institutional-flow-grid{gap:10px!important}
+  #institutionalTrend .institutional-flow-card{padding:10px!important;border-radius:16px!important}
+  #institutionalTrend .institutional-flow-title{font-size:13px!important;gap:6px!important}
+  #institutionalTrend .institutional-mini-icon{width:26px!important;height:26px!important;flex-basis:26px!important}
+  #institutionalTrend .institutional-flow-card>p{font-size:10px!important;min-height:30px!important}
+  #institutionalTrend .institutional-flow-rows>div{min-height:33px!important;gap:5px!important}
+  #institutionalTrend .institutional-flow-rows span{font-size:10px!important}
+  #institutionalTrend .institutional-flow-rows b{font-size:10.5px!important}
+}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2461,7 +2501,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.3</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.4</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2951,33 +2991,61 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <article class="card detail-panel institutional-trend-card" id="institutionalTrend" data-view-panel="targets">
           <div class="card-title theme-white-card-title">
             <span class="theme-title-group"><i class="theme-title-icon theme-icon-institutional" aria-hidden="true"></i><span>法人動向</span></span>
-            <span class="institutional-head-meta"><b id="institutionalSignalChip">等待資料</b><small id="institutionalAsOf">TWSE／TPEx 官方資料</small></span>
+            <span class="institutional-head-meta"><b id="institutionalSignalChip">等待資料</b><b class="institutional-strength-chip tone-neutral" id="institutionalStrengthChip">法人強度 --/100</b><small id="institutionalAsOf">TWSE／TPEx 官方資料</small></span>
           </div>
           <div class="institutional-trend-body" aria-label="法人動向內容區">
             <div class="institutional-flow-grid">
               <section class="institutional-flow-card" data-inst-card="foreign">
-                <div class="institutional-flow-title"><span class="institutional-mini-icon inst-foreign" aria-hidden="true"></span><span>外資</span></div>
-                <strong id="institutionalForeign1">--</strong>
-                <small id="institutionalForeignStreak">等待資料</small>
-                <div class="institutional-periods"><span>5日<b id="institutionalForeign5">--</b></span><span>10日<b id="institutionalForeign10">--</b></span><span>20日<b id="institutionalForeign20">--</b></span></div>
+                <header class="institutional-flow-head">
+                  <div class="institutional-flow-title"><span class="institutional-mini-icon inst-foreign" aria-hidden="true"></span><span>外資</span></div>
+                  <em id="institutionalForeignState" class="tone-neutral">--</em>
+                </header>
+                <p id="institutionalForeignStreak">等待資料</p>
+                <div class="institutional-flow-rows">
+                  <div><span>當日</span><b id="institutionalForeign1">--</b></div>
+                  <div><span>5日</span><b id="institutionalForeign5">--</b></div>
+                  <div><span>10日</span><b id="institutionalForeign10">--</b></div>
+                  <div><span>20日</span><b id="institutionalForeign20">--</b></div>
+                </div>
               </section>
               <section class="institutional-flow-card" data-inst-card="trust">
-                <div class="institutional-flow-title"><span class="institutional-mini-icon inst-trust" aria-hidden="true"></span><span>投信</span></div>
-                <strong id="institutionalTrust1">--</strong>
-                <small id="institutionalTrustStreak">等待資料</small>
-                <div class="institutional-periods"><span>5日<b id="institutionalTrust5">--</b></span><span>10日<b id="institutionalTrust10">--</b></span><span>20日<b id="institutionalTrust20">--</b></span></div>
+                <header class="institutional-flow-head">
+                  <div class="institutional-flow-title"><span class="institutional-mini-icon inst-trust" aria-hidden="true"></span><span>投信</span></div>
+                  <em id="institutionalTrustState" class="tone-neutral">--</em>
+                </header>
+                <p id="institutionalTrustStreak">等待資料</p>
+                <div class="institutional-flow-rows">
+                  <div><span>當日</span><b id="institutionalTrust1">--</b></div>
+                  <div><span>5日</span><b id="institutionalTrust5">--</b></div>
+                  <div><span>10日</span><b id="institutionalTrust10">--</b></div>
+                  <div><span>20日</span><b id="institutionalTrust20">--</b></div>
+                </div>
               </section>
               <section class="institutional-flow-card" data-inst-card="dealer">
-                <div class="institutional-flow-title"><span class="institutional-mini-icon inst-dealer" aria-hidden="true"></span><span>自營商</span></div>
-                <strong id="institutionalDealer1">--</strong>
-                <small id="institutionalDealerStreak">等待資料</small>
-                <div class="institutional-periods"><span>5日<b id="institutionalDealer5">--</b></span><span>10日<b id="institutionalDealer10">--</b></span><span>20日<b id="institutionalDealer20">--</b></span></div>
+                <header class="institutional-flow-head">
+                  <div class="institutional-flow-title"><span class="institutional-mini-icon inst-dealer" aria-hidden="true"></span><span>自營商</span></div>
+                  <em id="institutionalDealerState" class="tone-neutral">--</em>
+                </header>
+                <p id="institutionalDealerStreak">等待資料</p>
+                <div class="institutional-flow-rows">
+                  <div><span>當日</span><b id="institutionalDealer1">--</b></div>
+                  <div><span>5日</span><b id="institutionalDealer5">--</b></div>
+                  <div><span>10日</span><b id="institutionalDealer10">--</b></div>
+                  <div><span>20日</span><b id="institutionalDealer20">--</b></div>
+                </div>
               </section>
               <section class="institutional-flow-card institutional-total-card" data-inst-card="total">
-                <div class="institutional-flow-title"><span class="institutional-mini-icon inst-total" aria-hidden="true"></span><span>三大法人</span></div>
-                <strong id="institutionalTotal1">--</strong>
-                <small id="institutionalTotalStreak">等待資料</small>
-                <div class="institutional-periods"><span>5日<b id="institutionalTotal5">--</b></span><span>10日<b id="institutionalTotal10">--</b></span><span>20日<b id="institutionalTotal20">--</b></span></div>
+                <header class="institutional-flow-head">
+                  <div class="institutional-flow-title"><span class="institutional-mini-icon inst-total" aria-hidden="true"></span><span>三大法人</span></div>
+                  <em id="institutionalTotalState" class="tone-neutral">--</em>
+                </header>
+                <p id="institutionalTotalStreak">等待資料</p>
+                <div class="institutional-flow-rows">
+                  <div><span>當日</span><b id="institutionalTotal1">--</b></div>
+                  <div><span>5日</span><b id="institutionalTotal5">--</b></div>
+                  <div><span>10日</span><b id="institutionalTotal10">--</b></div>
+                  <div><span>20日</span><b id="institutionalTotal20">--</b></div>
+                </div>
               </section>
             </div>
             <div class="institutional-detail-grid">
@@ -3070,7 +3138,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.2.3"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.2.4"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

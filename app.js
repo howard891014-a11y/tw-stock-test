@@ -125,7 +125,7 @@ async function stockMeta(query){
   let lastError=null;
   for(let i=0;i<2;i++){
     try{
-      return await readJson(await fetch(`/api/quote?mode=meta&q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股票基本資料");
+      return await readJson(await fetch(`/api/stockmeta?q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股票基本資料");
     }catch(e){
       lastError=e;
       if(i<1)await new Promise(r=>setTimeout(r,260));
@@ -2860,8 +2860,8 @@ async function loadValuation(stock){
 }
 
 
-// v2.6.2.2 — 法人動向：只接 TWSE／TPEx 官方公開資料；券商分點先保留介面，不混入目前判讀。
-const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v2620",INSTITUTIONAL_CACHE_MS=20*60*1000;
+// v2.6.2.4 — 法人動向第一階段完成：官方三大法人＋方向強度＋四卡評語；分點仍保留介面。
+const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v2624",INSTITUTIONAL_CACHE_MS=20*60*1000;
 let latestInstitutionalData=null;
 function readInstitutionalCache(){try{return JSON.parse(localStorage.getItem(INSTITUTIONAL_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeInstitutionalCache(x){try{localStorage.setItem(INSTITUTIONAL_CACHE_KEY,JSON.stringify(x))}catch{}}
@@ -2884,11 +2884,64 @@ function institutionalStreakText(s){
   const action=s.direction==="buy"?"買":"賣",prefix=s.days>=2?`連${s.days}${action}`:`單日${action}超`;
   return `${prefix}｜${institutionalFmtShares(s.value)}`;
 }
+function institutionalSign(v){const x=Number(v);return Number.isFinite(x)?(x>0?1:x<0?-1:0):null}
+function institutionalActorScore(data,key){const x=Number(data?.signal?.actorScores?.[key]);return Number.isFinite(x)?x:0}
+function institutionalActorState(data,key){
+  const score=institutionalActorScore(data,key);
+  if(score>=.65)return {label:"強勢",tone:"tone-good"};
+  if(score>=.20)return {label:"偏多",tone:"tone-good"};
+  if(score<=-.65)return {label:"賣壓",tone:"tone-bad"};
+  if(score<=-.20)return {label:"偏空",tone:"tone-bad"};
+  return {label:"中性",tone:"tone-neutral"};
+}
+function institutionalPeriodPhrase(data,key){
+  const vals=[5,10,20].map(days=>institutionalPeriod(data,key,days)),signs=vals.map(institutionalSign);
+  if(signs.every(x=>x===1))return "5／10／20日均買超";
+  if(signs.every(x=>x===-1))return "5／10／20日均賣超";
+  if(signs[0]===1&&signs[1]===1)return "短中期維持買超";
+  if(signs[0]===-1&&signs[1]===-1)return "短中期維持賣超";
+  const d1=institutionalSign(institutionalPeriod(data,key,1)),d5=signs[0];
+  if(d1===1&&d5===-1)return "單日回補，但5日仍偏賣";
+  if(d1===-1&&d5===1)return "單日轉賣，但5日仍偏買";
+  if(d5===1)return "近5日站在買方";
+  if(d5===-1)return "近5日站在賣方";
+  return "近期方向仍偏中性";
+}
+function institutionalActorComment(data,key){
+  const s=data?.streaks?.[key],streak=s?.days?institutionalStreakText(s).split("｜")[0]:"";
+  const period=institutionalPeriodPhrase(data,key);
+  return `${streak&&streak!=="最新一日持平"?`${streak}，`:""}${period}。`;
+}
+function institutionalStrength(data){
+  const direct=Number(data?.signal?.strength);if(Number.isFinite(direct))return Math.max(0,Math.min(100,Math.round(direct)));
+  const score=Math.abs(Number(data?.signal?.score)||0),coverage=Math.max(0,Math.min(1,(Number(data?.historyCount)||0)/20));
+  const actors=["foreign","trust","dealer"].map(k=>institutionalActorScore(data,k)),dir=Number(data?.signal?.score)>0?1:Number(data?.signal?.score)<0?-1:0;
+  const active=actors.filter(x=>Math.abs(x)>=.05),agreement=dir&&active.length?active.filter(x=>Math.sign(x)===dir).length/active.length:0;
+  return Math.round(Math.max(0,Math.min(100,(score*.72+agreement*18)*(0.8+coverage*.2))));
+}
+function institutionalStrengthTone(strength,label){
+  const s=String(label||"");if(/偏空/.test(s))return strength>=70?"tone-bad":"tone-watch";if(/偏多/.test(s))return strength>=70?"tone-good":"tone-watch";return "tone-neutral";
+}
+function institutionalDominantActor(data){
+  const p20=data?.periods?.["20"]?.complete?data.periods["20"]:data?.periods?.["10"]?.complete?data.periods["10"]:data?.periods?.["5"]?.complete?data.periods["5"]:data?.periods?.["1"];
+  if(!p20)return "";
+  const rows=[["外資",Number(p20.foreign)],["投信",Number(p20.trust)],["自營商",Number(p20.dealer)]].filter(x=>Number.isFinite(x[1]));
+  if(!rows.length)return "";rows.sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));return rows[0][0];
+}
+function institutionalSystemJudgement(data,label,strength){
+  const phrases=[["foreign","外資"],["trust","投信"],["dealer","自營商"]].map(([key,name])=>`${name}${institutionalActorComment(data,key).replace(/。$/,'')}`);
+  const signs=["foreign","trust","dealer"].map(key=>Math.sign(institutionalActorScore(data,key))).filter(Boolean),aligned=signs.length>=2&&signs.every(x=>x===signs[0]);
+  const dominant=institutionalDominantActor(data),coverage=Number(data?.historyCount)||0;
+  const alignment=aligned?`三類法人方向一致${dominant?`，目前以${dominant}的累計買賣超規模最大`:""}`:`三類法人仍有分歧${dominant?`，目前${dominant}的累計變化最明顯`:""}`;
+  const coverageNote=coverage<20?`目前取得 ${coverage} 個交易日，較長週期不足時不納入判讀。`:`已取得近20個交易日。`;
+  return `${label}｜法人強度 ${strength}/100。${phrases.join("；")}。${alignment}。${coverageNote}分點籌碼尚未納入。`;
+}
 function resetInstitutional(note="等待資料"){
   latestInstitutionalData=null;
   const chip=$("institutionalSignalChip");if(chip){chip.textContent=note;chip.classList.remove("tone-up","tone-down","tone-watch")}
+  const strengthChip=$("institutionalStrengthChip");if(strengthChip){strengthChip.textContent="法人強度 --/100";strengthChip.classList.remove("tone-good","tone-bad","tone-watch","tone-neutral")}
   setText("institutionalAsOf","TWSE／TPEx 官方資料");
-  for(const key of ["Foreign","Trust","Dealer","Total"]){for(const d of [1,5,10,20])setInstitutionalFlow(`institutional${key}${d}`,null);setText(`institutional${key}Streak`,note)}
+  for(const key of ["Foreign","Trust","Dealer","Total"]){for(const d of [1,5,10,20])setInstitutionalFlow(`institutional${key}${d}`,null);setText(`institutional${key}Streak`,note);const state=$(`institutional${key}State`);if(state){state.textContent="--";state.className="tone-neutral"}}
   const streak=$("institutionalStreakList");if(streak)streak.innerHTML=`<span>${note}</span>`;
   setText("institutionalOvernightFlow","資料源待接");setText("institutionalLargeFlow","資料源待接");
   setText("institutionalBranchNote","目前不納入法人方向判讀與短線玩法權重。");
@@ -2898,13 +2951,17 @@ function resetInstitutional(note="等待資料"){
 function institutionalChipTone(label){const s=String(label||"");return /偏多/.test(s)?"tone-up":/偏空/.test(s)?"tone-down":s==="中性"?"tone-watch":""}
 function renderInstitutional(data){
   latestInstitutionalData=data||null;if(!data)return resetInstitutional("資料不足");
-  const chip=$("institutionalSignalChip"),label=data?.signal?.label||"中性";
+  const chip=$("institutionalSignalChip"),label=data?.signal?.label||"中性",strength=institutionalStrength(data);
+  if(data?.signal&&typeof data.signal==="object"&&!Number.isFinite(Number(data.signal.strength)))data.signal.strength=strength;
   if(chip){chip.textContent=label;chip.classList.remove("tone-up","tone-down","tone-watch");const tone=institutionalChipTone(label);if(tone)chip.classList.add(tone)}
+  const strengthChip=$("institutionalStrengthChip");if(strengthChip){strengthChip.textContent=`法人強度 ${strength}/100`;strengthChip.classList.remove("tone-good","tone-bad","tone-watch","tone-neutral");strengthChip.classList.add(institutionalStrengthTone(strength,label))}
   setText("institutionalAsOf",data.asOfDate?`${data.asOfDate}｜${data.market||""}`:"官方最新資料");
   const map=[["Foreign","foreign"],["Trust","trust"],["Dealer","dealer"],["Total","total"]];
   for(const [labelKey,key] of map){
     for(const days of [1,5,10,20])setInstitutionalFlow(`institutional${labelKey}${days}`,institutionalPeriod(data,key,days));
-    setText(`institutional${labelKey}Streak`,institutionalStreakText(data?.streaks?.[key]));
+    setText(`institutional${labelKey}Streak`,institutionalActorComment(data,key));
+    const state=$(`institutional${labelKey}State`),stateData=key==="total"?{label:label.replace("法人","")||"中性",tone:institutionalChipTone(label)==="tone-down"?"tone-bad":institutionalChipTone(label)==="tone-up"?"tone-good":"tone-neutral"}:institutionalActorState(data,key);
+    if(state){state.textContent=stateData.label;state.className=stateData.tone}
   }
   const host=$("institutionalStreakList");
   if(host){
@@ -2920,11 +2977,10 @@ function renderInstitutional(data){
   setText("institutionalOvernightFlow",branch.available&&branch.overnightTrading?String(branch.overnightTrading):"資料源待接");
   setText("institutionalLargeFlow",branch.available&&branch.shortTermLargeFlow?String(branch.shortTermLargeFlow):"資料源待接");
   setText("institutionalBranchNote",branch.note||"目前不納入法人方向判讀與短線玩法權重。");
-  const reasons=Array.isArray(data?.signal?.reasons)?data.signal.reasons.filter(Boolean):[];
-  const coverage=Number(data?.historyCount)||0,coverageNote=coverage<20?`目前取得 ${coverage} 個交易日，較長週期不足時不顯示數值。`:"已取得近20個交易日。";
-  setText("institutionalJudgement",`${label}${reasons.length?`｜${reasons.join("、")}`:""}。${coverageNote}分點籌碼尚未納入。`);
+  setText("institutionalJudgement",institutionalSystemJudgement(data,label,strength));
   setText("institutionalSource",`資料來源：${data.source||"TWSE／TPEx 官方公開資料"}`);
 }
+
 async function institutional(query,market="",force=false){
   const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),cache=readInstitutionalCache(),hit=cache[code];
   if(!force&&hit?.data&&Date.now()-Number(hit.savedAt||0)<INSTITUTIONAL_CACHE_MS)return hit.data;
