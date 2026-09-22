@@ -1,4 +1,4 @@
-// StockZone v2.6.2.5
+// StockZone v2.6.2.6
 // Official institutional-flow route: TWSE T86 + TPEx daily institutional report.
 // Values are normalized to shares. The route deliberately fails open on individual
 // historical dates so one unavailable trading day does not break the whole card.
@@ -7,6 +7,31 @@ const TWSE_T86 = "https://www.twse.com.tw/rwd/zh/fund/T86";
 const TPEX_DAILY = "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade";
 const TPEX_DAILY_LEGACY = "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php";
 const TPEX_OPENAPI = "https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading";
+const TPEX_ACTIVE_BROKER = "https://www.tpex.org.tw/openapi/v1/tpex_active_broker_volume";
+
+// 使用者提供的券商觀察表：同一券商／分點可同時屬於多個交易型態。
+// 這是觀察標籤，不代表該券商每一筆交易都屬於該型態。
+const BROKER_WATCH_GROUPS = {
+  daytrade: [
+    "新加坡瑞銀","摩根大通","美林","元大","元富","台新","亞東","新光","群益","元大-中壢",
+    "永全-八德","兆豐-南門","凱基-大里","凱基-台北","凱基-屏東","凱基-員林","凱基-站前","富邦-嘉義","華南-中正","聯邦-富強"
+  ],
+  overnight: [
+    "美商高盛","港商野村","新加坡瑞銀","摩根大通","元大","元富","元大-土城永寧","元大-太平","元大-成功","元大-竹科",
+    "元大-虎尾","元大-鹿港","元大-新竹","元大-彰化","日盛-忠孝","永豐金-虎尾","永豐金-桃園","兆豐-中港","兆豐-北高雄","兆豐-虎尾",
+    "兆豐-南京","兆豐-復興","凱基-士林","凱基-台北","凱基-市政","凱基-板橋","凱基-屏東","富邦-台中","富邦-台南","富邦-虎尾",
+    "富邦-建國","統一-仁愛","統一-松江","統一-南京","華南-竹北","華南-長虹","華南-嘉義","群益-內湖","群益-海山","群益-館前"
+  ],
+  short: [
+    "新加坡瑞銀","摩根大通","玉山","康和","台企銀-嘉義","台新-台中","台新-建北","台新-高雄","玉山-台南","兆豐-大安",
+    "兆豐-忠孝","合庫-台中","國泰-博愛","國票-長城","凱基-市政","凱基-桃園","富邦-建國","富邦-員林","統一-敦南"
+  ],
+  swing: [
+    "台灣匯立","台灣摩根","港商野村","瑞士信貸","摩根大通","元富","台新","宏遠","國泰綜合","富邦","華南永昌","新光","群益","福邦","中國信託",
+    "元大-敦化","日盛-龍潭","台企銀-桃園","台新-高雄","兆豐-忠孝","兆豐-復興","國票-和平","國票-長城","凱基-大安","凱基-中港","富邦-南屯","統一-敦南"
+  ]
+};
+const BROKER_TAG_LABELS = { daytrade: "當沖", overnight: "隔日沖", short: "短線", swing: "波段" };
 
 function cleanCode(v) {
   return String(v || "").replace(/\.(TW|TWO)$/i, "").trim();
@@ -71,7 +96,7 @@ async function fetchJson(url, timeoutMs = 5000) {
       redirect: "follow",
       headers: {
         Accept: "application/json,text/plain,*/*",
-        "User-Agent": "StockZone/2.6.2.5",
+        "User-Agent": "StockZone/2.6.2.6",
         Referer: String(url).includes("tpex.org.tw") ? "https://www.tpex.org.tw/" : "https://www.twse.com.tw/",
       },
     });
@@ -205,6 +230,169 @@ function parseTpexOpenApi(payload, code) {
     total: totalRaw === null ? foreign + trust + dealer : totalRaw,
     source: "TPEx OpenAPI",
   };
+}
+
+
+function normalizeBrokerName(v) {
+  let s = String(v || "").trim().replace(/[臺]/g, "台").replace(/[－–—]/g, "-").replace(/[　\s]+/g, "");
+  s = s.replace(/股份有限公司$/, "").replace(/證券股份/g, "").replace(/證券/g, "");
+  s = s.replace(/新加坡瑞銀瑞銀/g, "新加坡瑞銀");
+  const exactAliases = {
+    "高盛": "美商高盛", "高盛證券": "美商高盛", "野村": "港商野村", "野村證券": "港商野村",
+    "瑞銀": "新加坡瑞銀", "瑞信": "瑞士信貸", "瑞士信貸證券": "瑞士信貸",
+    "台灣匯立證券": "台灣匯立", "國泰綜合證券": "國泰綜合", "中國信託綜合": "中國信託",
+    "中國信託證券": "中國信託", "中信": "中國信託"
+  };
+  return exactAliases[s] || s;
+}
+
+function brokerMatchKey(v) {
+  return normalizeBrokerName(v).replace(/[-‐‑‒–—_]/g, "").replace(/[()（）]/g, "").toLowerCase();
+}
+
+const BROKER_WATCH_INDEX = (() => {
+  const map = new Map();
+  for (const [tag, names] of Object.entries(BROKER_WATCH_GROUPS)) {
+    for (const raw of names) {
+      const display = normalizeBrokerName(raw), key = brokerMatchKey(display);
+      if (!key) continue;
+      const row = map.get(key) || { display, tags: [] };
+      if (!row.tags.includes(tag)) row.tags.push(tag);
+      map.set(key, row);
+    }
+  }
+  return map;
+})();
+
+function brokerWatchInfo(v) {
+  const normalized = normalizeBrokerName(v), key = brokerMatchKey(normalized), hit = BROKER_WATCH_INDEX.get(key);
+  return hit ? { name: hit.display || normalized, tags: [...hit.tags] } : { name: normalized, tags: [] };
+}
+
+function objectField(row, exact = [], patterns = []) {
+  if (!row || typeof row !== "object") return undefined;
+  const entries = Object.entries(row);
+  const norm = (s) => String(s || "").replace(/[\s　_\-()（）]/g, "").toLowerCase();
+  const wanted = new Set(exact.map(norm));
+  for (const [k, v] of entries) if (wanted.has(norm(k))) return v;
+  for (const [k, v] of entries) if (patterns.some((re) => re.test(String(k)))) return v;
+  return undefined;
+}
+
+function activeBrokerStockMatches(row, code) {
+  const direct = objectField(row,
+    ["股票代號","證券代號","股票名稱及代號","SecuritiesCode","StockCode","CompanyCode","SecuritiesCompanyCode"],
+    [/股票.*代號/i,/證券.*代號/i,/stock.*code/i,/securit.*code/i,/company.*code/i]
+  );
+  const test = (v) => {
+    const s = String(v || "").trim();
+    return s === code || new RegExp(`(^|[^0-9A-Z])${code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^0-9A-Z]|$)`, "i").test(s);
+  };
+  if (test(direct)) return true;
+  return Object.values(row || {}).some(test);
+}
+
+function parseTpexActiveBrokerVolume(payload, code) {
+  if (!Array.isArray(payload)) return { stockRows: [], matches: [], stockRank: null, date: "" };
+  const stockRows = payload.filter((row) => row && typeof row === "object" && activeBrokerStockMatches(row, code));
+  let stockRank = null, date = "";
+  const matches = [];
+  for (const row of stockRows) {
+    const rankRaw = objectField(row,["股票排行","StockRank","SecuritiesRank"],[/股票.*排行/i,/stock.*rank/i,/securit.*rank/i]);
+    const dateRaw = objectField(row,["資料日期","Date","DataDate"],[/資料日期/i,/^date$/i,/data.*date/i]);
+    if (stockRank === null && n(rankRaw) !== null) stockRank = n(rankRaw);
+    if (!date && dateRaw != null) { const ds=String(dateRaw).replace(/\D/g,""); date = /^20\d{6}$/.test(ds) ? ymdIso(ds) : (rocToIso(dateRaw) || ymdIso(dateRaw) || String(dateRaw).trim()); }
+
+    let brokerRaw = objectField(row,
+      ["證商名稱","券商名稱","BrokerName","SecuritiesFirmName","SecuritiesCompanyName","DealerName"],
+      [/證商.*名稱/i,/券商.*名稱/i,/broker.*name/i,/securit.*(?:firm|broker|company).*name/i,/dealer.*name/i]
+    );
+    if (!brokerRaw) {
+      for (const v of Object.values(row)) {
+        const info = brokerWatchInfo(v);
+        if (info.tags.length) { brokerRaw = v; break; }
+      }
+    }
+    if (!brokerRaw) continue;
+    const watch = brokerWatchInfo(brokerRaw);
+    if (!watch.tags.length) continue;
+    const buy = n(objectField(row,["總買量","買進量","TotalBuy","BuyVolume","TotalBuyVolume"],[/總買量/i,/買進.*量/i,/total.*buy/i,/buy.*volume/i]));
+    const sell = n(objectField(row,["總賣量","賣出量","TotalSell","SellVolume","TotalSellVolume"],[/總賣量/i,/賣出.*量/i,/total.*sell/i,/sell.*volume/i]));
+    const brokerRank = n(objectField(row,["證商排行","券商排行","BrokerRank"],[/證商.*排行/i,/券商.*排行/i,/broker.*rank/i]));
+    matches.push({
+      broker: watch.name,
+      sourceBroker: String(brokerRaw).trim(),
+      tags: watch.tags,
+      tagLabels: watch.tags.map((x) => BROKER_TAG_LABELS[x]),
+      buy,
+      sell,
+      net: buy !== null && sell !== null ? buy - sell : null,
+      brokerRank,
+    });
+  }
+  matches.sort((a, b) => {
+    const av = a.net === null ? ((a.buy || 0) + (a.sell || 0)) : Math.abs(a.net);
+    const bv = b.net === null ? ((b.buy || 0) + (b.sell || 0)) : Math.abs(b.net);
+    return bv - av || (a.brokerRank || 999) - (b.brokerRank || 999);
+  });
+  return { stockRows, matches, stockRank, date };
+}
+
+function brokerVolumeText(v) {
+  if (!Number.isFinite(Number(v))) return "";
+  const x = Number(v), sign = x > 0 ? "+" : "";
+  return `${sign}${x.toLocaleString("zh-TW", { maximumFractionDigits: 0 })}張`;
+}
+
+function brokerGroupText(matches, tag, max = 2) {
+  const rows = (matches || []).filter((x) => x.tags?.includes(tag)).slice(0, max);
+  if (!rows.length) return "觀察名單未出現";
+  return rows.map((x) => `${x.broker}${x.net === null ? "" : ` ${brokerVolumeText(x.net)}`}`).join("｜");
+}
+
+async function fetchTpexBranchFlow(code) {
+  try {
+    const parsed = parseTpexActiveBrokerVolume(await fetchJson(TPEX_ACTIVE_BROKER, 6000), code);
+    if (!parsed.stockRows.length) {
+      return {
+        available: false,
+        status: "not_top30",
+        overnightTrading: null,
+        shortTermLargeFlow: null,
+        waveFlow: null,
+        matches: [],
+        note: "今日未進 TPEx 上櫃熱門成交前30，因此沒有官方券商進出排行。",
+        source: "TPEx OpenAPI 上櫃股票熱門股證券商進出排行",
+      };
+    }
+    const overnight = brokerGroupText(parsed.matches, "overnight");
+    const short = brokerGroupText(parsed.matches, "short");
+    const wave = brokerGroupText(parsed.matches, "swing");
+    return {
+      available: true,
+      status: "active",
+      stockRank: parsed.stockRank,
+      date: parsed.date,
+      overnightTrading: overnight,
+      shortTermLargeFlow: short,
+      waveFlow: wave,
+      matches: parsed.matches,
+      note: `TPEx 熱門成交前30${parsed.stockRank ? `｜個股排行第${parsed.stockRank}` : ""}；依觀察名單比對，暫不納入法人強度與玩法權重。`,
+      source: "TPEx OpenAPI 上櫃股票熱門股證券商進出排行",
+    };
+  } catch (e) {
+    console.warn("[institutional] TPEx active broker volume failed", e?.message || e);
+    return {
+      available: false,
+      status: "source_error",
+      overnightTrading: null,
+      shortTermLargeFlow: null,
+      waveFlow: null,
+      matches: [],
+      note: "TPEx 熱門券商進出資料暫時無法取得；不影響三大法人資料。",
+      source: "TPEx OpenAPI 上櫃股票熱門股證券商進出排行",
+    };
+  }
 }
 
 async function fetchTwseDay(code, d) {
@@ -365,7 +553,7 @@ function buildSignal(periods, streaks) {
   };
 }
 
-function buildPayload(exchange, code, rows) {
+function buildPayload(exchange, code, rows, branchFlow = null) {
   const periods = { "1": sumRows(rows, 1), "5": sumRows(rows, 5), "10": sumRows(rows, 10), "20": sumRows(rows, 20) };
   const streaks = {
     foreign: streak(rows, "foreign"),
@@ -388,12 +576,17 @@ function buildPayload(exchange, code, rows) {
     periods,
     streaks,
     signal: buildSignal(periods, streaks),
-    branchFlow: {
+    branchFlow: branchFlow || {
       available: false,
-      status: "source_pending",
+      status: exchange === "TWSE" ? "tpex_only" : "source_pending",
       overnightTrading: null,
       shortTermLargeFlow: null,
-      note: "券商分點／隔日沖資料源尚未啟用；不納入目前法人方向判讀。",
+      waveFlow: null,
+      matches: [],
+      note: exchange === "TWSE"
+        ? "免費官方券商進出排行目前只提供上櫃熱門成交前30；上市股暫不顯示。"
+        : "TPEx 熱門券商進出資料尚未取得；不納入目前法人方向判讀。",
+      source: "TPEx OpenAPI 上櫃股票熱門股證券商進出排行",
     },
     fetchedAt: new Date().toISOString(),
   };
@@ -419,8 +612,20 @@ module.exports = async function handler(req, res) {
       res.status(404).json({ ok: false, error: "official institutional data not found", code });
       return;
     }
+    const branchFlow = selected === "TPEX"
+      ? await fetchTpexBranchFlow(code)
+      : {
+          available: false,
+          status: "tpex_only",
+          overnightTrading: null,
+          shortTermLargeFlow: null,
+          waveFlow: null,
+          matches: [],
+          note: "免費官方券商進出排行目前只提供上櫃熱門成交前30；上市股暫不顯示。",
+          source: "TPEx OpenAPI 上櫃股票熱門股證券商進出排行",
+        };
     res.setHeader("Cache-Control", "s-maxage=900, stale-while-revalidate=7200");
-    res.status(200).json(buildPayload(selected, code, history));
+    res.status(200).json(buildPayload(selected, code, history, branchFlow));
   } catch (e) {
     console.error("[institutional] route failed", e);
     res.status(502).json({ ok: false, error: "official institutional source failed", detail: String(e?.message || e) });
