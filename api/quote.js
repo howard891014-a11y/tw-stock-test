@@ -9,7 +9,6 @@ function shortName(v){
   return cleanName(v)
     .replace(/股份有限公司$/g,"")
     .replace(/有限公司$/g,"")
-    .replace(/科技$/g,"")
     .trim();
 }
 async function fetchJson(url,timeoutMs=4500){const c=new AbortController(),timer=setTimeout(()=>c.abort(),timeoutMs);try{const r=await fetch(url,{headers:HEADERS,signal:c.signal});if(!r.ok)throw Error(`HTTP ${r.status}`);return r.json()}finally{clearTimeout(timer)}}
@@ -70,7 +69,7 @@ async function fetchYahoo(symbol,official){
   const officialPrevious=await officialPreviousPromise;
   const previousClose=officialPrevious??toNumber(meta.regularMarketPreviousClose??meta.chartPreviousClose??meta.previousClose);
   const change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null;
-  return{source:"Yahoo Finance",symbol,code,name:shortName(official?.name||FALLBACK_NAMES[code]||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString()};
+  return{source:"Yahoo Finance",symbol,code,name:shortName(FALLBACK_NAMES[code]||official?.name||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString()};
 }
 async function handler(req,res){
   if(String(req.query?.mode||"").trim().toLowerCase()==="meta")return stockmetaHandler(req,res);

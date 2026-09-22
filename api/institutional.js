@@ -1,10 +1,11 @@
-// StockZone v2.6.2.4
+// StockZone v2.6.2.5
 // Official institutional-flow route: TWSE T86 + TPEx daily institutional report.
 // Values are normalized to shares. The route deliberately fails open on individual
 // historical dates so one unavailable trading day does not break the whole card.
 
 const TWSE_T86 = "https://www.twse.com.tw/rwd/zh/fund/T86";
-const TPEX_DAILY = "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php";
+const TPEX_DAILY = "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade";
+const TPEX_DAILY_LEGACY = "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php";
 const TPEX_OPENAPI = "https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading";
 
 function cleanCode(v) {
@@ -70,7 +71,7 @@ async function fetchJson(url, timeoutMs = 5000) {
       redirect: "follow",
       headers: {
         Accept: "application/json,text/plain,*/*",
-        "User-Agent": "StockZone/2.6.2.4",
+        "User-Agent": "StockZone/2.6.2.5",
         Referer: String(url).includes("tpex.org.tw") ? "https://www.tpex.org.tw/" : "https://www.twse.com.tw/",
       },
     });
@@ -125,6 +126,35 @@ function parseTwse(payload, code, requestedYmd) {
     dealerHedge: valueAt(row, dealerHedgeIdx >= 0 ? dealerHedgeIdx : 17),
     total: totalRaw === null ? foreign + trust + dealer : totalRaw,
     source: "TWSE T86",
+  };
+}
+
+function parseTpexModern(payload, code, requestedRocDate) {
+  const table = Array.isArray(payload?.tables) ? payload.tables[0] : null;
+  const rows = Array.isArray(table?.data) ? table.data : [];
+  if (!rows.length) return null;
+  const responseDate = String(table?.date || payload?.date || requestedRocDate || "").trim();
+  if (requestedRocDate && responseDate && responseDate !== requestedRocDate) return null;
+  const row = rows.find((r) => String(r?.[0] || "").replace(/^=|"/g, "").trim() === code);
+  if (!row || row.length < 24) return null;
+  // Preserve the same semantics as TWSE T86: 外資 excludes foreign-dealer flow.
+  const foreign = n(row[4]);
+  const trust = n(row[13]);
+  const dealer = n(row[22]);
+  if (foreign === null || trust === null || dealer === null) return null;
+  const totalRaw = n(row[23]);
+  return {
+    date: rocToIso(responseDate || requestedRocDate),
+    code,
+    name: String(row[1] || "").trim(),
+    foreign,
+    foreignDealer: n(row[7]),
+    trust,
+    dealer,
+    dealerProprietary: n(row[16]),
+    dealerHedge: n(row[19]),
+    total: totalRaw === null ? foreign + trust + dealer : totalRaw,
+    source: "TPEx 三大法人日報",
   };
 }
 
@@ -185,10 +215,18 @@ async function fetchTwseDay(code, d) {
 }
 
 async function fetchTpexDay(code, d) {
-  const params = new URLSearchParams({ l: "zh-tw", o: "json", se: "EW", t: "D", d: rocDate(d), s: "0,asc" });
-  const url = `${TPEX_DAILY}?${params.toString()}`;
-  try { return parseTpexLegacy(await fetchJson(url), code); }
-  catch (e) { console.warn(`[institutional] TPEx ${rocDate(d)} failed`, e?.message || e); return null; }
+  const requestedRocDate = rocDate(d);
+  const modern = new URLSearchParams({ type: "Daily", sect: "EW", date: requestedRocDate, id: "", response: "json" });
+  try {
+    const row = parseTpexModern(await fetchJson(`${TPEX_DAILY}?${modern.toString()}`), code, requestedRocDate);
+    if (row) return row;
+  } catch (e) {
+    console.warn(`[institutional] TPEx modern ${requestedRocDate} failed`, e?.message || e);
+  }
+  // Compatibility fallback for dates/environments where the legacy endpoint still responds.
+  const legacy = new URLSearchParams({ l: "zh-tw", o: "json", se: "EW", t: "D", d: requestedRocDate, s: "0,asc" });
+  try { return parseTpexLegacy(await fetchJson(`${TPEX_DAILY_LEGACY}?${legacy.toString()}`), code); }
+  catch (e) { console.warn(`[institutional] TPEx legacy ${requestedRocDate} failed`, e?.message || e); return null; }
 }
 
 async function fetchTpexLatest(code) {
@@ -211,8 +249,9 @@ async function collectHistory(exchange, code, cache) {
     return cache.get(key);
   };
   const rows = [];
-  for (let i = 0; i < candidates.length && rows.length < 20; i += 7) {
-    const batch = candidates.slice(i, i + 7);
+  const batchSize = exchange === "TPEX" ? 4 : 7;
+  for (let i = 0; i < candidates.length && rows.length < 20; i += batchSize) {
+    const batch = candidates.slice(i, i + batchSize);
     const got = await Promise.all(batch.map(fetchOne));
     for (const row of got) if (row?.date && !rows.some((x) => x.date === row.date)) rows.push(row);
   }
