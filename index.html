@@ -2416,17 +2416,13 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 .institutional-periods span{min-width:0;color:#9aa6b5;font-size:9.5px;text-align:center;}
 .institutional-periods b{display:block;margin-top:3px;color:#4b5d73;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .institutional-periods b.flow-up{color:#1b9365}.institutional-periods b.flow-down{color:#d05265}
-.institutional-detail-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:10px;margin-top:10px;}
+.institutional-detail-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px;}
 .institutional-detail-card{padding:12px 13px;border:1px solid #edf1f6;border-radius:15px;background:#fbfcfe;}
 .institutional-detail-title{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:9px;border-bottom:1px solid #eef2f6;}
 .institutional-detail-title>span{color:#344961;font-size:12px;font-weight:850}.institutional-detail-title>small{color:#9aa7b6;font-size:9.5px;}
 .institutional-streak-list{display:flex;gap:7px;flex-wrap:wrap;padding-top:10px;}
 .institutional-streak-list span{display:inline-flex;align-items:center;min-height:25px;padding:4px 8px;border-radius:9px;background:#eef3f8;color:#62748a;font-size:10.5px;font-weight:700;}
 .institutional-streak-list span.flow-up{background:#eaf8f1;color:#18885c}.institutional-streak-list span.flow-down{background:#fff0f3;color:#cf4f63}
-.institutional-branch-list{display:grid;gap:7px;padding-top:9px;}
-.institutional-branch-list>div{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#607187;font-size:10.5px;}
-.institutional-branch-list b{color:#9a7a30;font-size:10.5px;font-weight:800;}
-.institutional-branch-note{display:block;margin-top:8px;color:#9aa7b6;font-size:9.5px;line-height:1.45;}
 .institutional-judgement{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:start;margin-top:10px;padding:11px 13px;border:1px solid #e7edf4;border-radius:14px;background:#f7faff;}
 .institutional-judgement span{color:#7a8a9d;font-size:10.5px;font-weight:800}.institutional-judgement strong{color:#263b54;font-size:12px;line-height:1.55;font-weight:750;}
 .institutional-source-note{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px;padding:0 2px;color:#a0aab6;font-size:9px;line-height:1.4;}
@@ -2474,7 +2470,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   #institutionalTrend .institutional-flow-rows b{font-size:10.5px!important}
 }
 </style>
-<style id="v2626-broker-wrap">#institutionalTrend .institutional-branch-list b{max-width:62%;text-align:right;white-space:normal;overflow-wrap:anywhere;line-height:1.35;}</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2502,7 +2497,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.6</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.7</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3054,14 +3049,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <div class="institutional-detail-title"><span>連續性</span><small>最新交易日起算</small></div>
                 <div class="institutional-streak-list" id="institutionalStreakList"><span>搜尋股票後載入法人資料。</span></div>
               </section>
-              <section class="institutional-detail-card institutional-branch-card">
-                <div class="institutional-detail-title"><span>短線分點籌碼</span><small>TPEx 官方前30</small></div>
-                <div class="institutional-branch-list">
-                  <div><span>疑似隔日沖分點</span><b id="institutionalOvernightFlow">僅上櫃熱門前30</b></div>
-                  <div><span>短線大額分點</span><b id="institutionalLargeFlow">僅上櫃熱門前30</b></div>
-                </div>
-                <small class="institutional-branch-note" id="institutionalBranchNote">TPEx 官方熱門成交前30｜依觀察名單比對；暫不納入法人強度與玩法權重。</small>
-              </section>
             </div>
             <div class="institutional-judgement">
               <span>系統判讀</span><strong id="institutionalJudgement">搜尋股票後顯示法人籌碼方向。</strong>
@@ -3139,7 +3126,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.2.6"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.2.7"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
