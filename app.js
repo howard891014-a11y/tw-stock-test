@@ -2859,6 +2859,89 @@ async function loadValuation(stock){
   }finally{card?.classList.remove("is-loading")}
 }
 
+
+// v2.6.2.0 — 法人動向：只接 TWSE／TPEx 官方公開資料；券商分點先保留介面，不混入目前判讀。
+const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v2620",INSTITUTIONAL_CACHE_MS=20*60*1000;
+let latestInstitutionalData=null;
+function readInstitutionalCache(){try{return JSON.parse(localStorage.getItem(INSTITUTIONAL_CACHE_KEY)||"{}")||{}}catch{return{}}}
+function writeInstitutionalCache(x){try{localStorage.setItem(INSTITUTIONAL_CACHE_KEY,JSON.stringify(x))}catch{}}
+function institutionalCode(stock=currentStock){return String(stock?.code||String(stock?.symbol||"").split(".")[0]||"").replace(/\.(?:TW|TWO)$/i,"").trim()}
+function institutionalSignClass(v){const x=Number(v);return Number.isFinite(x)&&x>0?"flow-up":Number.isFinite(x)&&x<0?"flow-down":""}
+function institutionalFmtShares(v){
+  const x=Number(v);if(!Number.isFinite(x))return "--";
+  const sign=x>0?"+":x<0?"−":"" ,a=Math.abs(x);
+  let body;
+  if(a>=1e8)body=`${(a/1e8).toLocaleString("zh-TW",{maximumFractionDigits:a>=1e9?1:2})}億`;
+  else if(a>=1e4)body=`${(a/1e4).toLocaleString("zh-TW",{maximumFractionDigits:a>=1e6?1:2})}萬`;
+  else body=a.toLocaleString("zh-TW",{maximumFractionDigits:0});
+  return `${sign}${body}股`;
+}
+function institutionalPeriod(data,key,days){const p=data?.periods?.[String(days)];if(!p||!p.complete)return null;const v=Number(p?.[key]);return Number.isFinite(v)?v:null}
+function setInstitutionalFlow(id,v){const el=$(id);if(!el)return;el.textContent=v===null||v===undefined?"--":institutionalFmtShares(v);el.classList.remove("flow-up","flow-down");const cls=institutionalSignClass(v);if(cls)el.classList.add(cls)}
+function institutionalStreakText(s){
+  if(!s||!s.days)return "等待資料";
+  if(s.direction==="flat")return "最新一日持平";
+  const action=s.direction==="buy"?"買":"賣",prefix=s.days>=2?`連${s.days}${action}`:`單日${action}超`;
+  return `${prefix}｜${institutionalFmtShares(s.value)}`;
+}
+function resetInstitutional(note="等待資料"){
+  latestInstitutionalData=null;
+  const chip=$("institutionalSignalChip");if(chip){chip.textContent=note;chip.classList.remove("tone-up","tone-down","tone-watch")}
+  setText("institutionalAsOf","TWSE／TPEx 官方資料");
+  for(const key of ["Foreign","Trust","Dealer","Total"]){for(const d of [1,5,10,20])setInstitutionalFlow(`institutional${key}${d}`,null);setText(`institutional${key}Streak`,note)}
+  const streak=$("institutionalStreakList");if(streak)streak.innerHTML=`<span>${note}</span>`;
+  setText("institutionalOvernightFlow","資料源待接");setText("institutionalLargeFlow","資料源待接");
+  setText("institutionalBranchNote","目前不納入法人方向判讀與短線玩法權重。");
+  setText("institutionalJudgement",note==="讀取中"?"正在讀取官方法人資料…":"搜尋股票後顯示法人籌碼方向。");
+  setText("institutionalSource","資料來源：TWSE／TPEx 官方公開資料");
+}
+function institutionalChipTone(label){const s=String(label||"");return /偏多/.test(s)?"tone-up":/偏空/.test(s)?"tone-down":s==="中性"?"tone-watch":""}
+function renderInstitutional(data){
+  latestInstitutionalData=data||null;if(!data)return resetInstitutional("資料不足");
+  const chip=$("institutionalSignalChip"),label=data?.signal?.label||"中性";
+  if(chip){chip.textContent=label;chip.classList.remove("tone-up","tone-down","tone-watch");const tone=institutionalChipTone(label);if(tone)chip.classList.add(tone)}
+  setText("institutionalAsOf",data.asOfDate?`${data.asOfDate}｜${data.market||""}`:"官方最新資料");
+  const map=[["Foreign","foreign"],["Trust","trust"],["Dealer","dealer"],["Total","total"]];
+  for(const [labelKey,key] of map){
+    for(const days of [1,5,10,20])setInstitutionalFlow(`institutional${labelKey}${days}`,institutionalPeriod(data,key,days));
+    setText(`institutional${labelKey}Streak`,institutionalStreakText(data?.streaks?.[key]));
+  }
+  const host=$("institutionalStreakList");
+  if(host){
+    host.replaceChildren();
+    const names={foreign:"外資",trust:"投信",dealer:"自營商",total:"三大法人"};
+    for(const key of ["foreign","trust","dealer","total"]){
+      const st=data?.streaks?.[key],tag=document.createElement("span");
+      tag.textContent=`${names[key]}｜${institutionalStreakText(st).split("｜")[0]}`;
+      const dir=st?.direction==="buy"?"flow-up":st?.direction==="sell"?"flow-down":"";if(dir)tag.classList.add(dir);host.append(tag);
+    }
+  }
+  const branch=data?.branchFlow||{};
+  setText("institutionalOvernightFlow",branch.available&&branch.overnightTrading?String(branch.overnightTrading):"資料源待接");
+  setText("institutionalLargeFlow",branch.available&&branch.shortTermLargeFlow?String(branch.shortTermLargeFlow):"資料源待接");
+  setText("institutionalBranchNote",branch.note||"目前不納入法人方向判讀與短線玩法權重。");
+  const reasons=Array.isArray(data?.signal?.reasons)?data.signal.reasons.filter(Boolean):[];
+  const coverage=Number(data?.historyCount)||0,coverageNote=coverage<20?`目前取得 ${coverage} 個交易日，較長週期不足時不顯示數值。`:"已取得近20個交易日。";
+  setText("institutionalJudgement",`${label}${reasons.length?`｜${reasons.join("、")}`:""}。${coverageNote}分點籌碼尚未納入。`);
+  setText("institutionalSource",`資料來源：${data.source||"TWSE／TPEx 官方公開資料"}`);
+}
+async function institutional(query,market="",force=false){
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),cache=readInstitutionalCache(),hit=cache[code];
+  if(!force&&hit?.data&&Date.now()-Number(hit.savedAt||0)<INSTITUTIONAL_CACHE_MS)return hit.data;
+  const params=new URLSearchParams({q:code,market:String(market||"")});
+  const data=await readJson(await fetch(`/api/institutional?${params.toString()}`,{cache:"no-store"}),"法人動向");
+  cache[code]={savedAt:Date.now(),data};const keys=Object.keys(cache).sort((a,b)=>Number(cache[b]?.savedAt||0)-Number(cache[a]?.savedAt||0));for(const k of keys.slice(20))delete cache[k];writeInstitutionalCache(cache);return data;
+}
+async function loadInstitutional(stock,force=false){
+  const code=institutionalCode(stock),market=stock?.market||stock?.marketLabel||"",card=$("institutionalTrend");if(!code)return;
+  card?.classList.add("is-loading");
+  try{
+    const data=await institutional(code,market,force),cur=institutionalCode(currentStock);if(cur&&cur!==code)return;renderInstitutional(data);
+  }catch(e){
+    console.warn("法人動向更新失敗",e);const cur=institutionalCode(currentStock);if(!cur||cur===code){latestInstitutionalData=null;resetInstitutional("資料暫缺");setText("institutionalJudgement",`TWSE／TPEx 官方法人資料暫時無法取得：${e.message}`)}
+  }finally{card?.classList.remove("is-loading")}
+}
+
 function renderQuoteFields(x){
   const last=Number(x?.last ?? x?.price ?? x?.regularMarketPrice),change=Number(x?.change ?? x?.regularMarketChange),pct=Number(x?.changePct ?? x?.changePercent ?? x?.regularMarketChangePercent);
   setText("currentPrice",fmt(last));setText("metricPrice",fmt(last));setText("decisionPrice",fmt(last));
@@ -2872,7 +2955,7 @@ function patchCurrentQuote(x){
   currentStock={...currentStock,...x,name:currentStock.name||x.name,shortName:currentStock.shortName||x.shortName,market:currentStock.market||x.market};renderQuoteFields(currentStock);updateListButtons();renderTradeOutputs();if(["swing","mixed"].includes(latestPlayStyleResult?.key))renderSwingWave(latestPlayStyleResult);return true;
 }
 function renderStock(x){
-  currentStock=x;latestHistory5Y=null;latestFundamentalData=null;resetFundamentalOverview("讀取中");resetPlayStyle("讀取分析資料中…");
+  currentStock=x;latestHistory5Y=null;latestFundamentalData=null;latestInstitutionalData=null;resetFundamentalOverview("讀取中");resetInstitutional("讀取中");resetPlayStyle("讀取分析資料中…");
   setText("stockName",shortStockName(x.name||x.shortName)||"—");
   setText("stockCodeLabel",stockHeaderMeta(x));
   setText("marketLabel","");
@@ -2896,7 +2979,7 @@ async function search(){
     if(!meta)meta=localStockMeta(data?.code||data?.symbol)||cachedStockMeta(data?.code||data?.symbol);
     if(!meta&&/[\u3400-\u9fff]/.test(q)&&data)meta={code:data.code||String(data.symbol||"").split(".")[0],name:q,market:data.market||data.marketLabel||"",symbol:data.symbol};
     data=mergeStockMeta(data,meta);renderStock(data);setView("overview");
-    loadValuation(data);loadTechnical(data);void loadFundamentals(data);loadDisposal(data);beginTargetSearch(data.code||data.symbol||q);
+    loadValuation(data);loadTechnical(data);void loadFundamentals(data);void loadInstitutional(data);loadDisposal(data);beginTargetSearch(data.code||data.symbol||q);
     setStatus(`搜尋成功：${shortStockName(data.name)||data.code||q}`);btn.disabled=false;
 
     const code=String(data.code||String(data.symbol||"").split(".")[0]||q),name=data.name||data.shortName||"";
