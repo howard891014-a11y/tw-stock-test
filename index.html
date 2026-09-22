@@ -2461,7 +2461,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.3</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2665,13 +2665,14 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <section class="valuation-model-tiles" aria-label="估值模型小卡">
             <div class="valuation-tech-tile valuation-tech-tile-eps">
               <header><b><span class="valuation-tech-icon valuation-tech-icon-eps" aria-hidden="true">▥</span>EPS</b></header>
-              <p id="valuationMiniEpsLead">近四季獲利能力</p>
+              <p id="valuationMiniEpsLead">近四季 EPS</p>
+              <p class="valuation-mini-subnote" id="valuationMiniEpsComment">等待估值資料</p>
               <div class="valuation-quarter-grid valuation-quarter-row-grid" id="valuationQuarterGrid"></div>
-              <div class="valuation-data-row valuation-ttm-direct"><span>近四季 EPS</span><b id="valuationTtmEps">--</b></div>
+              <div class="valuation-data-row valuation-ttm-direct"><span id="valuationMiniEpsBottomLabel">相對同業</span><b id="valuationTtmEps">--</b></div>
             </div>
             <div class="valuation-tech-tile valuation-tech-tile-pe">
               <header><b><span class="valuation-tech-icon valuation-tech-icon-pe" aria-hidden="true">PE</span>本益比</b><em id="valuationMiniPeState">--</em></header>
-              <p id="valuationMiniPeLead">獲利成熟企業估值</p>
+              <p id="valuationMiniPeLead">等待估值資料</p>
               <div class="valuation-rows">
                 <div class="valuation-data-row"><span>目前</span><b id="valuationMiniPeCurrent">--</b></div>
                 <div class="valuation-data-row"><span>同業</span><b id="valuationMiniPePeer">--</b></div>
@@ -2681,17 +2682,16 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             </div>
             <div class="valuation-tech-tile valuation-tech-tile-ps">
               <header><b><span class="valuation-tech-icon valuation-tech-icon-ps" aria-hidden="true">PS</span>股價營收比</b><em id="valuationMiniPsState">--</em></header>
-              <p id="valuationMiniPsLead">成長與營收擴張估值</p>
+              <p id="valuationMiniPsLead">等待估值資料</p>
               <div class="valuation-rows">
                 <div class="valuation-data-row"><span>目前</span><b id="valuationMiniPsCurrent">--</b></div>
                 <div class="valuation-data-row"><span>同業</span><b id="valuationMiniPsPeer">--</b></div>
-                <div class="valuation-data-row"><span>模型合理價</span><b id="valuationMiniPsFair">--</b></div>
-                <div class="valuation-data-row"><span>權重</span><b id="valuationMiniPsWeight">--</b></div>
+                <div class="valuation-data-row"><span>PS 合理股價</span><b id="valuationMiniPsFair">--</b></div>
               </div>
             </div>
             <div class="valuation-tech-tile valuation-tech-tile-pb">
               <header><b><span class="valuation-tech-icon valuation-tech-icon-pb" aria-hidden="true">PB</span>股價淨值比</b><em id="valuationMiniPbState">--</em></header>
-              <p id="valuationMiniPbLead">資產與淨值支撐估值</p>
+              <p id="valuationMiniPbLead">等待估值資料</p>
               <div class="valuation-rows">
                 <div class="valuation-data-row"><span>目前</span><b id="valuationMiniPbCurrent">--</b></div>
                 <div class="valuation-data-row"><span>同業</span><b id="valuationMiniPbPeer">--</b></div>
@@ -3070,7 +3070,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.2.2"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.2.3"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -3222,7 +3222,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 @media(max-width:720px){.disposal-summary-card .disposal-summary-head{transform:translateX(6px)!important}}
 </style>
 
-<script id="v26133-valuation-relayout">
+<script id="v2623-valuation-copy-tune">
 (function(){
   function txt(id){var el=document.getElementById(id);return el?String(el.textContent||'').replace(/\s+/g,' ').trim():'';}
   function usable(id){var v=txt(id);return (!v||v==='--'||v==='資料不足'||v.indexOf('等待')===0)?'':v;}
@@ -3236,6 +3236,45 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     return ['偏高','tone-bad'];
   }
   function setTone(id, arr){ var el=document.getElementById(id); if(el){ el.textContent=arr[0]; el.className=arr[1]; } }
+  function parseQuarterEps(){
+    return Array.prototype.slice.call(document.querySelectorAll('#valuationQuarterGrid .valuation-quarter-chip b')).map(function(el){ return num(el.textContent); }).filter(function(v){ return isFinite(v); });
+  }
+  function compactPeerText(diff){
+    if(!isFinite(diff)) return '--';
+    if(Math.abs(diff)<1) return '接近同業';
+    return (diff<0?'低 ':'高 ')+Math.abs(diff).toFixed(2)+'%';
+  }
+  function epsComment(vals, ttm){
+    if(!vals.length) return '近四季 EPS 資料不足。';
+    var pos=vals.filter(function(v){ return v>0; }).length;
+    var ttmTxt=isFinite(ttm)?('近四季合計 '+ttm.toLocaleString('zh-TW',{maximumFractionDigits:2,minimumFractionDigits:0})) : '';
+    if(pos===vals.length){
+      if(vals.length>=2 && vals[0]>=vals[1]) return (ttmTxt?ttmTxt+'，':'')+'四季皆為正，且最近一季續強。';
+      return (ttmTxt?ttmTxt+'，':'')+'四季皆為正，獲利延續性佳。';
+    }
+    if(pos>=3) return (ttmTxt?ttmTxt+'，':'')+'多數季度維持獲利，整體仍算穩定。';
+    if(pos>=2) return (ttmTxt?ttmTxt+'，':'')+'獲利波動較大，仍要觀察延續性。';
+    return (ttmTxt?ttmTxt+'，':'')+'獲利偏弱，穩定度仍待確認。';
+  }
+  function modelComment(diff, kind){
+    if(!isFinite(diff)) return '同業資料不足，暫時無法判讀。';
+    var dict={
+      pe:{low2:'本益比明顯低於同業，獲利估值偏便宜。',low1:'本益比低於同業，獲利估值略有折價。',mid:'本益比接近同業，獲利估值大致合理。',high1:'本益比較同業偏高，市場已給一定溢價。',high2:'本益比明顯高於同業，獲利溢價偏高。'},
+      ps:{low2:'PS 明顯低於同業，市場對營收成長給價偏低。',low1:'PS 低於同業，營收估值略有折價。',mid:'PS 接近同業，營收估值大致合理。',high1:'PS 高於同業，市場對營收成長已有溢價。',high2:'PS 明顯高於同業，營收成長溢價偏高。'},
+      pb:{low2:'PB 明顯低於同業，資產淨值評價偏低。',low1:'PB 低於同業，淨值評價略有折價。',mid:'PB 接近同業，資產估值大致合理。',high1:'PB 高於同業，市場給了資產溢價。',high2:'PB 明顯高於同業，資產評價溢價偏高。'}
+    }[kind]||{};
+    if(diff<=-20) return dict.low2;
+    if(diff<=-5) return dict.low1;
+    if(diff<8) return dict.mid;
+    if(diff<30) return dict.high1;
+    return dict.high2;
+  }
+  function compactStatus(){
+    var note=txt('valuationEstimateConfidenceNote')||'';
+    var disp=(note.match(/分歧\s*([\d.]+%)/)||[])[1]||'--';
+    var data=(note.match(/資料\s*([\d.]+%)/)||[])[1]||'--';
+    return '分歧 '+disp+'｜資料 '+data;
+  }
   function sync(){
     var attract=txt('fundamentalPriceAttractiveness')||'--';
     var conf=txt('valuationEstimateConfidence')||'--';
@@ -3243,7 +3282,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     var fairRange=txt('valuationFairRange')||'--';
     var fairRangeNote=txt('valuationFairRangeNote')||'';
     var position=txt('valuationStatus')||'--';
-    var positionDetail=txt('valuationStatusDetail')||'';
+
+    set('valuationStatusDetail', compactStatus());
 
     set('valuationCompositeModelLine', usable('valuationPrimaryModel') || '--');
     set('valuationCompositeWeightLine', 'PE '+(txt('valuationPeWeight')||'--')+'｜PS '+(usable('valuationPsWeight')||'--')+'｜PB '+(txt('valuationPbWeight')||'--'));
@@ -3251,7 +3291,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     set('valuationCompositeScenarioLine', position);
     set('valuationCompositeAttractivenessLine', attract);
     set('valuationCompositeConfidenceLine', conf);
-    set('valuationCompositeReasonLine', [fairRangeNote, positionDetail, confNote].filter(Boolean).join('｜') || usable('valuationModelReason') || '等待模型資料');
+    set('valuationCompositeReasonLine', [fairRangeNote, confNote].filter(Boolean).join('｜') || usable('valuationModelReason') || '等待模型資料');
 
     var curPeTxt=usable('valuationCurrentPe')||usable('valuationEvidenceCurrentPe')||'--';
     var peerPeTxt=usable('valuationPeerPe')||usable('valuationEvidencePeerPe')||'--';
@@ -3263,6 +3303,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     set('valuationMiniPePeer', peerPeTxt);
     set('valuationMiniPeFair', fairPeTxt);
     set('valuationMiniPeDiff', pctText(peDiff));
+    set('valuationMiniPeLead', modelComment(peDiff,'pe'));
 
     var curPsTxt=usable('valuationEvidenceCurrentPs')||'--';
     var peerPsTxt=usable('valuationEvidencePeerPs')||'--';
@@ -3273,11 +3314,11 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     set('valuationMiniPsCurrent', curPsTxt);
     set('valuationMiniPsPeer', peerPsTxt);
     set('valuationMiniPsFair', fairPsTxt);
-    set('valuationMiniPsWeight', usable('valuationPsWeight')||'--');
+    set('valuationMiniPsLead', modelComment(psDiff,'ps'));
 
     var curPbTxt=usable('valuationCurrentPb')||usable('valuationEvidenceCurrentPb')||'--';
     var peerPbTxt=usable('valuationPeerPb')||usable('valuationEvidencePeerPb')||'--';
-    var fairPbTxt=usable('valuationEvidencePbFair')||usable('valuationPbFair')||'--';
+    var fairPbTxt=usable('valuationEvidencePbFair')||'--';
     var bpsTxt=usable('valuationSummaryBps')||usable('valuationBookValue')||'--';
     var curPb=num(curPbTxt), peerPb=num(peerPbTxt);
     var pbDiff=isFinite(curPb)&&isFinite(peerPb)&&peerPb!==0?((curPb-peerPb)/peerPb*100):NaN;
@@ -3286,6 +3327,14 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     set('valuationMiniPbPeer', peerPbTxt);
     set('valuationMiniPbFair', fairPbTxt);
     set('valuationMiniPbBook', bpsTxt);
+    set('valuationMiniPbLead', modelComment(pbDiff,'pb'));
+
+    var epsVals=parseQuarterEps();
+    var ttm=num(usable('valuationEvidenceTtmEps')); if(!isFinite(ttm)&&epsVals.length) ttm=epsVals.reduce(function(s,v){return s+v;},0);
+    set('valuationMiniEpsLead','近四季 EPS');
+    set('valuationMiniEpsComment', epsComment(epsVals, ttm));
+    set('valuationMiniEpsBottomLabel','相對同業');
+    set('valuationTtmEps', compactPeerText(peDiff));
   }
   document.addEventListener('DOMContentLoaded', function(){ sync(); setInterval(sync,900); });
 })();
@@ -4878,6 +4927,7 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .
 #valuation .valuation-model-tiles .valuation-tech-tile header em.tone-neutral{color:#5e7f9f!important;border-color:#91a7bb!important}
 #valuation .valuation-model-tiles .valuation-tech-tile header em.tone-bad{color:#b95763!important;border-color:#d0a0a6!important}
 #valuation .valuation-model-tiles .valuation-tech-tile p{margin:8px 0 6px!important;color:#65788f!important;font-size:11px!important;line-height:1.4!important;min-height:31px!important}
+#valuation .valuation-model-tiles .valuation-tech-tile .valuation-mini-subnote{margin:-2px 0 8px!important;color:#8193a8!important;font-size:10px!important;line-height:1.45!important;min-height:0!important}
 #valuation .valuation-model-tiles .valuation-tech-tile small{display:block!important;padding-top:7px!important;border-top:1px solid #d9e3ef!important;color:#8999aa!important;font-size:9px!important;line-height:1.45!important}
 @media(max-width:720px){
 #valuation.valuation-card-v26131{padding:16px 14px!important}
