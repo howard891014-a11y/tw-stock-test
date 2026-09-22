@@ -107,7 +107,7 @@ function stockHeaderMeta(stock){
   const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"—"),market=String(stock?.market||stock?.marketLabel||"台股").trim(),industry=stockIndustryValue(stock);
   return [code,market,industry].filter(Boolean).join(" | ");
 }
-const STOCK_META_CACHE_KEY="stockzone_stock_meta_cache_v2573";
+const STOCK_META_CACHE_KEY="stockzone_stock_meta_cache_v2625";
 function readStockMetaCache(){try{return JSON.parse(localStorage.getItem(STOCK_META_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function cachedStockMeta(query){
   const q=String(query||"").trim(),all=readStockMetaCache(),hit=all[q];
@@ -125,7 +125,7 @@ async function stockMeta(query){
   let lastError=null;
   for(let i=0;i<2;i++){
     try{
-      return await readJson(await fetch(`/api/stockmeta?q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股票基本資料");
+      return await readJson(await fetch(`/api/quote?mode=meta&q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股票基本資料");
     }catch(e){
       lastError=e;
       if(i<1)await new Promise(r=>setTimeout(r,260));
@@ -135,10 +135,15 @@ async function stockMeta(query){
   if(local)return local;
   throw lastError||new Error("TWSE／TPEx 股票基本資料暫時無法取得");
 }
+function preferredStockName(...values){
+  const names=[...new Set(values.map(shortStockName).filter(Boolean))];
+  if(!names.length)return "";
+  return names.sort((a,b)=>a.length-b.length||a.localeCompare(b,"zh-Hant"))[0];
+}
 function mergeStockMeta(data,meta){
   if(!meta)return data;
-  const industry=stockIndustryValue(meta,data);
-  return {...data,code:meta.code||data?.code||data?.symbol,symbol:data?.symbol||meta.symbol||meta.code,name:meta.name||data?.name||data?.shortName,shortName:meta.name||data?.shortName||data?.name,market:meta.market||data?.market||data?.marketLabel,marketLabel:meta.market||data?.marketLabel||data?.market,industry};
+  const industry=stockIndustryValue(meta,data),name=preferredStockName(data?.name,data?.shortName,meta?.name,meta?.shortName);
+  return {...data,code:meta.code||data?.code||data?.symbol,symbol:data?.symbol||meta.symbol||meta.code,name:name||meta.name||data?.name||data?.shortName,shortName:name||meta.name||data?.shortName||data?.name,market:meta.market||data?.market||data?.marketLabel,marketLabel:meta.market||data?.marketLabel||data?.market,industry};
 }
 
 function taipeiMarketClock(now=new Date()){
@@ -239,8 +244,6 @@ function shortStockName(name){
   let s=String(name||"").trim();
   if(!s)return s;
   s=s.replace(/股份有限公司$/,"").replace(/有限公司$/,"").replace(/公司$/,"");
-  // UI display name: remove common legal/industry suffixes rather than maintaining one-off names.
-  s=s.replace(/科技$/,"");
   return s;
 }
 
@@ -2861,7 +2864,7 @@ async function loadValuation(stock){
 
 
 // v2.6.2.4 — 法人動向第一階段完成：官方三大法人＋方向強度＋四卡評語；分點仍保留介面。
-const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v2624",INSTITUTIONAL_CACHE_MS=20*60*1000;
+const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v2625",INSTITUTIONAL_CACHE_MS=20*60*1000;
 let latestInstitutionalData=null;
 function readInstitutionalCache(){try{return JSON.parse(localStorage.getItem(INSTITUTIONAL_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeInstitutionalCache(x){try{localStorage.setItem(INSTITUTIONAL_CACHE_KEY,JSON.stringify(x))}catch{}}
