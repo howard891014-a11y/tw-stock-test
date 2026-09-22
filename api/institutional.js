@@ -1,0 +1,362 @@
+// StockZone v2.6.2.0
+// Official institutional-flow route: TWSE T86 + TPEx daily institutional report.
+// Values are normalized to shares. The route deliberately fails open on individual
+// historical dates so one unavailable trading day does not break the whole card.
+
+const TWSE_T86 = "https://www.twse.com.tw/rwd/zh/fund/T86";
+const TPEX_DAILY = "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php";
+const TPEX_OPENAPI = "https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading";
+
+function cleanCode(v) {
+  return String(v || "").replace(/\.(TW|TWO)$/i, "").trim();
+}
+
+function n(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const x = Number(String(v).replace(/,/g, "").trim());
+  return Number.isFinite(x) ? x : null;
+}
+
+function fmtYmd(d) {
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function ymdIso(ymd) {
+  const s = String(ymd || "").replace(/\D/g, "");
+  if (s.length !== 8) return "";
+  return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+}
+
+function rocDate(d) {
+  return `${d.getUTCFullYear() - 1911}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function rocToIso(v) {
+  const raw = String(v || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (/^\d{7}$/.test(digits)) return `${Number(digits.slice(0, 3)) + 1911}-${digits.slice(3, 5)}-${digits.slice(5, 7)}`;
+  const m = raw.match(/(\d{2,3})\D+(\d{1,2})\D+(\d{1,2})/);
+  if (!m) return "";
+  return `${Number(m[1]) + 1911}-${String(Number(m[2])).padStart(2, "0")}-${String(Number(m[3])).padStart(2, "0")}`;
+}
+
+function taipeiTodayUtc() {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" })
+      .formatToParts(new Date())
+      .filter((x) => x.type !== "literal")
+      .map((x) => [x.type, x.value])
+  );
+  return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
+}
+
+function recentWeekdays(max = 27) {
+  const out = [];
+  const d = taipeiTodayUtc();
+  for (let i = 0; out.length < max && i < 45; i++) {
+    const x = new Date(d.getTime() - i * 86400000);
+    const day = x.getUTCDay();
+    if (day !== 0 && day !== 6) out.push(x);
+  }
+  return out;
+}
+
+async function fetchJson(url, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: {
+        Accept: "application/json,text/plain,*/*",
+        "User-Agent": "StockZone/2.6.2.0",
+        Referer: String(url).includes("tpex.org.tw") ? "https://www.tpex.org.tw/" : "https://www.twse.com.tw/",
+      },
+    });
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    const text = await r.text();
+    if (!text.trim()) return null;
+    try { return JSON.parse(text); }
+    catch { throw new Error("official payload is not JSON"); }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function fieldIndex(fields, names) {
+  const norm = (s) => String(s || "").replace(/[\s　]/g, "").replace(/[（]/g, "(").replace(/[）]/g, ")").trim();
+  const wanted = new Set(names.map(norm));
+  return (fields || []).findIndex((x) => wanted.has(norm(x)));
+}
+
+function valueAt(row, idx) {
+  return idx >= 0 ? n(row?.[idx]) : null;
+}
+
+function parseTwse(payload, code, requestedYmd) {
+  if (!payload || String(payload.stat || "").toUpperCase() !== "OK" || !Array.isArray(payload.data)) return null;
+  const fields = Array.isArray(payload.fields) ? payload.fields : [];
+  const codeIdx = fieldIndex(fields, ["證券代號"]);
+  const nameIdx = fieldIndex(fields, ["證券名稱"]);
+  const foreignIdx = fieldIndex(fields, ["外陸資買賣超股數(不含外資自營商)", "外陸資買賣超股數（不含外資自營商）"]);
+  const foreignDealerIdx = fieldIndex(fields, ["外資自營商買賣超股數"]);
+  const trustIdx = fieldIndex(fields, ["投信買賣超股數"]);
+  const dealerIdx = fieldIndex(fields, ["自營商買賣超股數"]);
+  const dealerPropIdx = fieldIndex(fields, ["自營商買賣超股數(自行買賣)", "自營商買賣超股數（自行買賣）"]);
+  const dealerHedgeIdx = fieldIndex(fields, ["自營商買賣超股數(避險)", "自營商買賣超股數（避險）"]);
+  const totalIdx = fieldIndex(fields, ["三大法人買賣超股數"]);
+  const row = payload.data.find((r) => String(r?.[codeIdx >= 0 ? codeIdx : 0] || "").trim() === code);
+  if (!row) return null;
+  const foreign = valueAt(row, foreignIdx >= 0 ? foreignIdx : 4);
+  const trust = valueAt(row, trustIdx >= 0 ? trustIdx : 10);
+  const dealer = valueAt(row, dealerIdx >= 0 ? dealerIdx : 11);
+  if (foreign === null || trust === null || dealer === null) return null;
+  const totalRaw = valueAt(row, totalIdx >= 0 ? totalIdx : 18);
+  return {
+    date: ymdIso(payload.date || requestedYmd),
+    code,
+    name: String(row?.[nameIdx >= 0 ? nameIdx : 1] || "").trim(),
+    foreign,
+    foreignDealer: valueAt(row, foreignDealerIdx >= 0 ? foreignDealerIdx : 7),
+    trust,
+    dealer,
+    dealerProprietary: valueAt(row, dealerPropIdx >= 0 ? dealerPropIdx : 14),
+    dealerHedge: valueAt(row, dealerHedgeIdx >= 0 ? dealerHedgeIdx : 17),
+    total: totalRaw === null ? foreign + trust + dealer : totalRaw,
+    source: "TWSE T86",
+  };
+}
+
+function parseTpexLegacy(payload, code) {
+  const rows = Array.isArray(payload?.aaData) ? payload.aaData : [];
+  if (!rows.length) return null;
+  const row = rows.find((r) => String(r?.[0] || "").trim() === code);
+  if (!row) return null;
+  const foreign = n(row[4]);
+  const trust = n(row[13]);
+  const dealer = n(row[22]);
+  if (foreign === null || trust === null || dealer === null) return null;
+  const totalRaw = n(row[23]);
+  return {
+    date: rocToIso(payload.reportDate),
+    code,
+    name: String(row[1] || "").trim(),
+    foreign,
+    foreignDealer: n(row[7]),
+    trust,
+    dealer,
+    dealerProprietary: n(row[16]),
+    dealerHedge: n(row[19]),
+    total: totalRaw === null ? foreign + trust + dealer : totalRaw,
+    source: "TPEx 三大法人日報",
+  };
+}
+
+function parseTpexOpenApi(payload, code) {
+  if (!Array.isArray(payload)) return null;
+  const row = payload.find((r) => String(r?.SecuritiesCompanyCode || "").trim() === code);
+  if (!row) return null;
+  const foreign = n(row["Foreign Investors include Mainland Area Investors (Foreign Dealers excluded)-Difference"]);
+  const trust = n(row["SecuritiesInvestmentTrustCompanies-Difference"]);
+  const dealer = n(row["Dealers-Difference"]);
+  if (foreign === null || trust === null || dealer === null) return null;
+  const totalRaw = n(row.TotalDifference);
+  return {
+    date: rocToIso(row.Date),
+    code,
+    name: String(row.CompanyName || "").trim(),
+    foreign,
+    foreignDealer: n(row["ForeignDealers-Difference"]),
+    trust,
+    dealer,
+    dealerProprietary: n(row["Dealers(Proprietary)-Difference"]),
+    dealerHedge: n(row["Dealers(Hedging)-Difference"]),
+    total: totalRaw === null ? foreign + trust + dealer : totalRaw,
+    source: "TPEx OpenAPI",
+  };
+}
+
+async function fetchTwseDay(code, d) {
+  const ymd = fmtYmd(d);
+  const url = `${TWSE_T86}?response=json&date=${ymd}&selectType=ALLBUT0999`;
+  try { return parseTwse(await fetchJson(url), code, ymd); }
+  catch (e) { console.warn(`[institutional] TWSE ${ymd} failed`, e?.message || e); return null; }
+}
+
+async function fetchTpexDay(code, d) {
+  const params = new URLSearchParams({ l: "zh-tw", o: "json", se: "EW", t: "D", d: rocDate(d), s: "0,asc" });
+  const url = `${TPEX_DAILY}?${params.toString()}`;
+  try { return parseTpexLegacy(await fetchJson(url), code); }
+  catch (e) { console.warn(`[institutional] TPEx ${rocDate(d)} failed`, e?.message || e); return null; }
+}
+
+async function fetchTpexLatest(code) {
+  try { return parseTpexOpenApi(await fetchJson(TPEX_OPENAPI), code); }
+  catch (e) { console.warn("[institutional] TPEx OpenAPI fallback failed", e?.message || e); return null; }
+}
+
+function marketOrder(market) {
+  const m = String(market || "").toLowerCase();
+  if (/上櫃|otc|tpex|two/.test(m)) return ["TPEX"];
+  if (/上市|twse|sii/.test(m)) return ["TWSE"];
+  return ["TWSE", "TPEX"];
+}
+
+async function collectHistory(exchange, code, cache) {
+  const candidates = recentWeekdays(27);
+  const fetchOne = async (d) => {
+    const key = `${exchange}:${fmtYmd(d)}`;
+    if (!cache.has(key)) cache.set(key, exchange === "TWSE" ? fetchTwseDay(code, d) : fetchTpexDay(code, d));
+    return cache.get(key);
+  };
+  const rows = [];
+  for (let i = 0; i < candidates.length && rows.length < 20; i += 7) {
+    const batch = candidates.slice(i, i + 7);
+    const got = await Promise.all(batch.map(fetchOne));
+    for (const row of got) if (row?.date && !rows.some((x) => x.date === row.date)) rows.push(row);
+  }
+  rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  if (exchange === "TPEX" && !rows.length) {
+    const latest = await fetchTpexLatest(code);
+    if (latest?.date) rows.push(latest);
+  }
+  return rows.slice(0, 20);
+}
+
+function sumRows(rows, count) {
+  const used = rows.slice(0, count);
+  const sum = (key) => used.reduce((acc, r) => acc + (Number(r?.[key]) || 0), 0);
+  return {
+    daysUsed: used.length,
+    complete: used.length >= count,
+    foreign: sum("foreign"),
+    trust: sum("trust"),
+    dealer: sum("dealer"),
+    dealerProprietary: sum("dealerProprietary"),
+    dealerHedge: sum("dealerHedge"),
+    total: sum("total"),
+  };
+}
+
+function streak(rows, key) {
+  if (!rows.length) return { direction: "none", days: 0, value: 0 };
+  const first = Number(rows[0]?.[key]) || 0;
+  const direction = first > 0 ? "buy" : first < 0 ? "sell" : "flat";
+  if (direction === "flat") return { direction, days: 1, value: 0 };
+  let days = 0, value = 0;
+  for (const r of rows) {
+    const v = Number(r?.[key]) || 0;
+    if ((direction === "buy" && v > 0) || (direction === "sell" && v < 0)) { days++; value += v; }
+    else break;
+  }
+  return { direction, days, value };
+}
+
+function directionScore(periods, key) {
+  const spec = [[1, .35], [5, .30], [10, .20], [20, .15]];
+  let score = 0, weight = 0;
+  for (const [days, w] of spec) {
+    const p = periods[String(days)];
+    if (!p || !p.complete) continue;
+    const v = Number(p[key]) || 0;
+    score += (v > 0 ? 1 : v < 0 ? -1 : 0) * w;
+    weight += w;
+  }
+  return weight ? score / weight : 0;
+}
+
+function buildSignal(periods, streaks) {
+  const foreign = directionScore(periods, "foreign");
+  const trust = directionScore(periods, "trust");
+  const dealer = directionScore(periods, "dealer");
+  const score = foreign * .45 + trust * .40 + dealer * .15;
+  let label = "中性";
+  if (score >= .45) label = "法人偏多";
+  else if (score >= .16) label = "中性偏多";
+  else if (score <= -.45) label = "法人偏空";
+  else if (score <= -.16) label = "中性偏空";
+  const reasons = [];
+  const p5 = periods["5"];
+  if (p5?.complete) {
+    for (const [key, name] of [["foreign", "外資"], ["trust", "投信"], ["dealer", "自營商"]]) {
+      const v = Number(p5[key]) || 0;
+      reasons.push(`${name}5日${v > 0 ? "買超" : v < 0 ? "賣超" : "持平"}`);
+    }
+  } else if (periods["1"]?.complete) {
+    const p1 = periods["1"];
+    for (const [key, name] of [["foreign", "外資"], ["trust", "投信"], ["dealer", "自營商"]]) {
+      const v = Number(p1[key]) || 0;
+      reasons.push(`${name}今日${v > 0 ? "買超" : v < 0 ? "賣超" : "持平"}`);
+    }
+  }
+  const streakReason = [["foreign", "外資"], ["trust", "投信"]]
+    .map(([key, name]) => {
+      const s = streaks[key];
+      return s?.days >= 2 && s.direction !== "flat" ? `${name}連${s.days}${s.direction === "buy" ? "買" : "賣"}` : "";
+    }).filter(Boolean);
+  reasons.unshift(...streakReason);
+  return { label, score: Math.round(score * 100), reasons: reasons.slice(0, 4), actorScores: { foreign, trust, dealer } };
+}
+
+function buildPayload(exchange, code, rows) {
+  const periods = { "1": sumRows(rows, 1), "5": sumRows(rows, 5), "10": sumRows(rows, 10), "20": sumRows(rows, 20) };
+  const streaks = {
+    foreign: streak(rows, "foreign"),
+    trust: streak(rows, "trust"),
+    dealer: streak(rows, "dealer"),
+    total: streak(rows, "total"),
+  };
+  return {
+    ok: true,
+    code,
+    name: rows[0]?.name || "",
+    market: exchange === "TWSE" ? "上市" : "上櫃",
+    exchange,
+    source: exchange === "TWSE" ? "TWSE 官方 T86" : "TPEx 官方三大法人日報",
+    sourceUrl: exchange === "TWSE" ? "https://www.twse.com.tw/rwd/zh/fund/T86?response=html&selectType=ALLBUT0999" : "https://www.tpex.org.tw/zh-tw/mainboard/trading/major-institutional/3itrade/day.html",
+    unit: "shares",
+    asOfDate: rows[0]?.date || "",
+    historyCount: rows.length,
+    history: rows,
+    periods,
+    streaks,
+    signal: buildSignal(periods, streaks),
+    branchFlow: {
+      available: false,
+      status: "source_pending",
+      overnightTrading: null,
+      shortTermLargeFlow: null,
+      note: "券商分點／隔日沖資料源尚未啟用；不納入目前法人方向判讀。",
+    },
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+module.exports = async function handler(req, res) {
+  const code = cleanCode(req.query?.q || req.query?.code || "");
+  const market = String(req.query?.market || "");
+  if (!/^\d{4,6}[A-Z]?$/.test(code)) {
+    res.status(400).json({ ok: false, error: "invalid stock code" });
+    return;
+  }
+
+  try {
+    const cache = new Map();
+    let selected = null;
+    let history = [];
+    for (const exchange of marketOrder(market)) {
+      const rows = await collectHistory(exchange, code, cache);
+      if (rows.length) { selected = exchange; history = rows; break; }
+    }
+    if (!selected || !history.length) {
+      res.status(404).json({ ok: false, error: "official institutional data not found", code });
+      return;
+    }
+    res.setHeader("Cache-Control", "s-maxage=900, stale-while-revalidate=7200");
+    res.status(200).json(buildPayload(selected, code, history));
+  } catch (e) {
+    console.error("[institutional] route failed", e);
+    res.status(502).json({ ok: false, error: "official institutional source failed", detail: String(e?.message || e) });
+  }
+};
