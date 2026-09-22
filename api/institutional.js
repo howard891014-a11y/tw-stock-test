@@ -1,4 +1,4 @@
-// StockZone v2.6.2.0
+// StockZone v2.6.2.4
 // Official institutional-flow route: TWSE T86 + TPEx daily institutional report.
 // Values are normalized to shares. The route deliberately fails open on individual
 // historical dates so one unavailable trading day does not break the whole card.
@@ -70,7 +70,7 @@ async function fetchJson(url, timeoutMs = 5000) {
       redirect: "follow",
       headers: {
         Accept: "application/json,text/plain,*/*",
-        "User-Agent": "StockZone/2.6.2.0",
+        "User-Agent": "StockZone/2.6.2.4",
         Referer: String(url).includes("tpex.org.tw") ? "https://www.tpex.org.tw/" : "https://www.twse.com.tw/",
       },
     });
@@ -276,6 +276,25 @@ function buildSignal(periods, streaks) {
   else if (score >= .16) label = "中性偏多";
   else if (score <= -.45) label = "法人偏空";
   else if (score <= -.16) label = "中性偏空";
+
+  // 法人強度描述的是「方向一致性＋連續性」，不是把買賣超股數硬做跨股票比較。
+  // 這樣可以安全提供給後續玩法／共振使用，也不會讓大型股因絕對股數較大而天然拿高分。
+  const actorRows = [["foreign", foreign, .45], ["trust", trust, .40], ["dealer", dealer, .15]];
+  const direction = score > .03 ? 1 : score < -.03 ? -1 : 0;
+  const activeActors = actorRows.filter(([, actor]) => Math.abs(actor) >= .05);
+  const alignedWeight = direction ? activeActors.reduce((sum, [, actor, weight]) => sum + (Math.sign(actor) === direction ? weight : 0), 0) : 0;
+  const activeWeight = activeActors.reduce((sum, [, , weight]) => sum + weight, 0) || 1;
+  const agreement = direction ? alignedWeight / activeWeight : 0;
+  const streakConsistency = direction ? actorRows.reduce((sum, [key, , weight]) => {
+    const s = streaks[key];
+    const sameDirection = (direction > 0 && s?.direction === "buy") || (direction < 0 && s?.direction === "sell");
+    return sum + (sameDirection ? Math.min(Number(s?.days) || 0, 5) / 5 * weight : 0);
+  }, 0) : 0;
+  const completePeriods = ["1", "5", "10", "20"].filter((days) => periods[days]?.complete).length;
+  const coverage = completePeriods / 4;
+  const rawStrength = Math.abs(score) * 70 + agreement * 18 + streakConsistency * 12;
+  const strength = Math.round(Math.max(0, Math.min(100, rawStrength * (.72 + coverage * .28))));
+
   const reasons = [];
   const p5 = periods["5"];
   if (p5?.complete) {
@@ -296,7 +315,15 @@ function buildSignal(periods, streaks) {
       return s?.days >= 2 && s.direction !== "flat" ? `${name}連${s.days}${s.direction === "buy" ? "買" : "賣"}` : "";
     }).filter(Boolean);
   reasons.unshift(...streakReason);
-  return { label, score: Math.round(score * 100), reasons: reasons.slice(0, 4), actorScores: { foreign, trust, dealer } };
+  return {
+    label,
+    score: Math.round(score * 100),
+    strength,
+    strengthBasis: "direction_consistency",
+    coveragePct: Math.round(coverage * 100),
+    reasons: reasons.slice(0, 4),
+    actorScores: { foreign, trust, dealer },
+  };
 }
 
 function buildPayload(exchange, code, rows) {
