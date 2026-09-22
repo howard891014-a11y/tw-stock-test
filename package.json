@@ -1,1 +1,1 @@
-{"name":"tw-stock-test","version":"2.6.2.7","private":true,"dependencies":{"@neondatabase/serverless":"1.1.0"}}
+{"name":"tw-stock-test","version":"2.6.2.8","private":true,"dependencies":{"@neondatabase/serverless":"1.1.0"},"scripts":{"validate:business-tags":"node scripts/validate-business-tags.js"}}
