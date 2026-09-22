@@ -125,7 +125,7 @@ async function stockMeta(query){
   let lastError=null;
   for(let i=0;i<2;i++){
     try{
-      return await readJson(await fetch(`/api/stockmeta?q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股票基本資料");
+      return await readJson(await fetch(`/api/quote?mode=meta&q=${encodeURIComponent(query)}`,{cache:"no-store"}),"股票基本資料");
     }catch(e){
       lastError=e;
       if(i<1)await new Promise(r=>setTimeout(r,260));
@@ -2860,7 +2860,7 @@ async function loadValuation(stock){
 }
 
 
-// v2.6.2.0 — 法人動向：只接 TWSE／TPEx 官方公開資料；券商分點先保留介面，不混入目前判讀。
+// v2.6.2.2 — 法人動向：只接 TWSE／TPEx 官方公開資料；券商分點先保留介面，不混入目前判讀。
 const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v2620",INSTITUTIONAL_CACHE_MS=20*60*1000;
 let latestInstitutionalData=null;
 function readInstitutionalCache(){try{return JSON.parse(localStorage.getItem(INSTITUTIONAL_CACHE_KEY)||"{}")||{}}catch{return{}}}
