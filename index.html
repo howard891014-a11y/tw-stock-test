@@ -2398,7 +2398,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-view="analysis">分析</button>
         <button data-view="valuation">基本面</button>
         <button data-view="disposal">處置</button>
-        <button data-view="targets">目標價</button>
+        <button data-view="targets">法人</button>
         <button data-view="news">新聞</button>
       </div>
       <div class="side-group smart-group">
@@ -2413,7 +2413,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.25</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.1.41</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2452,7 +2452,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-view="analysis" type="button">分析</button>
         <button data-view="valuation" type="button">基本面</button>
         <button data-view="disposal" type="button">處置</button>
-        <button data-view="targets" type="button">目標價</button>
+        <button data-view="targets" type="button">法人</button>
         <button data-view="news" type="button">新聞</button>
       </nav>
       <nav class="section-tabs analysis-tabs mode-tabs" id="screeningTabs" aria-label="智慧選股導覽">
@@ -2898,6 +2898,11 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <div class="news-list" id="newsList">
             <div class="news-empty">搜尋股票後，這裡會自動載入該公司的近期新聞。</div>
           </div>
+        </article>
+
+        <article class="card detail-panel institutional-trend-card" id="institutionalTrend" data-view-panel="targets">
+          <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-institutional" aria-hidden="true"></i><span>法人動向</span></span></div>
+          <div class="institutional-trend-body" aria-label="法人動向內容區"></div>
         </article>
 
         <article class="card targets-card detail-panel target-b-card" id="targets" data-view-panel="targets">
@@ -4134,6 +4139,9 @@ body.mode-analysis #decision .decision-risk-badge{background:#fff3f5!important;c
 #valuation.valuation-card,
 #news.news-analysis-card,
 #targets.target-b-card{padding:16px 14px!important;}
+#institutionalTrend.institutional-trend-card{grid-column:1/3;padding:16px 14px!important;min-height:132px!important;}
+#institutionalTrend>.card-title{margin:0 0 14px!important;padding-left:0!important;display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:10px!important;flex-wrap:wrap!important;}
+#institutionalTrend .institutional-trend-body{min-height:72px!important;border-top:1px solid #edf2f7!important;}
 #fundamentalPanel .fundamental-overview-card{padding:16px 14px!important;}
 #fundamentalPanel .fundamental-overview-head{margin-bottom:14px!important;}
 #technical .card-title,
@@ -4167,6 +4175,7 @@ body.mode-analysis #decision .decision-risk-badge{background:#fff3f5!important;c
 .theme-icon-fundamental{-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4h12l6 6v18H7z'/%3E%3Cpath d='M19 4v6h6'/%3E%3Cpath d='M11 17h10M11 22h8M11 12h4'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4h12l6 6v18H7z'/%3E%3Cpath d='M19 4v6h6'/%3E%3Cpath d='M11 17h10M11 22h8M11 12h4'/%3E%3C/g%3E%3C/svg%3E")!important;}
 .theme-icon-valuation{-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='5' width='16' height='20' rx='3'/%3E%3Cpath d='M9 11h8M9 16h3M15 16h2M9 20h3M15 20h2'/%3E%3Ccircle cx='24' cy='22' r='4'/%3E%3Cpath d='m27 25 2 2'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='5' width='16' height='20' rx='3'/%3E%3Cpath d='M9 11h8M9 16h3M15 16h2M9 20h3M15 20h2'/%3E%3Ccircle cx='24' cy='22' r='4'/%3E%3Cpath d='m27 25 2 2'/%3E%3C/g%3E%3C/svg%3E")!important;}
 .theme-icon-target{-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='14' cy='18' r='8'/%3E%3Ccircle cx='14' cy='18' r='4'/%3E%3Cpath d='M20 12 28 4M21 5h7v7'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='14' cy='18' r='8'/%3E%3Ccircle cx='14' cy='18' r='4'/%3E%3Cpath d='M20 12 28 4M21 5h7v7'/%3E%3C/g%3E%3C/svg%3E")!important;}
+.theme-icon-institutional{-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12 16 5l12 7'/%3E%3Cpath d='M6 13h20M7 26h18M9 13v13M15 13v13M21 13v13'/%3E%3Cpath d='M5 29h22'/%3E%3Cpath d='m20 8 4-4 4 4M24 4v8'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12 16 5l12 7'/%3E%3Cpath d='M6 13h20M7 26h18M9 13v13M15 13v13M21 13v13'/%3E%3Cpath d='M5 29h22'/%3E%3Cpath d='m20 8 4-4 4 4M24 4v8'/%3E%3C/g%3E%3C/svg%3E")!important;}
 .theme-icon-news{-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 7h20v18H10a4 4 0 0 1-4-4z'/%3E%3Cpath d='M10 11h6M18 11h4M10 16h12M10 21h12'/%3E%3Crect x='18' y='9.5' width='6' height='4' rx='1'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 7h20v18H10a4 4 0 0 1-4-4z'/%3E%3Cpath d='M10 11h6M18 11h4M10 16h12M10 21h12'/%3E%3Crect x='18' y='9.5' width='6' height='4' rx='1'/%3E%3C/g%3E%3C/svg%3E")!important;}
 
 #decision .card-title-actions{display:inline-flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important;justify-content:flex-end!important;}
@@ -4183,6 +4192,7 @@ body.mode-analysis #decision .decision-risk-badge{background:#fff3f5!important;c
   #fundamentalPanel .fundamental-overview-title.theme-white-card-title,
   #valuation>.card-title,
   #targets>.card-title,
+  #institutionalTrend>.card-title,
   #news .news-analysis-head>.card-title{
     font-size:20px!important;
     font-weight:800!important;
@@ -4192,6 +4202,7 @@ body.mode-analysis #decision .decision-risk-badge{background:#fff3f5!important;c
   #valuation.valuation-card,
   #news.news-analysis-card,
   #targets.target-b-card{padding:16px 14px!important;}
+  #institutionalTrend.institutional-trend-card{padding:16px 14px!important;grid-column:1/3!important;}
   #fundamentalPanel .fundamental-overview-card{padding:16px 14px!important;}
 }
 </style>
