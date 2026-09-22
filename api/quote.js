@@ -1,3 +1,4 @@
+const stockmetaHandler=require("../lib/stockmeta-service");
 const HEADERS={"User-Agent":"Mozilla/5.0","Accept":"application/json,text/plain,*/*"};
 const FALLBACK_NAMES={"2330":"台積電","2454":"聯發科","3017":"奇鋐","6187":"萬潤","7769":"鴻勁","2467":"志聖","4919":"新唐","8064":"東捷"};
 const FALLBACK_CODES=Object.fromEntries(Object.entries(FALLBACK_NAMES).map(([code,name])=>[name,code]));
@@ -72,6 +73,7 @@ async function fetchYahoo(symbol,official){
   return{source:"Yahoo Finance",symbol,code,name:shortName(official?.name||FALLBACK_NAMES[code]||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString()};
 }
 async function handler(req,res){
+  if(String(req.query?.mode||"").trim().toLowerCase()==="meta")return stockmetaHandler(req,res);
   res.setHeader("Cache-Control","no-store");res.setHeader("Access-Control-Allow-Origin","*");
   const query=String(req.query.q||req.query.code||"").trim();if(!query)return res.status(400).json({ok:false,error:"請輸入股票名稱或代碼"});
   try{
