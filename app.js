@@ -2864,7 +2864,7 @@ async function loadValuation(stock){
 
 
 // v2.6.2.4 — 法人動向第一階段完成：官方三大法人＋方向強度＋四卡評語；分點仍保留介面。
-const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v2625",INSTITUTIONAL_CACHE_MS=20*60*1000;
+const INSTITUTIONAL_CACHE_KEY="stockzone_institutional_v2626",INSTITUTIONAL_CACHE_MS=20*60*1000;
 let latestInstitutionalData=null;
 function readInstitutionalCache(){try{return JSON.parse(localStorage.getItem(INSTITUTIONAL_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeInstitutionalCache(x){try{localStorage.setItem(INSTITUTIONAL_CACHE_KEY,JSON.stringify(x))}catch{}}
@@ -2937,7 +2937,15 @@ function institutionalSystemJudgement(data,label,strength){
   const dominant=institutionalDominantActor(data),coverage=Number(data?.historyCount)||0;
   const alignment=aligned?`三類法人方向一致${dominant?`，目前以${dominant}的累計買賣超規模最大`:""}`:`三類法人仍有分歧${dominant?`，目前${dominant}的累計變化最明顯`:""}`;
   const coverageNote=coverage<20?`目前取得 ${coverage} 個交易日，較長週期不足時不納入判讀。`:`已取得近20個交易日。`;
-  return `${label}｜法人強度 ${strength}/100。${phrases.join("；")}。${alignment}。${coverageNote}分點籌碼尚未納入。`;
+  const branch=data?.branchFlow||{};
+  const branchNote=branch.available
+    ? "TPEx 熱門前30券商進出已取得，暫不納入法人強度。"
+    : branch.status==="not_top30"
+      ? "今日未進 TPEx 熱門成交前30，無官方券商排行。"
+      : branch.status==="tpex_only"
+        ? "上市股目前沒有免費官方熱門券商排行。"
+        : "熱門券商進出資料暫缺，不影響法人方向判讀。";
+  return `${label}｜法人強度 ${strength}/100。${phrases.join("；")}。${alignment}。${coverageNote}${branchNote}`;
 }
 function resetInstitutional(note="等待資料"){
   latestInstitutionalData=null;
@@ -2946,8 +2954,8 @@ function resetInstitutional(note="等待資料"){
   setText("institutionalAsOf","TWSE／TPEx 官方資料");
   for(const key of ["Foreign","Trust","Dealer","Total"]){for(const d of [1,5,10,20])setInstitutionalFlow(`institutional${key}${d}`,null);setText(`institutional${key}Streak`,note);const state=$(`institutional${key}State`);if(state){state.textContent="--";state.className="tone-neutral"}}
   const streak=$("institutionalStreakList");if(streak)streak.innerHTML=`<span>${note}</span>`;
-  setText("institutionalOvernightFlow","資料源待接");setText("institutionalLargeFlow","資料源待接");
-  setText("institutionalBranchNote","目前不納入法人方向判讀與短線玩法權重。");
+  setText("institutionalOvernightFlow","僅上櫃熱門前30");setText("institutionalLargeFlow","僅上櫃熱門前30");
+  setText("institutionalBranchNote","TPEx 官方熱門成交前30｜依觀察名單比對；暫不納入法人強度與玩法權重。");
   setText("institutionalJudgement",note==="讀取中"?"正在讀取官方法人資料…":"搜尋股票後顯示法人籌碼方向。");
   setText("institutionalSource","資料來源：TWSE／TPEx 官方公開資料");
 }
@@ -2977,11 +2985,12 @@ function renderInstitutional(data){
     }
   }
   const branch=data?.branchFlow||{};
-  setText("institutionalOvernightFlow",branch.available&&branch.overnightTrading?String(branch.overnightTrading):"資料源待接");
-  setText("institutionalLargeFlow",branch.available&&branch.shortTermLargeFlow?String(branch.shortTermLargeFlow):"資料源待接");
-  setText("institutionalBranchNote",branch.note||"目前不納入法人方向判讀與短線玩法權重。");
+  const branchFallback=branch.status==="not_top30"?"今日未進前30":branch.status==="tpex_only"?"僅支援上櫃":branch.status==="source_error"?"官方資料暫缺":"僅上櫃熱門前30";
+  setText("institutionalOvernightFlow",branch.available&&branch.overnightTrading?String(branch.overnightTrading):branchFallback);
+  setText("institutionalLargeFlow",branch.available&&branch.shortTermLargeFlow?String(branch.shortTermLargeFlow):branchFallback);
+  setText("institutionalBranchNote",branch.note||"TPEx 官方熱門成交前30｜依觀察名單比對；暫不納入法人強度與玩法權重。");
   setText("institutionalJudgement",institutionalSystemJudgement(data,label,strength));
-  setText("institutionalSource",`資料來源：${data.source||"TWSE／TPEx 官方公開資料"}`);
+  setText("institutionalSource",`資料來源：${data.source||"TWSE／TPEx 官方公開資料"}${branch?.source?`｜分點：TPEx 官方熱門前30`:""}`);
 }
 
 async function institutional(query,market="",force=false){

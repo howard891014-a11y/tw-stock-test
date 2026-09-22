@@ -2474,6 +2474,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   #institutionalTrend .institutional-flow-rows b{font-size:10.5px!important}
 }
 </style>
+<style id="v2626-broker-wrap">#institutionalTrend .institutional-branch-list b{max-width:62%;text-align:right;white-space:normal;overflow-wrap:anywhere;line-height:1.35;}</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2501,7 +2502,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.5</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.6</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3054,12 +3055,12 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <div class="institutional-streak-list" id="institutionalStreakList"><span>搜尋股票後載入法人資料。</span></div>
               </section>
               <section class="institutional-detail-card institutional-branch-card">
-                <div class="institutional-detail-title"><span>短線分點籌碼</span><small>預留模組</small></div>
+                <div class="institutional-detail-title"><span>短線分點籌碼</span><small>TPEx 官方前30</small></div>
                 <div class="institutional-branch-list">
-                  <div><span>疑似隔日沖分點</span><b id="institutionalOvernightFlow">資料源待接</b></div>
-                  <div><span>短線大額分點</span><b id="institutionalLargeFlow">資料源待接</b></div>
+                  <div><span>疑似隔日沖分點</span><b id="institutionalOvernightFlow">僅上櫃熱門前30</b></div>
+                  <div><span>短線大額分點</span><b id="institutionalLargeFlow">僅上櫃熱門前30</b></div>
                 </div>
-                <small class="institutional-branch-note" id="institutionalBranchNote">目前不納入法人方向判讀與短線玩法權重。</small>
+                <small class="institutional-branch-note" id="institutionalBranchNote">TPEx 官方熱門成交前30｜依觀察名單比對；暫不納入法人強度與玩法權重。</small>
               </section>
             </div>
             <div class="institutional-judgement">
@@ -3138,7 +3139,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.2.5"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.2.6"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
