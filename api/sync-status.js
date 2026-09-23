@@ -85,9 +85,26 @@ async function readCompanyTagCoverage(sql){
   if(!profiles.length)return{
     profileRows:0,allMarketCompanies:0,nativeTechIndustryCompanies:0,technologyBusinessCompanies:0,crossIndustryTechCompanies:0,
     fineTechCompanies:0,coarseIndustry:0,unmappedAll:0,techCompanies:0,curated:0,officialChain:0,industryFallback:0,
-    unmappedTech:0,fineMapped:0,fineMappedPct:0,fineTechPct:0,coveredPct:0,relations:0,representedTagCount:0,officialChainSeedNames:0
+    unmappedTech:0,fineMapped:0,fineMappedPct:0,fineTechPct:0,coveredPct:0,relations:0,representedTagCount:0,officialChainSeedNames:0,
+    masterIndustryCodeRows:0,masterIndustryCodeCoveragePct:0,masterMissingIndustryCodeRows:0,masterTwseRows:0,masterTpexRows:0,
+    masterNonStandardCodeRows:0,masterInvalidCodeRows:0,masterDuplicateCodeRows:0
   };
-  return{profileRows:profiles.length,...summarizeProfiles(profiles)};
+  const summary=summarizeProfiles(profiles);
+  const industryCodeRows=profiles.filter(p=>String(p.industry_code||'').trim()).length;
+  const twseRows=profiles.filter(p=>p.market==='上市').length;
+  const tpexRows=profiles.filter(p=>p.market==='上櫃').length;
+  const nonStandardCodeRows=profiles.filter(p=>!/^\d{4}$/.test(String(p.symbol||''))).length;
+  const invalidCodeRows=profiles.filter(p=>!/^\d{4,6}$/.test(String(p.symbol||''))).length;
+  const uniqueCodes=new Set(profiles.map(p=>String(p.symbol||'')));
+  return{
+    profileRows:profiles.length,...summary,
+    masterIndustryCodeRows:industryCodeRows,
+    masterIndustryCodeCoveragePct:profiles.length?Number((industryCodeRows/profiles.length*100).toFixed(1)):0,
+    masterMissingIndustryCodeRows:Math.max(0,profiles.length-industryCodeRows),
+    masterTwseRows:twseRows,masterTpexRows:tpexRows,
+    masterNonStandardCodeRows:nonStandardCodeRows,masterInvalidCodeRows:invalidCodeRows,
+    masterDuplicateCodeRows:profiles.length-uniqueCodes.size
+  };
 }
 
 async function statusResponse(req, res) {
@@ -174,7 +191,10 @@ async function statusResponse(req, res) {
       ORDER BY market
     `).catch(()=>[]),
     sql.query(`
-      SELECT market,COUNT(*)::int AS rows,COUNT(DISTINCT industry_code)::int AS industries,MAX(updated_at) AS last_write
+      SELECT market,COUNT(*)::int AS rows,COUNT(DISTINCT industry_code)::int AS industries,
+             COUNT(*) FILTER (WHERE NULLIF(BTRIM(industry_code),'') IS NOT NULL)::int AS industry_code_rows,
+             COUNT(*) FILTER (WHERE stock_code !~ '^[0-9]{4}$')::int AS non_standard_code_rows,
+             MAX(updated_at) AS last_write
       FROM market_company_profile
       GROUP BY market
       ORDER BY market
