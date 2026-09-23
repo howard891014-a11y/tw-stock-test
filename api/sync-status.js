@@ -1,6 +1,6 @@
 const { getSql } = require('../lib/db');
 const { isCronAuthorized } = require('../lib/sync-common');
-const { runPriceSync, runTwseDisposalSync, runTpexDisposalSync } = require('../lib/sync-service');
+const { runPriceSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -81,7 +81,7 @@ async function statusResponse(req, res) {
   if(code){
     if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
 
-    const [priceRows,disposalRows,historyRows]=await Promise.all([
+    const [priceRows,disposalRows,historyRows,activityRows]=await Promise.all([
       sql.query(`
         SELECT stock_code,stock_name,market,trade_date,close_price,previous_close,
                open_price,high_price,low_price,quote_time,source,updated_at
@@ -103,6 +103,15 @@ async function statusResponse(req, res) {
         WHERE stock_code=$1
         ORDER BY trade_date DESC
         LIMIT 25
+      `,[code]).catch(()=>[]),
+      sql.query(`
+        SELECT trade_date,stock_code,stock_name,market,trade_value,change_pct,avg_value_prev20,value_ratio_20,
+               recent_value_avg_5,prior_value_avg_15,value_trend_5_15,up_value_share_5,positive_days_5,
+               return_5_pct,return_20_pct,baseline_days_20,recent_days_5,activity_ready,updated_at
+        FROM market_activity_daily
+        WHERE stock_code=$1
+        ORDER BY trade_date DESC
+        LIMIT 25
       `,[code]).catch(()=>[])
     ]);
 
@@ -119,10 +128,10 @@ async function statusResponse(req, res) {
       ORDER BY source
     `,[syncSources]);
 
-    return res.status(200).json({ok:true,code,found:Boolean(price||disposalRows.length||historyRows.length),price,history:historyRows,disposal:disposalRows,sync});
+    return res.status(200).json({ok:true,code,found:Boolean(price||disposalRows.length||historyRows.length||activityRows.length),price,history:historyRows,activity:activityRows,disposal:disposalRows,sync});
   }
 
-  const [status,price,disposal,marketHistory]=await Promise.all([
+  const [status,price,disposal,marketHistory,marketActivity]=await Promise.all([
     sql.query(`SELECT source,last_attempt_at,last_success_at,status,row_count,error_message,updated_at FROM sync_status ORDER BY source`),
     sql.query(`SELECT market,COUNT(*)::int AS rows,MAX(trade_date) AS latest_trade_date,MAX(updated_at) AS last_write FROM price_snapshot GROUP BY market ORDER BY market`),
     sql.query(`SELECT market,COUNT(*)::int AS rows,MIN(start_date) AS min_start,MAX(end_date) AS max_end,MAX(updated_at) AS last_write FROM disposal_snapshot GROUP BY market ORDER BY market`),
@@ -135,9 +144,18 @@ async function statusResponse(req, res) {
       FROM market_daily_history
       GROUP BY market
       ORDER BY market
+    `).catch(()=>[]),
+    sql.query(`
+      SELECT market,COUNT(*)::int AS rows,COUNT(DISTINCT trade_date)::int AS trading_days,
+             MAX(trade_date) AS latest_trade_date,
+             COUNT(*) FILTER (WHERE activity_ready)::int AS ready_rows,
+             MAX(updated_at) AS last_write
+      FROM market_activity_daily
+      GROUP BY market
+      ORDER BY market
     `).catch(()=>[])
   ]);
-  return res.status(200).json({ok:true,status,price,marketHistory,disposal});
+  return res.status(200).json({ok:true,status,price,marketHistory,marketActivity,disposal});
 }
 
 module.exports=async function handler(req,res){
@@ -158,7 +176,16 @@ module.exports=async function handler(req,res){
       if(action==='price')result=await runPriceSync({cronSchedule:schedule});
       else if(action==='twse')result=await runTwseDisposalSync();
       else if(action==='tpex')result=await runTpexDisposalSync();
-      else return res.status(400).json({ok:false,error:'action 僅支援 price / twse / tpex'});
+      else if(action==='market-backfill'){
+        const backfill=await runMarketHistoryBackfill({targetTradingDays:21,maxNewDays:7,delayMs:1000});
+        return res.status(200).json({ok:true,source:'market_history_backfill',...backfill});
+      }
+      else return res.status(400).json({ok:false,error:'action 僅支援 price / twse / tpex / market-backfill'});
+
+      if(schedule && ['price','twse','tpex'].includes(action)){
+        try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:21,maxNewDays:7,delayMs:1000})}
+        catch(e){result.body.marketBootstrap={ok:false,error:String(e?.message||e)}}
+      }
       return res.status(result.httpStatus).json(result.body);
     }
 
