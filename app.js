@@ -3678,21 +3678,27 @@ let fundflowCoverageFetchedAt=0;
 function renderFundflowCoverage(cov){
   const count=$("fundflowTagCount"),title=$("fundflowTagTitle"),detail=$("fundflowTagDetail"),badge=$("fundflowTagBadge");
   if(!count||!title||!detail||!badge)return;
-  const profileRows=Number(cov?.profileRows||0),techCompanies=Number(cov?.techCompanies||0);
-  if(!profileRows||!techCompanies){
+  const all=Number(cov?.allMarketCompanies||cov?.profileRows||0);
+  if(!all){
     title.textContent="等待公司基本資料同步";
-    count.textContent="61";
+    count.textContent="--";
     badge.textContent="待同步";
-    detail.textContent="61 家人工精細標籤＋296 家官方產業鏈名稱種子已就緒；等待既有 15:00 全市場同步寫入公司基本資料後，顯示實際科技股覆蓋率。";
+    detail.textContent="等待下一次既有 Cron 同步 TWSE＋TPEx 全市場公司母表；科技業務標籤與跨產業科技覆寫會在同步後一起統計。";
     return;
   }
-  const curated=Number(cov?.curated||0),officialChain=Number(cov?.officialChain||0),fallback=Number(cov?.industryFallback||0),unmapped=Number(cov?.unmappedTech||0),fine=Number(cov?.fineMapped||0);
+  const techBiz=Number(cov?.technologyBusinessCompanies||cov?.techCompanies||0);
+  const nativeTech=Number(cov?.nativeTechIndustryCompanies||0);
+  const crossTech=Number(cov?.crossIndustryTechCompanies||0);
+  const fine=Number(cov?.fineTechCompanies||cov?.fineMapped||0);
+  const fallback=Number(cov?.industryFallback||0);
+  const coarse=Number(cov?.coarseIndustry||0);
+  const unmapped=Number(cov?.unmappedAll||0);
   const covered=Number.isFinite(Number(cov?.coveredPct))?Number(cov.coveredPct):0;
-  const finePct=Number.isFinite(Number(cov?.fineMappedPct))?Number(cov.fineMappedPct):0;
-  title.textContent="全市場科技股已納入";
-  count.textContent=techCompanies.toLocaleString("zh-TW");
-  badge.textContent=`覆蓋 ${covered.toFixed(covered%1?1:0)}%`;
-  detail.textContent=`${techCompanies.toLocaleString("zh-TW")} 家科技股｜精細標籤 ${fine.toLocaleString("zh-TW")} 家（人工 ${curated}＋官方產業鏈 ${officialChain}）｜產業回退 ${fallback} 家${unmapped?`｜待補 ${unmapped} 家`:""}｜細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
+  const finePct=Number.isFinite(Number(cov?.fineTechPct))?Number(cov.fineTechPct):Number(cov?.fineMappedPct||0);
+  title.textContent="全市場公司母表已納入";
+  count.textContent=all.toLocaleString("zh-TW");
+  badge.textContent=`母表 ${covered.toFixed(covered%1?1:0)}%`;
+  detail.textContent=`${all.toLocaleString("zh-TW")} 家上市櫃公司｜有科技業務 ${techBiz.toLocaleString("zh-TW")} 家（官方科技產業 ${nativeTech}＋跨產業科技 ${crossTech}）｜科技精細標籤 ${fine} 家｜科技回退 ${fallback} 家｜傳產/金融粗分類 ${coarse} 家${unmapped?`｜未分類 ${unmapped} 家`:""}｜科技細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
 }
 async function loadFundflowCoverage(force=false){
   if(fundflowCoverageLoading)return;
@@ -3707,7 +3713,7 @@ async function loadFundflowCoverage(force=false){
       renderFundflowCoverage(payload?.companyTagCoverage||null);
       fundflowCoverageFetchedAt=Date.now();
     }finally{clearTimeout(timer)}
-  }catch(e){console.warn("科技股業務標籤覆蓋讀取失敗",e)}
+  }catch(e){console.warn("全市場業務標籤覆蓋讀取失敗",e)}
   finally{fundflowCoverageLoading=false}
 }
 
