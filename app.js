@@ -3673,12 +3673,51 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 
 renderLists();
 
+let fundflowCoverageLoading=false;
+let fundflowCoverageFetchedAt=0;
+function renderFundflowCoverage(cov){
+  const count=$("fundflowTagCount"),title=$("fundflowTagTitle"),detail=$("fundflowTagDetail"),badge=$("fundflowTagBadge");
+  if(!count||!title||!detail||!badge)return;
+  const profileRows=Number(cov?.profileRows||0),techCompanies=Number(cov?.techCompanies||0);
+  if(!profileRows||!techCompanies){
+    title.textContent="等待公司基本資料同步";
+    count.textContent="61";
+    badge.textContent="待同步";
+    detail.textContent="61 家人工精細標籤＋296 家官方產業鏈名稱種子已就緒；等待既有 15:00 全市場同步寫入公司基本資料後，顯示實際科技股覆蓋率。";
+    return;
+  }
+  const curated=Number(cov?.curated||0),officialChain=Number(cov?.officialChain||0),fallback=Number(cov?.industryFallback||0),unmapped=Number(cov?.unmappedTech||0),fine=Number(cov?.fineMapped||0);
+  const covered=Number.isFinite(Number(cov?.coveredPct))?Number(cov.coveredPct):0;
+  const finePct=Number.isFinite(Number(cov?.fineMappedPct))?Number(cov.fineMappedPct):0;
+  title.textContent="全市場科技股已納入";
+  count.textContent=techCompanies.toLocaleString("zh-TW");
+  badge.textContent=`覆蓋 ${covered.toFixed(covered%1?1:0)}%`;
+  detail.textContent=`${techCompanies.toLocaleString("zh-TW")} 家科技股｜精細標籤 ${fine.toLocaleString("zh-TW")} 家（人工 ${curated}＋官方產業鏈 ${officialChain}）｜產業回退 ${fallback} 家${unmapped?`｜待補 ${unmapped} 家`:""}｜細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
+}
+async function loadFundflowCoverage(force=false){
+  if(fundflowCoverageLoading)return;
+  if(!force&&fundflowCoverageFetchedAt&&Date.now()-fundflowCoverageFetchedAt<5*60*1000)return;
+  fundflowCoverageLoading=true;
+  try{
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),7000);
+    try{
+      const res=await fetch("/api/sync-status",{cache:"no-store",signal:controller.signal});
+      if(!res.ok)throw new Error(`sync-status ${res.status}`);
+      const payload=await res.json();
+      renderFundflowCoverage(payload?.companyTagCoverage||null);
+      fundflowCoverageFetchedAt=Date.now();
+    }finally{clearTimeout(timer)}
+  }catch(e){console.warn("科技股業務標籤覆蓋讀取失敗",e)}
+  finally{fundflowCoverageLoading=false}
+}
+
 function setView(view){
   const screeningViews=new Set(["screening","fundflow","featured","simulation"]),management=view==="management";
   const mode=screeningViews.has(view)?"screening":management?"management":"analysis";
   document.body.classList.remove("mode-analysis","mode-screening","mode-management");
   document.body.classList.add(`mode-${mode}`);
   if(view==="screening")view="fundflow";
+  if(view==="fundflow")loadFundflowCoverage(false);
   document.body.classList.toggle("view-overview",view==="overview");
   document.querySelectorAll("[data-view-panel]").forEach(p=>p.classList.toggle("active-view",p.dataset.viewPanel===view));
   document.querySelectorAll(".section-tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
