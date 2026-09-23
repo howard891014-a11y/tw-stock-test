@@ -1,6 +1,7 @@
 const tags = require("../lib/business-tags");
 const seeds = require("../lib/company-business-seeds");
 const db = require("../lib/company-business-tags");
+const industries = require("../lib/industry-classification");
 
 const errors = [];
 const seenSymbols = new Set();
@@ -49,6 +50,22 @@ if(!seededProbe.tags.some(x=>x.id==='network_equipment'))errors.push('official-c
 const fallbackProbe=db.resolveCompanyBusinessTags({name:'未收錄測試公司',industry:'半導體業'});
 if(fallbackProbe.resolution!=='industry-fallback'||fallbackProbe.tags[0]?.id!=='semiconductor_other_business')errors.push('industry fallback resolution failed');
 
+
+const industryCodeSamples=[
+  ['24','半導體業','semiconductor_other_business'],['25','電腦及週邊設備業','computer_peripheral_other'],
+  ['03','塑膠工業','plastics'],['08','玻璃陶瓷','glass_ceramics'],['17','金融業','finance']
+];
+for(const [code,name,expectedTag] of industryCodeSamples){
+  const info=industries.resolveIndustry({code});
+  if(info.name!==name)errors.push(`industry code ${code}: expected ${name}, got ${info.name}`);
+  const got=info.fallbackTag||info.broadTag;
+  if(got!==expectedTag)errors.push(`industry tag ${code}: expected ${expectedTag}, got ${got}`);
+}
+const nanya=db.resolveCompanyBusinessTags({symbol:'1303',name:'南亞',industryCode:'03'});
+if(!nanya.crossIndustryTechnology||!nanya.tags.some(x=>x.id==='ccl')||!nanya.tags.some(x=>x.id==='plastics'))errors.push('cross-industry overlay failed: 南亞');
+const taiwanGlass=db.resolveCompanyBusinessTags({symbol:'1802',name:'台玻',industryCode:'08'});
+if(!taiwanGlass.crossIndustryTechnology||!taiwanGlass.tags.some(x=>x.id==='glass_fiber_cloth')||!taiwanGlass.tags.some(x=>x.id==='glass_ceramics'))errors.push('cross-industry overlay failed: 台玻');
+
 const summary = db.getCoverageSummary();
 if (errors.length) {
   console.error(`Company business tags validation failed (${errors.length})`);
@@ -57,4 +74,4 @@ if (errors.length) {
 }
 console.log(`Company business tags ${db.version}: OK`);
 console.log(`${summary.companyCount} curated companies / ${summary.relationCount} curated relations / ${summary.representedTagCount} curated vote tags`);
-console.log(`${summary.officialChainSeedNames} official-chain seeded company names + full-market technology industry fallback`);
+console.log(`${summary.officialChainSeedNames} official-chain seeded company names + all-market official industry + cross-industry technology overlay`);
