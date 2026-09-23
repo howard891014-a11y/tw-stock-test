@@ -1,5 +1,5 @@
 const { getSql } = require('../lib/db');
-const { isCronAuthorized } = require('../lib/sync-common');
+const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 
@@ -91,6 +91,9 @@ async function readCompanyTagCoverage(sql){
 }
 
 async function statusResponse(req, res) {
+  // v2.6.2.17: status reads are also safe schema-migration entry points.
+  // This prevents a fresh cached sync from skipping new columns/tables after deployment.
+  await Promise.all([ensureMarketHistorySchema(),ensureCompanyProfileSchema()]);
   const sql=getSql();
   const code=String(req.query.code||'').trim();
 
