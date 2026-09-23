@@ -81,7 +81,7 @@ async function statusResponse(req, res) {
   if(code){
     if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
 
-    const [priceRows,disposalRows]=await Promise.all([
+    const [priceRows,disposalRows,historyRows]=await Promise.all([
       sql.query(`
         SELECT stock_code,stock_name,market,trade_date,close_price,previous_close,
                open_price,high_price,low_price,quote_time,source,updated_at
@@ -95,7 +95,15 @@ async function statusResponse(req, res) {
         FROM disposal_snapshot
         WHERE stock_code=$1
         ORDER BY end_date DESC,start_date DESC
-      `,[code])
+      `,[code]),
+      sql.query(`
+        SELECT trade_date,stock_code,stock_name,market,open_price,high_price,low_price,close_price,
+               previous_close,change_amount,change_pct,trade_volume,trade_value,transaction_count,source,updated_at
+        FROM market_daily_history
+        WHERE stock_code=$1
+        ORDER BY trade_date DESC
+        LIMIT 25
+      `,[code]).catch(()=>[])
     ]);
 
     const price=priceRows[0]||null;
@@ -111,15 +119,25 @@ async function statusResponse(req, res) {
       ORDER BY source
     `,[syncSources]);
 
-    return res.status(200).json({ok:true,code,found:Boolean(price||disposalRows.length),price,disposal:disposalRows,sync});
+    return res.status(200).json({ok:true,code,found:Boolean(price||disposalRows.length||historyRows.length),price,history:historyRows,disposal:disposalRows,sync});
   }
 
-  const [status,price,disposal]=await Promise.all([
+  const [status,price,disposal,marketHistory]=await Promise.all([
     sql.query(`SELECT source,last_attempt_at,last_success_at,status,row_count,error_message,updated_at FROM sync_status ORDER BY source`),
     sql.query(`SELECT market,COUNT(*)::int AS rows,MAX(trade_date) AS latest_trade_date,MAX(updated_at) AS last_write FROM price_snapshot GROUP BY market ORDER BY market`),
-    sql.query(`SELECT market,COUNT(*)::int AS rows,MIN(start_date) AS min_start,MAX(end_date) AS max_end,MAX(updated_at) AS last_write FROM disposal_snapshot GROUP BY market ORDER BY market`)
+    sql.query(`SELECT market,COUNT(*)::int AS rows,MIN(start_date) AS min_start,MAX(end_date) AS max_end,MAX(updated_at) AS last_write FROM disposal_snapshot GROUP BY market ORDER BY market`),
+    sql.query(`
+      SELECT market,COUNT(*)::int AS rows,COUNT(DISTINCT trade_date)::int AS trading_days,
+             MIN(trade_date) AS first_trade_date,MAX(trade_date) AS latest_trade_date,
+             COUNT(*) FILTER (WHERE trade_value IS NOT NULL)::int AS value_rows,
+             COUNT(*) FILTER (WHERE trade_volume IS NOT NULL)::int AS volume_rows,
+             MAX(updated_at) AS last_write
+      FROM market_daily_history
+      GROUP BY market
+      ORDER BY market
+    `).catch(()=>[])
   ]);
-  return res.status(200).json({ok:true,status,price,disposal});
+  return res.status(200).json({ok:true,status,price,marketHistory,disposal});
 }
 
 module.exports=async function handler(req,res){
