@@ -1,6 +1,7 @@
 const { getSql } = require('../lib/db');
 const { isCronAuthorized } = require('../lib/sync-common');
-const { runPriceSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
+const { runPriceSync, runCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
+const { summarizeProfiles } = require('../lib/company-business-tags');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -74,6 +75,17 @@ function requestedAction(req) {
   return String(req.query.action || '').trim().toLowerCase();
 }
 
+
+async function readCompanyTagCoverage(sql){
+  const profiles=await sql.query(`
+    SELECT stock_code AS symbol,stock_name AS name,market,industry
+    FROM market_company_profile
+    ORDER BY stock_code
+  `).catch(()=>[]);
+  if(!profiles.length)return{profileRows:0,techCompanies:0,curated:0,officialChain:0,industryFallback:0,unmappedTech:0,fineMapped:0,fineMappedPct:0,coveredPct:0,relations:0,representedTagCount:0,officialChainSeedNames:0};
+  return{profileRows:profiles.length,...summarizeProfiles(profiles)};
+}
+
 async function statusResponse(req, res) {
   const sql=getSql();
   const code=String(req.query.code||'').trim();
@@ -131,7 +143,7 @@ async function statusResponse(req, res) {
     return res.status(200).json({ok:true,code,found:Boolean(price||disposalRows.length||historyRows.length||activityRows.length),price,history:historyRows,activity:activityRows,disposal:disposalRows,sync});
   }
 
-  const [status,price,disposal,marketHistory,marketActivity]=await Promise.all([
+  const [status,price,disposal,marketHistory,marketActivity,companyProfiles,companyTagCoverage]=await Promise.all([
     sql.query(`SELECT source,last_attempt_at,last_success_at,status,row_count,error_message,updated_at FROM sync_status ORDER BY source`),
     sql.query(`SELECT market,COUNT(*)::int AS rows,MAX(trade_date) AS latest_trade_date,MAX(updated_at) AS last_write FROM price_snapshot GROUP BY market ORDER BY market`),
     sql.query(`SELECT market,COUNT(*)::int AS rows,MIN(start_date) AS min_start,MAX(end_date) AS max_end,MAX(updated_at) AS last_write FROM disposal_snapshot GROUP BY market ORDER BY market`),
@@ -153,9 +165,16 @@ async function statusResponse(req, res) {
       FROM market_activity_daily
       GROUP BY market
       ORDER BY market
-    `).catch(()=>[])
+    `).catch(()=>[]),
+    sql.query(`
+      SELECT market,COUNT(*)::int AS rows,COUNT(DISTINCT industry)::int AS industries,MAX(updated_at) AS last_write
+      FROM market_company_profile
+      GROUP BY market
+      ORDER BY market
+    `).catch(()=>[]),
+    readCompanyTagCoverage(sql)
   ]);
-  return res.status(200).json({ok:true,status,price,marketHistory,marketActivity,disposal});
+  return res.status(200).json({ok:true,status,price,marketHistory,marketActivity,companyProfiles,companyTagCoverage,disposal});
 }
 
 module.exports=async function handler(req,res){
@@ -173,14 +192,24 @@ module.exports=async function handler(req,res){
     if(action){
       if(!isCronAuthorized(req))return res.status(401).json({ok:false,error:'Unauthorized'});
       let result;
-      if(action==='price')result=await runPriceSync({cronSchedule:schedule});
+      if(action==='price'){
+        result=await runPriceSync({cronSchedule:schedule});
+        if(result.httpStatus===200){
+          try{result.body.companyProfiles=await runCompanyProfileSync()}
+          catch(e){result.body.companyProfiles={ok:false,error:String(e?.message||e)}}
+        }
+      }
+      else if(action==='company-profiles'){
+        const profile=await runCompanyProfileSync();
+        return res.status(profile.ok?200:502).json(profile);
+      }
       else if(action==='twse')result=await runTwseDisposalSync();
       else if(action==='tpex')result=await runTpexDisposalSync();
       else if(action==='market-backfill'){
         const backfill=await runMarketHistoryBackfill({targetTradingDays:21,maxNewDays:7,delayMs:1000});
         return res.status(200).json({ok:true,source:'market_history_backfill',...backfill});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 price / twse / tpex / market-backfill'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / twse / tpex / market-backfill'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:21,maxNewDays:7,delayMs:1000})}
