@@ -187,16 +187,46 @@ async function dbCloseQuote(code){
     return normalizeSnapshot(payload,code);
   }catch{return null}finally{clearTimeout(timer)}
 }
-async function misCloseQuote(code,market){
+const MIS_CLOSE_VERIFY_KEY="stockzone_mis_close_verify_v26211";
+function taipeiCloseVerifyCycle(now=new Date()){
+  let date="",weekday="",minutes=0;
+  try{
+    const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(now).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
+    date=`${parts.year}-${parts.month}-${parts.day}`;weekday=parts.weekday||"";minutes=Number(parts.hour||0)*60+Number(parts.minute||0);
+  }catch{date=now.toISOString().slice(0,10)}
+  const phase=["Sat","Sun"].includes(weekday)?"off":minutes>=13*60+30?"post":"pre";
+  return `${date}:${phase}`;
+}
+function readMisCloseVerify(code){
+  try{
+    const all=JSON.parse(localStorage.getItem(MIS_CLOSE_VERIFY_KEY)||"{}");
+    const row=all?.[String(code||"")];
+    return row?.cycle===taipeiCloseVerifyCycle()?row:null;
+  }catch{return null}
+}
+function writeMisCloseVerify(code,result){
+  try{
+    const all=JSON.parse(localStorage.getItem(MIS_CLOSE_VERIFY_KEY)||"{}");
+    all[String(code||"")]={cycle:taipeiCloseVerifyCycle(),checkedAt:new Date().toISOString(),result:result||null};
+    const entries=Object.entries(all).sort((a,b)=>String(b[1]?.checkedAt||"").localeCompare(String(a[1]?.checkedAt||""))).slice(0,120);
+    localStorage.setItem(MIS_CLOSE_VERIFY_KEY,JSON.stringify(Object.fromEntries(entries)));
+  }catch{}
+}
+async function misCloseQuote(code,market,{oncePerCycle=true}={}){
+  if(oncePerCycle){
+    const cached=readMisCloseVerify(code);
+    if(cached)return cached.result||null;
+  }
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),7000);
   try{
     const params=new URLSearchParams({q:String(code||"")});if(market)params.set("market",String(market));
     params.set("mode","official-close");
     const res=await fetch(`/api/sync-status?${params}`,{cache:"no-store",signal:controller.signal});
-    if(!res.ok)return null;
-    const payload=await res.json();
-    return payload?.ok===false?null:(payload?.result||payload);
-  }catch{return null}finally{clearTimeout(timer)}
+    if(!res.ok){if(oncePerCycle)writeMisCloseVerify(code,null);return null}
+    const payload=await res.json(),result=payload?.ok===false?null:(payload?.result||payload);
+    if(oncePerCycle)writeMisCloseVerify(code,result);
+    return result;
+  }catch{if(oncePerCycle)writeMisCloseVerify(code,null);return null}finally{clearTimeout(timer)}
 }
 function pickAfterCloseQuote(yahoo,db,mis){
   const candidates=[db,mis].filter(Boolean);
@@ -230,14 +260,23 @@ async function yahooQuote(query,market=""){
     try{return await once(20000)}catch(e2){if(e2?.name==="AbortError")throw new Error("股價查詢逾時");throw e2}
   }
 }
-async function quote(query,market=""){
+async function quote(query,market="",options={}){
   const yahoo=await yahooQuote(query,market);
-  // v2.5.7.0：盤中維持 Yahoo；盤後 MIS 已合併到 /api/sync-status，Neon 與 MIS 依最新交易日擇新者，同日優先 Neon。
+  // v2.6.2.11：盤中維持 Yahoo；盤後 Neon 為主。人工查詢才做 MIS 核對，且同一檔同一收盤週期最多核對一次。
   if(isTaiwanIntraday())return yahoo;
   const code=String(yahoo?.code||String(yahoo?.symbol||"").split(".")[0]||query||"").trim();
   if(!/^\d{4,6}$/.test(code))return yahoo;
-  const [db,mis]=await Promise.all([dbCloseQuote(code),misCloseQuote(code,market||yahoo?.market||yahoo?.marketLabel||"")]);
+  const verifyClose=options?.verifyClose!==false;
+  const dbPromise=dbCloseQuote(code),misPromise=verifyClose?misCloseQuote(code,market||yahoo?.market||yahoo?.marketLabel||""):Promise.resolve(null);
+  const [db,mis]=await Promise.all([dbPromise,misPromise]);
   return pickAfterCloseQuote(yahoo,db,mis);
+}
+async function autoListQuote(code,market=""){
+  if(isTaiwanIntraday())return quote(code,market,{verifyClose:false});
+  const db=await dbCloseQuote(code);
+  if(db)return db;
+  // Neon 暫時沒有快照時才回退 Yahoo；背景清單永遠不做 MIS 核對。
+  return yahooQuote(code,market);
 }
 
 function shortStockName(name){
@@ -3601,7 +3640,7 @@ async function autoRefreshQuotes(force=false){
   const due=autoListStocks().filter(([,base])=>force||!base.quoteUpdatedAt||Date.now()-new Date(base.quoteUpdatedAt).getTime()>=AUTO_QUOTE_MS);
   await autoPool(due,3,async([code,base])=>{
    try{
-    const d=await quote(code,base.market||""),last=Number(d.last??d.price??d.regularMarketPrice);
+    const d=await autoListQuote(code,base.market||""),last=Number(d.last??d.price??d.regularMarketPrice);
     const patch={quoteUpdatedAt:new Date().toISOString()};
     if(Number.isFinite(last))patch.last=last;
     const name=shortStockName(d.name||d.shortName||base.name);if(name)patch.name=name;
