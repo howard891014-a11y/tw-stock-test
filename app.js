@@ -3693,12 +3693,15 @@ function renderFundflowCoverage(cov){
   const fallback=Number(cov?.industryFallback||0);
   const coarse=Number(cov?.coarseIndustry||0);
   const unmapped=Number(cov?.unmappedAll||0);
-  const covered=Number.isFinite(Number(cov?.coveredPct))?Number(cov.coveredPct):0;
+  const techBizPct=all?techBiz/all*100:0;
   const finePct=Number.isFinite(Number(cov?.fineTechPct))?Number(cov.fineTechPct):Number(cov?.fineMappedPct||0);
+  const industryCoverage=Number(cov?.masterIndustryCodeCoveragePct||0);
+  const twseRows=Number(cov?.masterTwseRows||0),tpexRows=Number(cov?.masterTpexRows||0);
+  const nonStandard=Number(cov?.masterNonStandardCodeRows||0),invalid=Number(cov?.masterInvalidCodeRows||0),duplicates=Number(cov?.masterDuplicateCodeRows||0);
   title.textContent="全市場公司母表已納入";
   count.textContent=all.toLocaleString("zh-TW");
-  badge.textContent=`母表 ${covered.toFixed(covered%1?1:0)}%`;
-  detail.textContent=`${all.toLocaleString("zh-TW")} 家上市櫃公司｜有科技業務 ${techBiz.toLocaleString("zh-TW")} 家（官方科技產業 ${nativeTech}＋跨產業科技 ${crossTech}）｜科技精細標籤 ${fine} 家｜科技回退 ${fallback} 家｜傳產/金融粗分類 ${coarse} 家${unmapped?`｜未分類 ${unmapped} 家`:""}｜科技細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
+  badge.textContent=`科技業務 ${techBizPct.toFixed(techBizPct%1?1:0)}%`;
+  detail.textContent=`${all.toLocaleString("zh-TW")} 家上市櫃公司（上市 ${twseRows.toLocaleString("zh-TW")}＋上櫃 ${tpexRows.toLocaleString("zh-TW")}）｜產業代碼 ${industryCoverage.toFixed(industryCoverage%1?1:0)}%｜非4碼 ${nonStandard}｜無效碼 ${invalid}｜重複碼 ${duplicates}｜有科技業務 ${techBiz.toLocaleString("zh-TW")} 家（官方科技產業 ${nativeTech}＋跨產業科技 ${crossTech}）｜科技精細標籤 ${fine} 家｜科技回退 ${fallback} 家｜傳產/金融粗分類 ${coarse} 家${unmapped?`｜未分類 ${unmapped} 家`:""}｜科技細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
 }
 async function loadFundflowCoverage(force=false){
   if(fundflowCoverageLoading)return;
