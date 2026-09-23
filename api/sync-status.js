@@ -1,6 +1,6 @@
 const { getSql } = require('../lib/db');
 const { isCronAuthorized } = require('../lib/sync-common');
-const { runPriceSync, runCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
+const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 
 
@@ -194,10 +194,6 @@ module.exports=async function handler(req,res){
       let result;
       if(action==='price'){
         result=await runPriceSync({cronSchedule:schedule});
-        if(result.httpStatus===200){
-          try{result.body.companyProfiles=await runCompanyProfileSync()}
-          catch(e){result.body.companyProfiles={ok:false,error:String(e?.message||e)}}
-        }
       }
       else if(action==='company-profiles'){
         const profile=await runCompanyProfileSync();
@@ -212,6 +208,10 @@ module.exports=async function handler(req,res){
       else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / twse / tpex / market-backfill'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
+        // v2.6.2.15：三個既有 Cron 都只「檢查」公司基本資料。
+        // 空表、前次失敗或超過 20 小時才同步；當天已成功時 19:00 / 22:00 直接跳過。
+        try{result.body.companyProfiles=await ensureCompanyProfileSync({maxAgeHours:20})}
+        catch(e){result.body.companyProfiles={ok:false,error:String(e?.message||e)}}
         try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:21,maxNewDays:7,delayMs:1000})}
         catch(e){result.body.marketBootstrap={ok:false,error:String(e?.message||e)}}
       }
