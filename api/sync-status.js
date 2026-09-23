@@ -78,11 +78,15 @@ function requestedAction(req) {
 
 async function readCompanyTagCoverage(sql){
   const profiles=await sql.query(`
-    SELECT stock_code AS symbol,stock_name AS name,market,industry
+    SELECT stock_code AS symbol,stock_name AS name,market,industry_code,industry
     FROM market_company_profile
     ORDER BY stock_code
   `).catch(()=>[]);
-  if(!profiles.length)return{profileRows:0,techCompanies:0,curated:0,officialChain:0,industryFallback:0,unmappedTech:0,fineMapped:0,fineMappedPct:0,coveredPct:0,relations:0,representedTagCount:0,officialChainSeedNames:0};
+  if(!profiles.length)return{
+    profileRows:0,allMarketCompanies:0,nativeTechIndustryCompanies:0,technologyBusinessCompanies:0,crossIndustryTechCompanies:0,
+    fineTechCompanies:0,coarseIndustry:0,unmappedAll:0,techCompanies:0,curated:0,officialChain:0,industryFallback:0,
+    unmappedTech:0,fineMapped:0,fineMappedPct:0,fineTechPct:0,coveredPct:0,relations:0,representedTagCount:0,officialChainSeedNames:0
+  };
   return{profileRows:profiles.length,...summarizeProfiles(profiles)};
 }
 
@@ -167,7 +171,7 @@ async function statusResponse(req, res) {
       ORDER BY market
     `).catch(()=>[]),
     sql.query(`
-      SELECT market,COUNT(*)::int AS rows,COUNT(DISTINCT industry)::int AS industries,MAX(updated_at) AS last_write
+      SELECT market,COUNT(*)::int AS rows,COUNT(DISTINCT industry_code)::int AS industries,MAX(updated_at) AS last_write
       FROM market_company_profile
       GROUP BY market
       ORDER BY market
