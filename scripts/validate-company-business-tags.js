@@ -85,13 +85,19 @@ const officialChainProbes=[
   ['鴻勁','其他電子業','handler'],
   ['碩天','電腦及週邊設備業','ups'],
   ['安碁資訊','資訊服務業','cybersecurity'],
-  ['鴻海','其他電子業','ems_odm']
+  ['鴻海','其他電子業','ems_odm'],
+  ['漢翔','其他','defense'],
+  ['龍德造船','其他','defense'],
+  ['雷虎','運動休閒','defense']
 ];
 for(const [name,industry,expected] of officialChainProbes){
   const resolved=db.resolveCompanyBusinessTags({name,industry});
   if(!resolved.tags.some(x=>x.id===expected))errors.push(`official-chain v2 seed failed: ${name} -> ${expected}`);
 }
 if(seeds.seededCompanyNames.length<610)errors.push(`official-chain seed coverage regression: expected >=610 unique names, got ${seeds.seededCompanyNames.length}`);
+
+if(tags.getTag('telecom')?.voteEligible!==false)errors.push('coarse telecom should be non-votable because telecom_service_business is the canonical business tag');
+if(tags.getTag('conglomerate')?.voteEligible!==false)errors.push('empty generic conglomerate bucket should be non-votable until a current company group exists');
 
 
 const industryCodeSamples=[
