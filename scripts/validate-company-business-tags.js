@@ -51,6 +51,25 @@ const fallbackProbe=db.resolveCompanyBusinessTags({name:'未收錄測試公司',
 if(fallbackProbe.resolution!=='industry-fallback'||fallbackProbe.tags[0]?.id!=='semiconductor_other_business')errors.push('industry fallback resolution failed');
 
 
+const officialChainProbes=[
+  ['欣興','電子零組件業','general_pcb'],
+  ['嘉澤','電子零組件業','general_connector'],
+  ['奇鋐','電腦及週邊設備業','air_cooling'],
+  ['系微','資訊服務業','bios_firmware'],
+  ['晶睿','光電業','security_surveillance'],
+  ['洋華','光電業','touch_panel'],
+  ['盛群','半導體業','mcu'],
+  ['瑞昱','半導體業','network_ic'],
+  ['天鈺','半導體業','display_driver_ic'],
+  ['金居','電子零組件業','copper_foil']
+];
+for(const [name,industry,expected] of officialChainProbes){
+  const resolved=db.resolveCompanyBusinessTags({name,industry});
+  if(!resolved.tags.some(x=>x.id===expected))errors.push(`official-chain v2 seed failed: ${name} -> ${expected}`);
+}
+if(seeds.seededCompanyNames.length<500)errors.push(`official-chain seed coverage regression: expected >=500 unique names, got ${seeds.seededCompanyNames.length}`);
+
+
 const industryCodeSamples=[
   ['24','半導體業','semiconductor_other_business'],['25','電腦及週邊設備業','computer_peripheral_other'],
   ['03','塑膠工業','plastics'],['08','玻璃陶瓷','glass_ceramics'],['17','金融業','finance']
