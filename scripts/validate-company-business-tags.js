@@ -89,25 +89,44 @@ const officialChainProbes=[
   ['鴻海','其他電子業','ems_odm'],
   ['漢翔','其他','defense'],
   ['龍德造船','其他','defense'],
-  ['雷虎','運動休閒','defense']
+  ['雷虎','運動休閒','defense'],
+  ['凌陽','半導體業','consumer_ic'],
+  ['祥碩','半導體業','io_interface_ic'],
+  ['旺宏','半導體業','memory_ic'],
+  ['台積電','半導體業','wafer_manufacturing'],
+  ['致茂','其他電子業','semiconductor_process_test_equipment'],
+  ['永光','化學工業','semiconductor_chemicals_materials'],
+  ['景碩','電子零組件業','ic_substrate'],
+  ['順德','半導體業','leadframe'],
+  ['大聯大','電子通路業','ic_distribution'],
+  ['瑞儀','光電業','backlight_module'],
+  ['富采','光電業','led_epitaxy'],
+  ['聯合再生','光電業','solar_cell'],
+  ['華碩','電腦及週邊設備業','motherboard'],
+  ['新普','電子零組件業','battery_module'],
+  ['信錦','電子零組件業','hinge'],
+  ['仁寶','電腦及週邊設備業','notebook_pc'],
+  ['緯穎','電腦及週邊設備業','server_system'],
+  ['台嘉碩','電子零組件業','filter_oscillator'],
+  ['零壹','資訊服務業','software_distribution']
 ];
 for(const [name,industry,expected] of officialChainProbes){
   const resolved=db.resolveCompanyBusinessTags({name,industry});
   if(!resolved.tags.some(x=>x.id===expected))errors.push(`official-chain v2 seed failed: ${name} -> ${expected}`);
 }
 
-const batchBProbes=[
+const batchBRegressionProbes=[
   ['精英','電腦及週邊設備業','motherboard'],
   ['新普','電子零組件業','battery_module'],
-  ['信錦','電子零組件業','hinge_mechanism'],
-  ['虹光','電腦及週邊設備業','printer_scanner_projector'],
+  ['信錦','電子零組件業','hinge'],
+  ['虹光','電腦及週邊設備業','office_imaging_equipment'],
   ['東訊','通信網路業','wired_communication_equipment'],
   ['鑫科','電子零組件業','filter_oscillator'],
   ['永擎','電腦及週邊設備業','server_system']
 ];
-for(const [name,industry,expected] of batchBProbes){
+for(const [name,industry,expected] of batchBRegressionProbes){
   const resolved=db.resolveCompanyBusinessTags({name,industry});
-  if(!resolved.tags.some(x=>x.id===expected))errors.push(`v2.6.2.33-B product-chain seed failed: ${name} -> ${expected}`);
+  if(!resolved.tags.some(x=>x.id===expected))errors.push(`v2.6.2.33-B-FIX cumulative seed failed: ${name} -> ${expected}`);
 }
 
 const advancedPackagingAudit=[
@@ -123,7 +142,7 @@ for(const [name,industry,expectedTags] of advancedPackagingAudit){
     if(!resolved.tags.some(x=>x.id===expected))errors.push(`advanced-packaging audit failed: ${name} -> ${expected}`);
   }
 }
-if(seeds.seededCompanyNames.length<610)errors.push(`official-chain seed coverage regression: expected >=610 unique names, got ${seeds.seededCompanyNames.length}`);
+if(seeds.seededCompanyNames.length<760)errors.push(`official-chain seed coverage regression: expected >=760 unique names, got ${seeds.seededCompanyNames.length}`);
 
 if(tags.getTag('telecom')?.voteEligible!==false)errors.push('coarse telecom should be non-votable because telecom_service_business is the canonical business tag');
 if(tags.getTag('conglomerate')?.voteEligible!==false)errors.push('empty generic conglomerate bucket should be non-votable until a current company group exists');
