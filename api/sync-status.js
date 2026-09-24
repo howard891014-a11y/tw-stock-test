@@ -107,12 +107,252 @@ async function readCompanyTagCoverage(sql){
   };
 }
 
+
+const MARKET_HEALTH_WINDOW_DAYS = 20;
+const MARKET_HEALTH_COVERAGE_PCT = 90;
+const MARKET_HEALTH_FIELD_PCT = 95;
+const MARKET_HEALTH_READY_PCT = 80;
+const XY_MIN_READY_TRAJECTORY_DAYS = 5;
+const MARKET_HEALTH_MARKETS = ['上市','上櫃'];
+
+function pct(n,d){
+  const nn=Number(n||0),dd=Number(d||0);
+  return dd>0?Number((nn/dd*100).toFixed(1)):0;
+}
+function isoDate(v){return v?String(v).slice(0,10):null}
+function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
+
+function marketDateAlignment(byMarket){
+  const tw=(byMarket['上市']?.daily||[]).map(x=>x.tradeDate).filter(Boolean);
+  const tp=(byMarket['上櫃']?.daily||[]).map(x=>x.tradeDate).filter(Boolean);
+  if(!tw.length||!tp.length)return{
+    overlapStart:null,overlapEnd:null,commonDates:0,twseMissingDates:[],tpexMissingDates:[],aligned:false
+  };
+  const overlapStart=[tw.at(-1),tp.at(-1)].sort().at(-1);
+  const overlapEnd=[tw[0],tp[0]].sort()[0];
+  if(!overlapStart||!overlapEnd||overlapStart>overlapEnd)return{
+    overlapStart,overlapEnd,commonDates:0,twseMissingDates:[],tpexMissingDates:[],aligned:false
+  };
+  const twSet=new Set(tw),tpSet=new Set(tp);
+  const union=[...new Set([...tw,...tp])].filter(d=>d>=overlapStart&&d<=overlapEnd).sort().reverse();
+  const twseMissingDates=union.filter(d=>tpSet.has(d)&&!twSet.has(d));
+  const tpexMissingDates=union.filter(d=>twSet.has(d)&&!tpSet.has(d));
+  return{
+    overlapStart,overlapEnd,
+    commonDates:union.filter(d=>twSet.has(d)&&tpSet.has(d)).length,
+    twseMissingDates,tpexMissingDates,
+    aligned:twseMissingDates.length===0&&tpexMissingDates.length===0
+  };
+}
+
+async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={}){
+  const [masterRows,priceRows,historyDailyRows,activityDailyRows,historyDuplicateRows,activityDuplicateRows,missingLatestRows]=await Promise.all([
+    sql.query(`
+      SELECT market,COUNT(*)::int AS rows
+      FROM market_company_profile
+      WHERE market IN ('上市','上櫃')
+      GROUP BY market
+    `),
+    sql.query(`
+      SELECT market,COUNT(*)::int AS rows,MAX(trade_date)::text AS latest_trade_date,MAX(updated_at) AS last_write
+      FROM price_snapshot
+      WHERE market IN ('上市','上櫃')
+      GROUP BY market
+    `),
+    sql.query(`
+      WITH ranked_dates AS (
+        SELECT market,trade_date,
+               ROW_NUMBER() OVER (PARTITION BY market ORDER BY trade_date DESC) AS rn
+        FROM (SELECT DISTINCT market,trade_date FROM market_daily_history WHERE market IN ('上市','上櫃')) d
+      ), recent_dates AS (
+        SELECT market,trade_date FROM ranked_dates WHERE rn <= $1
+      )
+      SELECT h.market,h.trade_date::text AS trade_date,
+             COUNT(*)::int AS rows,
+             COUNT(DISTINCT h.stock_code)::int AS distinct_codes,
+             COUNT(*) FILTER (WHERE h.trade_value IS NOT NULL)::int AS value_rows,
+             COUNT(*) FILTER (WHERE h.trade_volume IS NOT NULL)::int AS volume_rows,
+             COUNT(DISTINCT h.stock_code) FILTER (WHERE p.stock_code IS NOT NULL)::int AS profile_matched_codes,
+             COUNT(DISTINCT h.stock_code) FILTER (WHERE p.stock_code IS NULL)::int AS extra_codes,
+             MAX(h.updated_at) AS last_write
+      FROM market_daily_history h
+      JOIN recent_dates d ON d.market=h.market AND d.trade_date=h.trade_date
+      LEFT JOIN market_company_profile p ON p.stock_code=h.stock_code AND p.market=h.market
+      GROUP BY h.market,h.trade_date
+      ORDER BY h.market,h.trade_date DESC
+    `,[windowDays]),
+    sql.query(`
+      WITH ranked_dates AS (
+        SELECT market,trade_date,
+               ROW_NUMBER() OVER (PARTITION BY market ORDER BY trade_date DESC) AS rn
+        FROM (SELECT DISTINCT market,trade_date FROM market_daily_history WHERE market IN ('上市','上櫃')) d
+      ), recent_dates AS (
+        SELECT market,trade_date FROM ranked_dates WHERE rn <= $1
+      )
+      SELECT d.market,d.trade_date::text AS trade_date,
+             COUNT(a.stock_code)::int AS rows,
+             COUNT(DISTINCT a.stock_code)::int AS distinct_codes,
+             COUNT(DISTINCT a.stock_code) FILTER (WHERE h.stock_code IS NOT NULL)::int AS history_matched_codes,
+             COUNT(*) FILTER (WHERE a.activity_ready)::int AS ready_rows,
+             COUNT(*) FILTER (WHERE a.baseline_days_20=20)::int AS baseline20_rows,
+             COUNT(*) FILTER (WHERE a.value_ratio_20 IS NOT NULL)::int AS value_ratio_rows,
+             MAX(a.updated_at) AS last_write
+      FROM recent_dates d
+      LEFT JOIN market_activity_daily a ON a.market=d.market AND a.trade_date=d.trade_date
+      LEFT JOIN market_daily_history h ON h.market=a.market AND h.trade_date=a.trade_date AND h.stock_code=a.stock_code
+      GROUP BY d.market,d.trade_date
+      ORDER BY d.market,d.trade_date DESC
+    `,[windowDays]),
+    sql.query(`
+      WITH ranked_dates AS (
+        SELECT market,trade_date,
+               ROW_NUMBER() OVER (PARTITION BY market ORDER BY trade_date DESC) AS rn
+        FROM (SELECT DISTINCT market,trade_date FROM market_daily_history WHERE market IN ('上市','上櫃')) d
+      ), recent_dates AS (
+        SELECT market,trade_date FROM ranked_dates WHERE rn <= $1
+      ), dup AS (
+        SELECT h.market,h.trade_date,h.stock_code,COUNT(*)::int AS c
+        FROM market_daily_history h
+        JOIN recent_dates d ON d.market=h.market AND d.trade_date=h.trade_date
+        GROUP BY h.market,h.trade_date,h.stock_code
+        HAVING COUNT(*)>1
+      )
+      SELECT market,COUNT(*)::int AS duplicate_groups,COALESCE(SUM(c-1),0)::int AS duplicate_extra_rows
+      FROM dup GROUP BY market
+    `,[windowDays]),
+    sql.query(`
+      WITH ranked_dates AS (
+        SELECT market,trade_date,
+               ROW_NUMBER() OVER (PARTITION BY market ORDER BY trade_date DESC) AS rn
+        FROM (SELECT DISTINCT market,trade_date FROM market_activity_daily WHERE market IN ('上市','上櫃')) d
+      ), recent_dates AS (
+        SELECT market,trade_date FROM ranked_dates WHERE rn <= $1
+      ), dup AS (
+        SELECT a.market,a.trade_date,a.stock_code,COUNT(*)::int AS c
+        FROM market_activity_daily a
+        JOIN recent_dates d ON d.market=a.market AND d.trade_date=a.trade_date
+        GROUP BY a.market,a.trade_date,a.stock_code
+        HAVING COUNT(*)>1
+      )
+      SELECT market,COUNT(*)::int AS duplicate_groups,COALESCE(SUM(c-1),0)::int AS duplicate_extra_rows
+      FROM dup GROUP BY market
+    `,[windowDays]),
+    sql.query(`
+      WITH latest AS (
+        SELECT market,MAX(trade_date) AS trade_date
+        FROM market_daily_history
+        WHERE market IN ('上市','上櫃')
+        GROUP BY market
+      ), missing AS (
+        SELECT p.market,p.stock_code,p.stock_name,
+               ROW_NUMBER() OVER (PARTITION BY p.market ORDER BY p.stock_code) AS rn
+        FROM market_company_profile p
+        JOIN latest l ON l.market=p.market
+        LEFT JOIN market_daily_history h
+          ON h.market=p.market AND h.trade_date=l.trade_date AND h.stock_code=p.stock_code
+        WHERE p.market IN ('上市','上櫃') AND h.stock_code IS NULL
+      )
+      SELECT market,stock_code,stock_name FROM missing WHERE rn<=12 ORDER BY market,stock_code
+    `)
+  ]);
+
+  const master=Object.fromEntries(masterRows.map(r=>[r.market,num(r.rows)]));
+  const prices=Object.fromEntries(priceRows.map(r=>[r.market,r]));
+  const historyDup=Object.fromEntries(historyDuplicateRows.map(r=>[r.market,r]));
+  const activityDup=Object.fromEntries(activityDuplicateRows.map(r=>[r.market,r]));
+  const missingLatest={上市:[],上櫃:[]};
+  for(const r of missingLatestRows)if(missingLatest[r.market])missingLatest[r.market].push({code:r.stock_code,name:r.stock_name});
+
+  const activityByKey=new Map(activityDailyRows.map(r=>[`${r.market}|${isoDate(r.trade_date)}`,r]));
+  const byMarket={};
+  const coreIssues=[],xyIssues=[];
+
+  for(const market of MARKET_HEALTH_MARKETS){
+    const masterCount=master[market]||0;
+    const rows=historyDailyRows.filter(r=>r.market===market);
+    const daily=rows.map(r=>{
+      const date=isoDate(r.trade_date),a=activityByKey.get(`${market}|${date}`)||{};
+      const historyCodes=num(r.distinct_codes),matchedCodes=num(r.profile_matched_codes),activityCodes=num(a.distinct_codes);
+      return{
+        tradeDate:date,
+        historyRows:num(r.rows),historyDistinctCodes:historyCodes,
+        masterMatchedCodes:matchedCodes,missingMasterCodes:Math.max(0,masterCount-matchedCodes),extraHistoryCodes:num(r.extra_codes),
+        historyCoveragePct:pct(matchedCodes,masterCount),
+        tradeValueCoveragePct:pct(r.value_rows,r.rows),tradeVolumeCoveragePct:pct(r.volume_rows,r.rows),
+        activityRows:num(a.rows),activityDistinctCodes:activityCodes,
+        activityCoveragePct:pct(a.history_matched_codes,historyCodes),
+        activityReadyRows:num(a.ready_rows),activityReadyPct:pct(a.ready_rows,activityCodes),
+        baseline20Rows:num(a.baseline20_rows),valueRatioRows:num(a.value_ratio_rows),
+        historyLastWrite:r.last_write||null,activityLastWrite:a.last_write||null
+      };
+    });
+    const checkedDays=daily.length;
+    const latest=daily[0]||null;
+    const lowCoverageDates=daily.filter(x=>x.historyCoveragePct<MARKET_HEALTH_COVERAGE_PCT).map(x=>x.tradeDate);
+    const lowFieldDates=daily.filter(x=>x.tradeValueCoveragePct<MARKET_HEALTH_FIELD_PCT||x.tradeVolumeCoveragePct<MARKET_HEALTH_FIELD_PCT).map(x=>x.tradeDate);
+    const lowActivityCoverageDates=daily.filter(x=>x.activityCoveragePct<MARKET_HEALTH_COVERAGE_PCT).map(x=>x.tradeDate);
+    const readyTrajectoryDates=daily.filter(x=>x.activityCoveragePct>=MARKET_HEALTH_COVERAGE_PCT&&x.activityReadyPct>=MARKET_HEALTH_READY_PCT).map(x=>x.tradeDate);
+    const hdup=historyDup[market]||{},adup=activityDup[market]||{};
+    const priceLatest=isoDate(prices[market]?.latest_trade_date);
+    const historyLatest=latest?.tradeDate||null;
+    const historyLatestMatchesPrice=Boolean(priceLatest&&historyLatest&&priceLatest===historyLatest);
+    const summary={
+      market,masterRows:masterCount,windowTradingDays:windowDays,checkedTradingDays:checkedDays,
+      oldestCheckedTradeDate:daily.at(-1)?.tradeDate||null,latestTradeDate:historyLatest,
+      priceSnapshotLatestTradeDate:priceLatest,historyLatestMatchesPrice,
+      minHistoryCoveragePct:daily.length?Math.min(...daily.map(x=>x.historyCoveragePct)):0,
+      avgHistoryCoveragePct:daily.length?Number((daily.reduce((s,x)=>s+x.historyCoveragePct,0)/daily.length).toFixed(1)):0,
+      latestHistoryCoveragePct:latest?.historyCoveragePct||0,
+      lowCoverageDates,
+      minTradeValueCoveragePct:daily.length?Math.min(...daily.map(x=>x.tradeValueCoveragePct)):0,
+      minTradeVolumeCoveragePct:daily.length?Math.min(...daily.map(x=>x.tradeVolumeCoveragePct)):0,
+      lowFieldCoverageDates:lowFieldDates,
+      minActivityCoveragePct:daily.length?Math.min(...daily.map(x=>x.activityCoveragePct)):0,
+      latestActivityCoveragePct:latest?.activityCoveragePct||0,
+      lowActivityCoverageDates,
+      latestActivityReadyPct:latest?.activityReadyPct||0,
+      readyTrajectoryDays:readyTrajectoryDates.length,readyTrajectoryDates,
+      historyDuplicateGroups:num(hdup.duplicate_groups),historyDuplicateExtraRows:num(hdup.duplicate_extra_rows),
+      activityDuplicateGroups:num(adup.duplicate_groups),activityDuplicateExtraRows:num(adup.duplicate_extra_rows),
+      latestMissingMasterCodeExamples:missingLatest[market],
+      daily
+    };
+    byMarket[market]=summary;
+
+    if(masterCount===0)coreIssues.push(`${market} 公司母表為 0`);
+    if(checkedDays<windowDays)coreIssues.push(`${market} history 僅 ${checkedDays}/${windowDays} 個交易日`);
+    if(priceLatest&&historyLatest&&!historyLatestMatchesPrice)coreIssues.push(`${market} history 最新日 ${historyLatest} 未對齊 price_snapshot ${priceLatest}`);
+    if(summary.minHistoryCoveragePct<MARKET_HEALTH_COVERAGE_PCT)coreIssues.push(`${market} history 股票覆蓋最低 ${summary.minHistoryCoveragePct}%`);
+    if(summary.minTradeValueCoveragePct<MARKET_HEALTH_FIELD_PCT||summary.minTradeVolumeCoveragePct<MARKET_HEALTH_FIELD_PCT)coreIssues.push(`${market} history 成交量值欄位覆蓋不足`);
+    if(summary.minActivityCoveragePct<MARKET_HEALTH_COVERAGE_PCT)coreIssues.push(`${market} activity 對 history 覆蓋最低 ${summary.minActivityCoveragePct}%`);
+    if(summary.historyDuplicateGroups>0||summary.activityDuplicateGroups>0)coreIssues.push(`${market} 發現重複資料列`);
+    if(summary.readyTrajectoryDays<XY_MIN_READY_TRAJECTORY_DAYS)xyIssues.push(`${market} activity_ready 軌跡僅 ${summary.readyTrajectoryDays}/${XY_MIN_READY_TRAJECTORY_DAYS} 天`);
+  }
+
+  const dateAlignment=marketDateAlignment(byMarket);
+  if(dateAlignment.twseMissingDates.length)coreIssues.push(`上市在共同日期區間缺 ${dateAlignment.twseMissingDates.length} 個交易日`);
+  if(dateAlignment.tpexMissingDates.length)coreIssues.push(`上櫃在共同日期區間缺 ${dateAlignment.tpexMissingDates.length} 個交易日`);
+  const coreHealthy=coreIssues.length===0;
+  return{
+    checkedAt:new Date().toISOString(),windowTradingDays:windowDays,
+    thresholds:{stockCoveragePct:MARKET_HEALTH_COVERAGE_PCT,tradeFieldCoveragePct:MARKET_HEALTH_FIELD_PCT,activityCoveragePct:MARKET_HEALTH_COVERAGE_PCT,activityReadyPct:MARKET_HEALTH_READY_PCT,xyMinReadyTrajectoryDays:XY_MIN_READY_TRAJECTORY_DAYS},
+    coreHealthy,readyForXY:coreHealthy&&xyIssues.length===0,
+    coreIssues,xyIssues,dateAlignment,byMarket
+  };
+}
+
 async function statusResponse(req, res) {
   // v2.6.2.17: status reads are also safe schema-migration entry points.
   // This prevents a fresh cached sync from skipping new columns/tables after deployment.
   await Promise.all([ensureMarketHistorySchema(),ensureCompanyProfileSchema()]);
   const sql=getSql();
   const code=String(req.query.code||'').trim();
+  const view=String(req.query.view||'').trim().toLowerCase();
+
+  if(view==='market-health'){
+    const marketHealth=await readMarketDataHealth(sql);
+    return res.status(200).json({ok:true,view:'market-health',marketHealth});
+  }
 
   if(code){
     if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
@@ -249,4 +489,4 @@ module.exports=async function handler(req,res){
   }catch(e){return res.status(500).json({ok:false,error:String(e?.message||e)})}
 };
 
-module.exports._test={requestedAction,CRON_ACTIONS,misNumber,misTradeDate};
+module.exports._test={requestedAction,CRON_ACTIONS,misNumber,misTradeDate,marketDateAlignment};
