@@ -3688,7 +3688,6 @@ let fundflowBrowserFetchedAt=0;
 let fundflowBrowserData=null;
 let fundflowBrowserQuery="";
 let fundflowBrowserScope="all";
-let fundflowBrowserStatus="all";
 let fundflowBrowserLimit=36;
 function renderFundflowCoverage(cov){
   const count=$("fundflowTagCount"),title=$("fundflowTagTitle"),detail=$("fundflowTagDetail"),badge=$("fundflowTagBadge");
@@ -3703,7 +3702,7 @@ function renderFundflowCoverage(cov){
   const techBizPct=all?techBiz/all*100:0,finePct=Number.isFinite(Number(cov?.fineTechPct))?Number(cov.fineTechPct):Number(cov?.fineMappedPct||0),industryCoverage=Number(cov?.masterIndustryCodeCoveragePct||0);
   const twseRows=Number(cov?.masterTwseRows||0),tpexRows=Number(cov?.masterTpexRows||0),nonStandard=Number(cov?.masterNonStandardCodeRows||0),invalid=Number(cov?.masterInvalidCodeRows||0),duplicates=Number(cov?.masterDuplicateCodeRows||0);
   title.textContent="全市場公司母表已納入";count.textContent=all.toLocaleString("zh-TW");badge.textContent=`科技業務 ${techBizPct.toFixed(techBizPct%1?1:0)}%`;
-  detail.textContent=`${all.toLocaleString("zh-TW")} 家上市櫃公司（上市 ${twseRows.toLocaleString("zh-TW")}＋上櫃 ${tpexRows.toLocaleString("zh-TW")}）｜產業代碼 ${industryCoverage.toFixed(industryCoverage%1?1:0)}%｜非4碼 ${nonStandard}｜無效碼 ${invalid}｜重複碼 ${duplicates}｜有科技業務 ${techBiz.toLocaleString("zh-TW")} 家（官方科技產業 ${nativeTech}＋跨產業科技 ${crossTech}）｜科技精細標籤 ${fine} 家｜科技回退 ${fallback} 家｜傳產/金融粗分類 ${coarse} 家${unmapped?`｜未分類 ${unmapped} 家`:""}｜科技細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
+  detail.textContent=`${all.toLocaleString("zh-TW")} 家上市櫃公司（上市 ${twseRows.toLocaleString("zh-TW")}＋上櫃 ${tpexRows.toLocaleString("zh-TW")}）｜產業代碼 ${industryCoverage.toFixed(industryCoverage%1?1:0)}%｜非4碼 ${nonStandard}｜無效碼 ${invalid}｜重複碼 ${duplicates}｜有科技業務 ${techBiz.toLocaleString("zh-TW")} 家（官方科技產業 ${nativeTech}＋跨產業科技 ${crossTech}）｜科技精細標籤 ${fine} 家｜其他/待細分 ${fallback} 家｜傳產/金融粗分類 ${coarse} 家${unmapped?`｜未分類 ${unmapped} 家`:""}｜科技細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
 }
 async function loadFundflowCoverage(force=false){
   if(fundflowCoverageLoading)return;if(!force&&fundflowCoverageFetchedAt&&Date.now()-fundflowCoverageFetchedAt<5*60*1000)return;fundflowCoverageLoading=true;
@@ -3722,9 +3721,6 @@ function fundflowQuadrantLabel(q){return q==="potential"?"右下潛伏":q==="mai
 function fundflowBrowserAllowed(item){
   if(!item)return false;
   if(fundflowBrowserScope!=="all"&&item.scope!==fundflowBrowserScope)return false;
-  if(fundflowBrowserStatus==="xy"&&!item.xyEligible)return false;
-  if(fundflowBrowserStatus==="no-xy"&&item.xyEligible)return false;
-  if(fundflowBrowserStatus==="unmapped"&&Number(item.companyCount||0)!==0)return false;
   const q=fundflowBrowserQuery.trim().toLowerCase();if(!q)return true;
   const hay=[item.name,item.tagId,item.parentName,...(item.aliases||[]),...(item.examples||[]).flatMap(x=>[x.name,x.code])].filter(Boolean).join(" ").toLowerCase();
   return hay.includes(q);
@@ -3734,7 +3730,7 @@ function renderFundflowBrowser(){
   if(!list||!summary||!result)return;
   if(!data){if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}return}
   if(loading)loading.classList.add("hidden");
-  const c=data.counts||{};summary.textContent=`定義 ${Number(c.totalDefinitions||0)}｜科技細業務 ${Number(c.technologyFineDefinitions||0)}｜已映射 ${Number(c.representedDefinitions||0)}｜可畫 XY ${Number(c.withXY||0)}`;
+  const c=data.counts||{};summary.textContent=`定義 ${Number(c.totalDefinitions||0)}｜科技細業務 ${Number(c.technologyFineDefinitions||0)}｜傳產/金融 ${Number(c.traditionalDefinitions||0)}｜其他 ${Number(c.otherDefinitions||0)}｜可畫 XY ${Number(c.withXY||0)}`;
   const filtered=(data.items||[]).filter(fundflowBrowserAllowed);result.textContent=`符合 ${filtered.length} 個業務`;
   const shown=filtered.slice(0,fundflowBrowserLimit);
   list.innerHTML=shown.map(item=>{
@@ -3745,7 +3741,6 @@ function renderFundflowBrowser(){
   }).join("")||'<p class="fundflow-browser-empty">目前沒有符合條件的業務分類。</p>';
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
-  document.querySelectorAll("[data-fundflow-browser-status]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserStatus===fundflowBrowserStatus));
 }
 async function loadFundflowBrowser(force=false){
   if(fundflowBrowserLoading)return;if(!force&&fundflowBrowserFetchedAt&&Date.now()-fundflowBrowserFetchedAt<5*60*1000){renderFundflowBrowser();return}fundflowBrowserLoading=true;
@@ -3839,7 +3834,6 @@ document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.addEventListe
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-radar-item[data-fundflow-tag]");if(item)fundflowSelect(item.dataset.fundflowTag,{scroll:true})});
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-browser-item[data-fundflow-browser-tag]");if(item&&!item.disabled)fundflowBrowserOpen(item.dataset.fundflowBrowserTag)});
 document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.addEventListener("click",()=>{fundflowBrowserScope=btn.dataset.fundflowBrowserScope||"all";fundflowBrowserLimit=36;renderFundflowBrowser()}));
-document.querySelectorAll("[data-fundflow-browser-status]").forEach(btn=>btn.addEventListener("click",()=>{fundflowBrowserStatus=btn.dataset.fundflowBrowserStatus||"all";fundflowBrowserLimit=36;renderFundflowBrowser()}));
 $("fundflowBrowserSearch")?.addEventListener("input",e=>{fundflowBrowserQuery=String(e.target?.value||"");fundflowBrowserLimit=36;renderFundflowBrowser()});
 $("fundflowBrowserMore")?.addEventListener("click",()=>{fundflowBrowserLimit+=36;renderFundflowBrowser()});
 $("fundflowDetailClose")?.addEventListener("click",fundflowClearSelection);
