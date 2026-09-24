@@ -1,5 +1,5 @@
 const assert=require('assert');
-const {classifyBusinessText}=require('../lib/business-enrichment');
+const {classifyBusinessText,classifyBroadBusinessText}=require('../lib/business-enrichment');
 const {resolveCompanyBusinessTags}=require('../lib/company-business-tags');
 
 function has(text,id){assert(classifyBusinessText(text).includes(id),`${id} missing for: ${text}`)}
@@ -53,6 +53,18 @@ const c4Cases = [
   ['8487','數位內容、廣告託播代理、轉播及其他','digital_media_streaming'],
 ];
 for (const [code,text,id] of c4Cases) hasCode(code,text,id);
+
+
+// C5 final unclassified cleanup: special/management-stock profiles may use clear broad
+// traditional sectors when no technology fine tag is present.
+assert(classifyBroadBusinessText('藥品、醫療器材及檢測試劑之研發製造與銷售').includes('biotech'));
+assert(classifyBroadBusinessText('食品、飲料與烘焙產品之製造及銷售').includes('food'));
+assert(classifyBroadBusinessText('建築工程與不動產開發').includes('construction'));
+assert(classifyBroadBusinessText('鋼材、不鏽鋼加工及銷售').includes('steel'));
+assert(classifyBusinessText('醫療器材與健康照護產品',{allowBroad:true}).includes('biomedical_health'));
+const special=resolveCompanyBusinessTags({stock_code:'9998',stock_name:'特殊測試',market:'上櫃',industry_code:'80',industry:'管理股票',auto_business_tags:['biotech']});
+assert.equal(special.resolution,'mops-business');
+assert(special.tags.some(x=>x.id==='biotech'));
 
 const resolved=resolveCompanyBusinessTags({stock_code:'9999',stock_name:'測試公司',market:'上市',industry_code:'24',industry:'半導體業',auto_business_tags:['mcu','pmic']});
 assert.equal(resolved.resolution,'mops-business');
