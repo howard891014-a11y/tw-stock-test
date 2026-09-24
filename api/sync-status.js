@@ -3,6 +3,7 @@ const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema 
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser } = require('../lib/fundflow-xy');
+const { runBusinessEnrichment, readPendingBusinessEnrichment } = require('../lib/business-enrichment');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -79,7 +80,7 @@ function requestedAction(req) {
 
 async function readCompanyTagCoverage(sql){
   const profiles=await sql.query(`
-    SELECT stock_code AS symbol,stock_name AS name,market,industry_code,industry
+    SELECT stock_code AS symbol,stock_name AS name,market,industry_code,industry,auto_business_tags,main_business,business_enrich_status,business_enrich_checked_at
     FROM market_company_profile
     ORDER BY stock_code
   `).catch(()=>[]);
@@ -385,6 +386,13 @@ async function statusResponse(req, res) {
     return res.status(200).json(data);
   }
 
+  if(view==='tech-pending'){
+    res.setHeader('Cache-Control','no-store');
+    const limit=Math.max(1,Math.min(500,Number(req.query?.limit)||200));
+    const data=await readPendingBusinessEnrichment({limit});
+    return res.status(200).json({...data,view:'tech-pending'});
+  }
+
   if(view==='market-health'){
     const marketHealth=await readMarketDataHealth(sql);
     return res.status(200).json({ok:true,view:'market-health',marketHealth});
@@ -502,6 +510,12 @@ module.exports=async function handler(req,res){
         const profile=await runCompanyProfileSync();
         return res.status(profile.ok?200:502).json(profile);
       }
+      else if(action==='business-enrich'){
+        const limit=Math.max(1,Math.min(50,Number(req.query?.limit)||30));
+        const retry=['1','true','yes'].includes(String(req.query?.retry||'').toLowerCase());
+        const enriched=await runBusinessEnrichment({limit,retry});
+        return res.status(200).json(enriched);
+      }
       else if(action==='twse')result=await runTwseDisposalSync();
       else if(action==='tpex')result=await runTpexDisposalSync();
       else if(action==='market-backfill'||action==='market-rebuild'){
@@ -516,7 +530,7 @@ module.exports=async function handler(req,res){
         const marketHealth=await readMarketDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',backfill,marketHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / twse / tpex / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / business-enrich / twse / tpex / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // v2.6.2.15：三個既有 Cron 都只「檢查」公司基本資料。
