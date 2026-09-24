@@ -66,6 +66,25 @@ const special=resolveCompanyBusinessTags({stock_code:'9998',stock_name:'特殊�
 assert.equal(special.resolution,'mops-business');
 assert(special.tags.some(x=>x.id==='biotech'));
 
+
+
+// C6 final 4 TDR cleanup. These were the last profiles counted as completely unclassified.
+const drCases = [
+  ['910861','神州-DR',['ai_solution','digital_platform']],
+  ['9110','越南控-DR',['motorcycle']],
+  ['911608','明輝-DR',['cybersecurity','system_integration']],
+  ['9136','巨騰-DR',['computer_chassis']],
+];
+for (const [code,name,expected] of drCases){
+  const r=resolveCompanyBusinessTags({stock_code:code,stock_name:name,market:'上市',industry_code:'91',industry:'存託憑證'});
+  assert.notEqual(r.resolution,'none',`${code} ${name} still unresolved`);
+  for (const id of expected) assert(r.tags.some(x=>x.id===id),`${code} ${name} missing ${id}`);
+}
+assert(classifyBroadBusinessText('生產製造機車、生產製造機車零組件、製造金屬零件').includes('motorcycle'));
+assert(classifyBusinessText('數據智能決策使能平台及AI全棧技術服務',{code:'910861'}).includes('ai_solution'));
+assert(classifyBusinessText('Supply chain management Engineering services Security products and services',{code:'911608'}).includes('cybersecurity'));
+assert(classifyBusinessText('生產及銷售筆記本型電腦外殼、手持設備外殼',{code:'9136'}).includes('computer_chassis'));
+
 const resolved=resolveCompanyBusinessTags({stock_code:'9999',stock_name:'測試公司',market:'上市',industry_code:'24',industry:'半導體業',auto_business_tags:['mcu','pmic']});
 assert.equal(resolved.resolution,'mops-business');
 assert(resolved.tags.some(x=>x.id==='mcu'));
