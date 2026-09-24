@@ -61,13 +61,26 @@ const officialChainProbes=[
   ['盛群','半導體業','mcu'],
   ['瑞昱','半導體業','network_ic'],
   ['天鈺','半導體業','display_driver_ic'],
-  ['金居','電子零組件業','copper_foil']
+  ['金居','電子零組件業','copper_foil'],
+  ['光罩','半導體業','photomask'],
+  ['永光','化學工業','photoresist'],
+  ['台特化','化學工業','specialty_gas'],
+  ['三福化','化學工業','wet_chemicals'],
+  ['上詮','光電業','optical_engine'],
+  ['強茂','半導體業','power_module'],
+  ['富鼎','半導體業','mosfet'],
+  ['台郡','電子零組件業','fpcb'],
+  ['勤誠','電腦及週邊設備業','server_rack'],
+  ['國巨','電子零組件業','mlcc'],
+  ['晶技','電子零組件業','crystal_oscillator'],
+  ['群創','光電業','lcd_panel'],
+  ['大聯大','電子通路業','electronic_distribution_business']
 ];
 for(const [name,industry,expected] of officialChainProbes){
   const resolved=db.resolveCompanyBusinessTags({name,industry});
   if(!resolved.tags.some(x=>x.id===expected))errors.push(`official-chain v2 seed failed: ${name} -> ${expected}`);
 }
-if(seeds.seededCompanyNames.length<500)errors.push(`official-chain seed coverage regression: expected >=500 unique names, got ${seeds.seededCompanyNames.length}`);
+if(seeds.seededCompanyNames.length<570)errors.push(`official-chain seed coverage regression: expected >=570 unique names, got ${seeds.seededCompanyNames.length}`);
 
 
 const industryCodeSamples=[
