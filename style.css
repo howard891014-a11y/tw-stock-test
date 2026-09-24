@@ -496,3 +496,20 @@ body.view-overview .overview-only{display:block}
   .price-block span{grid-column:1!important;grid-row:3!important}.price-block small{grid-column:2!important;grid-row:3!important}
   .stock-list-actions #addHoldingBtn{grid-column:3!important;grid-row:3!important}.stock-list-actions #addWatchBtn{grid-column:4!important;grid-row:3!important}
 }
+
+/* StockZone v2.6.2.28 — B/C/E' fund-flow projection visuals */
+.fundflow-projection{fill:none;stroke-width:2.2;stroke-dasharray:8 7;opacity:.56;pointer-events:none;vector-effect:non-scaling-stroke}
+.fundflow-projection.is-selected{stroke-width:3.2;opacity:.98}
+.fundflow-projection.is-dim{opacity:.06}
+.fundflow-projection-fan{opacity:.10;stroke-width:1.2;stroke-dasharray:3 4;pointer-events:none;vector-effect:non-scaling-stroke}
+.fundflow-projection-end{stroke-width:2.5;pointer-events:none;vector-effect:non-scaling-stroke}
+.fundflow-model-legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 4px 0;color:#667085;font-size:12px}
+.fundflow-model-legend span{display:inline-flex;align-items:center;gap:6px}
+.fundflow-model-legend i{display:inline-block;width:24px;height:0;border-top:2px solid #667085}
+.fundflow-model-legend i.projected{border-top-style:dashed}
+.fundflow-model-legend i.fan{height:10px;border:1px dashed #98a2b3;border-radius:999px;background:rgba(152,162,179,.12)}
+.fundflow-projection-summary{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;margin:12px 0;padding:12px 14px;border:1px solid #e5e7eb;border-radius:14px;background:#fafbfc}
+.fundflow-projection-summary span{font-size:12px;color:#667085}
+.fundflow-projection-summary strong{font-size:18px;text-align:right}
+.fundflow-projection-summary small{grid-column:1/-1;color:#667085;line-height:1.5}
+@media (max-width:640px){.fundflow-model-legend{gap:8px 10px}.fundflow-projection-summary{grid-template-columns:1fr}.fundflow-projection-summary strong{text-align:left}.fundflow-projection-summary small{grid-column:1}}

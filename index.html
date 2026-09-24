@@ -2884,10 +2884,10 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       </section>
       <section class="card fundflow-xy-card">
         <div class="fundflow-xy-head">
-          <div><small>業務輪動</small><h3>XY 資金輪動圖</h3></div>
+          <div><small>業務輪動＋轉態</small><h3>XY Phase 趨勢圖</h3></div>
           <span class="badge" id="fundflowAsOf">讀取中</span>
         </div>
-        <p class="fundflow-xy-intro">X 向右＝資金活動／潛伏程度提高；Y 向上＝價格強度提高。重點觀察「右下潛伏 → 右上主線」的移動軌跡。</p>
+        <p class="fundflow-xy-intro">X 向右＝資金活動度提高；Y 向上＝價格強度提高。實線是已發生軌跡，虛線是 Phase 引擎的模型轉態傾向；點開題材才顯示不確定扇形。</p>
         <div class="fundflow-filter-row" role="group" aria-label="資金輪動分類">
           <button class="active" type="button" data-fundflow-scope="technology-fine">科技細業務</button>
           <button type="button" data-fundflow-scope="all">全部業務</button>
@@ -2898,16 +2898,16 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <small>1 節點＝1 個交易日</small>
         </div>
         <div class="fundflow-kpis">
-          <div><span>右下潛伏</span><strong id="fundflowPotentialCount">--</strong><small>資金先進、價格未完全發動</small></div>
-          <div><span>右上主線</span><strong id="fundflowMainlineCount">--</strong><small>資金＋價格同步偏強</small></div>
-          <div><span>持續右移</span><strong id="fundflowRightCount">--</strong><small>近數日 X 軸持續改善</small></div>
+          <div><span>準備攀升</span><strong id="fundflowPotentialCount">--</strong><small>資金萌芽／潛伏且轉態向上</small></div>
+          <div><span>主升確認</span><strong id="fundflowMainlineCount">--</strong><small>資金＋價格共振且族群確認</small></div>
+          <div><span>過熱／冷卻</span><strong id="fundflowRightCount">--</strong><small>高檔鈍化或資金退潮</small></div>
           <div><span>軌跡日數</span><strong id="fundflowDaysCount">--</strong><small>activity-ready 交易日</small></div>
         </div>
         <div class="fundflow-chart-wrap" id="fundflowChartWrap">
-          <svg id="fundflowXySvg" viewBox="0 0 760 510" role="img" aria-label="業務資金輪動 XY 圖"></svg>
+          <svg id="fundflowXySvg" viewBox="0 0 760 510" role="img" aria-label="業務資金輪動與 Phase 模型轉態 XY 圖"></svg>
           <div class="fundflow-chart-loading" id="fundflowChartLoading">讀取 XY 資金輪動…</div>
         </div>
-        <div class="fundflow-quad-legend"><span>左上 價格強／資金退</span><span class="potential">右下 潛伏區</span><span class="mainline">右上 主線區</span><span>左下 冷區</span></div>
+        <div class="fundflow-quad-legend"><span>左上 價格先行</span><span class="potential">右下 資金先行</span><span class="mainline">右上 資金＋價格共振</span><span>左下 冷區</span></div><div class="fundflow-model-legend"><span><i class="actual"></i>實線：已發生</span><span><i class="projected"></i>虛線：模型傾向</span><span><i class="fan"></i>點開：不確定扇形</span></div>
       </section>
 
       <section class="card fundflow-browser-card" id="fundflowBrowserCard">
@@ -2943,27 +2943,28 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <div class="fundflow-detail-loading hidden" id="fundflowDetailLoading">讀取題材明細…</div>
         <div id="fundflowDetailBody">
           <div class="fundflow-detail-kpis">
-            <div><span>最新 X</span><strong id="fundflowDetailX">--</strong><small>資金活動／潛伏</small></div>
+            <div><span>最新 X</span><strong id="fundflowDetailX">--</strong><small>資金活動度</small></div>
             <div><span>最新 Y</span><strong id="fundflowDetailY">--</strong><small>價格強度</small></div>
-            <div><span>3日移動</span><strong id="fundflowDetailMove">--</strong><small id="fundflowDetailStatus">--</small></div>
+            <div><span>C / E</span><strong id="fundflowDetailMove">--</strong><small id="fundflowDetailStatus">--</small></div>
           </div>
+          <div class="fundflow-projection-summary"><span>模型轉態</span><strong id="fundflowDetailProjection">--</strong><small id="fundflowDetailProjectionNote">點開題材後才顯示不確定扇形；虛線不是未來保證。</small></div>
           <div class="fundflow-detail-grid">
-            <div class="fundflow-detail-panel"><h4>X 為什麼在這裡</h4><div id="fundflowXFactors" class="fundflow-factor-list"></div></div>
-            <div class="fundflow-detail-panel"><h4>Y 為什麼在這裡</h4><div id="fundflowYFactors" class="fundflow-factor-list"></div></div>
+            <div class="fundflow-detail-panel"><h4>X 資金活動度拆解</h4><div id="fundflowXFactors" class="fundflow-factor-list"></div></div>
+            <div class="fundflow-detail-panel"><h4>Y 價格強度拆解</h4><div id="fundflowYFactors" class="fundflow-factor-list"></div></div>
           </div>
-          <div class="fundflow-detail-panel fundflow-history-panel"><h4>每日 XY 軌跡</h4><div id="fundflowDetailHistory" class="fundflow-history-list"></div></div>
+          <div class="fundflow-detail-panel fundflow-history-panel"><h4>每日 XY＋Phase 軌跡</h4><div id="fundflowDetailHistory" class="fundflow-history-list"></div></div>
           <div class="fundflow-detail-panel"><div class="fundflow-company-head"><h4>公司貢獻</h4><small>移除該公司後重新計算 XY 的差值</small></div><div id="fundflowCompanyList" class="fundflow-company-list"></div></div>
           <small class="fundflow-detail-note" id="fundflowDetailNote"></small>
         </div>
       </section>
       <section class="card fundflow-radar-card">
-        <div class="fundflow-radar-head"><div><small>今日雷達</small><h3>輪動重點</h3></div><span id="fundflowEngineBadge">XY v1</span></div>
+        <div class="fundflow-radar-head"><div><small>今日雷達</small><h3>輪動重點</h3></div><span id="fundflowEngineBadge">XY Phase</span></div>
         <div class="fundflow-radar-grid">
-          <div><h4>潛伏升溫</h4><div id="fundflowPotentialList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
+          <div><h4>準備攀升</h4><div id="fundflowPotentialList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
           <div><h4>主線確認</h4><div id="fundflowMainlineList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
-          <div><h4>資金右移</h4><div id="fundflowRightList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
+          <div><h4>過熱／冷卻</h4><div id="fundflowRightList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
         </div>
-        <small class="fundflow-method-note" id="fundflowMethodNote">X 是成交活動／推動度，不等於逐筆成交推算的淨流入。</small>
+        <small class="fundflow-method-note" id="fundflowMethodNote">X 是資金活動度，不等於逐筆成交推算的淨流入；虛線是模型轉態傾向，不是未來保證。</small>
       </section>
     </article>
     <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-featured" aria-hidden="true"></i><span>近期精選</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
