@@ -40,12 +40,13 @@ assert.equal(cement.companyCount, 1);
 assert.equal(cement.xyEligible, false);
 assert(/資料不足/.test(cement.noXYReason) && /1 家/.test(cement.noXYReason), '單一公司應標記為資料不足');
 
-const fallback = out.items.find(x=>x.tagId==='semiconductor_other_business');
-assert(fallback, '應保留無法可靠細分時的安全網分類');
-assert.equal(fallback.scope, 'other', '科技 fallback 在一般 UI 應歸到其他，而不是科技細業務');
+const baseline = out.items.find(x=>x.tagId==='semiconductor_products_services');
+assert(baseline, '科技公司應有非 other 的最低科技業務標籤');
+assert.equal(baseline.scope, 'technology-fine');
+assert.equal(out.counts.technologyFallbackDefinitions, 0, '不應再有可投票科技 fallback');
 
 assert(out.counts.technologyFineDefinitions > 0);
 assert(out.counts.traditionalDefinitions > 0);
-assert(out.counts.otherDefinitions > 0);
+assert.equal(out.counts.otherDefinitions, 0);
 assert(out.counts.withXY >= 1);
 console.log(`Fundflow business browser validation PASS — ${out.counts.totalDefinitions} definitions, ${out.counts.technologyFineDefinitions} tech-fine`);

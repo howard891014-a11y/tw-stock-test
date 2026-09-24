@@ -28,6 +28,7 @@ for (const company of db.companies) {
 
 
 const staticallyCoveredFineTags=new Set(Object.keys(seeds.groups));
+for(const code of ['24','25','26','27','28','29','30','31','36']){ const info=industries.resolveIndustry({code}); if(info.fallbackTag)staticallyCoveredFineTags.add(info.fallbackTag); }
 for(const company of db.companies) for(const link of company.tags) staticallyCoveredFineTags.add(link.id);
 const orphanFineTags=tags.listVoteEligible().filter(tag=>tag.resolution==='fine'&&!staticallyCoveredFineTags.has(tag.id));
 if(orphanFineTags.length) errors.push(`fine business definitions without any company anchor: ${orphanFineTags.map(x=>`${x.id}/${x.name}`).join(', ')}`);
@@ -40,11 +41,11 @@ for (const [groupId,names] of Object.entries(seeds.groups)) {
 }
 
 const fallbackSamples=[
-  ['半導體業','semiconductor_other_business'],['電子零組件業','electronic_components_other'],
-  ['電腦及週邊設備業','computer_peripheral_other'],['光電業','optoelectronics_other'],
-  ['通信網路業','communication_other'],['資訊服務業','information_service_other'],
-  ['電子通路業','electronic_distribution_other'],['其他電子業','other_electronics_business'],
-  ['數位雲端業','digital_cloud_other']
+  ['半導體業','semiconductor_products_services'],['電子零組件業','electronic_components_manufacturing'],
+  ['電腦及週邊設備業','computer_peripheral_business'],['光電業','optoelectronic_components_modules'],
+  ['通信網路業','network_equipment'],['資訊服務業','information_software_services'],
+  ['電子通路業','electronic_distribution_business'],['其他電子業','electronics_manufacturing_services'],
+  ['數位雲端業','digital_cloud_services']
 ];
 for(const [industry,expected] of fallbackSamples){
   const got=db.fallbackTagForIndustry(industry);
@@ -54,7 +55,7 @@ for(const [industry,expected] of fallbackSamples){
 const seededProbe=db.resolveCompanyBusinessTags({name:'智邦',industry:'通信網路業'});
 if(!seededProbe.tags.some(x=>x.id==='network_equipment'))errors.push('official-chain seed resolution failed: 智邦 -> network_equipment');
 const fallbackProbe=db.resolveCompanyBusinessTags({name:'未收錄測試公司',industry:'半導體業'});
-if(fallbackProbe.resolution!=='industry-fallback'||fallbackProbe.tags[0]?.id!=='semiconductor_other_business')errors.push('industry fallback resolution failed');
+if(fallbackProbe.resolution!=='industry-baseline'||fallbackProbe.tags[0]?.id!=='semiconductor_products_services')errors.push('technology baseline resolution failed');
 
 
 const officialChainProbes=[
@@ -112,10 +113,21 @@ if(seeds.seededCompanyNames.length<610)errors.push(`official-chain seed coverage
 
 if(tags.getTag('telecom')?.voteEligible!==false)errors.push('coarse telecom should be non-votable because telecom_service_business is the canonical business tag');
 if(tags.getTag('conglomerate')?.voteEligible!==false)errors.push('empty generic conglomerate bucket should be non-votable until a current company group exists');
+if(tags.listVoteEligible().some(x=>x.resolution==='fallback'))errors.push('legacy technology fallback buckets must not be voteEligible');
+const nativeTechBaselines=[
+  ['24','semiconductor_products_services'],['25','computer_peripheral_business'],['26','optoelectronic_components_modules'],
+  ['27','network_equipment'],['28','electronic_components_manufacturing'],['29','electronic_distribution_business'],
+  ['30','information_software_services'],['31','electronics_manufacturing_services'],['36','digital_cloud_services']
+];
+for(const [code,expected] of nativeTechBaselines){
+  const r=db.resolveCompanyBusinessTags({name:`測試科技${code}`,industryCode:code});
+  if(!r.technologyTags.some(x=>x.id===expected))errors.push(`native technology baseline ${code}: expected ${expected}`);
+  if(!r.hasTechnologyBusiness)errors.push(`native technology company ${code} lost technology label`);
+}
 
 
 const industryCodeSamples=[
-  ['24','半導體業','semiconductor_other_business'],['25','電腦及週邊設備業','computer_peripheral_other'],
+  ['24','半導體業','semiconductor_products_services'],['25','電腦及週邊設備業','computer_peripheral_business'],
   ['03','塑膠工業','plastics'],['08','玻璃陶瓷','glass_ceramics'],['17','金融業','finance']
 ];
 for(const [code,name,expectedTag] of industryCodeSamples){
