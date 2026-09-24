@@ -154,10 +154,12 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
       GROUP BY market
     `),
     sql.query(`
-      SELECT market,COUNT(*)::int AS rows,MAX(trade_date)::text AS latest_trade_date,MAX(updated_at) AS last_write
-      FROM price_snapshot
-      WHERE market IN ('上市','上櫃')
-      GROUP BY market
+      SELECT s.market,COUNT(*)::int AS rows,MAX(s.trade_date)::text AS latest_trade_date,MAX(s.updated_at) AS last_write,
+             COUNT(*) FILTER (WHERE p.stock_code IS NULL)::int AS extra_codes
+      FROM price_snapshot s
+      LEFT JOIN market_company_profile p ON p.stock_code=s.stock_code AND p.market=s.market
+      WHERE s.market IN ('上市','上櫃')
+      GROUP BY s.market
     `),
     sql.query(`
       WITH ranked_dates AS (
@@ -193,6 +195,7 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
              COUNT(a.stock_code)::int AS rows,
              COUNT(DISTINCT a.stock_code)::int AS distinct_codes,
              COUNT(DISTINCT a.stock_code) FILTER (WHERE h.stock_code IS NOT NULL)::int AS history_matched_codes,
+             COUNT(DISTINCT a.stock_code) FILTER (WHERE p.stock_code IS NULL AND a.stock_code IS NOT NULL)::int AS extra_codes,
              COUNT(*) FILTER (WHERE a.activity_ready)::int AS ready_rows,
              COUNT(*) FILTER (WHERE a.baseline_days_20=20)::int AS baseline20_rows,
              COUNT(*) FILTER (WHERE a.value_ratio_20 IS NOT NULL)::int AS value_ratio_rows,
@@ -200,6 +203,7 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
       FROM recent_dates d
       LEFT JOIN market_activity_daily a ON a.market=d.market AND a.trade_date=d.trade_date
       LEFT JOIN market_daily_history h ON h.market=a.market AND h.trade_date=a.trade_date AND h.stock_code=a.stock_code
+      LEFT JOIN market_company_profile p ON p.stock_code=a.stock_code AND p.market=a.market
       GROUP BY d.market,d.trade_date
       ORDER BY d.market,d.trade_date DESC
     `,[windowDays]),
@@ -279,7 +283,7 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
         masterMatchedCodes:matchedCodes,missingMasterCodes:Math.max(0,masterCount-matchedCodes),extraHistoryCodes:num(r.extra_codes),
         historyCoveragePct:pct(matchedCodes,masterCount),
         tradeValueCoveragePct:pct(r.value_rows,r.rows),tradeVolumeCoveragePct:pct(r.volume_rows,r.rows),
-        activityRows:num(a.rows),activityDistinctCodes:activityCodes,
+        activityRows:num(a.rows),activityDistinctCodes:activityCodes,extraActivityCodes:num(a.extra_codes),
         activityCoveragePct:pct(a.history_matched_codes,historyCodes),
         activityReadyRows:num(a.ready_rows),activityReadyPct:pct(a.ready_rows,activityCodes),
         baseline20Rows:num(a.baseline20_rows),valueRatioRows:num(a.value_ratio_rows),
@@ -292,6 +296,8 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
     const lowFieldDates=daily.filter(x=>x.tradeValueCoveragePct<MARKET_HEALTH_FIELD_PCT||x.tradeVolumeCoveragePct<MARKET_HEALTH_FIELD_PCT).map(x=>x.tradeDate);
     const lowActivityCoverageDates=daily.filter(x=>x.activityCoveragePct<MARKET_HEALTH_COVERAGE_PCT).map(x=>x.tradeDate);
     const readyTrajectoryDates=daily.filter(x=>x.activityCoveragePct>=MARKET_HEALTH_COVERAGE_PCT&&x.activityReadyPct>=MARKET_HEALTH_READY_PCT).map(x=>x.tradeDate);
+    const extraHistoryDates=daily.filter(x=>x.extraHistoryCodes>0).map(x=>x.tradeDate);
+    const extraActivityDates=daily.filter(x=>x.extraActivityCodes>0).map(x=>x.tradeDate);
     const hdup=historyDup[market]||{},adup=activityDup[market]||{};
     const priceLatest=isoDate(prices[market]?.latest_trade_date);
     const historyLatest=latest?.tradeDate||null;
@@ -299,7 +305,7 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
     const summary={
       market,masterRows:masterCount,windowTradingDays:windowDays,checkedTradingDays:checkedDays,
       oldestCheckedTradeDate:daily.at(-1)?.tradeDate||null,latestTradeDate:historyLatest,
-      priceSnapshotLatestTradeDate:priceLatest,historyLatestMatchesPrice,
+      priceSnapshotLatestTradeDate:priceLatest,historyLatestMatchesPrice,priceSnapshotRows:num(prices[market]?.rows),priceSnapshotExtraCodes:num(prices[market]?.extra_codes),
       minHistoryCoveragePct:daily.length?Math.min(...daily.map(x=>x.historyCoveragePct)):0,
       avgHistoryCoveragePct:daily.length?Number((daily.reduce((s,x)=>s+x.historyCoveragePct,0)/daily.length).toFixed(1)):0,
       latestHistoryCoveragePct:latest?.historyCoveragePct||0,
@@ -310,6 +316,8 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
       minActivityCoveragePct:daily.length?Math.min(...daily.map(x=>x.activityCoveragePct)):0,
       latestActivityCoveragePct:latest?.activityCoveragePct||0,
       lowActivityCoverageDates,
+      maxExtraHistoryCodes:daily.length?Math.max(...daily.map(x=>x.extraHistoryCodes)):0,extraHistoryDates,
+      maxExtraActivityCodes:daily.length?Math.max(...daily.map(x=>x.extraActivityCodes)):0,extraActivityDates,
       latestActivityReadyPct:latest?.activityReadyPct||0,
       readyTrajectoryDays:readyTrajectoryDates.length,readyTrajectoryDates,
       historyDuplicateGroups:num(hdup.duplicate_groups),historyDuplicateExtraRows:num(hdup.duplicate_extra_rows),
@@ -325,6 +333,9 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
     if(summary.minHistoryCoveragePct<MARKET_HEALTH_COVERAGE_PCT)coreIssues.push(`${market} history 股票覆蓋最低 ${summary.minHistoryCoveragePct}%`);
     if(summary.minTradeValueCoveragePct<MARKET_HEALTH_FIELD_PCT||summary.minTradeVolumeCoveragePct<MARKET_HEALTH_FIELD_PCT)coreIssues.push(`${market} history 成交量值欄位覆蓋不足`);
     if(summary.minActivityCoveragePct<MARKET_HEALTH_COVERAGE_PCT)coreIssues.push(`${market} activity 對 history 覆蓋最低 ${summary.minActivityCoveragePct}%`);
+    if(summary.maxExtraHistoryCodes>0)coreIssues.push(`${market} history 仍含非母表代碼，單日最高 ${summary.maxExtraHistoryCodes} 筆`);
+    if(summary.maxExtraActivityCodes>0)coreIssues.push(`${market} activity 仍含非母表代碼，單日最高 ${summary.maxExtraActivityCodes} 筆`);
+    if(summary.priceSnapshotExtraCodes>0)coreIssues.push(`${market} price_snapshot 仍含非母表代碼 ${summary.priceSnapshotExtraCodes} 筆`);
     if(summary.historyDuplicateGroups>0||summary.activityDuplicateGroups>0)coreIssues.push(`${market} 發現重複資料列`);
     if(summary.readyTrajectoryDays<XY_MIN_READY_TRAJECTORY_DAYS)xyIssues.push(`${market} activity_ready 軌跡僅 ${summary.readyTrajectoryDays}/${XY_MIN_READY_TRAJECTORY_DAYS} 天`);
   }
