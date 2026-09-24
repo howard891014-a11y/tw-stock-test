@@ -3683,6 +3683,13 @@ let fundflowTrajectoryDays=10;
 let fundflowSelectedTagId="";
 let fundflowDetailLoading=false;
 let fundflowDetailData=null;
+let fundflowBrowserLoading=false;
+let fundflowBrowserFetchedAt=0;
+let fundflowBrowserData=null;
+let fundflowBrowserQuery="";
+let fundflowBrowserScope="all";
+let fundflowBrowserStatus="all";
+let fundflowBrowserLimit=36;
 function renderFundflowCoverage(cov){
   const count=$("fundflowTagCount"),title=$("fundflowTagTitle"),detail=$("fundflowTagDetail"),badge=$("fundflowTagBadge");
   if(!count||!title||!detail||!badge)return;
@@ -3708,6 +3715,47 @@ function fundflowAllowed(g){if(!g)return false;if(fundflowScope==="all")return t
 function fundflowEligibleGroups(){return (fundflowXyData?.groups||[]).filter(g=>fundflowAllowed(g)&&Number(g.validCount)>=2&&Array.isArray(g.trajectory)&&g.trajectory.length>=2)}
 function fundflowSvg(tag,attrs={},text=""){const el=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,String(v)));if(text!=="")el.textContent=text;return el}
 function fundflowColor(q){return q==="potential"?"#e2a034":q==="mainline"?"#4f9f79":q==="price-led"?"#8a82c8":q==="cold"?"#9aa8b7":"#5e8fd0"}
+
+function fundflowQuadrantLabel(q){return q==="potential"?"右下潛伏":q==="mainline"?"右上主線":q==="price-led"?"左上價強":q==="cold"?"左下冷區":"尚無XY"}
+function fundflowBrowserAllowed(item){
+  if(!item)return false;
+  if(fundflowBrowserScope!=="all"&&item.scope!==fundflowBrowserScope)return false;
+  if(fundflowBrowserStatus==="xy"&&!item.xyEligible)return false;
+  if(fundflowBrowserStatus==="no-xy"&&item.xyEligible)return false;
+  if(fundflowBrowserStatus==="unmapped"&&Number(item.companyCount||0)!==0)return false;
+  const q=fundflowBrowserQuery.trim().toLowerCase();if(!q)return true;
+  const hay=[item.name,item.tagId,item.parentName,...(item.aliases||[]),...(item.examples||[]).flatMap(x=>[x.name,x.code])].filter(Boolean).join(" ").toLowerCase();
+  return hay.includes(q);
+}
+function renderFundflowBrowser(){
+  const data=fundflowBrowserData,list=$("fundflowBrowserList"),summary=$("fundflowBrowserSummary"),result=$("fundflowBrowserResultCount"),more=$("fundflowBrowserMore"),loading=$("fundflowBrowserLoading");
+  if(!list||!summary||!result)return;
+  if(!data){if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}return}
+  if(loading)loading.classList.add("hidden");
+  const c=data.counts||{};summary.textContent=`定義 ${Number(c.totalDefinitions||0)}｜科技細業務 ${Number(c.technologyFineDefinitions||0)}｜已映射 ${Number(c.representedDefinitions||0)}｜可畫 XY ${Number(c.withXY||0)}`;
+  const filtered=(data.items||[]).filter(fundflowBrowserAllowed);result.textContent=`符合 ${filtered.length} 個業務`;
+  const shown=filtered.slice(0,fundflowBrowserLimit);
+  list.innerHTML=shown.map(item=>{
+    const parent=item.parentName?`<span>${escNews(item.parentName)}</span>`:"",examples=(item.examples||[]).slice(0,3).map(x=>x.name||x.code).filter(Boolean).join("、");
+    const xy=item.xyEligible?`<b class="fundflow-browser-xy ${escNews(item.quadrant||"")}">${fundflowQuadrantLabel(item.quadrant)} · X ${fundflowFmt(item.x)} / Y ${fundflowFmt(item.y)}</b>`:`<b class="fundflow-browser-xy no-xy">${escNews(item.noXYReason||"尚無XY")}</b>`;
+    const meta=`${Number(item.companyCount||0)} 家${item.xyEligible?`｜有效 ${Number(item.validCount||0)}/${Number(item.memberCount||item.companyCount||0)}｜3日 X ${fundflowSigned(item.dx3)}`:""}${examples?`｜${escNews(examples)}`:""}`;
+    return `<button type="button" class="fundflow-browser-item${item.xyEligible?" is-clickable":""}" data-fundflow-browser-tag="${escNews(item.tagId)}" ${item.xyEligible?"":"disabled"}><div class="fundflow-browser-name"><strong>${escNews(item.name||item.tagId)}</strong>${parent}</div>${xy}<small>${meta}</small></button>`;
+  }).join("")||'<p class="fundflow-browser-empty">目前沒有符合條件的業務分類。</p>';
+  if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
+  document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
+  document.querySelectorAll("[data-fundflow-browser-status]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserStatus===fundflowBrowserStatus));
+}
+async function loadFundflowBrowser(force=false){
+  if(fundflowBrowserLoading)return;if(!force&&fundflowBrowserFetchedAt&&Date.now()-fundflowBrowserFetchedAt<5*60*1000){renderFundflowBrowser();return}fundflowBrowserLoading=true;
+  const loading=$("fundflowBrowserLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}
+  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),22000);try{const res=await fetch(`/api/sync-status?view=fundflow-browser&days=10`,{cache:"no-store",signal:controller.signal});fundflowBrowserData=await readJson(res,"業務瀏覽器");fundflowBrowserFetchedAt=Date.now();renderFundflowBrowser()}finally{clearTimeout(timer)}}catch(e){console.warn("業務瀏覽器讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`業務分類讀取失敗：${e?.message||e}`}}finally{fundflowBrowserLoading=false}
+}
+function fundflowBrowserOpen(tagId){
+  const item=(fundflowBrowserData?.items||[]).find(x=>x.tagId===tagId);if(!item?.xyEligible)return;
+  if(item.scope==="traditional-coarse")fundflowScope="traditional-coarse";else if(item.scope==="technology-fine")fundflowScope="technology-fine";else fundflowScope="all";
+  renderFundflowXy();fundflowSelect(tagId,{scroll:true});
+}
+
 function fundflowSelect(tagId,{scroll=false}={}){
   const id=String(tagId||"").trim();if(!id)return;fundflowSelectedTagId=id;renderFundflowChart();loadFundflowDetail(id,false);
   if(scroll)setTimeout(()=>$("fundflowDetailCard")?.scrollIntoView({behavior:"smooth",block:"start"}),120);
@@ -3773,6 +3821,11 @@ async function loadFundflowXy(force=false,serverRefresh=false){
 document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.addEventListener("click",()=>{fundflowScope=btn.dataset.fundflowScope||"technology-fine";const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&!fundflowAllowed(selected))fundflowClearSelection();renderFundflowXy()}));
 document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.addEventListener("click",()=>{const d=Number(btn.dataset.fundflowDays);if(![5,10,15].includes(d)||d===fundflowTrajectoryDays)return;fundflowTrajectoryDays=d;fundflowXyFetchedAt=0;fundflowDetailData=null;loadFundflowXy(true,false);if(fundflowSelectedTagId)loadFundflowDetail(fundflowSelectedTagId,true)}));
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-radar-item[data-fundflow-tag]");if(item)fundflowSelect(item.dataset.fundflowTag,{scroll:true})});
+document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-browser-item[data-fundflow-browser-tag]");if(item&&!item.disabled)fundflowBrowserOpen(item.dataset.fundflowBrowserTag)});
+document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.addEventListener("click",()=>{fundflowBrowserScope=btn.dataset.fundflowBrowserScope||"all";fundflowBrowserLimit=36;renderFundflowBrowser()}));
+document.querySelectorAll("[data-fundflow-browser-status]").forEach(btn=>btn.addEventListener("click",()=>{fundflowBrowserStatus=btn.dataset.fundflowBrowserStatus||"all";fundflowBrowserLimit=36;renderFundflowBrowser()}));
+$("fundflowBrowserSearch")?.addEventListener("input",e=>{fundflowBrowserQuery=String(e.target?.value||"");fundflowBrowserLimit=36;renderFundflowBrowser()});
+$("fundflowBrowserMore")?.addEventListener("click",()=>{fundflowBrowserLimit+=36;renderFundflowBrowser()});
 $("fundflowDetailClose")?.addEventListener("click",fundflowClearSelection);
 
 function setView(view){
@@ -3781,7 +3834,7 @@ function setView(view){
   document.body.classList.remove("mode-analysis","mode-screening","mode-management");
   document.body.classList.add(`mode-${mode}`);
   if(view==="screening")view="fundflow";
-  if(view==="fundflow"){loadFundflowCoverage(false);loadFundflowXy(false);}
+  if(view==="fundflow"){loadFundflowCoverage(false);loadFundflowXy(false).finally(()=>loadFundflowBrowser(false));}
   document.body.classList.toggle("view-overview",view==="overview");
   document.querySelectorAll("[data-view-panel]").forEach(p=>p.classList.toggle("active-view",p.dataset.viewPanel===view));
   document.querySelectorAll(".section-tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
