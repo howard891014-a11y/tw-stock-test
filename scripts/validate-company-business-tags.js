@@ -94,6 +94,20 @@ for(const [name,industry,expected] of officialChainProbes){
   const resolved=db.resolveCompanyBusinessTags({name,industry});
   if(!resolved.tags.some(x=>x.id===expected))errors.push(`official-chain v2 seed failed: ${name} -> ${expected}`);
 }
+
+const advancedPackagingAudit=[
+  ['萬潤','半導體業',['cowos','cpo','silicon_photonics','soic','copos']],
+  ['志聖','其他電子業',['cowos','soic','bonding_equipment','copos']],
+  ['辛耘','半導體業',['cowos','foplp']],
+  ['均華','其他電子業',['cowos','soic','hbm']],
+  ['弘塑','半導體業',['cowos','foplp','hbm']]
+];
+for(const [name,industry,expectedTags] of advancedPackagingAudit){
+  const resolved=db.resolveCompanyBusinessTags({name,industry});
+  for(const expected of expectedTags){
+    if(!resolved.tags.some(x=>x.id===expected))errors.push(`advanced-packaging audit failed: ${name} -> ${expected}`);
+  }
+}
 if(seeds.seededCompanyNames.length<610)errors.push(`official-chain seed coverage regression: expected >=610 unique names, got ${seeds.seededCompanyNames.length}`);
 
 if(tags.getTag('telecom')?.voteEligible!==false)errors.push('coarse telecom should be non-votable because telecom_service_business is the canonical business tag');
