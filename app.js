@@ -3811,7 +3811,7 @@ async function loadFundflowXy(force=false){
   try{
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
     try{
-      const res=await fetch(`/api/fundflow?days=10${force?"&refresh=1":""}`,{cache:"no-store",signal:controller.signal});
+      const res=await fetch(`/api/sync-status?view=fundflow&days=10${force?"&refresh=1":""}`,{cache:"no-store",signal:controller.signal});
       const payload=await readJson(res,"資金輪動");fundflowXyData=payload;fundflowXyFetchedAt=Date.now();renderFundflowXy();
     }finally{clearTimeout(timer)}
   }catch(e){

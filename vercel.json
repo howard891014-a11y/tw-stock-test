@@ -6,12 +6,6 @@
         "sin1"
       ],
       "maxDuration": 60
-    },
-    "api/fundflow.js": {
-      "regions": [
-        "sin1"
-      ],
-      "maxDuration": 60
     }
   },
   "crons": [
