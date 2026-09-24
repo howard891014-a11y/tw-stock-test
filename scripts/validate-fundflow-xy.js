@@ -1,5 +1,5 @@
 const assert=require('assert');
-const {percentileRanks,computeBusinessFlow,quadrant}=require('../lib/fundflow-xy');
+const {percentileRanks,computeBusinessFlow,computeTagDetail,quadrant}=require('../lib/fundflow-xy');
 
 assert.deepStrictEqual(percentileRanks([1,2,3]).map(x=>Math.round(x)),[0,50,100]);
 assert.deepStrictEqual(percentileRanks([5,5]).map(x=>Math.round(x)),[50,50]);
@@ -44,3 +44,12 @@ assert(adv.validCount>=4,'advanced packaging equipment should aggregate multiple
 const cpo=result.groups.find(x=>x.tagId==='cpo');
 assert(cpo&&cpo.validCount>=3,'CPO should aggregate multiple companies');
 console.log('Fundflow XY validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,dx3:adv.dx3,status:adv.statusLabel},cpo:{x:cpo.x,y:cpo.y}});
+
+const detail=computeTagDetail(profiles,activity,'advanced_packaging_equipment',{maxDates:5});
+assert.equal(detail.trajectory.length,5,'detail trajectory should honor requested days');
+assert(detail.latest&&Number.isFinite(detail.latest.x)&&Number.isFinite(detail.latest.y),'detail latest coordinates should exist');
+assert(detail.latest.factors?.x?.valueRatio20!==undefined,'detail should expose X factor signals');
+assert(detail.latest.factors?.y?.return5Pct!==undefined,'detail should expose Y factor signals');
+assert(Array.isArray(detail.companies)&&detail.companies.length>=4,'detail should expose company contributions');
+assert(detail.companies.every(x=>Number.isFinite(x.impactX)&&Number.isFinite(x.impactY)),'company impacts should be finite');
+console.log('Fundflow detail validation PASS',{tag:detail.name,days:detail.trajectoryDays,companies:detail.companies.length});
