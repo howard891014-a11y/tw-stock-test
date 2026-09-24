@@ -2,7 +2,7 @@ const { getSql } = require('../lib/db');
 const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { summarizeProfiles } = require('../lib/company-business-tags');
-const { getFundflowSnapshot } = require('../lib/fundflow-xy');
+const { getFundflowSnapshot, getFundflowDetail } = require('../lib/fundflow-xy');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -366,6 +366,14 @@ async function statusResponse(req, res) {
     const days=Math.max(5,Math.min(15,Number(req.query?.days)||10));
     const force=String(req.query?.refresh||'').toLowerCase()==='true'||String(req.query?.refresh||'')==='1';
     const data=await getFundflowSnapshot({days,force});
+    return res.status(200).json(data);
+  }
+  if(view==='fundflow-detail'){
+    res.setHeader('Cache-Control','public, s-maxage=90, stale-while-revalidate=180');
+    const days=Math.max(5,Math.min(15,Number(req.query?.days)||10));
+    const tagId=String(req.query?.tag||req.query?.tagId||'').trim();
+    if(!tagId||!/^[a-z0-9_-]{2,80}$/i.test(tagId))return res.status(400).json({ok:false,error:'業務 tag 格式錯誤'});
+    const data=await getFundflowDetail({tagId,days});
     return res.status(200).json(data);
   }
 
