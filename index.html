@@ -2497,7 +2497,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.17</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.24</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2877,7 +2877,44 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       <small class="expected-foot" id="expectedFoot">持股會改用均價計算報酬與預估損益；觀察股維持現價基準。</small>
     </article>
     <article class="card detail-panel simple-detail" data-view-panel="screening"><div class="card-title">智慧選股 <span class="badge">待接功能</span></div><div class="hero-value"><span>全市場自動篩選</span><strong>✦</strong><small>之後加入低點／剛站回／接近買點篩選</small></div></article>
-    <article class="card detail-panel simple-detail" data-view-panel="fundflow"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-fundflow" aria-hidden="true"></i><span>資金流向</span></span><span class="badge" id="fundflowTagBadge">全市場 v2</span></div><div class="hero-value"><span id="fundflowTagTitle">全市場公司母表＋業務標籤</span><strong id="fundflowTagCount">--</strong><small id="fundflowTagDetail">等待下一次既有 Cron 同步全市場公司母表；官方產業、科技細標籤與跨產業科技覆寫會一起統計。</small></div></article>
+    <article class="detail-panel fundflow-page" data-view-panel="fundflow">
+      <section class="card fundflow-master-card">
+        <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-fundflow" aria-hidden="true"></i><span>資金流向</span></span><span class="badge" id="fundflowTagBadge">全市場 v2</span></div>
+        <div class="hero-value fundflow-master-hero"><span id="fundflowTagTitle">全市場公司母表＋業務標籤</span><strong id="fundflowTagCount">--</strong><small id="fundflowTagDetail">等待全市場公司母表與業務標籤統計。</small></div>
+      </section>
+      <section class="card fundflow-xy-card">
+        <div class="fundflow-xy-head">
+          <div><small>業務輪動</small><h3>XY 資金輪動圖</h3></div>
+          <span class="badge" id="fundflowAsOf">讀取中</span>
+        </div>
+        <p class="fundflow-xy-intro">X 向右＝資金活動／潛伏程度提高；Y 向上＝價格強度提高。重點觀察「右下潛伏 → 右上主線」的移動軌跡。</p>
+        <div class="fundflow-filter-row" role="group" aria-label="資金輪動分類">
+          <button class="active" type="button" data-fundflow-scope="technology-fine">科技細業務</button>
+          <button type="button" data-fundflow-scope="all">全部業務</button>
+          <button type="button" data-fundflow-scope="traditional-coarse">傳產／金融</button>
+        </div>
+        <div class="fundflow-kpis">
+          <div><span>右下潛伏</span><strong id="fundflowPotentialCount">--</strong><small>資金先進、價格未完全發動</small></div>
+          <div><span>右上主線</span><strong id="fundflowMainlineCount">--</strong><small>資金＋價格同步偏強</small></div>
+          <div><span>持續右移</span><strong id="fundflowRightCount">--</strong><small>近數日 X 軸持續改善</small></div>
+          <div><span>軌跡日數</span><strong id="fundflowDaysCount">--</strong><small>activity-ready 交易日</small></div>
+        </div>
+        <div class="fundflow-chart-wrap" id="fundflowChartWrap">
+          <svg id="fundflowXySvg" viewBox="0 0 760 510" role="img" aria-label="業務資金輪動 XY 圖"></svg>
+          <div class="fundflow-chart-loading" id="fundflowChartLoading">讀取 XY 資金輪動…</div>
+        </div>
+        <div class="fundflow-quad-legend"><span>左上 價格強／資金退</span><span class="potential">右下 潛伏區</span><span class="mainline">右上 主線區</span><span>左下 冷區</span></div>
+      </section>
+      <section class="card fundflow-radar-card">
+        <div class="fundflow-radar-head"><div><small>今日雷達</small><h3>輪動重點</h3></div><span id="fundflowEngineBadge">XY v1</span></div>
+        <div class="fundflow-radar-grid">
+          <div><h4>潛伏升溫</h4><div id="fundflowPotentialList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
+          <div><h4>主線確認</h4><div id="fundflowMainlineList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
+          <div><h4>資金右移</h4><div id="fundflowRightList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
+        </div>
+        <small class="fundflow-method-note" id="fundflowMethodNote">X 是成交活動／推動度，不等於逐筆成交推算的淨流入。</small>
+      </section>
+    </article>
     <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-featured" aria-hidden="true"></i><span>近期精選</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="simulation"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-simulation" aria-hidden="true"></i><span>模擬交易</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>模擬交易績效</span><strong>◎</strong><small>之後接入智慧選股模擬交易與績效回饋</small></div></article>
     <article class="card stage-card detail-panel" data-view-panel="analysis" id="stagePositionCard">
@@ -3126,7 +3163,14 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <label>券商名稱<input id="editBrokerName" type="text"></label>
 <label>目標價<input id="editTargetPrice" type="number" step="0.01"></label>
 <div class="modal-actions"><button id="cancelTargetEdit" type="button">取消</button><button id="deleteTargetEdit" type="button" class="danger-action">刪除</button><button id="saveTargetEdit" type="button">修改</button></div>
-<small>修改只儲存在此瀏覽器。</small></div></div>  <script src="./app.js?v=2.6.2.17"></script>
+<small>修改只儲存在此瀏覽器。</small></div></div>
+<style id="stockzone-v26224-fundflow-xy">
+.fundflow-page{display:none!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}.fundflow-page.active-view{display:block!important}.fundflow-page>.card{margin-bottom:14px}
+.fundflow-master-card .fundflow-master-hero{min-height:150px}.fundflow-xy-card,.fundflow-radar-card{padding:22px 24px!important}
+.fundflow-xy-head,.fundflow-radar-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.fundflow-xy-head small,.fundflow-radar-head small{display:block;color:#7f90a6;font-size:11px;font-weight:800;letter-spacing:.08em}.fundflow-xy-head h3,.fundflow-radar-head h3{margin:3px 0 0;color:#17243a;font-size:24px}.fundflow-xy-intro{margin:12px 0 14px;color:#6f8299;font-size:13px;line-height:1.65}.fundflow-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.fundflow-filter-row button{border:1px solid #d8e1ef;background:#fff;color:#74869d;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800}.fundflow-filter-row button.active{border-color:#8ebaff;background:#eef5ff;color:#3279df}.fundflow-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:14px}.fundflow-kpis>div{background:#f7f9fd;border:1px solid #e2e8f2;border-radius:15px;padding:11px 12px}.fundflow-kpis span{display:block;color:#73869d;font-size:10px;font-weight:800}.fundflow-kpis strong{display:block;color:#1e2e46;font-size:22px;margin:4px 0}.fundflow-kpis small{display:block;color:#9aa8b8;font-size:9px;line-height:1.35}.fundflow-chart-wrap{position:relative;border:1px solid #dfe7f1;background:#fbfcff;border-radius:18px;overflow:hidden}.fundflow-chart-wrap svg{display:block;width:100%;height:auto;min-height:340px}.fundflow-chart-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(251,252,255,.88);color:#7990aa;font-weight:800}.fundflow-chart-loading.hidden{display:none}.fundflow-quad-legend{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:9px;color:#8a9aae;font-size:10px;text-align:center}.fundflow-quad-legend span{padding:6px;border-radius:9px;background:#f6f8fb}.fundflow-quad-legend .potential{background:#fff7e8;color:#b97916}.fundflow-quad-legend .mainline{background:#eef9f3;color:#3b8a67}.fundflow-radar-head>span{font-size:11px;color:#7c8fa7;background:#f1f5fa;border-radius:999px;padding:6px 9px}.fundflow-radar-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:15px}.fundflow-radar-grid>div{border:1px solid #e0e7f1;border-radius:16px;padding:12px;min-width:0}.fundflow-radar-grid h4{margin:0 0 9px;color:#27384f;font-size:13px}.fundflow-radar-list{display:grid;gap:7px}.fundflow-radar-list p{margin:0;color:#91a0b2;font-size:11px}.fundflow-radar-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;padding:8px 0;border-top:1px solid #edf1f6}.fundflow-radar-item:first-child{border-top:0;padding-top:0}.fundflow-radar-item b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#27384f;font-size:12px}.fundflow-radar-item em{font-style:normal;color:#497dbb;font-size:11px;font-weight:800}.fundflow-radar-item small{grid-column:1/-1;color:#8a9aab;font-size:9px;line-height:1.35}.fundflow-method-note{display:block;margin-top:12px;color:#8b9aad;font-size:10px;line-height:1.55}.fundflow-axis-label{fill:#71869e;font-size:11px;font-weight:700}.fundflow-quadrant-label{fill:#9aabba;font-size:12px;font-weight:800}.fundflow-gridline{stroke:#e4eaf2;stroke-width:1}.fundflow-midline{stroke:#b8c7d9;stroke-width:1.2;stroke-dasharray:5 5}.fundflow-path{fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;opacity:.5}.fundflow-point-old{opacity:.32}.fundflow-point-latest{stroke:#fff;stroke-width:2.2}.fundflow-tag-label{fill:#334861;font-size:10px;font-weight:800;paint-order:stroke;stroke:#fbfcff;stroke-width:3px;stroke-linejoin:round}
+@media(max-width:720px){.fundflow-xy-card,.fundflow-radar-card{padding:16px 13px!important}.fundflow-xy-head h3,.fundflow-radar-head h3{font-size:20px}.fundflow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fundflow-kpis strong{font-size:19px}.fundflow-filter-row{gap:5px}.fundflow-filter-row button{padding:6px 9px;font-size:10px}.fundflow-chart-wrap svg{min-height:330px}.fundflow-radar-grid{grid-template-columns:1fr}.fundflow-quad-legend{grid-template-columns:repeat(2,1fr);font-size:9px}.fundflow-tag-label{font-size:9px}}
+</style>
+  <script src="./app.js?v=2.6.2.24"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
