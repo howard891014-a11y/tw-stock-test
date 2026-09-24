@@ -2497,7 +2497,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.24</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.2.29</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2511,7 +2511,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     </header>
 
     <main class="content">
-      <div class="stock-eyebrow-outside">個股分析</div>
+      <div class="stock-eyebrow-outside" id="modeEyebrow">個股分析</div>
       <section class="stock-head" id="overview">
         <div>
           <h1><span id="stockName">選擇股票</span> <small id="stockCodeLabel">----</small></h1>
@@ -2528,7 +2528,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         </div>
       </section>
 
-      <section class="mode-page-heading" id="screeningHeading"><div class="eyebrow">智慧選股</div></section>
       <section class="mode-page-heading" id="managementHeading"><div class="eyebrow">股票管理</div></section>
 
       <nav class="section-tabs analysis-tabs" id="analysisTabs" aria-label="個股分析導覽">
@@ -3225,7 +3224,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 
 @media(max-width:720px){.fundflow-xy-card,.fundflow-radar-card,.fundflow-detail-card{padding:16px 13px!important}.fundflow-xy-head h3,.fundflow-radar-head h3{font-size:20px}.fundflow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fundflow-kpis strong{font-size:19px}.fundflow-filter-row{gap:5px}.fundflow-filter-row button{padding:6px 9px;font-size:10px}.fundflow-days-row small{width:100%;margin-left:0}.fundflow-detail-head h3{font-size:20px}.fundflow-detail-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.fundflow-detail-kpis strong{font-size:17px}.fundflow-detail-grid{grid-template-columns:1fr}.fundflow-company-row{grid-template-columns:minmax(0,1fr) auto}.fundflow-chart-wrap svg{min-height:330px}.fundflow-radar-grid{grid-template-columns:1fr}.fundflow-quad-legend{grid-template-columns:repeat(2,1fr);font-size:9px}.fundflow-tag-label{font-size:9px}.fundflow-browser-card{padding:16px 13px!important}.fundflow-browser-head h3{font-size:20px}.fundflow-browser-list{grid-template-columns:1fr}.fundflow-browser-item{padding:10px}.fundflow-browser-search-wrap input{font-size:11px}.fundflow-browser-chips{margin-right:-2px}}
 </style>
-  <script src="./app.js?v=2.6.2.26"></script>
+  <script src="./app.js?v=2.6.2.29"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -3628,6 +3627,30 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   #valuation .valuation-quarter-row-grid .valuation-quarter-chip{padding:9px 0!important}
   #valuation .valuation-quarter-row-grid .valuation-quarter-chip span{font-size:10px!important}
   #valuation .valuation-quarter-row-grid .valuation-quarter-chip b{font-size:13px!important}
+}
+</style>
+
+<style id="stockzone-v26229-stage1-ui">
+/* v2.6.2.29 stage 1 — screening background/card sizing + heading cleanup. */
+body.mode-screening{
+  background-color:#f8faff!important;
+  background-image:
+    radial-gradient(circle at 18% 0%,rgba(120,158,255,.045),transparent 24%),
+    radial-gradient(circle at 100% 0%,rgba(186,124,255,.035),transparent 20%)!important;
+  background-size:100% 220vh,100% 220vh!important;
+  background-position:0 0,0 0!important;
+  background-repeat:no-repeat,no-repeat!important;
+}
+/* A later legacy title rule used to pad the entire fund-flow panel, making every card look undersized. */
+body.mode-screening .dashboard-grid>[data-view-panel="fundflow"]{padding:0!important;}
+body.mode-screening .fundflow-page>.card{width:100%!important;margin-left:0!important;margin-right:0!important;}
+body.mode-screening .fundflow-master-card{padding:22px 24px!important;}
+body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px!important;}
+@media(max-width:720px){
+  body.mode-screening .content{padding-left:7px!important;padding-right:7px!important;}
+  body.mode-screening .fundflow-page>.card{border-radius:25px!important;}
+  body.mode-screening .fundflow-master-card{padding:18px 16px!important;}
+  body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:165px!important;}
 }
 </style>
 </body>

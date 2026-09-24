@@ -3849,6 +3849,7 @@ function setView(view){
   const mode=screeningViews.has(view)?"screening":management?"management":"analysis";
   document.body.classList.remove("mode-analysis","mode-screening","mode-management");
   document.body.classList.add(`mode-${mode}`);
+  const modeEyebrow=$("modeEyebrow"); if(modeEyebrow) modeEyebrow.textContent=mode==="screening"?"智慧選股":mode==="management"?"股票管理":"個股分析";
   if(view==="screening")view="fundflow";
   if(view==="fundflow"){loadFundflowCoverage(false);loadFundflowXy(false).finally(()=>loadFundflowBrowser(false));}
   document.body.classList.toggle("view-overview",view==="overview");
