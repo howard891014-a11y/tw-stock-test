@@ -14,7 +14,7 @@ for(const phase of ['all','germination','potential','mainline','transition','hot
 if(app.includes('.sort((a,b)=>priority(b)-priority(a)).slice(0,16)'))errors.push('XY chart still truncates groups to Top 16');
 if(!app.includes('const groups=fundflowEligibleGroups().sort((a,b)=>priority(b)-priority(a))'))errors.push('XY chart is not full-view after Phase filtering');
 if(!css.includes('fill-opacity:.22')||!css.includes('stroke-opacity:.9')||!css.includes('stroke-dasharray:none'))errors.push('E-prime fan is not solid-outline filled styling');
-if(!html.includes('app.js?v=2.6.3.2'))errors.push('app.js cache-buster not updated to v2.6.3.2');
+if(!html.includes('app.js?v=2.6.3.3'))errors.push('app.js cache-buster not updated to v2.6.3.3');
 if(!html.includes('.fundflow-projection-fan{opacity:1;fill-opacity:.22;stroke-opacity:.9;stroke-width:1.15;stroke-dasharray:none'))errors.push('live inline E-prime fan CSS missing');
 for(const forbidden of ['data-fundflow-browser-status=','>科技回退<','>0 家公司<','>未成群<','>有 XY<','>全部狀態<'])if(html.includes(forbidden))errors.push(`obsolete business-browser control still present: ${forbidden}`);
 if(html.includes('data-fundflow-browser-scope="other"'))errors.push('obsolete 其他 business-browser scope still present');
