@@ -468,18 +468,26 @@ module.exports=async function handler(req,res){
       }
       else if(action==='twse')result=await runTwseDisposalSync();
       else if(action==='tpex')result=await runTpexDisposalSync();
-      else if(action==='market-backfill'){
-        const backfill=await runMarketHistoryBackfill({targetTradingDays:21,maxNewDays:7,delayMs:1000});
-        return res.status(200).json({ok:true,source:'market_history_backfill',...backfill});
+      else if(action==='market-backfill'||action==='market-rebuild'){
+        const rebuild=action==='market-rebuild';
+        const backfill=await runMarketHistoryBackfill({
+          targetTradingDays:35,
+          maxNewDays:rebuild?35:12,
+          delayMs:rebuild?150:350,
+          maxRunMs:rebuild?47000:42000,
+          scanCalendarDays:100
+        });
+        const marketHealth=await readMarketDataHealth(getSql());
+        return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',backfill,marketHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / twse / tpex / market-backfill'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / twse / tpex / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // v2.6.2.15：三個既有 Cron 都只「檢查」公司基本資料。
         // 空表、前次失敗或超過 20 小時才同步；當天已成功時 19:00 / 22:00 直接跳過。
         try{result.body.companyProfiles=await ensureCompanyProfileSync({maxAgeHours:20})}
         catch(e){result.body.companyProfiles={ok:false,error:String(e?.message||e)}}
-        try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:21,maxNewDays:7,delayMs:1000})}
+        try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:35,maxNewDays:10,delayMs:350,maxRunMs:40000,scanCalendarDays:100})}
         catch(e){result.body.marketBootstrap={ok:false,error:String(e?.message||e)}}
       }
       return res.status(result.httpStatus).json(result.body);
