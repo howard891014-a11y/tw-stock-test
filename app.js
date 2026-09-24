@@ -3679,6 +3679,7 @@ let fundflowXyLoading=false;
 let fundflowXyFetchedAt=0;
 let fundflowXyData=null;
 let fundflowScope="technology-fine";
+let fundflowPhaseFilter="all";
 let fundflowTrajectoryDays=10;
 let fundflowSelectedTagId="";
 let fundflowDetailLoading=false;
@@ -3711,7 +3712,21 @@ async function loadFundflowCoverage(force=false){
 function fundflowFmt(v,d=1){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):"--"}
 function fundflowSigned(v,d=1){const n=Number(v);return Number.isFinite(n)?`${n>=0?"+":""}${n.toFixed(d)}`:"--"}
 function fundflowAllowed(g){if(!g)return false;if(fundflowScope==="all")return true;return g.scope===fundflowScope}
-function fundflowEligibleGroups(){return (fundflowXyData?.groups||[]).filter(g=>fundflowAllowed(g)&&Number(g.validCount)>=2&&Array.isArray(g.trajectory)&&g.trajectory.length>=2)}
+function fundflowPhaseBucket(g){
+  const state=String(g?.phaseState||"").trim();
+  if(state==="overheating"||state==="cooling")return "hotcool";
+  if(state==="cold"||!state||state==="unknown")return "cold-unknown";
+  return state||"cold-unknown";
+}
+function fundflowPhaseAllowed(g){return fundflowPhaseFilter==="all"||fundflowPhaseBucket(g)===fundflowPhaseFilter}
+function fundflowEligibleGroups({phase=true}={}){return (fundflowXyData?.groups||[]).filter(g=>fundflowAllowed(g)&&(!phase||fundflowPhaseAllowed(g))&&Number(g.validCount)>=2&&Array.isArray(g.trajectory)&&g.trajectory.length>=2)}
+function fundflowPhaseFilterLabel(key){return ({all:"全部 Phase",germination:"資金萌芽",potential:"準備攀升",mainline:"主升確認",transition:"轉換／混沌",hotcool:"過熱／冷卻","cold-unknown":"冷區／方向未明"})[key]||"全部 Phase"}
+function renderFundflowPhaseControls(){
+  const base=fundflowEligibleGroups({phase:false}),counts={all:base.length,germination:0,potential:0,mainline:0,transition:0,hotcool:0,"cold-unknown":0};
+  base.forEach(g=>{const k=fundflowPhaseBucket(g);if(Object.prototype.hasOwnProperty.call(counts,k))counts[k]++});
+  document.querySelectorAll("[data-fundflow-phase]").forEach(btn=>{const key=btn.dataset.fundflowPhase||"all";btn.classList.toggle("active",key===fundflowPhaseFilter);const n=btn.querySelector("[data-fundflow-phase-count]");if(n)n.textContent=String(counts[key]??0)});
+  setText("fundflowPhaseSummary",`${fundflowPhaseFilterLabel(fundflowPhaseFilter)}｜圖上 ${fundflowEligibleGroups().length} 個業務`);
+}
 function fundflowSvg(tag,attrs={},text=""){const el=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,String(v)));if(text!=="")el.textContent=text;return el}
 function fundflowColor(q){return q==="potential"?"#e2a034":q==="mainline"?"#4f9f79":q==="price-led"?"#8a82c8":q==="cold"?"#9aa8b7":"#5e8fd0"}
 function fundflowPhaseColor(state,q){return state==="germination"?"#d8a63e":state==="potential"?"#e49b2f":state==="mainline"?"#3f9b70":state==="overheating"?"#d97d4d":state==="cooling"?"#b36a72":state==="cold"?"#97a6b6":fundflowColor(q)}
@@ -3750,11 +3765,13 @@ async function loadFundflowBrowser(force=false){
 function fundflowBrowserOpen(tagId){
   const item=(fundflowBrowserData?.items||[]).find(x=>x.tagId===tagId);if(!item?.xyEligible)return;
   if(item.scope==="traditional-coarse")fundflowScope="traditional-coarse";else if(item.scope==="technology-fine")fundflowScope="technology-fine";else fundflowScope="all";
-  renderFundflowXy();fundflowSelect(tagId,{scroll:true});
+  fundflowPhaseFilter=fundflowPhaseBucket(item);renderFundflowXy();fundflowSelect(tagId,{scroll:true});
 }
 
 function fundflowSelect(tagId,{scroll=false}={}){
-  const id=String(tagId||"").trim();if(!id)return;fundflowSelectedTagId=id;renderFundflowChart();loadFundflowDetail(id,false);
+  const id=String(tagId||"").trim();if(!id)return;const group=(fundflowXyData?.groups||[]).find(g=>g.tagId===id);
+  if(group&&!fundflowPhaseAllowed(group))fundflowPhaseFilter=fundflowPhaseBucket(group);
+  fundflowSelectedTagId=id;renderFundflowPhaseControls();renderFundflowChart();loadFundflowDetail(id,false);
   if(scroll)setTimeout(()=>$("fundflowDetailCard")?.scrollIntoView({behavior:"smooth",block:"start"}),120);
 }
 function fundflowClearSelection(){fundflowSelectedTagId="";fundflowDetailData=null;$("fundflowDetailCard")?.classList.add("hidden");renderFundflowChart()}
@@ -3767,27 +3784,29 @@ function renderFundflowChart(){
   svg.append(fundflowSvg("text",{x:L+pw/2,y:H-8,class:"fundflow-axis-label","text-anchor":"middle"},"資金活動度 X →"));svg.append(fundflowSvg("text",{x:15,y:T+ph/2,class:"fundflow-axis-label",transform:`rotate(-90 15 ${T+ph/2})`,"text-anchor":"middle"},"市場價格強度 Y →"));
   svg.append(fundflowSvg("text",{x:L+12,y:T+21,class:"fundflow-quadrant-label"},"價格先行"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+21,class:"fundflow-quadrant-label","text-anchor":"end"},"資金＋價格共振"));svg.append(fundflowSvg("text",{x:L+12,y:T+ph-12,class:"fundflow-quadrant-label"},"冷區"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+ph-12,class:"fundflow-quadrant-label","text-anchor":"end"},"資金先行"));
   const priority=g=>{const phase={potential:520,germination:480,mainline:430,overheating:390,cooling:360,cold:80,transition:180}[g.phaseState]||180;return phase+Number(g.phaseConfidence||0)+Number(g.confirmation||0)*.25};
-  let groups=fundflowEligibleGroups().sort((a,b)=>priority(b)-priority(a)).slice(0,16);const selected=(fundflowXyData.groups||[]).find(g=>g.tagId===fundflowSelectedTagId&&fundflowAllowed(g));if(selected&&!groups.some(g=>g.tagId===selected.tagId))groups=[...groups,selected];
-  groups.slice().reverse().forEach(g=>{
+  // v2.6.3.0: Phase 篩選只改顯示層；不再 Top-N 截斷，符合條件的業務全部畫出。
+  const groups=fundflowEligibleGroups().sort((a,b)=>priority(b)-priority(a)),selected=groups.find(g=>g.tagId===fundflowSelectedTagId)||null;
+  // v2.6.3.0 E' fan background pass: 扇形只在已選題材且明細就緒時顯示，並永遠先畫在實線／虛線後方。
+  if(selected&&fundflowDetailData?.tagId===selected.tagId&&selected.projection?.points?.length){
+    const color=fundflowPhaseColor(selected.phaseState,selected.quadrant),cx=sx(selected.x),cy=sy(selected.y),fanPts=selected.projection.points.slice(0,3),upper=[`${cx},${cy}`,...fanPts.map(p=>`${sx(p.highX)},${sy(p.highY)}`)],lower=[...fanPts].reverse().map(p=>`${sx(p.lowX)},${sy(p.lowY)}`),poly=[...upper,...lower].join(" ");
+    svg.append(fundflowSvg("polygon",{points:poly,class:"fundflow-projection-fan is-selected",fill:color,stroke:color,"aria-hidden":"true"}));
+  }
+  const drawOrder=[...groups.filter(g=>g.tagId!==fundflowSelectedTagId).reverse(),...groups.filter(g=>g.tagId===fundflowSelectedTagId)];
+  drawOrder.forEach(g=>{
     const selectedNow=g.tagId===fundflowSelectedTagId,dim=Boolean(fundflowSelectedTagId&&!selectedNow),color=fundflowPhaseColor(g.phaseState,g.quadrant),pts=(g.trajectory||[]).slice(-fundflowTrajectoryDays),coords=pts.map(p=>`${sx(p.x)},${sy(p.y)}`).join(" "),common={"data-fundflow-tag":g.tagId,tabindex:"0",role:"button","aria-label":`${g.name} XY 軌跡`};
     if(pts.length>1)svg.append(fundflowSvg("polyline",{points:coords,class:`fundflow-path${selectedNow?" is-selected":""}${dim?" is-dim":""}`,stroke:color,...common}));
     pts.slice(0,-1).forEach(p=>svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:selectedNow?4:3,fill:color,class:`fundflow-point-old${dim?" is-dim":""}`,...common})));
     const cx=sx(g.x),cy=sy(g.y),projection=g.projection||null;
-    // E' — all visible groups get only a short dashed center tendency before selection.
+    // E' — 未選取時只顯示短虛線中心傾向；選取後顯示完整虛線，扇形已在背景 pass 畫完。
     if(projection?.points?.length){
-      const projPoints=selectedNow?projection.points:(projection.points.filter(p=>Number(p.horizon)<=3));
-      const linePoints=[`${cx},${cy}`,...projPoints.map(p=>`${sx(p.x)},${sy(p.y)}`)].join(" ");
-      if(selectedNow&&fundflowDetailData?.tagId===g.tagId){
-        const fanPts=projection.points.slice(0,3),upper=[`${cx},${cy}`,...fanPts.map(p=>`${sx(p.highX)},${sy(p.highY)}`)],lower=[...fanPts].reverse().map(p=>`${sx(p.lowX)},${sy(p.lowY)}`),poly=[...upper,...lower].join(" ");
-        svg.append(fundflowSvg("polygon",{points:poly,class:"fundflow-projection-fan",fill:color,stroke:color,"aria-hidden":"true"}));
-      }
+      const projPoints=selectedNow?projection.points:projection.points.filter(p=>Number(p.horizon)<=3),linePoints=[`${cx},${cy}`,...projPoints.map(p=>`${sx(p.x)},${sy(p.y)}`)].join(" ");
       svg.append(fundflowSvg("polyline",{points:linePoints,class:`fundflow-projection${selectedNow?" is-selected":""}${dim?" is-dim":""}`,stroke:color,"aria-label":`${g.name} 模型轉態傾向：${projection.tendency||projection.direction||"--"}`}));
       if(selectedNow){const end=projPoints.at(-1);if(end)svg.append(fundflowSvg("circle",{cx:sx(end.x),cy:sy(end.y),r:4.5,fill:"#fff",stroke:color,class:"fundflow-projection-end"}))}
     }
     svg.append(fundflowSvg("circle",{cx,cy,r:selectedNow?8:6.5,fill:color,class:`fundflow-point-latest${selectedNow?" is-selected":""}${dim?" is-dim":""}`,...common}));
     const right=cx>L+pw*.72,top=cy<T+ph*.18,dx=right?-9:9,dy=top?16:-9;svg.append(fundflowSvg("text",{x:cx+dx,y:cy+dy,class:`fundflow-tag-label${selectedNow?" is-selected":""}${dim?" is-dim":""}`,"text-anchor":right?"end":"start",...common},g.name));
   });
-  if(!groups.length)svg.append(fundflowSvg("text",{x:W/2,y:H/2,class:"fundflow-axis-label","text-anchor":"middle"},"目前篩選沒有足夠的 2 家以上業務群組"));
+  if(!groups.length)svg.append(fundflowSvg("text",{x:W/2,y:H/2,class:"fundflow-axis-label","text-anchor":"middle"},"目前這個 Phase／範圍沒有足夠的 2 家以上業務群組"));
   svg.onclick=e=>{const node=e.target?.closest?.("[data-fundflow-tag]");if(node)fundflowSelect(node.getAttribute("data-fundflow-tag"),{scroll:false})};
   svg.onkeydown=e=>{if(e.key!=="Enter"&&e.key!==" ")return;const node=e.target?.closest?.("[data-fundflow-tag]");if(node){e.preventDefault();fundflowSelect(node.getAttribute("data-fundflow-tag"),{scroll:false})}};
 }
@@ -3797,11 +3816,11 @@ function fundflowListHtml(groups,kind){
 }
 function renderFundflowXy(){
   const data=fundflowXyData;if(!data)return renderFundflowChart();setText("fundflowAsOf",data.asOf?`${String(data.asOf).replaceAll("-","/")}｜${data.trajectoryDays}日`:"--");setText("fundflowEngineBadge",String(data.engineVersion||"XY v2").replace("xy-","XY "));
-  const groups=fundflowEligibleGroups(),rising=groups.filter(g=>["germination","potential"].includes(g.phaseState)&&Number(fundflowProjectionPoint(g,5)?.dy||0)>0).sort((a,b)=>Number(b.potentialScore)-Number(a.potentialScore)),mainline=groups.filter(g=>g.phaseState==="mainline").sort((a,b)=>Number(b.mainlineScore)-Number(a.mainlineScore)),cooling=groups.filter(g=>["overheating","cooling"].includes(g.phaseState)).sort((a,b)=>Number(b.coolingScore)-Number(a.coolingScore));
+  const groups=fundflowEligibleGroups({phase:false}),rising=groups.filter(g=>["germination","potential"].includes(g.phaseState)&&Number(fundflowProjectionPoint(g,5)?.dy||0)>0).sort((a,b)=>Number(b.potentialScore)-Number(a.potentialScore)),mainline=groups.filter(g=>g.phaseState==="mainline").sort((a,b)=>Number(b.mainlineScore)-Number(a.mainlineScore)),cooling=groups.filter(g=>["overheating","cooling"].includes(g.phaseState)).sort((a,b)=>Number(b.coolingScore)-Number(a.coolingScore));
   setText("fundflowPotentialCount",rising.length);setText("fundflowMainlineCount",mainline.length);setText("fundflowRightCount",cooling.length);setText("fundflowDaysCount",data.trajectoryDays||0);
   const a=$("fundflowPotentialList"),b=$("fundflowMainlineList"),c=$("fundflowRightList");if(a)a.innerHTML=fundflowListHtml(rising,"rising");if(b)b.innerHTML=fundflowListHtml(mainline,"mainline");if(c)c.innerHTML=fundflowListHtml(cooling,"cooling");
   const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{};note.textContent=`X 已改為純資金活動度；Y 為價格強度並加入 3 日報酬，座標以 3 日 EMA 平滑。實線＝已發生；虛線＝模型轉態傾向；點開才顯示不確定扇形。轉態樣本 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期，信心會自動壓低）":""}。`}
-  document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowScope===fundflowScope));document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));renderFundflowChart();
+  document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowScope===fundflowScope));document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));renderFundflowPhaseControls();renderFundflowChart();
 }
 function fundflowFactorHtml(factors,axis,priorFactors={},group={},priorPoint={}){
   const defs=axis==="x"?[["valueRatio20","20日成交值異常","55%"],["valueTrend515","5/15日成交值趨勢","45%"]]:[["changePct","當日漲跌","10%"],["return3Pct","3日報酬","25%"],["return5Pct","5日報酬","30%"],["return20Pct","20日報酬","20%"],["persistence5","近5日上漲持續性","15%"]];
@@ -3829,7 +3848,8 @@ async function loadFundflowXy(force=false,serverRefresh=false){
   if(fundflowXyLoading)return;if(!force&&fundflowXyFetchedAt&&Date.now()-fundflowXyFetchedAt<2*60*1000){renderFundflowXy();return}fundflowXyLoading=true;const loading=$("fundflowChartLoading");if(loading){loading.classList.remove("hidden");loading.textContent="計算最近業務輪動…"}
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);try{const res=await fetch(`/api/sync-status?view=fundflow&days=${fundflowTrajectoryDays}${serverRefresh?"&refresh=1":""}`,{cache:"no-store",signal:controller.signal});fundflowXyData=await readJson(res,"資金輪動");fundflowXyFetchedAt=Date.now();renderFundflowXy()}finally{clearTimeout(timer)}}catch(e){console.warn("XY 資金輪動讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`XY 讀取失敗：${e?.message||e}`}}finally{fundflowXyLoading=false}
 }
-document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.addEventListener("click",()=>{fundflowScope=btn.dataset.fundflowScope||"technology-fine";const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&!fundflowAllowed(selected))fundflowClearSelection();renderFundflowXy()}));
+document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.addEventListener("click",()=>{fundflowScope=btn.dataset.fundflowScope||"technology-fine";const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&(!fundflowAllowed(selected)||!fundflowPhaseAllowed(selected)))fundflowClearSelection();renderFundflowXy()}));
+document.querySelectorAll("[data-fundflow-phase]").forEach(btn=>btn.addEventListener("click",()=>{fundflowPhaseFilter=btn.dataset.fundflowPhase||"all";const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&!fundflowPhaseAllowed(selected))fundflowClearSelection();renderFundflowXy()}));
 document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.addEventListener("click",()=>{const d=Number(btn.dataset.fundflowDays);if(![5,10,15].includes(d)||d===fundflowTrajectoryDays)return;fundflowTrajectoryDays=d;fundflowXyFetchedAt=0;fundflowDetailData=null;loadFundflowXy(true,false);if(fundflowSelectedTagId)loadFundflowDetail(fundflowSelectedTagId,true)}));
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-radar-item[data-fundflow-tag]");if(item)fundflowSelect(item.dataset.fundflowTag,{scroll:true})});
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-browser-item[data-fundflow-browser-tag]");if(item&&!item.disabled)fundflowBrowserOpen(item.dataset.fundflowBrowserTag)});
