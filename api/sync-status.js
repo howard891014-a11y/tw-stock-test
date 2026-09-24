@@ -2,6 +2,7 @@ const { getSql } = require('../lib/db');
 const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { summarizeProfiles } = require('../lib/company-business-tags');
+const { getFundflowSnapshot } = require('../lib/fundflow-xy');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -359,6 +360,14 @@ async function statusResponse(req, res) {
   const sql=getSql();
   const code=String(req.query.code||'').trim();
   const view=String(req.query.view||'').trim().toLowerCase();
+
+  if(view==='fundflow'){
+    res.setHeader('Cache-Control','public, s-maxage=120, stale-while-revalidate=300');
+    const days=Math.max(5,Math.min(15,Number(req.query?.days)||10));
+    const force=String(req.query?.refresh||'').toLowerCase()==='true'||String(req.query?.refresh||'')==='1';
+    const data=await getFundflowSnapshot({days,force});
+    return res.status(200).json(data);
+  }
 
   if(view==='market-health'){
     const marketHealth=await readMarketDataHealth(sql);
