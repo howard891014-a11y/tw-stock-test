@@ -3702,7 +3702,7 @@ function renderFundflowCoverage(cov){
   const techBizPct=all?techBiz/all*100:0,finePct=Number.isFinite(Number(cov?.fineTechPct))?Number(cov.fineTechPct):Number(cov?.fineMappedPct||0),industryCoverage=Number(cov?.masterIndustryCodeCoveragePct||0);
   const twseRows=Number(cov?.masterTwseRows||0),tpexRows=Number(cov?.masterTpexRows||0),nonStandard=Number(cov?.masterNonStandardCodeRows||0),invalid=Number(cov?.masterInvalidCodeRows||0),duplicates=Number(cov?.masterDuplicateCodeRows||0);
   title.textContent="全市場公司母表已納入";count.textContent=all.toLocaleString("zh-TW");badge.textContent=`科技業務 ${techBizPct.toFixed(techBizPct%1?1:0)}%`;
-  detail.textContent=`${all.toLocaleString("zh-TW")} 家上市櫃公司（上市 ${twseRows.toLocaleString("zh-TW")}＋上櫃 ${tpexRows.toLocaleString("zh-TW")}）｜產業代碼 ${industryCoverage.toFixed(industryCoverage%1?1:0)}%｜非4碼 ${nonStandard}｜無效碼 ${invalid}｜重複碼 ${duplicates}｜有科技業務 ${techBiz.toLocaleString("zh-TW")} 家（官方科技產業 ${nativeTech}＋跨產業科技 ${crossTech}）｜科技精細標籤 ${fine} 家｜其他/待細分 ${fallback} 家｜傳產/金融粗分類 ${coarse} 家${unmapped?`｜未分類 ${unmapped} 家`:""}｜科技細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
+  detail.textContent=`${all.toLocaleString("zh-TW")} 家上市櫃公司（上市 ${twseRows.toLocaleString("zh-TW")}＋上櫃 ${tpexRows.toLocaleString("zh-TW")}）｜產業代碼 ${industryCoverage.toFixed(industryCoverage%1?1:0)}%｜非4碼 ${nonStandard}｜無效碼 ${invalid}｜重複碼 ${duplicates}｜有科技業務 ${techBiz.toLocaleString("zh-TW")} 家（官方科技產業 ${nativeTech}＋跨產業科技 ${crossTech}）｜科技細標籤 ${fine} 家｜科技待細分 ${fallback} 家｜傳產/金融粗分類 ${coarse} 家${unmapped?`｜未分類 ${unmapped} 家`:""}｜科技細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
 }
 async function loadFundflowCoverage(force=false){
   if(fundflowCoverageLoading)return;if(!force&&fundflowCoverageFetchedAt&&Date.now()-fundflowCoverageFetchedAt<5*60*1000)return;fundflowCoverageLoading=true;
@@ -3730,7 +3730,7 @@ function renderFundflowBrowser(){
   if(!list||!summary||!result)return;
   if(!data){if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}return}
   if(loading)loading.classList.add("hidden");
-  const c=data.counts||{};summary.textContent=`定義 ${Number(c.totalDefinitions||0)}｜科技細業務 ${Number(c.technologyFineDefinitions||0)}｜傳產/金融 ${Number(c.traditionalDefinitions||0)}｜其他 ${Number(c.otherDefinitions||0)}｜可畫 XY ${Number(c.withXY||0)}`;
+  const c=data.counts||{};summary.textContent=`定義 ${Number(c.totalDefinitions||0)}｜科技細業務 ${Number(c.technologyFineDefinitions||0)}｜傳產/金融 ${Number(c.traditionalDefinitions||0)}｜可畫 XY ${Number(c.withXY||0)}`;
   const filtered=(data.items||[]).filter(fundflowBrowserAllowed);result.textContent=`符合 ${filtered.length} 個業務`;
   const shown=filtered.slice(0,fundflowBrowserLimit);
   list.innerHTML=shown.map(item=>{
