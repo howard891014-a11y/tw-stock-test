@@ -26,6 +26,12 @@ for (const company of db.companies) {
   }
 }
 
+
+const staticallyCoveredFineTags=new Set(Object.keys(seeds.groups));
+for(const company of db.companies) for(const link of company.tags) staticallyCoveredFineTags.add(link.id);
+const orphanFineTags=tags.listVoteEligible().filter(tag=>tag.resolution==='fine'&&!staticallyCoveredFineTags.has(tag.id));
+if(orphanFineTags.length) errors.push(`fine business definitions without any company anchor: ${orphanFineTags.map(x=>`${x.id}/${x.name}`).join(', ')}`);
+
 for (const [groupId,names] of Object.entries(seeds.groups)) {
   const item=tags.getTag(groupId);
   if (!item) errors.push(`official-chain seed group has unknown tag: ${groupId}`);
@@ -74,13 +80,18 @@ const officialChainProbes=[
   ['國巨','電子零組件業','mlcc'],
   ['晶技','電子零組件業','crystal_oscillator'],
   ['群創','光電業','lcd_panel'],
-  ['大聯大','電子通路業','electronic_distribution_business']
+  ['大聯大','電子通路業','electronic_distribution_business'],
+  ['聯電','半導體業','mature_foundry'],
+  ['鴻勁','其他電子業','handler'],
+  ['碩天','電腦及週邊設備業','ups'],
+  ['安碁資訊','資訊服務業','cybersecurity'],
+  ['鴻海','其他電子業','ems_odm']
 ];
 for(const [name,industry,expected] of officialChainProbes){
   const resolved=db.resolveCompanyBusinessTags({name,industry});
   if(!resolved.tags.some(x=>x.id===expected))errors.push(`official-chain v2 seed failed: ${name} -> ${expected}`);
 }
-if(seeds.seededCompanyNames.length<570)errors.push(`official-chain seed coverage regression: expected >=570 unique names, got ${seeds.seededCompanyNames.length}`);
+if(seeds.seededCompanyNames.length<610)errors.push(`official-chain seed coverage regression: expected >=610 unique names, got ${seeds.seededCompanyNames.length}`);
 
 
 const industryCodeSamples=[
