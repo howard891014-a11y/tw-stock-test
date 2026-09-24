@@ -3787,8 +3787,22 @@ function renderFundflowChart(){
   // v2.6.3.0: Phase 篩選只改顯示層；不再 Top-N 截斷，符合條件的業務全部畫出。
   const groups=fundflowEligibleGroups().sort((a,b)=>priority(b)-priority(a)),selected=groups.find(g=>g.tagId===fundflowSelectedTagId)||null;
   // v2.6.3.0 E' fan background pass: 扇形只在已選題材且明細就緒時顯示，並永遠先畫在實線／虛線後方。
-  if(selected&&fundflowDetailData?.tagId===selected.tagId&&selected.projection?.points?.length){
-    const color=fundflowPhaseColor(selected.phaseState,selected.quadrant),cx=sx(selected.x),cy=sy(selected.y),fanPts=selected.projection.points.slice(0,3),upper=[`${cx},${cy}`,...fanPts.map(p=>`${sx(p.highX)},${sy(p.highY)}`)],lower=[...fanPts].reverse().map(p=>`${sx(p.lowX)},${sy(p.lowY)}`),poly=[...upper,...lower].join(" ");
+  // v2.6.3.1 fix: 只要有選到題材就盡量畫出扇形；若 API 沒給 high/low 邊界，則用中心線自動補一個保守展開區。
+  const selectedProjection=(fundflowDetailData?.tagId===fundflowSelectedTagId&&fundflowDetailData?.projection?.points?.length?fundflowDetailData.projection:selected?.projection)||null;
+  if(selected&&selectedProjection?.points?.length){
+    const color=fundflowPhaseColor(selected.phaseState,selected.quadrant),cx=sx(selected.x),cy=sy(selected.y);
+    const fanPts=selectedProjection.points.slice(0,Math.min(5,selectedProjection.points.length)).map((p,i)=>{
+      const horizon=Math.max(1,Number(p.horizon||i+1)||i+1);
+      const spreadBase=Math.max(2.4,6-horizon*.45);
+      const centerX=Number.isFinite(Number(p.x))?Number(p.x):Number(selected.x);
+      const centerY=Number.isFinite(Number(p.y))?Number(p.y):Number(selected.y);
+      const highX=Number.isFinite(Number(p.highX))?Number(p.highX):Math.min(100,centerX+spreadBase*.9);
+      const lowX=Number.isFinite(Number(p.lowX))?Number(p.lowX):Math.max(0,centerX-spreadBase*.9);
+      const highY=Number.isFinite(Number(p.highY))?Number(p.highY):Math.min(100,centerY+spreadBase);
+      const lowY=Number.isFinite(Number(p.lowY))?Number(p.lowY):Math.max(0,centerY-spreadBase);
+      return {highX,highY,lowX,lowY};
+    });
+    const upper=[`${cx},${cy}`,...fanPts.map(p=>`${sx(p.highX)},${sy(p.highY)}`)],lower=[...fanPts].reverse().map(p=>`${sx(p.lowX)},${sy(p.lowY)}`),poly=[...upper,...lower].join(" ");
     svg.append(fundflowSvg("polygon",{points:poly,class:"fundflow-projection-fan is-selected",fill:color,stroke:color,"aria-hidden":"true"}));
   }
   const drawOrder=[...groups.filter(g=>g.tagId!==fundflowSelectedTagId).reverse(),...groups.filter(g=>g.tagId===fundflowSelectedTagId)];

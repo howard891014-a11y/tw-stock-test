@@ -501,7 +501,7 @@ body.view-overview .overview-only{display:block}
 .fundflow-projection{fill:none;stroke-width:2.2;stroke-dasharray:8 7;opacity:.56;pointer-events:none;vector-effect:non-scaling-stroke}
 .fundflow-projection.is-selected{stroke-width:3.2;opacity:.98}
 .fundflow-projection.is-dim{opacity:.06}
-.fundflow-projection-fan{opacity:1;fill-opacity:.065;stroke-opacity:.18;stroke-width:1.1;stroke-dasharray:3 4;pointer-events:none;vector-effect:non-scaling-stroke}
+.fundflow-projection-fan{opacity:1;fill-opacity:.14;stroke-opacity:.34;stroke-width:1.25;stroke-dasharray:3 4;pointer-events:none;vector-effect:non-scaling-stroke}
 .fundflow-projection-end{stroke-width:2.5;pointer-events:none;vector-effect:non-scaling-stroke}
 .fundflow-model-legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 4px 0;color:#667085;font-size:12px}
 .fundflow-model-legend span{display:inline-flex;align-items:center;gap:6px}
@@ -513,3 +513,8 @@ body.view-overview .overview-only{display:block}
 .fundflow-projection-summary strong{font-size:18px;text-align:right}
 .fundflow-projection-summary small{grid-column:1/-1;color:#667085;line-height:1.5}
 @media (max-width:640px){.fundflow-model-legend{gap:8px 10px}.fundflow-projection-summary{grid-template-columns:1fr}.fundflow-projection-summary strong{text-align:left}.fundflow-projection-summary small{grid-column:1}}
+
+.fundflow-projection-fan{opacity:1;fill-opacity:.065;stroke-opacity:.18;stroke-width:1.1;stroke-dasharray:3 4;pointer-events:none;vector-effect:non-scaling-stroke}
+/* v2.6.3.1 — fundflow mobile simplification */
+.fundflow-master-card-v2631{padding:22px 24px!important}.fundflow-master-card-v2631 .card-title{margin-bottom:14px}.fundflow-master-hero-hidden{display:none!important}.fundflow-inline-status{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:-2px 0 12px}.fundflow-inline-status .badge{margin-left:auto}.fundflow-xy-card{display:none!important}
+@media(max-width:720px){.fundflow-master-card-v2631,.fundflow-radar-card,.fundflow-detail-card{padding:16px 13px!important}}
