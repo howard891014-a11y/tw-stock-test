@@ -3,7 +3,7 @@ const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema 
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser } = require('../lib/fundflow-xy');
-const { runBusinessEnrichment, readPendingBusinessEnrichment } = require('../lib/business-enrichment');
+const { runBusinessEnrichment, readPendingBusinessEnrichment, readUnclassifiedProfiles } = require('../lib/business-enrichment');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -391,6 +391,13 @@ async function statusResponse(req, res) {
     const limit=Math.max(1,Math.min(500,Number(req.query?.limit)||200));
     const data=await readPendingBusinessEnrichment({limit});
     return res.status(200).json({...data,view:'tech-pending'});
+  }
+
+  if(view==='unclassified'){
+    res.setHeader('Cache-Control','no-store');
+    const limit=Math.max(1,Math.min(500,Number(req.query?.limit)||200));
+    const data=await readUnclassifiedProfiles({limit});
+    return res.status(200).json({...data,view:'unclassified'});
   }
 
   if(view==='market-health'){
