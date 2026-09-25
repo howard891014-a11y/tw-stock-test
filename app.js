@@ -215,7 +215,7 @@ async function yahooQuote(query,market="",options={}){
   }
 }
 async function quote(query,market="",options={}){
-  // v2.6.5.15：盤後仍先走自己的全市場 price_snapshot；盤中則請後端優先走官方 TWSE/TPEx MIS。
+  // v2.6.5.16：盤後仍先走自己的全市場 price_snapshot；盤中則請後端優先走官方 TWSE/TPEx MIS。
   // v2.6.5.14 的 DB-first 快速搜尋保留；Yahoo 只作盤中 MIS 或盤後 DB 缺資料時的 fallback。
   if(!isTaiwanIntraday()){
     const fast=await dbCloseQuote(query,market);
@@ -3041,7 +3041,7 @@ async function search(){
   if(!q){setStatus("請輸入股票名稱或代碼",true);return}
   const seq=++activeSearchSeq;btn.disabled=true;setStatus("搜尋股票…");
   try{
-    // v2.6.5.15：保留 v2.6.5.14 DB-first 搜尋；盤中 quote 改由官方 MIS 優先。盤後 quote 直接用 Neon 的
+    // v2.6.5.16：保留 v2.6.5.14 DB-first 搜尋；盤中 quote 改由官方 MIS 優先。盤後 quote 直接用 Neon 的
     // market_company_profile + price_snapshot 同時完成「名稱→代碼／市場」與收盤價解析。
     // 不再為每一檔第一次搜尋額外抓官方股票主檔或交易所產業類別。
     let meta=localStockMeta(q)||cachedStockMeta(q);
