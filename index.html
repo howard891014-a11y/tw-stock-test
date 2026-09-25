@@ -2912,7 +2912,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           </div>
           <div class="fundflow-inline-status fundflow-inline-status-solo" hidden aria-hidden="true"><span class="badge" id="fundflowAsOf">讀取中</span></div>
           <div class="fundflow-chart-wrap" id="fundflowChartWrap">
-            <svg id="fundflowXySvg" viewBox="0 0 760 510" role="img" aria-label="業務資金輪動與 Phase 模型轉態 XY 圖"></svg>
+            <svg id="fundflowXySvg" viewBox="0 0 760 510" role="img" aria-label="業務資金輪動與階段模型轉態 XY 圖"></svg>
             <div class="fundflow-chart-loading" id="fundflowChartLoading">讀取 XY 資金輪動…</div>
           </div>
           <div class="fundflow-model-legend"><span><i class="actual"></i>實線：已發生</span><span><i class="fan"></i>點開：不確定扇形</span></div>
@@ -2938,7 +2938,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <div class="fundflow-browser-loading" id="fundflowBrowserLoading">讀取完整業務分類…</div>
         <div class="fundflow-browser-list" id="fundflowBrowserList"></div>
         <button type="button" class="fundflow-browser-more hidden" id="fundflowBrowserMore">顯示更多</button>
-        <small class="fundflow-browser-note">這裡顯示完整可投票業務定義。已可靠細分的科技業務放在「科技細業務」，傳產與金融依官方產業放在「傳產／金融」。科技公司一律至少使用科技業務標籤，不再使用科技「其他／粗分類」桶。資料足夠的業務可直接點進題材拆解。</small>
+        <small class="fundflow-browser-note">這裡顯示 Fundflow 的市場題材層：會一起輪動的細業務已合併成市場常用名稱，CoWoS／CoPoS／FOPLP／玻璃基板等獨立題材仍分開。原始細業務不刪除，會保留作搜尋別名與公司角色；資料足夠的題材可直接點進拆解。</small>
       </section>
       <section class="card fundflow-detail-card hidden" id="fundflowDetailCard">
         <div class="fundflow-detail-head">
@@ -2957,13 +2957,13 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div class="fundflow-detail-panel"><h4>X 資金活動度拆解</h4><div id="fundflowXFactors" class="fundflow-factor-list"></div></div>
             <div class="fundflow-detail-panel"><h4>Y 價格強度拆解</h4><div id="fundflowYFactors" class="fundflow-factor-list"></div></div>
           </div>
-          <div class="fundflow-detail-panel fundflow-history-panel"><h4>每日 XY＋Phase 軌跡</h4><div id="fundflowDetailHistory" class="fundflow-history-list"></div></div>
+          <div class="fundflow-detail-panel fundflow-history-panel"><h4>每日 XY＋階段軌跡</h4><div id="fundflowDetailHistory" class="fundflow-history-list"></div></div>
           <div class="fundflow-detail-panel"><div class="fundflow-company-head"><h4>公司貢獻</h4><small>移除該公司後重新計算 XY 的差值</small></div><div id="fundflowCompanyList" class="fundflow-company-list"></div></div>
           <small class="fundflow-detail-note" id="fundflowDetailNote"></small>
         </div>
       </section>
       <section class="card fundflow-radar-card">
-        <div class="fundflow-radar-head"><div><small>今日雷達</small><h3>輪動重點</h3></div><span id="fundflowEngineBadge">XY Phase</span></div>
+        <div class="fundflow-radar-head"><div><small>今日雷達</small><h3>輪動重點</h3></div><span id="fundflowEngineBadge">XY 階段</span></div>
         <div class="fundflow-radar-grid">
           <div><h4>準備攀升</h4><div id="fundflowPotentialList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
           <div><h4>主線確認</h4><div id="fundflowMainlineList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
@@ -3236,7 +3236,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
  .fundflow-master-card-v2631{padding:22px 24px!important}.fundflow-master-card-v2631 .card-title{margin-bottom:14px}.fundflow-master-hero-hidden{display:none!important}.fundflow-merged-body{display:block}.fundflow-inline-status{display:none!important}.fundflow-inline-status .badge{margin-left:auto}.fundflow-controls-box{border:1px solid #d7deea;border-radius:18px;background:#f7f9fd;padding:12px 14px;margin:8px 0 14px}.fundflow-control-row{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:flex-start;column-gap:10px;row-gap:0}.fundflow-control-row+.fundflow-control-row{margin-top:10px}.fundflow-control-items{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}.fundflow-row-label{min-width:0;color:#667b94;font-size:11px;font-weight:900;line-height:32px}.fundflow-phase-caption{line-height:32px}.fundflow-filter-row,.fundflow-phase-row,.fundflow-days-row{margin-bottom:0}.fundflow-phase-row,.fundflow-days-row{padding-left:0}.fundflow-xy-card{display:none!important}.fundflow-controls-box .fundflow-filter-row,.fundflow-controls-box .fundflow-phase-row,.fundflow-controls-box .fundflow-days-row{border:0!important;background:transparent!important;padding:0!important}.fundflow-quad-legend{display:none!important}.fundflow-model-legend i.fan{height:10px;border:1px solid #98a2b3;border-radius:999px;background:rgba(152,162,179,.18)}.fundflow-projection-fan{opacity:1;fill-opacity:.22;stroke-opacity:.9;stroke-width:1.15;stroke-dasharray:none;pointer-events:none;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 @media(max-width:720px){.fundflow-master-card-v2631,.fundflow-radar-card,.fundflow-detail-card{padding:16px 13px!important}.fundflow-xy-head h3,.fundflow-radar-head h3{font-size:20px}.fundflow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fundflow-kpis strong{font-size:19px}.fundflow-filter-row{gap:5px}.fundflow-filter-row button{padding:6px 9px;font-size:10px}.fundflow-controls-box{padding:10px 10px;margin:8px 0 14px}.fundflow-control-row{grid-template-columns:42px minmax(0,1fr);column-gap:8px}.fundflow-phase-row{gap:5px;padding:0}.fundflow-phase-caption{width:auto;font-size:10px}.fundflow-row-label{font-size:10px;line-height:30px}.fundflow-control-items{gap:6px}.fundflow-phase-row button,.fundflow-filter-row button,.fundflow-days-row button{padding:5px 8px;font-size:9px}.fundflow-detail-head h3{font-size:20px}.fundflow-detail-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.fundflow-detail-kpis strong{font-size:17px}.fundflow-detail-grid{grid-template-columns:1fr}.fundflow-company-row{grid-template-columns:minmax(0,1fr) auto}.fundflow-chart-wrap svg{min-height:330px}.fundflow-radar-grid{grid-template-columns:1fr}.fundflow-quad-legend{grid-template-columns:repeat(2,1fr);font-size:9px}.fundflow-tag-label{font-size:9px}.fundflow-browser-card{padding:16px 13px!important}.fundflow-browser-head h3{font-size:20px}.fundflow-browser-list{grid-template-columns:1fr}.fundflow-browser-item{padding:10px}.fundflow-browser-search-wrap input{font-size:11px}.fundflow-browser-chips{margin-right:-2px}.fundflow-model-legend{gap:8px 10px}.fundflow-projection-summary{grid-template-columns:1fr}.fundflow-projection-summary strong{text-align:left}.fundflow-projection-summary small{grid-column:1}}}
 </style>
-  <script src="./app.js?v=2.6.3.5"></script>
+  <script src="./app.js?v=2.6.4.0"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
