@@ -41,6 +41,16 @@ assert.equal(d.sbl_return,2000);
 assert.equal(d.sbl_adjustment,-1000);
 assert.equal(d.sbl_balance,56000);
 
+// Current TPEx /www endpoints use the tables[] payload shape rather than aaData.
+const tpexModernMargin = {date:'115/09/24',tables:[{date:'115/09/24',data:tpexMargin.aaData}]};
+const cm = credit.parseTpexMargin(tpexModernMargin,'2026-09-24')[0];
+assert.equal(cm.stock_code,'6488');
+assert.equal(cm.margin_balance,53000);
+const tpexModernSbl = {tables:[{date:'2026/09/24',data:tpexSbl.aaData}]};
+const ds = credit.parseTpexSbl(tpexModernSbl,'2026-09-24')[0];
+assert.equal(ds.stock_code,'6488');
+assert.equal(ds.sbl_balance,56000);
+
 const merged = credit.mergeCreditRows([a],[b]);
 assert.equal(merged.length,1);
 assert.equal(merged[0].margin_balance,105000);
@@ -64,3 +74,15 @@ assert.throws(()=>credit.parseTwseMargin({...twseMargin,date:'20260923'},'2026-0
 assert.throws(()=>credit.parseTpexMargin({...tpexMargin,reportDate:'115\/09\/23'},'2026-09-24'),/日期錯位/);
 
 console.log('credit-trading validation PASS');
+
+const fs = require('fs');
+const institutionalRoute = fs.readFileSync(require('path').join(__dirname,'..','api','institutional.js'),'utf8');
+const syncRoute = fs.readFileSync(require('path').join(__dirname,'..','api','sync-status.js'),'utf8');
+assert(institutionalRoute.includes('ensureCreditTradingForStock(code, payload.market)'), 'institutional route must self-bootstrap credit data on an empty DB');
+assert(syncRoute.includes('creditBackfill=await runCreditTradingBackfill'), 'cron must advance persisted credit history automatically');
+const creditSource = fs.readFileSync(require('path').join(__dirname,'..','lib','credit-trading.js'),'utf8');
+assert(creditSource.includes('/www/zh-tw/margin/balance'), 'TPEx current margin endpoint must be present');
+assert(creditSource.includes('/www/zh-tw/margin/sbl'), 'TPEx current SBL endpoint must be present');
+assert(creditSource.includes('fillCreditHistoryForMarket(normalizedMarket'), 'incomplete credit history must trigger market-wide fill');
+assert(creditSource.includes('COUNT(*) FILTER (WHERE margin_source IS NOT NULL)'), 'partial TPEx/TWSE dates must remain eligible for retry');
+assert(!creditSource.includes("if (current.available) return { ...current, storage: 'db' };"), 'one-day credit history must not short-circuit 5/10/20-day fill');
