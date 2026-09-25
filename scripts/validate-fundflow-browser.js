@@ -1,12 +1,14 @@
 const assert = require('assert');
 const { buildBusinessBrowserCatalog } = require('../lib/fundflow-xy');
-const { listVoteEligible } = require('../lib/business-tags');
+const { listMarketDefinitions } = require('../lib/market-topic-taxonomy');
 
 const profiles = [
   { stock_code:'6488', stock_name:'環球晶', market:'上櫃', industry_code:'24', industry:'半導體業' },
   { stock_code:'3532', stock_name:'台勝科', market:'上市', industry_code:'24', industry:'半導體業' },
   { stock_code:'6182', stock_name:'合晶', market:'上櫃', industry_code:'24', industry:'半導體業' },
   { stock_code:'1101', stock_name:'台泥', market:'上市', industry_code:'01', industry:'水泥工業' },
+  { stock_code:'6207', stock_name:'雷科', market:'上櫃', industry_code:'31', industry:'其他電子業' },
+  { stock_code:'6781', stock_name:'AES-KY', market:'上市', industry_code:'28', industry:'電子零組件業' },
 ];
 
 const snapshot = {
@@ -23,7 +25,7 @@ const snapshot = {
 
 const out = buildBusinessBrowserCatalog(profiles, snapshot);
 assert.equal(out.ok, true);
-assert.equal(out.counts.totalDefinitions, listVoteEligible().length, '應列出完整可投票業務定義');
+assert.equal(out.counts.totalDefinitions, listMarketDefinitions().length, '應列出完整市場題材定義');
 assert.equal(out.asOf, '2026-09-23');
 
 const wafer = out.items.find(x=>x.tagId==='wafer');
@@ -48,5 +50,20 @@ assert.equal(out.counts.technologyFallbackDefinitions, 0, '不應再有可投票
 assert(out.counts.technologyFineDefinitions > 0);
 assert(out.counts.traditionalDefinitions > 0);
 assert.equal(out.counts.otherDefinitions, 0);
+
+const glass = out.items.find(x=>x.tagId==='glass_substrate');
+assert(glass, '應包含玻璃基板');
+assert(glass.companyNames.includes('雷科'), '玻璃基板 browser search index 應包含完整公司名：雷科');
+assert(glass.companyCodes.includes('6207'), '玻璃基板 browser search index 應包含公司代碼：6207');
+
+
+const bbu = out.items.find(x=>x.tagId==='bbu');
+assert(bbu, '應包含 BBU 市場題材');
+assert(bbu.companyNames.includes('AES-KY'), 'BBU 應由市場題材公司 seed 納入 AES-KY');
+
+const semEq = out.items.find(x=>x.tagId==='semiconductor_equipment');
+assert(semEq, '應包含合併後半導體設備市場題材');
+assert(!out.items.some(x=>x.tagId==='wet_process_equipment'), '細製程設備不應再獨立跑 XY/browser 主題');
+
 assert(out.counts.withXY >= 1);
 console.log(`Fundflow business browser validation PASS — ${out.counts.totalDefinitions} definitions, ${out.counts.technologyFineDefinitions} tech-fine`);

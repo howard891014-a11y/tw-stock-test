@@ -41,22 +41,22 @@ for(let di=0;di<dates.length;di++){
 }
 const result=computeBusinessFlow(profiles,activity,{maxDates:12});
 assert.equal(result.dates.length,12);
-const adv=result.groups.find(x=>x.tagId==='advanced_packaging_equipment');
-assert(adv,'advanced_packaging_equipment should exist');
+const adv=result.groups.find(x=>x.tagId==='semiconductor_equipment');
+assert(adv,'semiconductor_equipment market topic should exist');
 assert(adv.trajectory.length===12,'trajectory should have twelve dates');
 assert(Number.isFinite(adv.x)&&Number.isFinite(adv.y),'coordinates should be finite');
 assert(Number.isFinite(adv.confirmation)&&Number.isFinite(adv.overheating),'C/E should be finite');
 assert(adv.phaseState&&adv.phaseLabel,'phase state should exist');
 assert(adv.projection?.points?.length===3,'projection should expose 3/5/10 horizons');
 assert(Number.isFinite(adv.projection.confidence),'projection confidence should be finite');
-const cpo=result.groups.find(x=>x.tagId==='cpo');
-assert(cpo&&cpo.validCount>=3,'CPO should aggregate multiple companies');
+const cpo=result.groups.find(x=>x.tagId==='cpo_silicon_photonics');
+assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate multiple companies');
 const cal=buildTransitionCalibration(result.groups);
 assert(cal.historyDays===12,'calibration should count history days');
 assert(projectGroup(adv,cal).points.length===3,'projectGroup should return three horizons');
-console.log('Fundflow XY v2 + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
+console.log('Fundflow XY v2.1 market-topic + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
-const detail=computeTagDetail(profiles,activity,'advanced_packaging_equipment',{maxDates:10});
+const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});
 assert.equal(detail.trajectory.length,10,'detail trajectory should honor requested days');
 assert(detail.latest&&Number.isFinite(detail.latest.x)&&Number.isFinite(detail.latest.y),'detail latest coordinates should exist');
 assert(detail.latest.factors?.x?.valueRatio20!==undefined,'detail should expose X factor signals');
