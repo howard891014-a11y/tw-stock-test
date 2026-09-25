@@ -2987,6 +2987,27 @@ function resetInstitutional(note="等待資料"){
   const streak=$("institutionalStreakList");if(streak)streak.innerHTML=`<span>${note}</span>`;
   setText("institutionalJudgement",note==="讀取中"?"正在讀取官方法人資料…":"搜尋股票後顯示法人籌碼方向。");
   setText("institutionalSource","資料來源：TWSE／TPEx 官方公開資料");
+  resetCreditTrading(note);
+}
+function creditTradingValue(v){return v===null||v===undefined?"--":institutionalFmtShares(v)}
+function setCreditFlow(id,v){const el=$(id);if(!el)return;el.textContent=creditTradingValue(v);el.classList.remove("flow-up","flow-down");const cls=institutionalSignClass(v);if(cls)el.classList.add(cls)}
+function resetCreditTrading(note="等待資料"){
+  setText("creditTradingAsOf",note);const chip=$("creditTradingSignal");if(chip){chip.textContent=note;chip.className="tone-neutral"}
+  for(const key of ["Margin1","MarginBalance","Margin5","Margin10","Margin20","Short1","ShortBalance","Short5","Short10","Short20","SblSell","SblBalance","Sbl5","Sbl10","Sbl20"])setCreditFlow(`credit${key}`,null);
+  setText("creditMarginUsage","使用率 --");setText("creditShortRatio","券資比 --");setText("creditSblReturn","今日還券 --");setText("creditTradingJudgement",note==="讀取中"?"正在讀取信用交易資料…":"等待信用交易歷史資料。");
+}
+function renderCreditTrading(c){
+  if(!c?.available)return resetCreditTrading(c?.signal?.label||"資料暫缺");
+  const latest=c.latest||{},periods=c.periods||{},p=n=>periods[String(n)]||{};
+  setText("creditTradingAsOf",c.asOfDate?`${c.asOfDate}｜${c.historyCount||0}日歷史`:"官方資料");
+  setCreditFlow("creditMargin1",p(1).marginChange);setCreditFlow("creditMarginBalance",latest.margin_balance);setCreditFlow("creditMargin5",p(5).complete?p(5).marginChange:null);setCreditFlow("creditMargin10",p(10).complete?p(10).marginChange:null);setCreditFlow("creditMargin20",p(20).complete?p(20).marginChange:null);
+  setCreditFlow("creditShort1",p(1).shortChange);setCreditFlow("creditShortBalance",latest.short_balance);setCreditFlow("creditShort5",p(5).complete?p(5).shortChange:null);setCreditFlow("creditShort10",p(10).complete?p(10).shortChange:null);setCreditFlow("creditShort20",p(20).complete?p(20).shortChange:null);
+  setCreditFlow("creditSblSell",latest.sbl_sell);setCreditFlow("creditSblBalance",latest.sbl_balance);setCreditFlow("creditSbl5",p(5).complete?p(5).sblChange:null);setCreditFlow("creditSbl10",p(10).complete?p(10).sblChange:null);setCreditFlow("creditSbl20",p(20).complete?p(20).sblChange:null);
+  setText("creditMarginUsage",Number.isFinite(Number(latest.margin_usage_pct))?`使用率 ${Number(latest.margin_usage_pct).toFixed(1)}%`:"使用率 --");
+  setText("creditShortRatio",Number.isFinite(Number(latest.short_margin_ratio))?`券資比 ${Number(latest.short_margin_ratio).toFixed(1)}%`:"券資比 --");
+  setText("creditSblReturn",latest.sbl_return===null||latest.sbl_return===undefined?"今日還券 --":`今日還券 ${institutionalFmtShares(latest.sbl_return)}`);
+  const sig=c.signal||{},chip=$("creditTradingSignal");if(chip){chip.textContent=sig.label||"中性";chip.className=sig.tone==="good"?"tone-good":sig.tone==="bad"?"tone-bad":sig.tone==="watch"?"tone-watch":"tone-neutral"}
+  const reasons=Array.isArray(sig.reasons)&&sig.reasons.length?sig.reasons.join("；"):"信用籌碼目前沒有明顯異常組合";setText("creditTradingJudgement",`${sig.label||"中性"}｜${reasons}。`);
 }
 function institutionalChipTone(label){const s=String(label||"");return /偏多/.test(s)?"tone-up":/偏空/.test(s)?"tone-down":s==="中性"?"tone-watch":""}
 function renderInstitutional(data){
@@ -3015,6 +3036,7 @@ function renderInstitutional(data){
   }
   setText("institutionalJudgement",institutionalSystemJudgement(data,label,strength));
   setText("institutionalSource",`資料來源：${data.source||"TWSE／TPEx 官方公開資料"}`);
+  renderCreditTrading(data.creditTrading);
 }
 
 async function institutional(query,market="",force=false){
