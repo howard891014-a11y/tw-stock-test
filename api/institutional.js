@@ -1,4 +1,4 @@
-// StockZone v2.6.2.10
+// StockZone v2.6.5.10
 // Official institutional-flow route: TWSE T86 + TPEx daily institutional report.
 // Values are normalized to shares. The route deliberately fails open on individual
 // historical dates so one unavailable trading day does not break the whole card.
@@ -8,6 +8,7 @@ const TPEX_DAILY = "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade";
 const TPEX_DAILY_LEGACY = "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php";
 const TPEX_OPENAPI = "https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading";
 const { readCreditTradingForStock, buildCreditSignal } = require("../lib/credit-trading");
+const { readInstitutionalForStock, institutionalHistoryIsFresh, upsertInstitutionalRows } = require("../lib/institutional-history");
 
 function cleanCode(v) {
   return String(v || "").replace(/\.(TW|TWO)$/i, "").trim();
@@ -81,7 +82,7 @@ async function fetchJson(url, timeoutMs = 4500, attempts = 3) {
         redirect: "follow",
         headers: {
           Accept: "application/json,text/plain,*/*",
-          "User-Agent": "StockZone/2.6.2.10",
+          "User-Agent": "StockZone/2.6.5.10",
           Referer: String(url).includes("tpex.org.tw") ? "https://www.tpex.org.tw/" : "https://www.twse.com.tw/",
         },
       });
@@ -425,6 +426,7 @@ function buildPayload(exchange, code, rows, freshness = {}) {
     freshnessVerified: !!freshness.freshnessVerified,
     latestPublishedDate: freshness.latestDate || rows[0]?.date || "",
     fetchedAt: new Date().toISOString(),
+    storage: freshness.persisted ? "db" : "official_live_fallback",
   };
 }
 
@@ -440,10 +442,34 @@ module.exports = async function handler(req, res) {
     const cache = new Map();
     let selected = null;
     let history = [];
-    let freshness = { freshnessVerified: false, latestDate: "" };
+    let freshness = { freshnessVerified: false, latestDate: "", persisted: false };
     for (const exchange of marketOrder(market)) {
+      const marketName = exchange === "TWSE" ? "上市" : "上櫃";
+      // v2.6.5.10: persisted institutional history is the primary path.  A live
+      // official fallback remains only for bootstrap/stale recovery, and any good
+      // fallback rows are immediately written back so the next lookup is DB-only.
+      try {
+        const stored = await readInstitutionalForStock(code, marketName, 20);
+        const storedFresh = stored.length >= 20 && await institutionalHistoryIsFresh(stored, marketName);
+        if (storedFresh) {
+          selected = exchange;
+          history = stored;
+          freshness = { freshnessVerified: true, latestDate: stored[0]?.date || "", persisted: true };
+          break;
+        }
+      } catch (dbReadError) {
+        console.warn(`[institutional] persisted ${marketName} read unavailable`, dbReadError?.message || dbReadError);
+      }
+
       const result = await collectHistory(exchange, code, cache);
-      if (result.rows.length) { selected = exchange; history = result.rows; freshness = result; break; }
+      if (result.rows.length) {
+        selected = exchange;
+        history = result.rows.map((row) => ({ ...row, market: marketName }));
+        freshness = { ...result, persisted: false };
+        try { await upsertInstitutionalRows(history); }
+        catch (dbWriteError) { console.warn(`[institutional] persisted ${marketName} write unavailable`, dbWriteError?.message || dbWriteError); }
+        break;
+      }
     }
     if (!selected || !history.length) {
       res.status(404).json({ ok: false, error: "official institutional data not found", code });

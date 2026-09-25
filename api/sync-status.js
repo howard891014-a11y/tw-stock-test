@@ -2,6 +2,7 @@ const { getSql } = require('../lib/db');
 const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { runCreditTradingSync, runCreditTradingBackfill } = require('../lib/credit-trading');
+const { runInstitutionalSync, runInstitutionalBackfill } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
@@ -585,6 +586,11 @@ module.exports=async function handler(req,res){
       else if(action==='twse')result=await runTwseDisposalSync();
       else if(action==='tpex')result=await runTpexDisposalSync();
       else if(action==='credit')result=await runCreditTradingSync();
+      else if(action==='institutional')result=await runInstitutionalSync();
+      else if(action==='institutional-backfill'){
+        const backfill=await runInstitutionalBackfill({maxNewDays:Math.max(1,Math.min(8,Number(req.query?.days)||4)),maxRunMs:45000,scanCalendarDays:90});
+        return res.status(200).json(backfill);
+      }
       else if(action==='credit-backfill'){
         const backfill=await runCreditTradingBackfill({maxNewDays:Math.max(1,Math.min(8,Number(req.query?.days)||4)),maxRunMs:45000,scanCalendarDays:90});
         return res.status(200).json(backfill);
@@ -601,12 +607,14 @@ module.exports=async function handler(req,res){
         const marketHealth=await readMarketDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',backfill,marketHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / business-enrich / twse / tpex / credit / credit-backfill / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // Reuse existing cron/function slots. Credit-trading sync is idempotent and
         // independently preserves each market's last good data on upstream failure.
         if(['twse','tpex'].includes(action)){
+          try{result.body.institutionalTrading=await runInstitutionalSync().then(x=>x.body)}
+          catch(e){result.body.institutionalTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
           try{result.body.creditTrading=await runCreditTradingSync().then(x=>x.body)}
           catch(e){result.body.creditTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
         }
