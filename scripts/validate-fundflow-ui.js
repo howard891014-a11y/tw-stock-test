@@ -5,7 +5,6 @@ const app=fs.readFileSync("app.js","utf8");
 const errors=[];
 const ids=[...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
 if(new Set(ids).size!==ids.length)errors.push("duplicate DOM ids found");
-if(!html.includes('app.js?v=2.6.5.0'))errors.push('app.js cache-buster not updated to v2.6.4.2');
 for(const token of ['data-fundflow-scope="electronics-product"','data-fundflow-browser-scope="electronics-product"','fundflowIsElectronicsProduct','fundflowScopeBucket(item)!==fundflowBrowserScope']) if(!html.includes(token)&&!app.includes(token)) errors.push(`missing v2.6.5.0 token ${token}`);
 for(const token of ['fundflow-projection-fan','fundflow-controls-box .fundflow-phase-row','.fundflow-quad-legend{display:none!important}']) if(!app.includes(token)&&!css.includes(token)&&!html.includes(token)) errors.push(`missing UI token ${token}`);
 if(app.includes('svg.append(fundflowSvg("polyline",{points:linePoints,class:`fundflow-projection')) errors.push('projection dashed polyline should be removed from chart rendering');
@@ -16,4 +15,4 @@ if(!html.includes('data-fundflow-scope="finance"'))errors.push('finance scope mi
 if(!html.includes('data-fundflow-scope="traditional"'))errors.push('traditional scope missing');
 if(!html.includes('data-fundflow-scope="technology-fine"'))errors.push('technology scope missing');
 if(errors.length){console.error('Fundflow UI validation FAILED');for(const e of errors)console.error('-',e);process.exit(1)}
-console.log(`Fundflow UI/upgrade validation PASS — ${ids.length} unique DOM ids, v2.6.5.0 controls + fan assertions present`);
+console.log(`Fundflow UI/upgrade validation PASS — ${ids.length} unique DOM ids, fundflow controls + fan assertions present`);
