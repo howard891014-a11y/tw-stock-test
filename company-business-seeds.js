@@ -321,7 +321,7 @@ const GROUPS = Object.freeze({
 });
 
 function normalizeCompanyName(value){
-  return String(value||'').normalize('NFKC').trim().replace(/\s+/g,'').replace(/[＊*]/g,'').replace(/(?:-KY創|-KY|-DR|-創)$/i,'');
+  return String(value||'').normalize('NFKC').trim().replace(/\s+/g,'').replace(/[＊*]/g,'').replace(/(?:-KY創|-KY|-DR|-創)$/i,'').replace(/(?:股份有限公司|有限公司|公司)$/,'');
 }
 
 const NAME_TAGS = new Map();
@@ -340,7 +340,7 @@ function tagsForCompanyName(name){
 }
 
 module.exports=Object.freeze({
-  version:'2.3.1',
+  version:'2.3.2',
   groups:GROUPS,
   normalizeCompanyName,
   tagsForCompanyName,

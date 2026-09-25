@@ -1,13 +1,13 @@
-// StockZone v2.6.2.32 — Business Fund-Flow XY Engine v2 + Phase Transition Engine v1
+// StockZone v2.6.4.1 — Market-Topic Fund-Flow XY Engine v2.1.1 + Phase Transition Engine v1
 // B: X is price-free capital activity; Y is price strength; 3-session EMA reduces daily noise.
 // C: confirmation C, overheating E, velocity/acceleration, phase state + empirical transition calibration.
-// E': actual XY history stays solid; projection is a dashed model tendency. Uncertainty fan is shown only after selection.
+// E': actual XY history stays solid; uncertainty fan is shown only after selection.
 
 function getSql(){ return require('./db').getSql(); }
 const { resolveCompanyBusinessTags } = require('./company-business-tags');
-const { getTag, listVoteEligible } = require('./business-tags');
+const { marketTopicLinks, listMarketDefinitions } = require('./market-topic-taxonomy');
 
-const ENGINE_VERSION = 'xy-2.0.0-phase-1.0';
+const ENGINE_VERSION = 'xy-2.1.1-market-topic-phase-1.0';
 const DEFAULT_TRAJECTORY_DAYS = 15;
 const ENGINE_HISTORY_DAYS = 60;
 const IMPORTANCE_WEIGHT = Object.freeze({ core:1, important:0.85, related:0.65 });
@@ -46,16 +46,6 @@ function quantile(values,q){
 }
 function phaseMeta(key){return PHASES[key]||PHASES.transition;}
 
-function catalogTagIsTechnology(tagId){
-  let item=getTag(tagId),guard=0;
-  while(item&&guard++<12){if(item.id==='tech')return true;item=item.parent?getTag(item.parent):null;}
-  return false;
-}
-function catalogScope(tag){
-  if(!tag)return 'traditional-coarse';
-  if(catalogTagIsTechnology(tag.id))return 'technology-fine';
-  return 'traditional-coarse';
-}
 function buildBusinessBrowserCatalog(profiles=[],snapshot={}){
   const companyMap=new Map();
   for(const p of profiles||[]){
@@ -63,11 +53,11 @@ function buildBusinessBrowserCatalog(profiles=[],snapshot={}){
       stock_code:p.stock_code||p.symbol,stock_name:p.stock_name||p.name,name:p.stock_name||p.name,market:p.market,
       industry_code:p.industry_code,industry:p.industry,auto_business_tags:p.auto_business_tags
     });
-    const seen=new Set();
-    for(const link of resolved.tags||[]){
+    const seen=new Set(),companyName=resolved.name||String(p.stock_name||p.name||''),companyCode=resolved.symbol||String(p.stock_code||p.symbol||'');
+    const marketLinks=marketTopicLinks(resolved.tags||[],companyName);
+    for(const link of marketLinks){
       if(!link?.id||seen.has(link.id))continue;seen.add(link.id);
       const cur=companyMap.get(link.id)||{companyCount:0,examples:[],companyNames:[],companyCodes:[]};cur.companyCount++;
-      const companyName=resolved.name||String(p.stock_name||p.name||''),companyCode=resolved.symbol||String(p.stock_code||p.symbol||'');
       if(companyName&&!cur.companyNames.includes(companyName))cur.companyNames.push(companyName);
       if(companyCode&&!cur.companyCodes.includes(companyCode))cur.companyCodes.push(companyCode);
       if(cur.examples.length<5)cur.examples.push({code:companyCode,name:companyName});
@@ -75,10 +65,10 @@ function buildBusinessBrowserCatalog(profiles=[],snapshot={}){
     }
   }
   const groupMap=new Map((snapshot?.groups||[]).map(g=>[g.tagId,g]));
-  const definitions=listVoteEligible();
+  const definitions=listMarketDefinitions();
   const items=definitions.map(tag=>{
     const company=companyMap.get(tag.id)||{companyCount:0,examples:[],companyNames:[],companyCodes:[]},g=groupMap.get(tag.id)||null;
-    const parent=tag.parent?getTag(tag.parent):null,scope=catalogScope(tag),companyCount=Number(company.companyCount||0);
+    const scope=tag.scope||'traditional-coarse',companyCount=Number(company.companyCount||0);
     const trajectoryLength=Array.isArray(g?.trajectory)?g.trajectory.length:0,validCount=Number(g?.validCount||0);
     const xyEligible=Boolean(g&&validCount>=2&&trajectoryLength>=2);
     let noXYReason='';
@@ -88,7 +78,7 @@ function buildBusinessBrowserCatalog(profiles=[],snapshot={}){
     else if(validCount<2)noXYReason=`資料不足（有效 ${validCount}/${companyCount} 家）`;
     else if(trajectoryLength<2)noXYReason='資料不足（XY 軌跡不足 2 日）';
     return {
-      tagId:tag.id,name:tag.name,parentId:tag.parent||'',parentName:parent?.name||'',kind:tag.kind,resolution:tag.resolution,scope,
+      tagId:tag.id,name:tag.name,parentId:tag.parentId||'',parentName:tag.parentName||'',kind:tag.kind,resolution:tag.resolution,scope,
       aliases:[...(tag.aliases||[])],companyCount,examples:company.examples,companyNames:company.companyNames||[],companyCodes:company.companyCodes||[],represented:companyCount>0,
       hasXY:Boolean(g),xyEligible,noXYReason,asOf:snapshot?.asOf||'',
       x:g?.x??null,y:g?.y??null,rawX:g?.rawX??null,rawY:g?.rawY??null,quadrant:g?.quadrant||'',status:g?.status||'',statusLabel:g?.statusLabel||'',
@@ -139,15 +129,14 @@ function scoreStocksForDate(rows){
   });
 }
 
-function classifyScope(link){if(!link)return 'other';if(link.id==='other_industry')return 'other';if(link.technology)return link.resolution==='fallback'?'other':'technology-fine';return 'traditional-coarse';}
 function buildProfileTagMap(profiles){
   const byCode=new Map(),tagMeta=new Map();
   for(const p of profiles||[]){
     const code=String(p.stock_code||p.symbol||'').trim();if(!code)continue;
     const resolved=resolveCompanyBusinessTags({stock_code:code,stock_name:p.stock_name,name:p.stock_name,market:p.market,industry_code:p.industry_code,industry:p.industry,auto_business_tags:p.auto_business_tags});
-    const links=resolved.tags.map(link=>{
-      const meta=getTag(link.id),out={...link,weight:importanceWeight(link.importance),scope:classifyScope(link),parentName:meta?.parent?getTag(meta.parent)?.name||'':''};
-      if(!tagMeta.has(link.id))tagMeta.set(link.id,{tagId:link.id,name:link.name,parent:link.parent,parentName:out.parentName,scope:out.scope,resolution:link.resolution,technology:Boolean(link.technology)});
+    const links=marketTopicLinks(resolved.tags||[],resolved.name||p.stock_name||p.name||'').map(link=>{
+      const out={...link,weight:importanceWeight(link.importance),scope:link.scope|| (link.technology?'technology-fine':'traditional-coarse'),parentName:link.parentName||''};
+      if(!tagMeta.has(link.id))tagMeta.set(link.id,{tagId:link.id,name:link.name,parent:'',parentName:out.parentName,scope:out.scope,resolution:link.resolution||'market-topic',technology:Boolean(link.technology)});
       return out;
     });
     byCode.set(code,{...p,code,resolved,links});
@@ -304,7 +293,7 @@ function projectGroup(group,calibration){
   else if(p5.dx>1&&p5.dy>1)tendency='同步轉強';
   else if(p5.dx<-1&&p5.dy<-1)tendency='同步轉弱';
   return {mode:'model-tendency',state,stateLabel:phaseMeta(state).label,tendency,direction:label,confidence:round(confidence),historyDays:calibration?.historyDays||0,maturityPct:maturity,points,
-    caution:'虛線是依目前狀態、速度與歷史同狀態轉態統計形成的模型傾向，不是未來股價或座標保證。'};
+    caution:'扇形是依目前狀態、速度與歷史同狀態轉態統計形成的不確定範圍，不是未來股價或座標保證。'};
 }
 function decorateProjections(groups,calibration){for(const g of groups||[])g.projection=projectGroup(g,calibration);return groups;}
 
@@ -336,7 +325,7 @@ function computeTagDetail(profiles,activityRows,tagId,{maxDates=10}={}){
       dx1:g.dx1,dy1:g.dy1,dx3:g.dx3,dy3:g.dy3,ddx1:g.ddx1,ddy1:g.ddy1,memberCount:g.memberCount,validCount:g.validCount,coveragePct:g.coveragePct,reliability:g.reliability,activityBreadth:g.activityBreadth,priceBreadth:g.priceBreadth,upBreadth:g.upBreadth,factors:latestFactors,
       groupBuild:{xMedian:latestRawSummary.xMedian,xMean:latestRawSummary.xMean,activityBreadth:latestRawSummary.activityBreadth,yMedian:latestRawSummary.yMedian,yMean:latestRawSummary.yMean,priceBreadth:latestRawSummary.priceBreadth,upBreadth:latestRawSummary.upBreadth,reliability:latestRawSummary.reliability}},
     projection,calibration:{historyDays:calibration.historyDays,maturityPct:calibration.maturityPct,sampleCount:calibration.sampleCount},companies:companies.slice(0,20),
-    methodology:{impact:'公司貢獻＝移除該公司後重新計算當日原始業務座標，與完整原始座標的差。',factor:'因子熱度為該業務成員的加權全市場百分位平均，50 約為中性。',projection:'虛線／扇形是狀態＋速度＋歷史同狀態轉態分布的模型傾向，不是未來保證。'}};
+    methodology:{impact:'公司貢獻＝移除該公司後重新計算當日原始業務座標，與完整原始座標的差。',factor:'因子熱度為該業務成員的加權全市場百分位平均，50 約為中性。',projection:'扇形是狀態＋速度＋歷史同狀態轉態分布的不確定範圍，不是未來保證。'}};
 }
 
 async function ensureBusinessFlowSchema(sql=getSql()){
@@ -416,7 +405,7 @@ async function getFundflowSnapshot({days=10,force=false}={}){
   const rightMoving=groups.filter(g=>eligible(g)&&g.dx3>1).sort((a,b)=>b.rotationScore-a.rotationScore).slice(0,10);
   const value={ok:true,engineVersion:ENGINE_VERSION,asOf:allDates.at(-1),trajectoryDates:allDates.slice(-bounded),trajectoryDays:Math.min(bounded,allDates.length),
     axes:{x:'資金活動度',y:'市場價格強度',center:50,potentialX:55,mainline:55},
-    methodology:{stockX:'55% 20日成交值異常＋45% 5/15日成交值趨勢；兩者採全市場百分位。X 不再混入價格方向。',stockY:'10% 當日漲跌＋25% 3日報酬＋30% 5日報酬＋20% 20日報酬＋15% 近5日上漲持續性；價格因子採全市場百分位。',group:'業務座標採加權中位數／平均＋族群廣度，小樣本向 50 收縮；座標用 3 交易日 EMA 平滑。',phase:'C＝族群同步確認度；E＝高檔過熱／衰竭度；Phase 另結合 ΔX/ΔY 與加速度並使用兩日狀態黏性。',projection:'虛線把 Phase、ΔXY 與歷史同狀態轉態分布混合成模型傾向；點開題材才顯示不確定扇形。',caution:'X 是成交活動／參與度，不是券商分點或逐筆成交推算的「淨流入」；虛線不是未來保證。'},
+    methodology:{stockX:'55% 20日成交值異常＋45% 5/15日成交值趨勢；兩者採全市場百分位。X 不再混入價格方向。',stockY:'10% 當日漲跌＋25% 3日報酬＋30% 5日報酬＋20% 20日報酬＋15% 近5日上漲持續性；價格因子採全市場百分位。',group:'業務座標採加權中位數／平均＋族群廣度，小樣本向 50 收縮；座標用 3 交易日 EMA 平滑。',phase:'C＝族群同步確認度；E＝高檔過熱／衰竭度；Phase 另結合 ΔX/ΔY 與加速度並使用兩日狀態黏性。',projection:'Phase、ΔXY 與歷史同狀態轉態分布形成模型傾向；點開題材顯示不確定扇形。',caution:'X 是成交活動／參與度，不是券商分點或逐筆成交推算的「淨流入」；扇形不是未來保證。'},
     calibration:{historyDays:calibration.historyDays,maturityPct:calibration.maturityPct,sampleCount:calibration.sampleCount,warmup:calibration.historyDays<30},
     counts:{groups:groups.length,byScope:scopeCounts(groups),rising:rising.length,mainline:mainline.length,cooling:cooling.length},
     picks:{rising,potential:rising,mainline,cooling,rightMoving,retreat:cooling},groups};

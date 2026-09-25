@@ -140,6 +140,12 @@ for(const [name,industry,expected] of glassSubstrateAudit){
   if(!resolved.tags.some(x=>x.id===expected))errors.push(`glass-substrate audit failed: ${name} -> ${expected}`);
 }
 
+const glassSubstrateSymbolAudit=[['6207','雷科'],['8027','鈦昇'],['7828','創新服務']];
+for(const [symbol,name] of glassSubstrateSymbolAudit){
+  const resolved=db.resolveCompanyBusinessTags({symbol,name,industryCode:'24'});
+  if(!resolved.tags.some(x=>x.id==='glass_substrate'&&['important','core'].includes(x.importance)))errors.push(`glass-substrate exact-symbol mapping failed: ${symbol} ${name}`);
+}
+
 const advancedPackagingAudit=[
   ['萬潤','半導體業',['cowos','cpo','silicon_photonics','soic','copos']],
   ['志聖','其他電子業',['cowos','soic','bonding_equipment','copos']],
