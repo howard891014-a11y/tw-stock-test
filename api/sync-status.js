@@ -1,8 +1,8 @@
 const { getSql } = require('../lib/db');
 const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
-const { runCreditTradingSync, runCreditTradingBackfill } = require('../lib/credit-trading');
-const { runInstitutionalSync, runInstitutionalBackfill } = require('../lib/institutional-history');
+const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
+const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
@@ -361,6 +361,69 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
   };
 }
 
+
+async function readFlowDataHealth(sql){
+  const [institutional,credit,expectedRows,profileRows,syncRows]=await Promise.all([
+    readInstitutionalHistoryHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
+    readCreditTradingHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
+    sql.query(`
+      SELECT market,MAX(trade_date)::text AS expected_trade_date
+      FROM market_daily_history
+      WHERE market IN ('上市','上櫃')
+      GROUP BY market
+    `).catch(()=>[]),
+    sql.query(`
+      SELECT market,COUNT(*)::int AS profile_rows
+      FROM market_company_profile
+      WHERE market IN ('上市','上櫃')
+      GROUP BY market
+    `).catch(()=>[]),
+    sql.query(`
+      SELECT source,last_attempt_at,last_success_at,status,row_count,error_message,updated_at
+      FROM sync_status
+      WHERE source = ANY($1::text[])
+      ORDER BY source
+    `,[['institutional_flow_twse','institutional_flow_tpex','credit_trading_twse','credit_trading_tpex']]).catch(()=>[])
+  ]);
+  const expected=Object.fromEntries(expectedRows.map(r=>[r.market,isoDate(r.expected_trade_date)]));
+  const profiles=Object.fromEntries(profileRows.map(r=>[r.market,Number(r.profile_rows)||0]));
+  const syncBySource=Object.fromEntries(syncRows.map(r=>[r.source,r]));
+  const sourceMap={
+    '上市':{institutional:'institutional_flow_twse',credit:'credit_trading_twse'},
+    '上櫃':{institutional:'institutional_flow_tpex',credit:'credit_trading_tpex'}
+  };
+  const markets={};
+  const warnings=[];
+  for(const market of ['上市','上櫃']){
+    const exp=expected[market]||null, profileCount=profiles[market]||0;
+    const inst=institutional.markets?.[market]||{};
+    const cred=credit.markets?.[market]||{};
+    const instDate=isoDate(inst.maxDate),creditDate=isoDate(cred.maxDate);
+    const instFresh=!exp||Boolean(instDate&&instDate>=exp);
+    const creditFresh=!exp||Boolean(creditDate&&creditDate>=exp);
+    const instHistoryReady=Number(inst.tradingDays||0)>=20;
+    const creditHistoryReady=Number(cred.tradingDays||0)>=20;
+    const dateAligned=Boolean(instDate&&creditDate&&instDate===creditDate);
+    const institutionalCoveragePct=profileCount?pct(inst.latestRows||0,profileCount):0;
+    const creditParticipationPct=profileCount?pct(cred.latestRows||0,profileCount):0;
+    const ready=instFresh&&creditFresh&&instHistoryReady&&creditHistoryReady;
+    if(!instFresh)warnings.push(`${market}法人最新 ${instDate||'無'}，市場最新 ${exp||'未知'}`);
+    if(!creditFresh)warnings.push(`${market}信用最新 ${creditDate||'無'}，市場最新 ${exp||'未知'}`);
+    if(!instHistoryReady)warnings.push(`${market}法人歷史僅 ${Number(inst.tradingDays||0)} 日`);
+    if(!creditHistoryReady)warnings.push(`${market}信用歷史僅 ${Number(cred.tradingDays||0)} 日`);
+    markets[market]={
+      ready,expectedTradeDate:exp,profileRows:profileCount,dateAligned,
+      institutional:{...inst,fresh:instFresh,historyReady:instHistoryReady,coveragePct:institutionalCoveragePct,sync:syncBySource[sourceMap[market].institutional]||null},
+      credit:{...cred,fresh:creditFresh,historyReady:creditHistoryReady,participationPct:creditParticipationPct,sync:syncBySource[sourceMap[market].credit]||null}
+    };
+  }
+  return{
+    readyForAX:Object.values(markets).length===2&&Object.values(markets).every(x=>x.ready),
+    targetHistoryDays:20,markets,warnings:warnings.slice(0,12),
+    generatedAt:new Date().toISOString()
+  };
+}
+
 async function statusResponse(req, res) {
   // v2.6.2.17: status reads are also safe schema-migration entry points.
   // This prevents a fresh cached sync from skipping new columns/tables after deployment.
@@ -465,6 +528,11 @@ async function statusResponse(req, res) {
     return res.status(200).json({ok:true,view:'market-health',marketHealth});
   }
 
+  if(view==='flow-data-health'){
+    const flowDataHealth=await readFlowDataHealth(sql);
+    return res.status(200).json({ok:true,view:'flow-data-health',flowDataHealth});
+  }
+
   if(code){
     if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
 
@@ -518,7 +586,7 @@ async function statusResponse(req, res) {
     return res.status(200).json({ok:true,code,found:Boolean(price||disposalRows.length||historyRows.length||activityRows.length),price,history:historyRows,activity:activityRows,disposal:disposalRows,sync});
   }
 
-  const [status,price,disposal,marketHistory,marketActivity,companyProfiles,companyTagCoverage]=await Promise.all([
+  const [status,price,disposal,marketHistory,marketActivity,companyProfiles,companyTagCoverage,creditTrading]=await Promise.all([
     sql.query(`SELECT source,last_attempt_at,last_success_at,status,row_count,error_message,updated_at FROM sync_status ORDER BY source`),
     sql.query(`SELECT market,COUNT(*)::int AS rows,MAX(trade_date) AS latest_trade_date,MAX(updated_at) AS last_write FROM price_snapshot GROUP BY market ORDER BY market`),
     sql.query(`SELECT market,COUNT(*)::int AS rows,MIN(start_date) AS min_start,MAX(end_date) AS max_end,MAX(updated_at) AS last_write FROM disposal_snapshot GROUP BY market ORDER BY market`),
@@ -550,9 +618,11 @@ async function statusResponse(req, res) {
       GROUP BY market
       ORDER BY market
     `).catch(()=>[]),
-    readCompanyTagCoverage(sql)
+    readCompanyTagCoverage(sql),
+    readCreditTradingHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)}))
   ]);
-  return res.status(200).json({ok:true,status,price,marketHistory,marketActivity,companyProfiles,companyTagCoverage,disposal});
+  const flowDataHealth=await readFlowDataHealth(sql).catch(e=>({readyForAX:false,markets:{},warnings:[String(e?.message||e)],error:String(e?.message||e)}));
+  return res.status(200).json({ok:true,status,price,marketHistory,marketActivity,companyProfiles,companyTagCoverage,disposal,creditTrading,flowDataHealth});
 }
 
 module.exports=async function handler(req,res){
@@ -617,6 +687,13 @@ module.exports=async function handler(req,res){
           catch(e){result.body.institutionalTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
           try{result.body.creditTrading=await runCreditTradingSync().then(x=>x.body)}
           catch(e){result.body.creditTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
+          // v2.6.5.13: keep both persisted flow layers symmetric.  Each existing
+          // evening cron advances at most one missing market-wide trading day for
+          // institutional + credit history.  Mature DBs return immediately.
+          try{result.body.institutionalBackfill=await runInstitutionalBackfill({maxNewDays:1,maxRunMs:7000,scanCalendarDays:90})}
+          catch(e){result.body.institutionalBackfill={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
+          try{result.body.creditBackfill=await runCreditTradingBackfill({maxNewDays:1,maxRunMs:8000,scanCalendarDays:90})}
+          catch(e){result.body.creditBackfill={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
         }
         // v2.6.2.15：三個既有 Cron 都只「檢查」公司基本資料。
         // 空表、前次失敗或超過 20 小時才同步；當天已成功時 19:00 / 22:00 直接跳過。

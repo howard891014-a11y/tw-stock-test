@@ -1,4 +1,4 @@
-// StockZone v2.6.5.12
+// StockZone v2.6.5.13
 // Official institutional-flow route: TWSE T86 + TPEx daily institutional report.
 // Values are normalized to shares. The route deliberately fails open on individual
 // historical dates so one unavailable trading day does not break the whole card.
@@ -82,7 +82,7 @@ async function fetchJson(url, timeoutMs = 4500, attempts = 3) {
         redirect: "follow",
         headers: {
           Accept: "application/json,text/plain,*/*",
-          "User-Agent": "StockZone/2.6.5.12",
+          "User-Agent": "StockZone/2.6.5.13",
           Referer: String(url).includes("tpex.org.tw") ? "https://www.tpex.org.tw/" : "https://www.twse.com.tw/",
         },
       });
@@ -477,7 +477,7 @@ module.exports = async function handler(req, res) {
     }
     res.setHeader("Cache-Control", freshness.freshnessVerified ? "s-maxage=300, stale-while-revalidate=60" : "no-store");
     const payload = buildPayload(selected, code, history, freshness);
-    // Credit trading is an independent persisted layer. v2.6.5.12 self-bootstraps the
+    // Credit trading is an independent persisted layer. v2.6.5.13 self-bootstraps the
     // latest market snapshot on an empty DB, so a new deployment no longer has to
     // wait for the next cron. Never let its DB/upstream problem break institutional.
     try {
