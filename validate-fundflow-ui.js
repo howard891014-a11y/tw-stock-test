@@ -5,7 +5,7 @@ const app=fs.readFileSync("app.js","utf8");
 const errors=[];
 const ids=[...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
 if(new Set(ids).size!==ids.length)errors.push("duplicate DOM ids found");
-if(!html.includes('app.js?v=2.6.3.4'))errors.push('app.js cache-buster not updated to v2.6.3.4');
+if(!html.includes('app.js?v=2.6.3.5'))errors.push('app.js cache-buster not updated to v2.6.3.5');
 for(const token of ['data-fundflow-scope="electronics-product"','data-fundflow-browser-scope="electronics-product"','fundflowIsElectronicsProduct','fundflowScopeBucket(item)!==fundflowBrowserScope']) if(!html.includes(token)&&!app.includes(token)) errors.push(`missing v2.6.3.4 token ${token}`);
 for(const token of ['fundflow-projection-fan','fundflow-controls-box .fundflow-phase-row','.fundflow-quad-legend{display:none!important}']) if(!app.includes(token)&&!css.includes(token)&&!html.includes(token)) errors.push(`missing UI token ${token}`);
 if(app.includes('svg.append(fundflowSvg("polyline",{points:linePoints,class:`fundflow-projection')) errors.push('projection dashed polyline should be removed from chart rendering');

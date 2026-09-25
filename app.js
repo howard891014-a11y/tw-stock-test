@@ -3739,7 +3739,7 @@ function fundflowBrowserAllowed(item){
   if(!item)return false;
   if(fundflowBrowserScope!=="all"&&fundflowScopeBucket(item)!==fundflowBrowserScope)return false;
   const q=fundflowBrowserQuery.trim().toLowerCase();if(!q)return true;
-  const hay=[item.name,item.tagId,item.parentName,...(item.aliases||[]),...(item.examples||[]).flatMap(x=>[x.name,x.code])].filter(Boolean).join(" ").toLowerCase();
+  const hay=[item.name,item.tagId,item.parentName,...(item.aliases||[]),...(item.companyNames||[]),...(item.companyCodes||[]),...(item.examples||[]).flatMap(x=>[x.name,x.code])].filter(Boolean).join(" ").toLowerCase();
   return hay.includes(q);
 }
 function renderFundflowBrowser(){
