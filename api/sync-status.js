@@ -1,6 +1,7 @@
 const { getSql } = require('../lib/db');
 const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
+const { runCreditTradingSync, runCreditTradingBackfill } = require('../lib/credit-trading');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
@@ -583,6 +584,11 @@ module.exports=async function handler(req,res){
       }
       else if(action==='twse')result=await runTwseDisposalSync();
       else if(action==='tpex')result=await runTpexDisposalSync();
+      else if(action==='credit')result=await runCreditTradingSync();
+      else if(action==='credit-backfill'){
+        const backfill=await runCreditTradingBackfill({maxNewDays:Math.max(1,Math.min(8,Number(req.query?.days)||4)),maxRunMs:45000,scanCalendarDays:90});
+        return res.status(200).json(backfill);
+      }
       else if(action==='market-backfill'||action==='market-rebuild'){
         const rebuild=action==='market-rebuild';
         const backfill=await runMarketHistoryBackfill({
@@ -595,9 +601,15 @@ module.exports=async function handler(req,res){
         const marketHealth=await readMarketDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',backfill,marketHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / business-enrich / twse / tpex / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / business-enrich / twse / tpex / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
+        // Reuse existing cron/function slots. Credit-trading sync is idempotent and
+        // independently preserves each market's last good data on upstream failure.
+        if(['twse','tpex'].includes(action)){
+          try{result.body.creditTrading=await runCreditTradingSync().then(x=>x.body)}
+          catch(e){result.body.creditTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
+        }
         // v2.6.2.15：三個既有 Cron 都只「檢查」公司基本資料。
         // 空表、前次失敗或超過 20 小時才同步；當天已成功時 19:00 / 22:00 直接跳過。
         try{result.body.companyProfiles=await ensureCompanyProfileSync({maxAgeHours:20})}

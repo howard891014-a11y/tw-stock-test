@@ -7,6 +7,7 @@ const TWSE_T86 = "https://www.twse.com.tw/rwd/zh/fund/T86";
 const TPEX_DAILY = "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade";
 const TPEX_DAILY_LEGACY = "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php";
 const TPEX_OPENAPI = "https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading";
+const { readCreditTradingForStock, buildCreditSignal } = require("../lib/credit-trading");
 
 function cleanCode(v) {
   return String(v || "").replace(/\.(TW|TWO)$/i, "").trim();
@@ -449,7 +450,18 @@ module.exports = async function handler(req, res) {
       return;
     }
     res.setHeader("Cache-Control", freshness.freshnessVerified ? "s-maxage=300, stale-while-revalidate=60" : "no-store");
-    res.status(200).json(buildPayload(selected, code, history, freshness));
+    const payload = buildPayload(selected, code, history, freshness);
+    // Credit trading is an independent persisted layer. Never let a DB/schema/upstream
+    // problem break the existing official institutional card.
+    try {
+      const creditTrading = await readCreditTradingForStock(code, payload.market);
+      creditTrading.signal = buildCreditSignal(creditTrading, payload);
+      payload.creditTrading = creditTrading;
+    } catch (creditError) {
+      console.warn("[institutional] credit layer unavailable", creditError?.message || creditError);
+      payload.creditTrading = { available: false, historyCount: 0, periods: {}, history: [], signal: { label: "資料暫缺", tone: "neutral", reasons: [] } };
+    }
+    res.status(200).json(payload);
   } catch (e) {
     console.error("[institutional] route failed", e);
     res.status(502).json({ ok: false, error: "official institutional source failed", detail: String(e?.message || e) });
