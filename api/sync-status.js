@@ -3,7 +3,7 @@ const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema 
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser } = require('../lib/fundflow-xy');
-const { runBusinessEnrichment, readPendingBusinessEnrichment, readUnclassifiedProfiles } = require('../lib/business-enrichment');
+const { runBusinessEnrichment, readBlindCoverageAudit, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -80,7 +80,7 @@ function requestedAction(req) {
 
 async function readCompanyTagCoverage(sql){
   const profiles=await sql.query(`
-    SELECT stock_code AS symbol,stock_name AS name,market,industry_code,industry,auto_business_tags,main_business,business_enrich_status,business_enrich_checked_at
+    SELECT stock_code AS symbol,stock_name AS name,market,industry_code,industry,auto_business_tags,auto_market_topics,main_business,business_enrich_status,business_enrich_version,business_enrich_checked_at
     FROM market_company_profile
     ORDER BY stock_code
   `).catch(()=>[]);
@@ -98,8 +98,13 @@ async function readCompanyTagCoverage(sql){
   const nonStandardCodeRows=profiles.filter(p=>!/^\d{4}$/.test(String(p.symbol||''))).length;
   const invalidCodeRows=profiles.filter(p=>!/^\d{4,6}$/.test(String(p.symbol||''))).length;
   const uniqueCodes=new Set(profiles.map(p=>String(p.symbol||'')));
+  const mainBusinessRows=profiles.filter(p=>String(p.main_business||'').trim()).length;
+  const blindVersionRows=profiles.filter(p=>String(p.business_enrich_version||'')===BLIND_COVERAGE_VERSION).length;
   return{
     profileRows:profiles.length,...summary,
+    blindCoverageVersion:BLIND_COVERAGE_VERSION,mainBusinessRows,blindVersionRows,
+    blindScanCoveragePct:profiles.length?Number((blindVersionRows/profiles.length*100).toFixed(1)):0,
+    mainBusinessCoveragePct:profiles.length?Number((mainBusinessRows/profiles.length*100).toFixed(1)):0,
     masterIndustryCodeRows:industryCodeRows,
     masterIndustryCodeCoveragePct:profiles.length?Number((industryCodeRows/profiles.length*100).toFixed(1)):0,
     masterMissingIndustryCodeRows:Math.max(0,profiles.length-industryCodeRows),
@@ -386,6 +391,14 @@ async function statusResponse(req, res) {
     return res.status(200).json(data);
   }
 
+  if(view==='blind-coverage'){
+    res.setHeader('Cache-Control','no-store');
+    const limit=Math.max(1,Math.min(1000,Number(req.query?.limit)||300));
+    const minScore=Math.max(0,Math.min(100,Number(req.query?.minScore)||60));
+    const data=await readBlindCoverageAudit({limit,minScore});
+    return res.status(200).json(data);
+  }
+
   if(view==='tech-pending'){
     res.setHeader('Cache-Control','no-store');
     const limit=Math.max(1,Math.min(500,Number(req.query?.limit)||200));
@@ -518,9 +531,9 @@ module.exports=async function handler(req,res){
         return res.status(profile.ok?200:502).json(profile);
       }
       else if(action==='business-enrich'){
-        const limit=Math.max(1,Math.min(50,Number(req.query?.limit)||30));
+        const limit=Math.max(1,Math.min(200,Number(req.query?.limit)||(schedule?70:120)));
         const retry=['1','true','yes'].includes(String(req.query?.retry||'').toLowerCase());
-        const enriched=await runBusinessEnrichment({limit,retry});
+        const enriched=await runBusinessEnrichment({limit,retry,maxRunMs:schedule?18000:47000,concurrency:schedule?8:8});
         return res.status(200).json(enriched);
       }
       else if(action==='twse')result=await runTwseDisposalSync();
@@ -546,6 +559,12 @@ module.exports=async function handler(req,res){
         catch(e){result.body.companyProfiles={ok:false,error:String(e?.message||e)}}
         try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:80,maxNewDays:10,delayMs:350,maxRunMs:40000,scanCalendarDays:180})}
         catch(e){result.body.marketBootstrap={ok:false,error:String(e?.message||e)}}
+        // v2.6.5.0: once market-history bootstrap is healthy, use the same existing Cron to advance
+        // the all-company blind business scan. No extra Vercel Cron job is required.
+        if(result.body.marketBootstrap?.ok&&(result.body.marketBootstrap.done||Number(result.body.marketBootstrap.newDays||0)===0)){
+          try{result.body.blindCoverage=await runBusinessEnrichment({limit:70,maxRunMs:18000,concurrency:8})}
+          catch(e){result.body.blindCoverage={ok:false,error:String(e?.message||e)}}
+        }else result.body.blindCoverage={ok:true,skipped:true,reason:'market history bootstrap still using runtime budget'};
       }
       return res.status(result.httpStatus).json(result.body);
     }
