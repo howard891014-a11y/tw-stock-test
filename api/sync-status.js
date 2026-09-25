@@ -399,6 +399,41 @@ async function statusResponse(req, res) {
     return res.status(200).json(data);
   }
 
+  if(view==='blind-catchup'){
+    // v2.6.5.1 temporary migration runner. It is bounded, additive-only, and becomes
+    // a no-op after the current blind-coverage version has caught up. ui=1 provides
+    // a one-tab auto runner so the user never has to manually refresh ten batches.
+    res.setHeader('Cache-Control','no-store');
+    const ui=['1','true','yes'].includes(String(req.query?.ui||'').toLowerCase());
+    if(ui){
+      res.setHeader('Content-Type','text/html; charset=utf-8');
+      return res.status(200).send(`<!doctype html><html lang="zh-Hant"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StockZone Blind Catch-up</title><style>body{font-family:system-ui,-apple-system,sans-serif;background:#0f1115;color:#eef3fb;margin:0;padding:24px}main{max-width:760px;margin:auto}h1{font-size:22px}.card{background:#171b22;border:1px solid #2a3442;border-radius:16px;padding:18px}#bar{height:14px;background:#252d38;border-radius:99px;overflow:hidden}#fill{height:100%;width:0;background:#76a9ff;transition:width .25s}.big{font-size:32px;font-weight:700;margin:12px 0}.muted{color:#aeb9c8}pre{white-space:pre-wrap;word-break:break-word;background:#0b0d11;border-radius:12px;padding:12px;max-height:46vh;overflow:auto}button{font:inherit;padding:10px 14px;border-radius:10px;border:0} </style><main><h1>StockZone 全市場 Blind Coverage 補掃</h1><div class="card"><div class="muted">保持此頁開啟即可，會自動一批一批跑到完成，不用手動重新整理。</div><div class="big" id="status">準備中…</div><div id="bar"><div id="fill"></div></div><p id="meta" class="muted"></p><pre id="log"></pre><button id="retry" hidden>繼續</button></div><script>const S=document.getElementById('status'),M=document.getElementById('meta'),F=document.getElementById('fill'),L=document.getElementById('log'),R=document.getElementById('retry');let stopped=false;async function one(){R.hidden=true;S.textContent='掃描中…';try{const u='/api/sync-status?view=blind-catchup&confirm=1&batch=200&_='+Date.now();const r=await fetch(u,{cache:'no-store'});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));F.style.width=(j.progressPct||0)+'%';S.textContent=j.done?'完成 100%':('完成 '+(j.progressPct||0)+'%');M.textContent='已完成 '+((j.total||0)-(j.pending||0))+' / '+(j.total||0)+' 家｜本批處理 '+(j.processed||0)+' 家｜剩餘 '+(j.pending||0)+' 家';L.textContent=JSON.stringify(j,null,2);if(j.done){stopped=true;S.textContent='全市場 Blind Coverage 補掃完成';return}setTimeout(one,1200)}catch(e){S.textContent='暫停：'+e.message;M.textContent='按「繼續」即可從目前進度續跑，不會重來。';R.hidden=false}}R.onclick=()=>{if(!stopped)one()};one();</script></main></html>`);
+    }
+    const confirm=['1','true','yes'].includes(String(req.query?.confirm||'').toLowerCase());
+    const batch=Math.max(1,Math.min(200,Number(req.query?.batch)||200));
+    if(!confirm){
+      const pending=await readPendingBusinessEnrichment({limit:20});
+      return res.status(200).json({
+        ok:true,view:'blind-catchup',version:BLIND_COVERAGE_VERSION,armed:false,
+        message:'Use ui=1 for the automatic catch-up runner, or confirm=1 for one JSON batch.',
+        pending:pending.pending,total:pending.total,withMainBusiness:pending.withMainBusiness
+      });
+    }
+    const run=await runBusinessEnrichment({limit:batch,maxRunMs:47000,concurrency:10});
+    const pending=await readPendingBusinessEnrichment({limit:20});
+    const completed=Math.max(0,Number(pending.total||0)-Number(pending.pending||0));
+    const progressPct=Number(pending.total||0)>0?Number((completed/Number(pending.total)*100).toFixed(1)):100;
+    return res.status(200).json({
+      ok:true,view:'blind-catchup',version:BLIND_COVERAGE_VERSION,armed:true,
+      batchRequested:batch,processed:run.processed||0,cachedReclassified:run.cachedReclassified||0,
+      classified:run.classified||0,scanned:run.scanned||0,errors:run.errors||0,
+      pending:pending.pending,total:pending.total,withMainBusiness:pending.withMainBusiness,
+      progressPct,done:Number(pending.pending||0)===0,
+      next:Number(pending.pending||0)>0?'Repeat the same request for another bounded batch.':'Open view=blind-coverage for the final audit.',
+      sample:pending.items||[]
+    });
+  }
+
   if(view==='tech-pending'){
     res.setHeader('Cache-Control','no-store');
     const limit=Math.max(1,Math.min(500,Number(req.query?.limit)||200));
