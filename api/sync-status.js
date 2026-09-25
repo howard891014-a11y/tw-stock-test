@@ -3,7 +3,7 @@ const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema 
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser } = require('../lib/fundflow-xy');
-const { runBusinessEnrichment, readBlindCoverageAudit, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
+const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -397,6 +397,14 @@ async function statusResponse(req, res) {
     const minScore=Math.max(0,Math.min(100,Number(req.query?.minScore)||60));
     const data=await readBlindCoverageAudit({limit,minScore});
     return res.status(200).json(data);
+  }
+
+  if(view==='blind-export'){
+    res.setHeader('Cache-Control','no-store');
+    res.setHeader('Content-Type','application/json; charset=utf-8');
+    res.setHeader('Content-Disposition','attachment; filename=stockzone-blind-audit.json');
+    const data=await readBlindCoverageExport();
+    return res.status(200).send(JSON.stringify(data));
   }
 
   if(view==='blind-catchup'){
