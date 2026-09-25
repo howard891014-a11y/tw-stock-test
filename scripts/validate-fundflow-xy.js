@@ -54,7 +54,7 @@ assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate mul
 const cal=buildTransitionCalibration(result.groups);
 assert(cal.historyDays===12,'calibration should count history days');
 assert(projectGroup(adv,cal).points.length===3,'projectGroup should return three horizons');
-console.log('Fundflow XY v2.1 market-topic + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
+console.log('Fundflow XY v2.2 blind market-topic + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
 const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});
 assert.equal(detail.trajectory.length,10,'detail trajectory should honor requested days');
@@ -98,3 +98,18 @@ assert(detail.projection?.points?.length===3,'detail should expose projection');
   assert(result.groups.some(x=>x.tagId==='semiconductor_test_equipment_market'),'鴻勁 Handler / semiconductor-test-equipment mapping missing');
 }
 console.log('Fundflow detail v2 validation PASS',{tag:detail.name,days:detail.trajectoryDays,companies:detail.companies.length,phase:detail.latest.phaseLabel});
+
+// v2.6.5.0 blind runtime coverage: main_business evidence must add a second topic even when
+// the company already has an unrelated valid tag. No known-company seed is used here.
+{
+  const profiles=[
+    {stock_code:'9998',stock_name:'盲測設備甲',market:'上櫃',industry_code:'31',industry:'其他電子業',auto_business_tags:['automation_machine'],auto_market_topics:[],main_business:'自動化設備、TGV 玻璃通孔與 Glass Core 雷射鑽孔設備'},
+    {stock_code:'9997',stock_name:'盲測通訊乙',market:'上櫃',industry_code:'27',industry:'通信網路業',auto_business_tags:['network_equipment'],auto_market_topics:[],main_business:'低軌衛星通訊終端與 LEO satellite gateway'}
+  ];
+  const rows=[];
+  for(const trade_date of ['2026-09-23','2026-09-24'])for(const p of profiles)rows.push({trade_date,stock_code:p.stock_code,stock_name:p.stock_name,market:p.market,trade_value:100,change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
+  const blind=computeBusinessFlow(profiles,rows,{maxDates:2});
+  assert(blind.groups.some(x=>x.tagId==='glass_substrate'),'runtime main_business should discover glass substrate without company seed');
+  assert(blind.groups.some(x=>x.tagId==='automation_market'),'existing automation tag must remain alongside newly discovered glass substrate');
+  assert(blind.groups.some(x=>x.tagId==='leo_satellite'),'runtime main_business should discover LEO satellite without company seed');
+}
