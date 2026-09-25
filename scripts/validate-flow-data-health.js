@@ -11,6 +11,10 @@ for(const token of [
   'readFlowDataHealth',
   "view==='flow-data-health'",
   'readyForAX',
+  'liveReady',
+  'backtestReady250',
+  'researchReady500',
+  'price:{...price',
   'expectedTradeDate',
   'institutionalBackfill=await runInstitutionalBackfill',
   'creditBackfill=await runCreditTradingBackfill',
@@ -25,4 +29,4 @@ for(const [name,src] of [['institutional',institutionalLib],['credit',creditLib]
   assert(src.includes('maxDate'),`${name} health must expose maxDate`);
 }
 
-console.log('Flow data health validation PASS — symmetric cron backfill + freshness/history diagnostics + A-X readiness gate present');
+console.log('Flow data health validation PASS — price/institutional/credit freshness + 20/250/500D readiness gates present');
