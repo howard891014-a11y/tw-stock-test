@@ -46,7 +46,6 @@ const LOCAL_STOCK_META={
   "2330":{code:"2330",name:"台積電",market:"上市",symbol:"2330.TW"},"台積電":{code:"2330",name:"台積電",market:"上市",symbol:"2330.TW"}
 };
 function localStockMeta(query){return LOCAL_STOCK_META[String(query||"").trim()]||null}
-const INDUSTRY_META_CACHE_KEY="stockzone_industry_meta_v2606",INDUSTRY_META_CACHE_MS=7*24*60*60*1000;
 function stockIndustryValue(...sources){
   for(const x of sources){
     if(!x||typeof x!=="object")continue;
@@ -57,55 +56,9 @@ function stockIndustryValue(...sources){
   }
   return "";
 }
-function readIndustryMetaCache(){try{return JSON.parse(localStorage.getItem(INDUSTRY_META_CACHE_KEY)||"{}")||{}}catch{return{}}}
-function writeIndustryMetaCache(x){try{localStorage.setItem(INDUSTRY_META_CACHE_KEY,JSON.stringify(x))}catch{}}
-const SECURITIES_INDUSTRY_NAMES={
-  "01":"水泥工業","02":"食品工業","03":"塑膠工業","04":"紡織纖維","05":"電機機械","06":"電器電纜",
-  "08":"玻璃陶瓷","09":"造紙工業","10":"鋼鐵工業","11":"橡膠工業","12":"汽車工業","14":"建材營造",
-  "15":"航運業","16":"觀光餐旅","18":"貿易百貨","19":"綜合","20":"其他","21":"化學工業","22":"生技醫療業",
-  "23":"油電燃氣業","24":"半導體業","25":"電腦及週邊設備業","26":"光電業","27":"通信網路業","28":"電子零組件業",
-  "29":"電子通路業","30":"資訊服務業","31":"其他電子業","32":"文化創意業","33":"農業科技","35":"綠能環保",
-  "36":"數位雲端","37":"運動休閒","38":"居家生活","80":"管理股票"
-};
-function officialIndustryName(row,market=""){
-  const direct=stockIndustryValue(row);if(direct)return direct;
-  const code=String(row?.SecuritiesIndustryCode??row?.industryCode??row?.["產業別代碼"]??"").trim().padStart(2,"0");
-  if(code==="17")return /上市|TWSE|TW/i.test(String(market||""))?"金融保險":"金融業";
-  return SECURITIES_INDUSTRY_NAMES[code]||"";
-}
-async function officialIndustryMeta(code,market=""){
-  const c=String(code||"").replace(/\.(?:TW|TWO)$/i,"").trim();
-  if(!/^\d{4,6}$/.test(c))return "";
-  const cache=readIndustryMetaCache(),hit=cache[c];
-  if(hit&&Date.now()-Number(hit.savedAt||0)<INDUSTRY_META_CACHE_MS&&hit.industry)return String(hit.industry);
-  const urls=[];
-  if(/上櫃|OTC|TWO/i.test(String(market||"")))urls.push("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O");
-  else if(/上市|TWSE|TW/i.test(String(market||"")))urls.push("https://openapi.twse.com.tw/v1/opendata/t187ap03_L");
-  else urls.push("https://openapi.twse.com.tw/v1/opendata/t187ap03_L","https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O");
-  for(const url of urls){
-    try{
-      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),7000);
-      let res;
-      try{res=await fetch(url,{cache:"default",signal:controller.signal})}finally{clearTimeout(timer)}
-      if(!res.ok)continue;
-      const payload=await res.json(),rows=Array.isArray(payload)?payload:(Array.isArray(payload?.data)?payload.data:[]);
-      const row=rows.find(r=>String(r?.SecuritiesCompanyCode??r?.["公司代號"]??r?.code??r?.stockCode??"").trim()===c);
-      const industry=officialIndustryName(row,market);
-      if(industry){cache[c]={industry,savedAt:Date.now()};writeIndustryMetaCache(cache);return industry}
-    }catch(e){console.warn("產業別官方資料讀取失敗",e)}
-  }
-  return "";
-}
-async function enrichStockMetaIndustry(meta){
-  if(!meta)return meta;
-  const existing=stockIndustryValue(meta);if(existing)return {...meta,industry:existing};
-  const code=meta?.code||String(meta?.symbol||"").split(".")[0]||"",market=meta?.market||meta?.marketLabel||"";
-  const industry=await officialIndustryMeta(code,market);
-  return industry?{...meta,industry}:meta;
-}
 function stockHeaderMeta(stock){
-  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"—"),market=String(stock?.market||stock?.marketLabel||"台股").trim(),industry=stockIndustryValue(stock);
-  return [code,market,industry].filter(Boolean).join(" | ");
+  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"—"),market=String(stock?.market||stock?.marketLabel||"台股").trim();
+  return [code,market].filter(Boolean).join(" | ");
 }
 const STOCK_META_CACHE_KEY="stockzone_stock_meta_cache_v2625";
 function readStockMetaCache(){try{return JSON.parse(localStorage.getItem(STOCK_META_CACHE_KEY)||"{}")||{}}catch{return{}}}
@@ -116,9 +69,9 @@ function cachedStockMeta(query){
   return hit;
 }
 function rememberStockMeta(stock){
-  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"").trim(),name=shortStockName(stock?.name||stock?.shortName||""),market=stock?.market||stock?.marketLabel||"",industry=stockIndustryValue(stock);
+  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"").trim(),name=shortStockName(stock?.name||stock?.shortName||""),market=stock?.market||stock?.marketLabel||"";
   if(!/^\d{4,6}$/.test(code))return;
-  const row={code,name,market,industry,symbol:stock?.symbol||`${code}${market==="上櫃"?".TWO":".TW"}`,savedAt:Date.now()},all=readStockMetaCache();
+  const row={code,name,market,symbol:stock?.symbol||`${code}${market==="上櫃"?".TWO":".TW"}`,savedAt:Date.now()},all=readStockMetaCache();
   all[code]=row;if(name)all[name]=row;localStorage.setItem(STOCK_META_CACHE_KEY,JSON.stringify(all));
 }
 async function stockMeta(query){
@@ -178,13 +131,14 @@ function normalizeSnapshot(payload,code){
   if(last===null)return null;
   return{source:"Neon price_snapshot",code:String((row.stock_code??row.stockCode??code)||""),name:row.stock_name??row.stockName??"",market:row.market??"",last,previousClose,change,changePct:previousClose&&change!==null?(change/previousClose)*100:null,open:numeric(row.open_price??row.openPrice),high:numeric(row.high_price??row.highPrice),low:numeric(row.low_price??row.lowPrice),quoteTime:row.quote_time??row.quoteTime??row.updated_at??row.updatedAt??null,tradeDate:dayKey(row.trade_date??row.tradeDate),officialClose:true};
 }
-async function dbCloseQuote(code){
+async function dbCloseQuote(query,market=""){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);
   try{
-    const res=await fetch(`/api/sync-status?code=${encodeURIComponent(code)}`,{cache:"no-store",signal:controller.signal});
+    const params=new URLSearchParams({mode:"db-close",q:String(query||"")});if(market)params.set("market",String(market));
+    const res=await fetch(`/api/quote?${params.toString()}`,{cache:"no-store",signal:controller.signal});
     if(!res.ok)return null;
     const payload=await res.json();
-    return normalizeSnapshot(payload,code);
+    return payload?.ok===false?null:payload;
   }catch{return null}finally{clearTimeout(timer)}
 }
 const MIS_CLOSE_VERIFY_KEY="stockzone_mis_close_verify_v26211";
@@ -240,13 +194,13 @@ function pickAfterCloseQuote(yahoo,db,mis){
   const best=candidates[0];
   return{...yahoo,...best,code:best.code||yahoo?.code,symbol:best.symbol||yahoo?.symbol,name:best.name||yahoo?.name,shortName:best.name||yahoo?.shortName,market:best.market||yahoo?.market,marketLabel:best.market||yahoo?.marketLabel};
 }
-async function yahooQuote(query,market=""){
+async function yahooQuote(query,market="",options={}){
   async function once(timeoutMs){
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),timeoutMs);
     try{
       return await readJson(
-        await fetch(`/api/quote?q=${encodeURIComponent(query)}${market?`&market=${encodeURIComponent(market)}`:""}`,{
+        await fetch(`/api/quote?q=${encodeURIComponent(query)}${market?`&market=${encodeURIComponent(market)}`:""}${options?.live?"&mode=live":""}`,{
           cache:"no-store",signal:controller.signal
         }),
         "股價"
@@ -261,19 +215,25 @@ async function yahooQuote(query,market=""){
   }
 }
 async function quote(query,market="",options={}){
-  const yahoo=await yahooQuote(query,market);
-  // v2.6.2.11：盤中維持 Yahoo；盤後 Neon 為主。人工查詢才做 MIS 核對，且同一檔同一收盤週期最多核對一次。
-  if(isTaiwanIntraday())return yahoo;
+  // v2.6.5.15：盤後仍先走自己的全市場 price_snapshot；盤中則請後端優先走官方 TWSE/TPEx MIS。
+  // v2.6.5.14 的 DB-first 快速搜尋保留；Yahoo 只作盤中 MIS 或盤後 DB 缺資料時的 fallback。
+  if(!isTaiwanIntraday()){
+    const fast=await dbCloseQuote(query,market);
+    if(fast)return fast;
+  }
+  const intraday=isTaiwanIntraday();
+  const yahoo=await yahooQuote(query,market,{live:intraday});
+  if(intraday)return yahoo;
   const code=String(yahoo?.code||String(yahoo?.symbol||"").split(".")[0]||query||"").trim();
   if(!/^\d{4,6}$/.test(code))return yahoo;
-  const verifyClose=options?.verifyClose!==false;
-  const dbPromise=dbCloseQuote(code),misPromise=verifyClose?misCloseQuote(code,market||yahoo?.market||yahoo?.marketLabel||""):Promise.resolve(null);
+  const verifyClose=options?.verifyClose===true;
+  const dbPromise=dbCloseQuote(code,market||yahoo?.market||yahoo?.marketLabel||""),misPromise=verifyClose?misCloseQuote(code,market||yahoo?.market||yahoo?.marketLabel||""):Promise.resolve(null);
   const [db,mis]=await Promise.all([dbPromise,misPromise]);
   return pickAfterCloseQuote(yahoo,db,mis);
 }
 async function autoListQuote(code,market=""){
   if(isTaiwanIntraday())return quote(code,market,{verifyClose:false});
-  const db=await dbCloseQuote(code);
+  const db=await dbCloseQuote(code,market);
   if(db)return db;
   // Neon 暫時沒有快照時才回退 Yahoo；背景清單永遠不做 MIS 核對。
   return yahooQuote(code,market);
@@ -466,7 +426,7 @@ async function loadFundamentals(stock){
   const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||""),market=stock?.market||stock?.marketLabel||"";
   try{
     const data=await fundamentals(code,market),cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");
-    if(cur&&cur!==code)return;latestFundamentalData=data;renderFundamentalOverview();const industry=stockIndustryValue(data,data?.company,data?.profile,data?.officialStatement);if(industry&&currentStock){currentStock={...currentStock,industry};setText("stockCodeLabel",stockHeaderMeta(currentStock));rememberStockMeta(currentStock)}if(latestValuationData)renderValuation(latestValuationData);if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
+    if(cur&&cur!==code)return;latestFundamentalData=data;renderFundamentalOverview();const industry=stockIndustryValue(data,data?.company,data?.profile,data?.officialStatement);if(industry&&currentStock)currentStock={...currentStock,industry};if(latestValuationData)renderValuation(latestValuationData);if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
   }catch(e){console.warn("長期基本面更新失敗",e);const cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(!cur||cur===code){latestFundamentalData=null;resetFundamentalOverview("資料不足");if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle()}}
 }
 
@@ -3081,25 +3041,25 @@ async function search(){
   if(!q){setStatus("請輸入股票名稱或代碼",true);return}
   const seq=++activeSearchSeq;btn.disabled=true;setStatus("搜尋股票…");
   try{
-    // v2.5.7.3：主畫面只等待行情。股票身分、目標價、新聞改背景補齊，避免第一次搜尋被 20～30 秒的外部來源卡住。
+    // v2.6.5.15：保留 v2.6.5.14 DB-first 搜尋；盤中 quote 改由官方 MIS 優先。盤後 quote 直接用 Neon 的
+    // market_company_profile + price_snapshot 同時完成「名稱→代碼／市場」與收盤價解析。
+    // 不再為每一檔第一次搜尋額外抓官方股票主檔或交易所產業類別。
     let meta=localStockMeta(q)||cachedStockMeta(q);
-    const metaPromise=(meta?enrichStockMetaIndustry(meta):stockMeta(q).then(enrichStockMetaIndustry)).catch(e=>{console.warn("股票身分／產業別背景補查失敗",e);return null});
     let data=await quote(meta?.code||q,meta?.market||"");
     if(seq!==activeSearchSeq)return;
-    if(!meta){
-      // 只給身分補查很短的機會；逾時就先顯示行情，之後再無感更新中文名／市場別。
-      meta=await Promise.race([metaPromise,new Promise(r=>setTimeout(()=>r(null),450))]);
+    if(!meta&&data){
+      const code=String(data.code||String(data.symbol||"").split(".")[0]||"").trim();
+      if(/^\d{4,6}$/.test(code))meta={code,name:data.name||data.shortName||(/[\u3400-\u9fff]/.test(q)?q:""),market:data.market||data.marketLabel||"",symbol:data.symbol||`${code}${String(data.market||"")==="上櫃"?".TWO":".TW"}`};
     }
-    if(!meta)meta=localStockMeta(data?.code||data?.symbol)||cachedStockMeta(data?.code||data?.symbol);
-    if(!meta&&/[\u3400-\u9fff]/.test(q)&&data)meta={code:data.code||String(data.symbol||"").split(".")[0],name:q,market:data.market||data.marketLabel||"",symbol:data.symbol};
     data=mergeStockMeta(data,meta);renderStock(data);setView("overview");
     loadValuation(data);loadTechnical(data);void loadFundamentals(data);void loadInstitutional(data);loadDisposal(data);beginTargetSearch(data.code||data.symbol||q);
     setStatus(`搜尋成功：${shortStockName(data.name)||data.code||q}`);btn.disabled=false;
 
     const code=String(data.code||String(data.symbol||"").split(".")[0]||q),name=data.name||data.shortName||"";
-    // 身分資料晚到時，只修正標題／市場，不重跑整頁。
-    void metaPromise.then(m=>{if(!m||seq!==activeSearchSeq)return;const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(m.code||"")!==curCode)return;currentStock=mergeStockMeta(currentStock,m);rememberStockMeta(currentStock);setText("stockName",shortStockName(currentStock.name||currentStock.shortName)||"—");setText("stockCodeLabel",stockHeaderMeta(currentStock))});
-    // 慢來源並行刷新；舊快取已先顯示，不再阻塞搜尋按鈕與主畫面。
+    // 只有 DB/Yahoo 沒帶齊身分時才背景補查；正常搜尋不再多送一個 meta request。
+    if(!data?.name||!data?.market){
+      void stockMeta(code||q).then(m=>{if(!m||seq!==activeSearchSeq)return;const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(m.code||"")!==curCode)return;currentStock=mergeStockMeta(currentStock,m);rememberStockMeta(currentStock);setText("stockName",shortStockName(currentStock.name||currentStock.shortName)||"—");setText("stockCodeLabel",stockHeaderMeta(currentStock))}).catch(e=>console.warn("股票身分背景補查失敗",e));
+    }
     void loadTargetPlay(code,name).catch(e=>console.warn("目標價背景更新失敗",e));
     void loadNews(code,name).catch(e=>console.warn("新聞背景更新失敗",e));
   }catch(e){
