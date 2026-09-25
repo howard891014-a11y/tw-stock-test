@@ -1,4 +1,4 @@
-// StockZone v2.6.5.10
+// StockZone v2.6.5.12
 // Official institutional-flow route: TWSE T86 + TPEx daily institutional report.
 // Values are normalized to shares. The route deliberately fails open on individual
 // historical dates so one unavailable trading day does not break the whole card.
@@ -7,7 +7,7 @@ const TWSE_T86 = "https://www.twse.com.tw/rwd/zh/fund/T86";
 const TPEX_DAILY = "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade";
 const TPEX_DAILY_LEGACY = "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php";
 const TPEX_OPENAPI = "https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading";
-const { readCreditTradingForStock, buildCreditSignal } = require("../lib/credit-trading");
+const { ensureCreditTradingForStock, buildCreditSignal } = require("../lib/credit-trading");
 const { readInstitutionalForStock, institutionalHistoryIsFresh, upsertInstitutionalRows } = require("../lib/institutional-history");
 
 function cleanCode(v) {
@@ -82,7 +82,7 @@ async function fetchJson(url, timeoutMs = 4500, attempts = 3) {
         redirect: "follow",
         headers: {
           Accept: "application/json,text/plain,*/*",
-          "User-Agent": "StockZone/2.6.5.10",
+          "User-Agent": "StockZone/2.6.5.12",
           Referer: String(url).includes("tpex.org.tw") ? "https://www.tpex.org.tw/" : "https://www.twse.com.tw/",
         },
       });
@@ -477,10 +477,11 @@ module.exports = async function handler(req, res) {
     }
     res.setHeader("Cache-Control", freshness.freshnessVerified ? "s-maxage=300, stale-while-revalidate=60" : "no-store");
     const payload = buildPayload(selected, code, history, freshness);
-    // Credit trading is an independent persisted layer. Never let a DB/schema/upstream
-    // problem break the existing official institutional card.
+    // Credit trading is an independent persisted layer. v2.6.5.12 self-bootstraps the
+    // latest market snapshot on an empty DB, so a new deployment no longer has to
+    // wait for the next cron. Never let its DB/upstream problem break institutional.
     try {
-      const creditTrading = await readCreditTradingForStock(code, payload.market);
+      const creditTrading = await ensureCreditTradingForStock(code, payload.market);
       creditTrading.signal = buildCreditSignal(creditTrading, payload);
       payload.creditTrading = creditTrading;
     } catch (creditError) {
