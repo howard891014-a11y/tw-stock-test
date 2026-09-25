@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.5.12",
+  "version": "2.6.5.13",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"
@@ -13,13 +13,14 @@
     "validate:topic-membership": "node scripts/validate-topic-membership.js",
     "validate:blind-coverage": "node scripts/validate-blind-coverage.js",
     "validate:layout": "node scripts/validate-project-layout.js",
-    "validate:all": "npm run validate:layout && npm run validate:app-version && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:blind-coverage && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:business-enrichment",
+    "validate:all": "npm run validate:layout && npm run validate:app-version && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:blind-coverage && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment",
     "validate:market-topics": "node scripts/validate-market-topics.js",
     "validate:fundflow-browser": "node scripts/validate-fundflow-browser.js",
     "validate:fundflow-ui": "node scripts/validate-fundflow-ui.js",
     "validate:business-enrichment": "node scripts/validate-business-enrichment.js",
     "validate:credit-trading": "node scripts/validate-credit-trading.js",
     "validate:app-version": "node scripts/validate-app-version.js",
-    "validate:institutional-history": "node scripts/validate-institutional-history.js"
+    "validate:institutional-history": "node scripts/validate-institutional-history.js",
+    "validate:flow-data-health": "node scripts/validate-flow-data-health.js"
   }
 }
