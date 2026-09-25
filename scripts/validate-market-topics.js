@@ -11,6 +11,17 @@ for(const fine of ['air_cooling','liquid_cooling','cold_plate','cdu','mlcc','res
   assert(!ids.includes(fine),`${fine} should not be an independent market XY topic`);
 }
 for(const separate of ['cowos','copos','foplp','glass_substrate'])assert(ids.includes(separate),`${separate} must remain separately tradable`);
+const glassDef=defs.find(x=>x.id==='glass_substrate');
+assert(glassDef&&glassDef.synthetic,'glass substrate should use explicit market-topic overlay');
+for(const [code,name] of [['6207','雷科'],['8027','鈦昇'],['7828','創新服務'],['3037','欣興'],['6664','群翊'],['8064','東捷']]){
+  const links=marketTopicLinks([],name,code);
+  assert(links.some(x=>x.id==='glass_substrate'),`${code} ${name} should receive glass substrate market overlay`);
+}
+for(const [code,name] of [['8027','鈦昇'],['6664','群翊'],['8064','東捷'],['6187','萬潤'],['2467','志聖']]){
+  const links=marketTopicLinks([],name,code);
+  assert(links.some(x=>x.id==='foplp'),`${code} ${name} should receive FOPLP market overlay`);
+}
+assert(marketTopicLinks([],'鴻勁','7769').some(x=>x.id==='cpo_silicon_photonics'),'鴻勁 should receive CPO/矽光子 market overlay');
 const thermal=marketTopicLinks([{id:'liquid_cooling',name:'液冷散熱',importance:'core',origin:'test'}],'奇鋐');
 assert(thermal.some(x=>x.id==='thermal'&&x.importance==='core'),'liquid cooling should consolidate to 散熱');
 const bbu=marketTopicLinks([],'AES-KY');
