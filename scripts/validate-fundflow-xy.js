@@ -6,14 +6,14 @@ assert.deepStrictEqual(percentileRanks([5,5]).map(x=>Math.round(x)),[50,50]);
 assert.equal(quadrant(65,40),'potential');
 assert.equal(quadrant(65,65),'mainline');
 
-// B: X must not move when only price direction changes.
+// X institutional base must not move when only Y price factors change (credit correction held fixed).
 const stockBase=[
-  {stock_code:'1',value_ratio_20:2,value_trend_5_15:1.5,change_pct:1,return_3_pct:2,return_5_pct:3,return_20_pct:5,positive_days_5:4},
-  {stock_code:'2',value_ratio_20:1,value_trend_5_15:1.0,change_pct:-1,return_3_pct:-2,return_5_pct:-3,return_20_pct:-5,positive_days_5:1},
-  {stock_code:'3',value_ratio_20:.5,value_trend_5_15:.7,change_pct:0,return_3_pct:0,return_5_pct:0,return_20_pct:0,positive_days_5:2},
+  {stock_code:'1',value_ratio_20:2,value_trend_5_15:1.5,inst_flow_ratio_1:2,inst_flow_ratio_5:1.8,inst_flow_ratio_10:1.5,inst_flow_ratio_20:1.2,inst_streak:5,inst_agreement:100,credit_correction:0,change_pct:1,return_3_pct:2,return_5_pct:3,return_20_pct:5,positive_days_5:4},
+  {stock_code:'2',value_ratio_20:1,value_trend_5_15:1.0,inst_flow_ratio_1:0,inst_flow_ratio_5:0,inst_flow_ratio_10:0,inst_flow_ratio_20:0,inst_streak:0,inst_agreement:0,credit_correction:0,change_pct:-1,return_3_pct:-2,return_5_pct:-3,return_20_pct:-5,positive_days_5:1},
+  {stock_code:'3',value_ratio_20:.5,value_trend_5_15:.7,inst_flow_ratio_1:-2,inst_flow_ratio_5:-1.8,inst_flow_ratio_10:-1.5,inst_flow_ratio_20:-1.2,inst_streak:-5,inst_agreement:-100,credit_correction:0,change_pct:0,return_3_pct:0,return_5_pct:0,return_20_pct:0,positive_days_5:2},
 ];
 const scored1=scoreStocksForDate(stockBase),scored2=scoreStocksForDate(stockBase.map(x=>({...x,change_pct:-x.change_pct,return_3_pct:-x.return_3_pct,return_5_pct:-x.return_5_pct,return_20_pct:-x.return_20_pct})));
-for(let i=0;i<scored1.length;i++)assert.equal(Math.round(scored1[i].stockX*100),Math.round(scored2[i].stockX*100),'X must be price-free');
+for(let i=0;i<scored1.length;i++)assert.equal(Math.round(scored1[i].stockInstitutionalX*100),Math.round(scored2[i].stockInstitutionalX*100),'institutional X base must be price-free');
 
 const profiles=[
   {stock_code:'6187',stock_name:'萬潤',market:'上櫃',industry_code:'31',industry:'其他電子業'},
@@ -54,12 +54,12 @@ assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate mul
 const cal=buildTransitionCalibration(result.groups);
 assert(cal.historyDays===12,'calibration should count history days');
 assert(projectGroup(adv,cal).points.length===3,'projectGroup should return three horizons');
-console.log('Fundflow XY v2.2 blind market-topic + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
+console.log('Fundflow XY v3.0 institutional-flow + credit-correction + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
 const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});
 assert.equal(detail.trajectory.length,10,'detail trajectory should honor requested days');
 assert(detail.latest&&Number.isFinite(detail.latest.x)&&Number.isFinite(detail.latest.y),'detail latest coordinates should exist');
-assert(detail.latest.factors?.x?.valueRatio20!==undefined,'detail should expose X factor signals');
+assert(detail.latest.factors?.x?.inst5!==undefined,'detail should expose X v2 institutional factor signals');
 assert(detail.latest.factors?.y?.return3Pct!==undefined,'detail should expose 3-day Y factor');
 assert(Array.isArray(detail.companies)&&detail.companies.length>=4,'detail should expose company contributions');
 assert(detail.companies.every(x=>Number.isFinite(x.impactX)&&Number.isFinite(x.impactY)),'company impacts should be finite');
@@ -97,7 +97,7 @@ assert(detail.projection?.points?.length===3,'detail should expose projection');
   assert(result.groups.some(x=>x.tagId==='cpo_silicon_photonics'),'鴻勁 CPO market-topic overlay missing');
   assert(result.groups.some(x=>x.tagId==='semiconductor_test_equipment_market'),'鴻勁 Handler / semiconductor-test-equipment mapping missing');
 }
-console.log('Fundflow detail v2 validation PASS',{tag:detail.name,days:detail.trajectoryDays,companies:detail.companies.length,phase:detail.latest.phaseLabel});
+console.log('Fundflow detail v3 validation PASS',{tag:detail.name,days:detail.trajectoryDays,companies:detail.companies.length,phase:detail.latest.phaseLabel});
 
 // v2.6.5.0 blind runtime coverage: main_business evidence must add a second topic even when
 // the company already has an unrelated valid tag. No known-company seed is used here.

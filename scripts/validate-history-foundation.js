@@ -9,9 +9,9 @@ const credit=fs.readFileSync('lib/credit-trading.js','utf8');
 for(const token of ['liveReady','backtestReady250','researchReady500','backtest:250','research:500']){
   assert(sync.includes(token),`history readiness token missing: ${token}`);
 }
-assert(sync.includes("targetTradingDays:500,maxNewDays:10"),'15:00 cron must advance 500D price history');
-assert(sync.includes("targetTradingDays:500,maxNewDays:4"),'19:00 cron must advance 500D institutional history');
-assert(sync.includes("targetTradingDays:500,maxNewDays:3"),'22:00 cron must advance 500D credit history');
+assert(sync.includes("targetTradingDays:500,maxNewDays:24"),'15:00 cron must accelerate 500D price history');
+assert(sync.includes("targetTradingDays:500,maxNewDays:24"),'19:00 cron must accelerate 500D institutional history');
+assert(sync.includes("targetTradingDays:500,maxNewDays:24"),'22:00 cron must accelerate 500D credit history');
 assert(sync.includes("reason:'500D price-history backfill assigned to 15:00 cron'"),'price deep-history cron ownership missing');
 assert(sync.includes("reason:'500D institutional backfill assigned to 19:00 cron'"),'institutional cron ownership missing');
 assert(sync.includes("reason:'500D credit backfill assigned to 22:00 cron'"),'credit cron ownership missing');
@@ -26,4 +26,6 @@ for(const [name,src] of [['institutional',inst],['credit',credit]]){
 }
 assert(credit.includes('partial credit day: margin='),'credit history must not mark margin/SBL partial days complete');
 
-console.log('History foundation validation PASS — 20D live + 250D backtest + 500D research gates, resumable DB-first backfill, canonical trading calendar');
+assert(sync.includes('concurrency:3'),'institutional accelerated backfill concurrency missing');
+assert(sync.includes('concurrency:2'),'credit accelerated backfill concurrency missing');
+console.log('History foundation validation PASS — 20D live + 250D/500D gates, accelerated resumable DB-first backfill, canonical trading calendar');
