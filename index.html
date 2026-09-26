@@ -2512,7 +2512,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.19</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.21</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2903,6 +2903,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <button class="active" type="button" data-fundflow-scope="technology-upstream" aria-pressed="true">科技上游</button>
                 <button class="active" type="button" data-fundflow-scope="technology-midstream" aria-pressed="true">科技中游</button>
                 <button class="active" type="button" data-fundflow-scope="technology-downstream" aria-pressed="true">科技下游</button>
+                <button class="active" type="button" data-fundflow-scope="electronics-product" aria-pressed="true">電子產品</button>
                 <button type="button" data-fundflow-scope="traditional" aria-pressed="false">傳產</button>
               </div>
             </div>
@@ -2929,7 +2930,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <svg id="fundflowXySvg" viewBox="0 0 760 510" role="img" aria-label="業務資金輪動與階段模型轉態 XY 圖"></svg>
             <div class="fundflow-chart-loading" id="fundflowChartLoading">讀取 XY 資金輪動…</div>
           </div>
-          <div class="fundflow-model-legend"><span><i class="actual"></i>實線：已發生</span><span><i class="fan"></i>點開：不確定扇形</span></div>
+          <div class="fundflow-model-legend"><span><i class="actual"></i>實線：已發生</span><span><i class="fan"></i>點開：A/B 兩條颱風路徑</span></div>
         </div>
       </section>
 
@@ -2945,6 +2946,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <button type="button" data-fundflow-browser-scope="technology-upstream">科技上游</button>
             <button type="button" data-fundflow-browser-scope="technology-midstream">科技中游</button>
             <button type="button" data-fundflow-browser-scope="technology-downstream">科技下游</button>
+            <button type="button" data-fundflow-browser-scope="electronics-product">電子產品</button>
             <button type="button" data-fundflow-browser-scope="traditional">傳產</button>
           </div>
         </div>
@@ -2965,7 +2967,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div><span>最新 Y</span><strong id="fundflowDetailY">--</strong><small>價格強度</small></div>
             <div><span>C / E</span><strong id="fundflowDetailMove">--</strong><small id="fundflowDetailStatus">--</small></div>
           </div>
-          <div class="fundflow-projection-summary"><span>模型轉態</span><strong id="fundflowDetailProjection">--</strong><small id="fundflowDetailProjectionNote">點開題材後才顯示不確定扇形；僅供方向參考。</small></div>
+          <div class="fundflow-projection-summary"><span>Top-2 未來路徑</span><strong id="fundflowDetailProjection">--</strong><small id="fundflowDetailProjectionNote">只畫信心最高的 A / B 兩條路徑；各自保留獨立不確定錐。</small></div>
           <div class="fundflow-detail-grid">
             <div class="fundflow-detail-panel"><h4>X 法人資金流＋籌碼品質</h4><div id="fundflowXFactors" class="fundflow-factor-list"></div></div>
             <div class="fundflow-detail-panel"><h4>Y 價格強度拆解</h4><div id="fundflowYFactors" class="fundflow-factor-list"></div></div>
@@ -3263,10 +3265,10 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 
 .fundflow-projection-fan{opacity:1;fill-opacity:.065;stroke-opacity:.18;stroke-width:1.1;stroke-dasharray:3 4;pointer-events:none;vector-effect:non-scaling-stroke}
 /* v2.6.3.1 — fundflow mobile simplification */
- .fundflow-master-card-v2631{padding:22px 24px!important}.fundflow-master-card-v2631 .card-title{margin-bottom:14px}.fundflow-master-hero-hidden{display:none!important}.fundflow-merged-body{display:block}.fundflow-inline-status{display:none!important}.fundflow-inline-status .badge{margin-left:auto}.fundflow-controls-box{border:1px solid #d7deea;border-radius:18px;background:#f7f9fd;padding:12px 14px;margin:8px 0 14px}.fundflow-control-row{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:flex-start;column-gap:10px;row-gap:0}.fundflow-control-row+.fundflow-control-row{margin-top:10px}.fundflow-control-items{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}.fundflow-row-label{min-width:0;color:#667b94;font-size:11px;font-weight:900;line-height:32px}.fundflow-phase-caption{line-height:32px}.fundflow-filter-row,.fundflow-phase-row,.fundflow-days-row{margin-bottom:0}.fundflow-phase-row,.fundflow-days-row{padding-left:0}.fundflow-xy-card{display:none!important}.fundflow-controls-box .fundflow-filter-row,.fundflow-controls-box .fundflow-phase-row,.fundflow-controls-box .fundflow-days-row{border:0!important;background:transparent!important;padding:0!important}.fundflow-quad-legend{display:none!important}.fundflow-model-legend i.fan{height:10px;border:1px solid #98a2b3;border-radius:999px;background:rgba(152,162,179,.18)}.fundflow-projection-fan{opacity:1;fill-opacity:.22;stroke-opacity:.9;stroke-width:1.15;stroke-dasharray:none;pointer-events:none;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+ .fundflow-master-card-v2631{padding:22px 24px!important}.fundflow-master-card-v2631 .card-title{margin-bottom:14px}.fundflow-master-hero-hidden{display:none!important}.fundflow-merged-body{display:block}.fundflow-inline-status{display:none!important}.fundflow-inline-status .badge{margin-left:auto}.fundflow-controls-box{border:1px solid #d7deea;border-radius:18px;background:#f7f9fd;padding:12px 14px;margin:8px 0 14px}.fundflow-control-row{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:flex-start;column-gap:10px;row-gap:0}.fundflow-control-row+.fundflow-control-row{margin-top:10px}.fundflow-control-items{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}.fundflow-row-label{min-width:0;color:#667b94;font-size:11px;font-weight:900;line-height:32px}.fundflow-phase-caption{line-height:32px}.fundflow-filter-row,.fundflow-phase-row,.fundflow-days-row{margin-bottom:0}.fundflow-phase-row,.fundflow-days-row{padding-left:0}.fundflow-xy-card{display:none!important}.fundflow-controls-box .fundflow-filter-row,.fundflow-controls-box .fundflow-phase-row,.fundflow-controls-box .fundflow-days-row{border:0!important;background:transparent!important;padding:0!important}.fundflow-quad-legend{display:none!important}.fundflow-model-legend i.fan{height:10px;border:1px solid #98a2b3;border-radius:999px;background:rgba(152,162,179,.18)}.fundflow-projection-fan{opacity:1;fill-opacity:.22;stroke-opacity:.9;stroke-width:1.15;stroke-dasharray:none;pointer-events:none;vector-effect:non-scaling-stroke;stroke-linejoin:round}.fundflow-projection-fan.is-primary{fill-opacity:.18;stroke-opacity:.78}.fundflow-projection-fan.is-secondary{fill-opacity:.08;stroke-opacity:.38;stroke-dasharray:5 5}.fundflow-future-path{fill:none;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;vector-effect:non-scaling-stroke}.fundflow-future-path.is-primary{opacity:.94}.fundflow-future-path.is-secondary{opacity:.62;stroke-dasharray:7 6}.fundflow-future-point{stroke:#fff;stroke-width:1.5;pointer-events:none;vector-effect:non-scaling-stroke}.fundflow-future-point.is-secondary{opacity:.72}.fundflow-future-label{font-size:10px;font-weight:900;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.fundflow-future-label.is-secondary{opacity:.72}
 @media(max-width:720px){.fundflow-master-card-v2631,.fundflow-radar-card,.fundflow-detail-card{padding:16px 13px!important}.fundflow-xy-head h3,.fundflow-radar-head h3{font-size:20px}.fundflow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fundflow-kpis strong{font-size:19px}.fundflow-filter-row{gap:5px}.fundflow-filter-row button{padding:6px 9px;font-size:10px}.fundflow-controls-box{padding:10px 10px;margin:8px 0 14px}.fundflow-control-row{grid-template-columns:42px minmax(0,1fr);column-gap:8px}.fundflow-phase-row{gap:5px;padding:0}.fundflow-phase-caption{width:auto;font-size:10px}.fundflow-row-label{font-size:10px;line-height:30px}.fundflow-control-items{gap:6px}.fundflow-phase-row button,.fundflow-filter-row button,.fundflow-days-row button{padding:5px 8px;font-size:9px}.fundflow-detail-head h3{font-size:20px}.fundflow-detail-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.fundflow-detail-kpis strong{font-size:17px}.fundflow-detail-grid{grid-template-columns:1fr}.fundflow-company-row{grid-template-columns:minmax(0,1fr) auto}.fundflow-chart-wrap svg{min-height:330px}.fundflow-radar-grid{grid-template-columns:1fr}.fundflow-quad-legend{grid-template-columns:repeat(2,1fr);font-size:9px}.fundflow-tag-label{font-size:9px}.fundflow-browser-card{padding:16px 13px!important}.fundflow-browser-head h3{font-size:20px}.fundflow-browser-list{grid-template-columns:1fr}.fundflow-browser-item{padding:10px}.fundflow-browser-search-wrap input{font-size:11px}.fundflow-browser-chips{margin-right:-2px}.fundflow-model-legend{gap:8px 10px}.fundflow-projection-summary{grid-template-columns:1fr}.fundflow-projection-summary strong{text-align:left}.fundflow-projection-summary small{grid-column:1}}}
 </style>
-  <script src="./app.js?v=2.6.5.19"></script>
+  <script src="./app.js?v=2.6.5.21"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
