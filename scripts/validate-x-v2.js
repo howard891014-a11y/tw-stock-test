@@ -1,8 +1,20 @@
 const assert=require('assert');
 const fs=require('fs');
-const {ENGINE_VERSION,enrichFlowFeatures,scoreStocksForDate,summarizeTagItemsRaw,normalizeTagSummaries}=require('../lib/fundflow-xy');
+const {ENGINE_VERSION,NON_CORE_EXPOSURE_BUDGET,applyCompanyExposureBudget,enrichFlowFeatures,scoreStocksForDate,summarizeTagItemsRaw,normalizeTagSummaries}=require('../lib/fundflow-xy');
 
-assert.equal(ENGINE_VERSION,'xy-3.1.0-a-xv2-themeflow-business-weight','formal X v2.1 engine version mismatch');
+assert.equal(ENGINE_VERSION,'xy-3.2.0-a-xv2-exposure-budget','formal X v2.2 engine version mismatch');
+assert.equal(NON_CORE_EXPOSURE_BUDGET,1.5,'non-core exposure budget mismatch');
+
+
+// Company exposure budget: core stays intact; only important/related total is capped at 1.5.
+const wideLinks=[{id:'core',importance:'core'},...Array.from({length:5},(_,i)=>({id:`important${i}`,importance:'important'})),...Array.from({length:3},(_,i)=>({id:`related${i}`,importance:'related'}))];
+const budgeted=applyCompanyExposureBudget(wideLinks);
+const coreLink=budgeted.find(x=>x.importance==='core'),nonCore=budgeted.filter(x=>x.importance!=='core');
+assert.equal(coreLink.weight,1,'core exposure must not be diluted');
+assert(Math.abs(nonCore.reduce((s,x)=>s+x.weight,0)-1.5)<1e-9,'important+related exposure must cap at 1.5');
+assert(nonCore.find(x=>x.importance==='important').weight>nonCore.find(x=>x.importance==='related').weight,'importance ordering must survive exposure scaling');
+const compact=applyCompanyExposureBudget([{id:'c',importance:'core'},{id:'i',importance:'important'}]);
+assert.equal(compact[0].weight,1);assert.equal(compact[1].weight,.5,'normal companies below budget must remain unchanged');
 
 // Stock-level institutional flow + bounded credit correction stays available as diagnostics.
 const rows=[];
@@ -57,8 +69,8 @@ assert(Math.abs(sparse.institutionalX-50)<Math.abs(normalized[0].institutionalX-
 
 const lib=fs.readFileSync('lib/fundflow-xy.js','utf8');
 for(const token of ['institutional_x_score','credit_correction','legacy_x_score','flow_breadth','flow_concentration_quality'])assert(lib.includes(token),`persisted X v2 field missing: ${token}`);
-for(const token of ["core:1, important:0.5, related:0.2","normalizeTagSummaries","themeFlow5Pct","flowCoveragePct)??0)/20"])assert(lib.includes(token),`X v2.1 topic-first/business-weight rule missing: ${token}`);
+for(const token of ["core:1, important:0.5, related:0.2","NON_CORE_EXPOSURE_BUDGET = 1.5","applyCompanyExposureBudget","normalizeTagSummaries","themeFlow5Pct","flowCoveragePct)??0)/20"])assert(lib.includes(token),`X v2.2 topic-first/exposure-budget rule missing: ${token}`);
 assert(lib.includes("LIMIT $1\n  `,[Math.max(trajectoryDays+20,trajectoryDays)]"),'X v2 must request rolling warmup dates');
 assert(lib.includes("axes:{x:'法人淨資金流＋信用籌碼修正'"),'formal XY axis must expose X v2');
 
-console.log('X v2.1 validation PASS — topic-first institutional flow, core/important/related 1.0/0.5/0.2, credit ±15, dispersion preserved');
+console.log('X v2.2 validation PASS — topic-first institutional flow, core kept intact, non-core exposure capped at 1.5, credit ±15, dispersion preserved');
