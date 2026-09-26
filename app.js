@@ -3765,7 +3765,7 @@ function renderFundflowChart(){
   const W=760,H=510,L=54,R=22,T=28,B=52,pw=W-L-R,ph=H-T-B,sx=x=>L+Math.max(0,Math.min(100,Number(x)||0))/100*pw,sy=y=>T+(100-Math.max(0,Math.min(100,Number(y)||0)))/100*ph;
   [{x:L,y:T,w:pw/2,h:ph/2,fill:"#f5f3fb"},{x:L+pw/2,y:T,w:pw/2,h:ph/2,fill:"#f0faf5"},{x:L,y:T+ph/2,w:pw/2,h:ph/2,fill:"#f6f8fb"},{x:L+pw/2,y:T+ph/2,w:pw/2,h:ph/2,fill:"#fff8eb"}].forEach(q=>svg.append(fundflowSvg("rect",{x:q.x,y:q.y,width:q.w,height:q.h,fill:q.fill})));
   [0,25,50,75,100].forEach(v=>{svg.append(fundflowSvg("line",{x1:sx(v),y1:T,x2:sx(v),y2:T+ph,class:v===50?"fundflow-midline":"fundflow-gridline"}));svg.append(fundflowSvg("line",{x1:L,y1:sy(v),x2:L+pw,y2:sy(v),class:v===50?"fundflow-midline":"fundflow-gridline"}));svg.append(fundflowSvg("text",{x:sx(v),y:H-29,class:"fundflow-axis-label","text-anchor":"middle"},String(v)));svg.append(fundflowSvg("text",{x:L-10,y:sy(v)+4,class:"fundflow-axis-label","text-anchor":"end"},String(v)))});
-  svg.append(fundflowSvg("text",{x:L+pw/2,y:H-8,class:"fundflow-axis-label","text-anchor":"middle"},"資金活動度 X →"));svg.append(fundflowSvg("text",{x:15,y:T+ph/2,class:"fundflow-axis-label",transform:`rotate(-90 15 ${T+ph/2})`,"text-anchor":"middle"},"市場價格強度 Y →"));
+  svg.append(fundflowSvg("text",{x:L+pw/2,y:H-8,class:"fundflow-axis-label","text-anchor":"middle"},"法人資金流 X →"));svg.append(fundflowSvg("text",{x:15,y:T+ph/2,class:"fundflow-axis-label",transform:`rotate(-90 15 ${T+ph/2})`,"text-anchor":"middle"},"市場價格強度 Y →"));
   svg.append(fundflowSvg("text",{x:L+12,y:T+21,class:"fundflow-quadrant-label"},"價格先行"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+21,class:"fundflow-quadrant-label","text-anchor":"end"},"資金＋價格共振"));svg.append(fundflowSvg("text",{x:L+12,y:T+ph-12,class:"fundflow-quadrant-label"},"冷區"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+ph-12,class:"fundflow-quadrant-label","text-anchor":"end"},"資金先行"));
   const priority=g=>{const phase={potential:520,germination:480,mainline:430,overheating:390,cooling:360,cold:80,transition:180}[g.phaseState]||180;return phase+Number(g.phaseConfidence||0)+Number(g.confirmation||0)*.25};
   // v2.6.3.0: Phase 篩選只改顯示層；不再 Top-N 截斷，符合條件的業務全部畫出。
@@ -3811,13 +3811,18 @@ function renderFundflowXy(){
   const groups=fundflowEligibleGroups({phase:false}),rising=groups.filter(g=>g.phaseState==="potential").sort((a,b)=>Number(b.potentialScore)-Number(a.potentialScore)),mainline=groups.filter(g=>g.phaseState==="mainline").sort((a,b)=>Number(b.mainlineScore)-Number(a.mainlineScore)),cooling=groups.filter(g=>["overheating","cooling"].includes(g.phaseState)).sort((a,b)=>Number(b.coolingScore)-Number(a.coolingScore));
   setText("fundflowPotentialCount",rising.length);setText("fundflowMainlineCount",mainline.length);setText("fundflowRightCount",cooling.length);setText("fundflowDaysCount",data.trajectoryDays||0);
   const a=$("fundflowPotentialList"),b=$("fundflowMainlineList"),c=$("fundflowRightList");if(a)a.innerHTML=fundflowListHtml(rising,"rising");if(b)b.innerHTML=fundflowListHtml(mainline,"mainline");if(c)c.innerHTML=fundflowListHtml(cooling,"cooling");
-  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{};note.textContent=`X 已改為純資金活動度；Y 為價格強度並加入 3 日報酬，座標以 3 日 EMA 平滑。實線＝已發生；點開才顯示不確定扇形。轉態樣本 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期，信心會自動壓低）":""}。`}
+  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{};note.textContent=`X v2＝法人淨資金流主體＋信用籌碼 ±15 分修正；舊成交活動 X 僅留作未來回測 baseline。Y 為價格強度，座標以 3 日 EMA 平滑。實線＝已發生；點開才顯示不確定扇形。轉態樣本 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期，信心會自動壓低）":""}。`}
   document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowScope===fundflowScope));document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));renderFundflowPhaseControls();renderFundflowChart();
 }
 function fundflowFactorHtml(factors,axis,priorFactors={},group={},priorPoint={}){
-  const defs=axis==="x"?[["valueRatio20","20日成交值異常","55%"],["valueTrend515","5/15日成交值趨勢","45%"]]:[["changePct","當日漲跌","10%"],["return3Pct","3日報酬","25%"],["return5Pct","5日報酬","30%"],["return20Pct","20日報酬","20%"],["persistence5","近5日上漲持續性","15%"]];
+  const defs=axis==="x"?[["inst1","法人當日淨流強度","15%"],["inst5","法人5日淨流趨勢","30%"],["inst10","法人10日淨流趨勢","25%"],["inst20","法人20日淨流趨勢","20%"],["streak","連買／連賣持續性","5%"],["agreement","三大法人方向一致度","5%"]]:[["changePct","當日漲跌","10%"],["return3Pct","3日報酬","25%"],["return5Pct","5日報酬","30%"],["return20Pct","20日報酬","20%"],["persistence5","近5日上漲持續性","15%"]];
   const rows=defs.map(([key,label,w])=>{const v=Math.max(0,Math.min(100,Number(factors?.[key])||0)),pv=Number(priorFactors?.[key]),delta=Number.isFinite(pv)?v-pv:null;return `<div class="fundflow-factor-row"><label>${label} <small>${w}${delta===null?"":`｜3日 ${fundflowSigned(delta,0)}`}</small></label><strong>${fundflowFmt(v,0)}</strong><div class="fundflow-factor-bar"><i style="width:${v}%"></i></div></div>`});
-  if(axis==="x")rows.push(`<div class="fundflow-factor-row"><label>族群活躍廣度 <small>群組聚合｜3日 ${fundflowSigned(Number(group.activityBreadth||0)-Number(priorPoint.activityBreadth||0),0)}</small></label><strong>${fundflowFmt(group.activityBreadth,0)}%</strong><div class="fundflow-factor-bar"><i style="width:${Math.max(0,Math.min(100,Number(group.activityBreadth)||0))}%"></i></div></div>`);
+  if(axis==="x"){
+    const flow=Math.max(0,Math.min(100,Number(group.flowBreadth??group.activityBreadth)||0)),prevFlow=Number(priorPoint.flowBreadth??priorPoint.activityBreadth),concentration=Math.max(0,Math.min(100,Number(group.concentrationQuality)||0)),credit=Math.max(0,Math.min(100,Number(factors?.creditQuality)||50)),corr=Number(group.creditCorrection||0);
+    rows.push(`<div class="fundflow-factor-row"><label>法人淨流入廣度 <small>群組聚合${Number.isFinite(prevFlow)?`｜3日 ${fundflowSigned(flow-prevFlow,0)}`:""}</small></label><strong>${fundflowFmt(flow,0)}%</strong><div class="fundflow-factor-bar"><i style="width:${flow}%"></i></div></div>`);
+    rows.push(`<div class="fundflow-factor-row"><label>資金集中品質 <small>避免少數個股獨撐</small></label><strong>${fundflowFmt(concentration,0)}</strong><div class="fundflow-factor-bar"><i style="width:${concentration}%"></i></div></div>`);
+    rows.push(`<div class="fundflow-factor-row"><label>信用籌碼修正 <small>最多 ±15 分</small></label><strong>${fundflowSigned(corr,1)}</strong><div class="fundflow-factor-bar"><i style="width:${credit}%"></i></div></div>`);
+  }
   else {rows.push(`<div class="fundflow-factor-row"><label>價格強勢廣度 <small>群組聚合｜3日 ${fundflowSigned(Number(group.priceBreadth||0)-Number(priorPoint.priceBreadth||0),0)}</small></label><strong>${fundflowFmt(group.priceBreadth,0)}%</strong><div class="fundflow-factor-bar"><i style="width:${Math.max(0,Math.min(100,Number(group.priceBreadth)||0))}%"></i></div></div>`);rows.push(`<div class="fundflow-factor-row"><label>上漲廣度 <small>群組聚合｜3日 ${fundflowSigned(Number(group.upBreadth||0)-Number(priorPoint.upBreadth||0),0)}</small></label><strong>${fundflowFmt(group.upBreadth,0)}%</strong><div class="fundflow-factor-bar"><i style="width:${Math.max(0,Math.min(100,Number(group.upBreadth)||0))}%"></i></div></div>`)}
   return rows.join("");
 }
@@ -3827,7 +3832,7 @@ function renderFundflowDetail(){
   const proj=d.projection||{},pp=fundflowProjectionPoint({projection:proj},5);setText("fundflowDetailProjection",proj.tendency?`${proj.tendency} ${fundflowFmt(proj.confidence,0)}%`:"--");setText("fundflowDetailProjectionNote",pp?`5日中心傾向 X ${fundflowFmt(pp.x)} / Y ${fundflowFmt(pp.y)}｜方向 ${proj.direction||"--"}`:"等待模型扇形資料");
   const traj=d.trajectory||[],p3=traj[Math.max(0,traj.length-4)]||traj[0]||{},xf=$("fundflowXFactors"),yf=$("fundflowYFactors");if(xf)xf.innerHTML=fundflowFactorHtml(d.latest?.factors?.x,"x",p3?.factors?.x||{},d.latest||{},p3);if(yf)yf.innerHTML=fundflowFactorHtml(d.latest?.factors?.y,"y",p3?.factors?.y||{},d.latest||{},p3);
   const hist=$("fundflowDetailHistory");if(hist)hist.innerHTML=(d.trajectory||[]).map((p,i,arr)=>`<div class="fundflow-history-item${i===arr.length-1?" latest":""}"><b>${escNews(String(p.date||"").slice(5).replace("-","/"))}</b><strong>X ${fundflowFmt(p.x)}<br>Y ${fundflowFmt(p.y)}</strong><small>${escNews(p.phaseLabel||"")}｜C ${fundflowFmt(p.confirmation,0)} / E ${fundflowFmt(p.overheating,0)}</small></div>`).join("");
-  const list=$("fundflowCompanyList");if(list)list.innerHTML=(d.companies||[]).slice(0,12).map(c=>`<div class="fundflow-company-row"><b>${escNews(c.name||c.code)}<small>${escNews(c.code)}｜${escNews(c.importance||"")}</small></b><div class="impact">X <em>${fundflowSigned(c.impactX,2)}</em>｜Y <em>${fundflowSigned(c.impactY,2)}</em></div><small>個股 X ${fundflowFmt(c.stockX)} / Y ${fundflowFmt(c.stockY)}｜量比20 ${fundflowFmt(c.valueRatio20,2)}｜3日 ${fundflowSigned(c.return3Pct,2)}%｜5日 ${fundflowSigned(c.return5Pct,2)}%｜20日 ${fundflowSigned(c.return20Pct,2)}%</small></div>`).join("")||"<p>暫無可用公司明細。</p>";
+  const list=$("fundflowCompanyList");if(list)list.innerHTML=(d.companies||[]).slice(0,12).map(c=>`<div class="fundflow-company-row"><b>${escNews(c.name||c.code)}<small>${escNews(c.code)}｜${escNews(c.importance||"")}</small></b><div class="impact">X <em>${fundflowSigned(c.impactX,2)}</em>｜Y <em>${fundflowSigned(c.impactY,2)}</em></div><small>個股 X ${fundflowFmt(c.stockX)} / Y ${fundflowFmt(c.stockY)}｜法人5日 ${fundflowSigned(c.instFlow5Pct,3)}%｜信用 ${fundflowSigned(c.creditCorrection,1)} 分｜3日 ${fundflowSigned(c.return3Pct,2)}%｜5日 ${fundflowSigned(c.return5Pct,2)}%｜20日 ${fundflowSigned(c.return20Pct,2)}%</small></div>`).join("")||"<p>暫無可用公司明細。</p>";
   const note=$("fundflowDetailNote");if(note)note.textContent=`${d?.methodology?.factor||"因子熱度以 50 為中性。"}｜${d?.methodology?.impact||"公司貢獻為移除該公司後重算的座標差。"}｜${d?.methodology?.projection||"扇形是模型不確定範圍，不是保證。"}`;
   renderFundflowChart();
 }
@@ -3870,9 +3875,25 @@ document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("clic
 document.querySelectorAll("[data-view-open]").forEach(btn=>btn.addEventListener("click",()=>setView(btn.dataset.viewOpen)));
 setView("overview");
 
+let historyProgressFetchedAt=0,historyProgressLoading=false;
+function renderHistoryProgress(data){
+  const markets=data?.markets||{},names=["上市","上櫃"];
+  const layer=(key)=>{const days=names.map(m=>Number(markets?.[m]?.[key]?.tradingDays||0)),min=Math.min(...days),pct=Math.max(0,Math.min(100,min/500*100));return{days,min,pct}};
+  const paint=(key,prefix)=>{const x=layer(key),bar=$(prefix+"Bar"),value=$(prefix+"Value"),detail=$(prefix+"Detail");if(bar)bar.style.width=`${x.pct.toFixed(1)}%`;if(value)value.textContent=`${x.min} / 500D`;if(detail)detail.textContent=`上市 ${x.days[0]}D｜上櫃 ${x.days[1]}D`;};
+  paint("price","historyPrice");paint("institutional","historyInstitutional");paint("credit","historyCredit");
+  const ready=[[$("historyLiveReady"),Boolean(data?.liveReady)],[$("historyBacktestReady"),Boolean(data?.backtestReady250)],[$("historyResearchReady"),Boolean(data?.researchReady500)]];ready.forEach(([el,ok])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${el.id==="historyLiveReady"?"20D Live":el.id==="historyBacktestReady"?"250D Backtest":"500D Research"} ${ok?"✓":""}`.trim()});
+  const updated=$("historyProgressUpdated");if(updated){const d=data?.generatedAt?new Date(data.generatedAt):null;updated.textContent=d&&!Number.isNaN(d.getTime())?`更新 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`:"已更新";}
+  const note=$("historyProgressNote"),warning=(data?.warnings||[])[0];if(note)note.textContent=warning?`注意：${warning}`:"目標每個交易日最多補 24D；約 20 次有效 Cron 可由 20D 推進至 500D。部署新版不會重跑既有 DB 歷史。";
+}
+async function loadHistoryProgress(force=false){
+  if(historyProgressLoading)return;if(!force&&historyProgressFetchedAt&&Date.now()-historyProgressFetchedAt<60*1000)return;historyProgressLoading=true;
+  const updated=$("historyProgressUpdated");if(updated)updated.textContent="讀取中";
+  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);try{const res=await fetch("/api/sync-status?view=flow-data-health",{cache:"no-store",signal:controller.signal});const payload=await readJson(res,"歷史資料進度");renderHistoryProgress(payload?.flowDataHealth||payload);historyProgressFetchedAt=Date.now()}finally{clearTimeout(timer)}}catch(e){console.warn("歷史資料進度讀取失敗",e);if(updated)updated.textContent="讀取失敗"}finally{historyProgressLoading=false}
+}
 document.querySelectorAll(".settings-open").forEach(btn=>btn.addEventListener("click",()=>{
   $("settingsModal")?.classList.remove("hidden");
   $("sidebar")?.classList.remove("open"); $("overlay")?.classList.remove("show");
+  loadHistoryProgress(false);
 }));
 $("closeSettings")?.addEventListener("click",()=>$("settingsModal")?.classList.add("hidden"));
 $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"))$("settingsModal").classList.add("hidden")});
