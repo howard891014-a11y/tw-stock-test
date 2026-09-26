@@ -63,7 +63,7 @@ assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate mul
 const cal=buildTransitionCalibration(result.groups);
 assert(cal.historyDays===12,'calibration should count history days');
 const projected=projectGroup(adv,cal);assert(projected.points.length===3,'projectGroup primary compatibility should return three horizons');assert(projected.scenarios.length===2,'projectGroup should return two typhoon paths');
-console.log('Fundflow XY v4 raw-flow/raw-price + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
+console.log('Fundflow XY v5 self-relative-flow/raw-price + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
 const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});
 assert.equal(detail.trajectory.length,10,'detail trajectory should honor requested days');
