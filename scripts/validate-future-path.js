@@ -13,6 +13,7 @@ assert.equal(p.mode,'top2-scenario');assert.equal(p.scenarios.length,2);assert.d
 for(const route of p.scenarios){assert.deepStrictEqual(route.points.map(x=>x.horizon),[3,5,10]);for(const pt of route.points){assert(pt.lowX<=pt.x&&pt.x<=pt.highX);assert(pt.lowY<=pt.y&&pt.y<=pt.highY)}}
 assert(p.points===p.primary.points);assert.equal(p.confidence,p.primary.confidence);assert(p.top2Share<=100.01&&p.residualPct>=0);assert(Number.isFinite(p.pathGap));
 const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8');
-for(const token of ['fundflowProjectionScenarios','fundflow-future-path','fundflow-future-point','fundflow-forecast-corridor','路徑差'])assert(app.includes(token)||html.includes(token),`Top-2 UI token missing: ${token}`);
-for(const token of ['Top-2 未來路徑','A/B 兩條颱風路徑','fundflow-future-path','fundflow-forecast-corridor'])assert(html.includes(token)||app.includes(token),`Top-2 UI/CSS token missing: ${token}`);
-console.log('Future Path Top-2 validation PASS — self-relative-coordinate A/B paths with separate smooth forecast corridors');
+for(const token of ['fundflowProjectionScenarios','fundflow-future-path','fundflow-future-point','fundflow-future-uncertainty','fundflow-typhoon-marker','animateMotion','fundflowPathState','路徑差'])assert(app.includes(token)||html.includes(token),`Top-2/typhoon UI token missing: ${token}`);
+for(const token of ['Top-2 未來路徑','A/B 兩條颱風路徑','3 / 5 / 10 日圓圈'])assert(html.includes(token)||app.includes(token),`Top-2 UI text missing: ${token}`);
+assert(!app.includes('fundflow-forecast-corridor ${routeClass}'),'old wide forecast corridor rendering should be removed');
+console.log('Future Path validation PASS — Top-2 3/5/10D routes + expanding uncertainty circles + historical typhoon animation');
