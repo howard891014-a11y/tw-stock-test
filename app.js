@@ -3660,7 +3660,7 @@ let fundflowCoverageFetchedAt=0;
 let fundflowXyLoading=false;
 let fundflowXyFetchedAt=0;
 let fundflowXyData=null;
-let fundflowScope="technology-fine";
+let fundflowScopes=new Set(["technology-upstream","technology-midstream","technology-downstream"]);
 let fundflowPhaseFilter="all";
 let fundflowTrajectoryDays=10;
 let fundflowSelectedTagId="";
@@ -3685,7 +3685,7 @@ function renderFundflowCoverage(cov){
   const techBizPct=all?techBiz/all*100:0,finePct=Number.isFinite(Number(cov?.fineTechPct))?Number(cov.fineTechPct):Number(cov?.fineMappedPct||0),industryCoverage=Number(cov?.masterIndustryCodeCoveragePct||0);
   const twseRows=Number(cov?.masterTwseRows||0),tpexRows=Number(cov?.masterTpexRows||0),nonStandard=Number(cov?.masterNonStandardCodeRows||0),invalid=Number(cov?.masterInvalidCodeRows||0),duplicates=Number(cov?.masterDuplicateCodeRows||0);
   title.textContent="全市場公司母表已納入";count.textContent=all.toLocaleString("zh-TW");if(!badge.dataset.locked)badge.textContent=`科技業務 ${techBizPct.toFixed(techBizPct%1?1:0)}%`;
-  detail.textContent=`${all.toLocaleString("zh-TW")} 家上市櫃公司（上市 ${twseRows.toLocaleString("zh-TW")}＋上櫃 ${tpexRows.toLocaleString("zh-TW")}）｜產業代碼 ${industryCoverage.toFixed(industryCoverage%1?1:0)}%｜非4碼 ${nonStandard}｜無效碼 ${invalid}｜重複碼 ${duplicates}｜有科技業務 ${techBiz.toLocaleString("zh-TW")} 家（官方科技產業 ${nativeTech}＋跨產業科技 ${crossTech}）｜科技細標籤 ${fine} 家｜科技待細分 ${fallback} 家｜傳產/金融粗分類 ${coarse} 家${unmapped?`｜未分類 ${unmapped} 家`:""}｜科技細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
+  detail.textContent=`${all.toLocaleString("zh-TW")} 家上市櫃公司（上市 ${twseRows.toLocaleString("zh-TW")}＋上櫃 ${tpexRows.toLocaleString("zh-TW")}）｜產業代碼 ${industryCoverage.toFixed(industryCoverage%1?1:0)}%｜非4碼 ${nonStandard}｜無效碼 ${invalid}｜重複碼 ${duplicates}｜有科技業務 ${techBiz.toLocaleString("zh-TW")} 家（官方科技產業 ${nativeTech}＋跨產業科技 ${crossTech}）｜科技細標籤 ${fine} 家｜科技待細分 ${fallback} 家｜傳產（含金融）粗分類 ${coarse} 家${unmapped?`｜未分類 ${unmapped} 家`:""}｜科技細標籤率 ${finePct.toFixed(finePct%1?1:0)}%`;
 }
 async function loadFundflowCoverage(force=false){
   if(fundflowCoverageLoading)return;if(!force&&fundflowCoverageFetchedAt&&Date.now()-fundflowCoverageFetchedAt<5*60*1000)return;fundflowCoverageLoading=true;
@@ -3693,9 +3693,23 @@ async function loadFundflowCoverage(force=false){
 }
 function fundflowFmt(v,d=1){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):"--"}
 function fundflowSigned(v,d=1){const n=Number(v);return Number.isFinite(n)?`${n>=0?"+":""}${n.toFixed(d)}`:"--"}
-function fundflowIsElectronicsProduct(g){const tagId=String(g?.tagId||"").toLowerCase(),text=`${String(g?.name||"")} ${String(g?.parentName||"")} ${tagId}`;const ids=new Set(["computer_peripheral_business","graphics_card","chipset","motherboard","computer_chassis","io_interface_card","video_capture_card","notebook_pc","desktop_pc","thin_client","office_imaging_equipment","display_module","backlight_module","lcd_panel","oled","mini_led","micro_led","touch_panel","ssd","memory_module","hard_disk_drive","optical_drive","flash_storage_device","optical_disc","camera_module","optical_lens","panel_market","ai_pc","acoustic_component","consumer_electronics"]);if(ids.has(tagId))return true;return /筆記型電腦|桌上型電腦|電腦週邊設備|顯示卡|主機板|電腦機殼|輸出入模組|視訊擷取|印表\/?掃描\/?投影設備|顯示器模組|背光模組|LCD面板|OLED|Mini LED|Micro LED|觸控面板|SSD|記憶體模組|硬碟機|光碟機|隨身碟|記憶卡|光碟片|相機模組|光學鏡頭|AI PC|聲學元件|消費性電子/.test(text)}
-function fundflowScopeBucket(g){if(!g)return "all";const tagId=String(g.tagId||"").toLowerCase(),name=`${String(g.name||"")} ${String(g.parentName||"")}`;if(tagId==="finance"||/金融|銀行|證券|保險|金控/.test(name))return "finance";if(g.scope==="traditional-coarse")return "traditional";if(g.scope==="technology-fine")return fundflowIsElectronicsProduct(g)?"electronics-product":"technology-fine";return String(g.scope||"all");}
-function fundflowAllowed(g){if(!g)return false;if(fundflowScope==="all")return true;return fundflowScopeBucket(g)===fundflowScope}
+const FUND_FLOW_TECH_UPSTREAM_IDS=new Set(["asic","high_speed_ic","semiconductor_equipment","semiconductor_material"]);
+const FUND_FLOW_TECH_DOWNSTREAM_IDS=new Set(["it_services_market","cloud_market","ems_odm","networking_market","leo_satellite","robot","ai_pc","optical_storage_market"]);
+function fundflowTechStage(g){
+  const tagId=String(g?.tagId||"").toLowerCase(),parent=String(g?.parentName||""),name=String(g?.name||"");
+  if(FUND_FLOW_TECH_UPSTREAM_IDS.has(tagId)||/IC設計|半導體材料|半導體設備/.test(parent))return "technology-upstream";
+  if(FUND_FLOW_TECH_DOWNSTREAM_IDS.has(tagId)||String(g?.scope||"")==="electronics-product"||/伺服器|資料中心|電腦與週邊|網路與通訊設備|軟體與數位服務|電子製造與通路/.test(parent)||/資服|雲端|電子代工|AI PC|低軌衛星/.test(name))return "technology-downstream";
+  return "technology-midstream";
+}
+function fundflowScopeBucket(g){
+  if(!g)return "traditional";
+  const tagId=String(g.tagId||"").toLowerCase(),name=`${String(g.name||"")} ${String(g.parentName||"")}`;
+  if(tagId==="finance"||/金融|銀行|證券|保險|金控/.test(name))return "traditional";
+  if(g.scope==="traditional-coarse")return "traditional";
+  if(g.scope==="technology-fine"||g.scope==="electronics-product")return fundflowTechStage(g);
+  return "traditional";
+}
+function fundflowAllowed(g){if(!g)return false;return fundflowScopes.has(fundflowScopeBucket(g))}
 function fundflowPhaseBucket(g){
   const state=String(g?.phaseState||"").trim();
   if(state==="overheating"||state==="cooling")return "hotcool";
@@ -3729,7 +3743,7 @@ function renderFundflowBrowser(){
   if(!list||!summary||!result)return;
   if(!data){if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}return}
   if(loading)loading.classList.add("hidden");
-  const items=(data.items||[]),countBy=scope=>items.filter(x=>fundflowScopeBucket(x)===scope).length,c=data.counts||{};summary.textContent=`定義 ${Number(c.totalDefinitions||items.length||0)}｜科技 ${countBy("technology-fine")}｜電子產品 ${countBy("electronics-product")}｜傳產 ${countBy("traditional")}｜金融 ${countBy("finance")}｜可畫 XY ${Number(c.withXY||0)}`;
+  const items=(data.items||[]),countBy=scope=>items.filter(x=>fundflowScopeBucket(x)===scope).length,c=data.counts||{};summary.textContent=`定義 ${Number(c.totalDefinitions||items.length||0)}｜科技上游 ${countBy("technology-upstream")}｜科技中游 ${countBy("technology-midstream")}｜科技下游 ${countBy("technology-downstream")}｜傳產（含金融） ${countBy("traditional")}｜可畫 XY ${Number(c.withXY||0)}`;
   const filtered=(data.items||[]).filter(fundflowBrowserAllowed);result.textContent=`符合 ${filtered.length} 個業務`;
   const shown=filtered.slice(0,fundflowBrowserLimit);
   list.innerHTML=shown.map(item=>{
@@ -3748,7 +3762,7 @@ async function loadFundflowBrowser(force=false){
 }
 function fundflowBrowserOpen(tagId){
   const item=(fundflowBrowserData?.items||[]).find(x=>x.tagId===tagId);if(!item?.xyEligible)return;
-  fundflowScope=fundflowScopeBucket(item);if(!["all","technology-fine","electronics-product","traditional","finance"].includes(fundflowScope))fundflowScope="all";
+  const bucket=fundflowScopeBucket(item);if(!fundflowScopes.has(bucket))fundflowScopes.add(bucket);
   fundflowPhaseFilter=fundflowPhaseBucket(item);renderFundflowXy();fundflowSelect(tagId,{scroll:true});
 }
 
@@ -3811,8 +3825,8 @@ function renderFundflowXy(){
   const groups=fundflowEligibleGroups({phase:false}),rising=groups.filter(g=>g.phaseState==="potential").sort((a,b)=>Number(b.potentialScore)-Number(a.potentialScore)),mainline=groups.filter(g=>g.phaseState==="mainline").sort((a,b)=>Number(b.mainlineScore)-Number(a.mainlineScore)),cooling=groups.filter(g=>["overheating","cooling"].includes(g.phaseState)).sort((a,b)=>Number(b.coolingScore)-Number(a.coolingScore));
   setText("fundflowPotentialCount",rising.length);setText("fundflowMainlineCount",mainline.length);setText("fundflowRightCount",cooling.length);setText("fundflowDaysCount",data.trajectoryDays||0);
   const a=$("fundflowPotentialList"),b=$("fundflowMainlineList"),c=$("fundflowRightList");if(a)a.innerHTML=fundflowListHtml(rising,"rising");if(b)b.innerHTML=fundflowListHtml(mainline,"mainline");if(c)c.innerHTML=fundflowListHtml(cooling,"cooling");
-  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{};note.textContent=`X v2＝法人淨資金流主體＋信用籌碼 ±15 分修正；舊成交活動 X 僅留作未來回測 baseline。Y 為價格強度，座標以 3 日 EMA 平滑。實線＝已發生；點開才顯示不確定扇形。轉態樣本 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期，信心會自動壓低）":""}。`}
-  document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowScope===fundflowScope));document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));renderFundflowPhaseControls();renderFundflowChart();
+  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{};note.textContent=`X v2.2＝法人淨資金流主體＋信用籌碼 ±15 分修正；核心業務保留完整權重，單一公司非核心跨題材曝險最多 1.5。舊成交活動 X 僅留作未來回測 baseline。Y 為價格強度，座標以 3 日 EMA 平滑。實線＝已發生；點開才顯示不確定扇形。轉態樣本 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期，信心會自動壓低）":""}。`}
+  document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>{const active=fundflowScopes.has(btn.dataset.fundflowScope);btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",active?"true":"false")});document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));renderFundflowPhaseControls();renderFundflowChart();
 }
 function fundflowFactorHtml(factors,axis,priorFactors={},group={},priorPoint={}){
   const defs=axis==="x"?[["inst1","法人當日淨流強度","15%"],["inst5","法人5日淨流趨勢","30%"],["inst10","法人10日淨流趨勢","25%"],["inst20","法人20日淨流趨勢","20%"],["streak","連買／連賣持續性","5%"],["agreement","三大法人方向一致度","5%"]]:[["changePct","當日漲跌","10%"],["return3Pct","3日報酬","25%"],["return5Pct","5日報酬","30%"],["return20Pct","20日報酬","20%"],["persistence5","近5日上漲持續性","15%"]];
@@ -3845,7 +3859,7 @@ async function loadFundflowXy(force=false,serverRefresh=false){
   if(fundflowXyLoading)return;if(!force&&fundflowXyFetchedAt&&Date.now()-fundflowXyFetchedAt<2*60*1000){renderFundflowXy();return}fundflowXyLoading=true;const loading=$("fundflowChartLoading");if(loading){loading.classList.remove("hidden");loading.textContent="計算最近業務輪動…"}
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);try{const res=await fetch(`/api/sync-status?view=fundflow&days=${fundflowTrajectoryDays}${serverRefresh?"&refresh=1":""}`,{cache:"no-store",signal:controller.signal});fundflowXyData=await readJson(res,"資金輪動");fundflowXyFetchedAt=Date.now();renderFundflowXy()}finally{clearTimeout(timer)}}catch(e){console.warn("XY 資金輪動讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`XY 讀取失敗：${e?.message||e}`}}finally{fundflowXyLoading=false}
 }
-document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.addEventListener("click",()=>{fundflowScope=btn.dataset.fundflowScope||"technology-fine";if(["all","technology-fine","electronics-product","traditional","finance"].includes(fundflowScope))fundflowBrowserScope=fundflowScope;const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&(!fundflowAllowed(selected)||!fundflowPhaseAllowed(selected)))fundflowClearSelection();renderFundflowXy();if(fundflowBrowserData)renderFundflowBrowser()}));
+document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.addEventListener("click",()=>{const key=btn.dataset.fundflowScope;if(!key)return;if(fundflowScopes.has(key)){if(fundflowScopes.size===1)return;fundflowScopes.delete(key)}else fundflowScopes.add(key);const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&(!fundflowAllowed(selected)||!fundflowPhaseAllowed(selected)))fundflowClearSelection();renderFundflowXy()}));
 document.querySelectorAll("[data-fundflow-phase]").forEach(btn=>btn.addEventListener("click",()=>{fundflowPhaseFilter=btn.dataset.fundflowPhase||"all";const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&!fundflowPhaseAllowed(selected))fundflowClearSelection();renderFundflowXy()}));
 document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.addEventListener("click",()=>{const d=Number(btn.dataset.fundflowDays);if(![5,10,15].includes(d)||d===fundflowTrajectoryDays)return;fundflowTrajectoryDays=d;fundflowXyFetchedAt=0;fundflowDetailData=null;loadFundflowXy(true,false);if(fundflowSelectedTagId)loadFundflowDetail(fundflowSelectedTagId,true)}));
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-radar-item[data-fundflow-tag]");if(item)fundflowSelect(item.dataset.fundflowTag,{scroll:true})});
