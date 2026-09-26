@@ -694,12 +694,12 @@ module.exports=async function handler(req,res){
       else if(action==='institutional')result=await runInstitutionalSync();
       else if(action==='institutional-backfill'){
         const target=Math.max(20,Math.min(500,Number(req.query?.target)||500));
-        const backfill=await runInstitutionalBackfill({targetTradingDays:target,maxNewDays:Math.max(1,Math.min(12,Number(req.query?.days)||4)),maxRunMs:45000});
+        const backfill=await runInstitutionalBackfill({targetTradingDays:target,maxNewDays:Math.max(1,Math.min(30,Number(req.query?.days)||24)),maxRunMs:45000,concurrency:3});
         return res.status(200).json(backfill);
       }
       else if(action==='credit-backfill'){
         const target=Math.max(20,Math.min(500,Number(req.query?.target)||500));
-        const backfill=await runCreditTradingBackfill({targetTradingDays:target,maxNewDays:Math.max(1,Math.min(10,Number(req.query?.days)||4)),maxRunMs:45000});
+        const backfill=await runCreditTradingBackfill({targetTradingDays:target,maxNewDays:Math.max(1,Math.min(30,Number(req.query?.days)||24)),maxRunMs:45000,concurrency:2});
         return res.status(200).json(backfill);
       }
       else if(action==='market-backfill'||action==='market-rebuild'){
@@ -719,21 +719,23 @@ module.exports=async function handler(req,res){
       else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
-        // v2.6.5.16: keep the three existing cron slots, but give each one a
-        // dedicated deep-history job so 250/500D catch-up never creates a new
-        // Vercel Function or repeats work already persisted in DB.
+        // v2.6.5.17: keep the three existing cron slots and accelerate deep
+        // history toward ~one-month completion.  Latest institutional/credit
+        // syncs are no longer duplicated across the 19:00/22:00 slots, leaving
+        // more of the 60s function budget for resumable DB backfill.
         if(['twse','tpex'].includes(action)){
-          try{result.body.institutionalTrading=await runInstitutionalSync().then(x=>x.body)}
-          catch(e){result.body.institutionalTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
-          try{result.body.creditTrading=await runCreditTradingSync().then(x=>x.body)}
-          catch(e){result.body.creditTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
-
           if(action==='twse'){
-            try{result.body.institutionalBackfill=await runInstitutionalBackfill({targetTradingDays:500,maxNewDays:4,maxRunMs:18000})}
+            try{result.body.institutionalTrading=await runInstitutionalSync().then(x=>x.body)}
+            catch(e){result.body.institutionalTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
+            result.body.creditTrading={ok:true,skipped:true,reason:'latest credit sync assigned to 22:00 cron'};
+            try{result.body.institutionalBackfill=await runInstitutionalBackfill({targetTradingDays:500,maxNewDays:24,maxRunMs:45000,concurrency:3})}
             catch(e){result.body.institutionalBackfill={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
             result.body.creditBackfill={ok:true,skipped:true,reason:'500D credit backfill assigned to 22:00 cron'};
           }else{
-            try{result.body.creditBackfill=await runCreditTradingBackfill({targetTradingDays:500,maxNewDays:3,maxRunMs:22000})}
+            try{result.body.creditTrading=await runCreditTradingSync().then(x=>x.body)}
+            catch(e){result.body.creditTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
+            result.body.institutionalTrading={ok:true,skipped:true,reason:'latest institutional sync assigned to 19:00 cron'};
+            try{result.body.creditBackfill=await runCreditTradingBackfill({targetTradingDays:500,maxNewDays:24,maxRunMs:45000,concurrency:2})}
             catch(e){result.body.creditBackfill={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
             result.body.institutionalBackfill={ok:true,skipped:true,reason:'500D institutional backfill assigned to 19:00 cron'};
           }
@@ -744,7 +746,7 @@ module.exports=async function handler(req,res){
         catch(e){result.body.companyProfiles={ok:false,error:String(e?.message||e)}}
 
         if(action==='price'){
-          try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:500,maxNewDays:10,delayMs:250,maxRunMs:43000,scanCalendarDays:900})}
+          try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:500,maxNewDays:24,delayMs:100,maxRunMs:48000,scanCalendarDays:900})}
           catch(e){result.body.marketBootstrap={ok:false,error:String(e?.message||e)}}
         }else{
           result.body.marketBootstrap={ok:true,skipped:true,reason:'500D price-history backfill assigned to 15:00 cron'};
