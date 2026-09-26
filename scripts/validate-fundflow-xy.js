@@ -3,8 +3,10 @@ const {percentileRanks,scoreStocksForDate,computeBusinessFlow,computeTagDetail,q
 
 assert.deepStrictEqual(percentileRanks([1,2,3]).map(x=>Math.round(x)),[0,50,100]);
 assert.deepStrictEqual(percentileRanks([5,5]).map(x=>Math.round(x)),[50,50]);
-assert.equal(quadrant(65,40),'potential');
-assert.equal(quadrant(65,65),'mainline');
+assert.equal(quadrant(1.2,-3.0),'potential');
+assert.equal(quadrant(1.2,4.0),'mainline');
+assert.equal(quadrant(-.5,2.0),'price-led');
+assert.equal(quadrant(-.5,-2.0),'cold');
 
 // X institutional base must not move when only Y price factors change (credit correction held fixed).
 const stockBase=[
@@ -13,7 +15,7 @@ const stockBase=[
   {stock_code:'3',value_ratio_20:.5,value_trend_5_15:.7,inst_flow_ratio_1:-2,inst_flow_ratio_5:-1.8,inst_flow_ratio_10:-1.5,inst_flow_ratio_20:-1.2,inst_streak:-5,inst_agreement:-100,credit_correction:0,change_pct:0,return_3_pct:0,return_5_pct:0,return_20_pct:0,positive_days_5:2},
 ];
 const scored1=scoreStocksForDate(stockBase),scored2=scoreStocksForDate(stockBase.map(x=>({...x,change_pct:-x.change_pct,return_3_pct:-x.return_3_pct,return_5_pct:-x.return_5_pct,return_20_pct:-x.return_20_pct})));
-for(let i=0;i<scored1.length;i++)assert.equal(Math.round(scored1[i].stockInstitutionalX*100),Math.round(scored2[i].stockInstitutionalX*100),'institutional X base must be price-free');
+for(let i=0;i<scored1.length;i++)assert.equal(Math.round(scored1[i].stockInstitutionalX*10000),Math.round(scored2[i].stockInstitutionalX*10000),'institutional X must remain independent of price-return factors');
 
 const profiles=[
   {stock_code:'6187',stock_name:'萬潤',market:'上櫃',industry_code:'31',industry:'其他電子業'},
@@ -61,12 +63,12 @@ assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate mul
 const cal=buildTransitionCalibration(result.groups);
 assert(cal.historyDays===12,'calibration should count history days');
 const projected=projectGroup(adv,cal);assert(projected.points.length===3,'projectGroup primary compatibility should return three horizons');assert(projected.scenarios.length===2,'projectGroup should return two typhoon paths');
-console.log('Fundflow XY v3.0 institutional-flow + credit-correction + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
+console.log('Fundflow XY v4 raw-flow/raw-price + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
 const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});
 assert.equal(detail.trajectory.length,10,'detail trajectory should honor requested days');
 assert(detail.latest&&Number.isFinite(detail.latest.x)&&Number.isFinite(detail.latest.y),'detail latest coordinates should exist');
-assert(detail.latest.factors?.x?.inst5!==undefined,'detail should expose X v2 institutional factor signals');
+assert(detail.latest.factors?.x?.inst5!==undefined,'detail should expose raw institutional-flow diagnostics');
 assert(detail.latest.factors?.y?.return3Pct!==undefined,'detail should expose 3-day Y factor');
 assert(Array.isArray(detail.companies)&&detail.companies.length>=4,'detail should expose company contributions');
 assert(detail.companies.every(x=>Number.isFinite(x.impactX)&&Number.isFinite(x.impactY)),'company impacts should be finite');
