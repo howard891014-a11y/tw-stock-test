@@ -14,6 +14,14 @@ function shortName(v){
 }
 function marketLabel(v){const s=String(v||"");return /上櫃|OTC|TPEX|TWO/i.test(s)?"上櫃":/上市|TWSE|TSE/i.test(s)?"上市":""}
 function symbolFor(code,market){return `${code}${market==="上櫃"?".TWO":".TW"}`}
+function liveStockHint(query,marketHint=""){
+  const code=cleanName(query).replace(/\.(?:TW|TWO)$/i,"");
+  if(!/^\d{4,6}$/.test(code))return null;
+  // v2.6.5.23: intraday polling already knows the stock code (and usually the
+  // market).  Do not hit Neon just to resolve the same identity every 30s.
+  // If market is unknown, MIS can safely probe both tse/otc channels.
+  return{code,name:FALLBACK_NAMES[code]||"",market:marketLabel(marketHint)};
+}
 async function fetchJson(url,timeoutMs=4500){const c=new AbortController(),timer=setTimeout(()=>c.abort(),timeoutMs);try{const r=await fetch(url,{headers:HEADERS,signal:c.signal});if(!r.ok)throw Error(`HTTP ${r.status}`);return r.json()}finally{clearTimeout(timer)}}
 const MIS_HEADERS={...HEADERS,"Referer":"https://mis.twse.com.tw/stock/index.jsp"};
 function misNumber(v){
@@ -221,7 +229,8 @@ async function handler(req,res){
       if(!result)return res.status(404).json({ok:false,error:"本機收盤資料暫無此股票"});
       return res.status(200).json({ok:true,...result,fetchedAt:new Date().toISOString()});
     }
-    const stock=await resolveStock(query,marketHint);if(!stock)return res.status(404).json({ok:false,error:"查無此股票名稱或代碼"});
+    const stock=mode==="live"?(liveStockHint(query,marketHint)||await resolveStock(query,marketHint)):await resolveStock(query,marketHint);
+    if(!stock)return res.status(404).json({ok:false,error:"查無此股票名稱或代碼"});
     let result=null;
     // v2.6.5.15：盤中由官方 TWSE/TPEx MIS 優先提供最新成交價，Yahoo 只當 fallback。
     // 避免 Yahoo 台股常見的盤初延遲，並保留 v2.6.5.14 的盤後 DB-first 路徑。
@@ -239,4 +248,4 @@ async function handler(req,res){
   }catch(error){return res.status(502).json({ok:false,error:"股票名稱或行情暫時無法取得",detail:error.message})}
 }
 module.exports=handler;
-module.exports._test={toNumber,cleanName,shortName,marketLabel,misNumber,misTradeDate,misQuoteTime,resolveStock,dbResolveStock,dbCloseQuote,fetchMisQuote};
+module.exports._test={toNumber,cleanName,shortName,marketLabel,misNumber,misTradeDate,misQuoteTime,liveStockHint,resolveStock,dbResolveStock,dbCloseQuote,fetchMisQuote};
