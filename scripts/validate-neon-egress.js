@@ -1,0 +1,26 @@
+const fs=require('fs');
+const assert=require('assert');
+const app=fs.readFileSync('app.js','utf8');
+const quote=fs.readFileSync('api/quote.js','utf8');
+const api=fs.readFileSync('api/fundflow.js','utf8');
+const core=fs.readFileSync('lib/fundflow-xy.js','utf8');
+const sync=fs.readFileSync('lib/sync-service.js','utf8');
+
+assert(quote.includes('function liveStockHint(query,marketHint="")'),'live quote numeric-code fast path missing');
+assert(quote.includes('mode==="live"?(liveStockHint(query,marketHint)||await resolveStock(query,marketHint))'),'live polling must bypass Neon identity lookup when code is already known');
+assert(app.includes('/api/fundflow?view=overview'),'fundflow overview must use dedicated cached API');
+assert(app.includes('/api/fundflow?view=browser'),'fundflow browser must use dedicated cached API');
+assert(app.includes('/api/fundflow?view=detail'),'fundflow detail must use dedicated cached API');
+assert(!app.includes('/api/sync-status?view=fundflow&'),'normal overview must not route through sync-status');
+assert(!app.includes('/api/sync-status?view=fundflow-browser'),'normal browser must not route through sync-status');
+assert(!app.includes('/api/sync-status?view=fundflow-detail'),'normal detail must not route through sync-status');
+assert(api.includes("s-maxage=300, stale-while-revalidate=3600"),'overview/detail shared cache header missing');
+assert(api.includes("s-maxage=600, stale-while-revalidate=3600"),'browser shared cache header missing');
+assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_snapshot'),'prepared snapshot table missing');
+assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_member'),'topic member index missing');
+assert(core.includes('async function loadTagEngineInputs'),'lazy topic detail loader missing');
+const detail=core.slice(core.indexOf('async function getFundflowDetail'),core.indexOf('\nmodule.exports='));
+assert(!detail.includes('loadEngineInputs(sql,ENGINE_HISTORY_DAYS)'),'detail must not reload full-market engine inputs');
+assert(!detail.includes('needsRefresh(sql)'),'detail request must not trigger full-market freshness rebuild');
+assert(sync.includes("refreshBusinessFlowDaily({trajectoryDays:ENGINE_HISTORY_DAYS})"),'daily sync must warm the full history and prepared snapshots');
+console.log('PASS validate-neon-egress');

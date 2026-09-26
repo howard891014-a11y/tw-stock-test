@@ -6,6 +6,8 @@ const api=fs.readFileSync('api/quote.js','utf8');
 assert(app.includes('options?.live?"&mode=live":""'),'client intraday quote must request mode=live');
 assert(app.includes('const intraday=isTaiwanIntraday();'),'quote must preserve Taiwan intraday gate');
 assert(api.includes('https://mis.twse.com.tw/stock/api/getStockInfo.jsp'),'quote API must use official MIS endpoint');
+assert(api.includes('function liveStockHint(query,marketHint="")'),'live quote code fast path missing');
+assert(api.includes('mode==="live"?(liveStockHint(query,marketHint)||await resolveStock(query,marketHint))'),'numeric live polling must bypass repeated Neon identity resolution');
 assert(api.includes('if(mode==="live")result=await fetchMisQuote(stock);'),'live mode must prefer MIS');
 assert(api.includes('if(!result){'),'live mode must retain fallback when MIS has no trade/temporarily fails');
 assert(api.includes('source:"TWSE/TPEx MIS 即時"'),'MIS result source marker missing');
