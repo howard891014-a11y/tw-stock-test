@@ -42,7 +42,9 @@ const sync=fs.readFileSync('api/sync-status.js','utf8');
 for(const token of ['readInstitutionalForStock','institutionalHistoryIsFresh','upsertInstitutionalRows','storage: freshness.persisted']){
   assert(api.includes(token),`missing API DB-first token: ${token}`);
 }
-for(const token of ['runInstitutionalSync','runInstitutionalBackfill',"action==='institutional'","action==='institutional-backfill'"]){
+for(const token of ['runInstitutionalSync','runInstitutionalBackfill',"action==='institutional'","action==='institutional-backfill'","action==='institutional-backfill-manual'"]){
   assert(sync.includes(token),`missing sync token: ${token}`);
 }
-console.log('Institutional history validation PASS — TWSE/TPEx parsers + DB-first route + sync actions present');
+const lib=fs.readFileSync('lib/institutional-history.js','utf8');
+for(const token of ['institutionalCoverageByDate','coveragePct>=85','partialDates','worstCoveragePct'])assert(lib.includes(token),`partial-date repair missing: ${token}`);
+console.log('Institutional history validation PASS — TWSE/TPEx parsers + DB-first route + partial-date repair + manual backfill present');

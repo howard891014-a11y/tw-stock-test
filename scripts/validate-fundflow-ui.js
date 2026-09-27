@@ -21,4 +21,4 @@ if(errors.length){console.error('Fundflow UI validation FAILED');for(const e of 
 assert(app.includes('function fundflowBusinessUniverse()'),'full business-universe helper missing');
 assert(app.includes('業務 ${universe.length}｜可畫 XY ${base.length}｜待法人 X ${pendingX}'),'UI must expose business universe vs true XY coverage');
 assert(app.includes('key==="all"?String(universe.length):String(counts[key]??0)'),'All-path control must show the full business-universe count instead of only XY-eligible businesses');
-console.log(`Fundflow UI v2.6.5.31 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
+console.log(`Fundflow UI v2.6.5.32 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);

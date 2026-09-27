@@ -1,0 +1,41 @@
+const assert=require('assert');
+const fs=require('fs');
+const {walkForwardPathAudit}=require('../lib/fundflow-xy');
+
+// Causal synthetic path: every topic keeps moving right/up.  The walk-forward
+// evaluator must learn only from data available at each anchor and report real hits.
+function makeGroup(id,shift=0){
+  const trajectory=[];
+  for(let i=0;i<42;i++){
+    const x=-45+shift+i*3.0,y=-4+shift*.02+i*.42;
+    trajectory.push({
+      date:`2026-${String(7+Math.floor(i/28)).padStart(2,'0')}-${String(i%28+1).padStart(2,'0')}`,
+      xAvailable:true,x,y,rawX:x/10,rawY:y,flowValidCount:6,
+      confirmation:72,overheating:25,phaseState:i<18?'transition':'mainline',phaseLabel:i<18?'混沌／方向未明':'共振轉強',phaseConfidence:72,
+      dx1:i?3:0,dy1:i?.42:0,dx3:i>=3?9:3,dy3:i>=3?1.26:.42,ddx1:0,ddy1:0,priceBreadth:68,flowBreadth:66,concentrationQuality:75,reliability:85,validCount:8
+    });
+  }
+  const last=trajectory.at(-1);
+  return {tagId:id,name:id,...last,trajectory};
+}
+const audit=walkForwardPathAudit([makeGroup('a',0),makeGroup('b',3),makeGroup('c',-4)],{horizon:5,minHistoryDays:10});
+assert(audit.predictions>20,'walk-forward should produce enough causal predictions');
+assert(Number.isFinite(audit.top1HitPct),'top1 hit rate must be measured');
+assert(Number.isFinite(audit.top2HitPct),'top2 hit rate must be measured');
+assert(audit.top2HitPct>=audit.top1HitPct,'top2 coverage cannot be below top1');
+assert(audit.top1HitPct>=60,'deterministic synthetic trend should clear 60% without fake confidence inflation');
+
+const core=fs.readFileSync('lib/fundflow-xy.js','utf8');
+const status=fs.readFileSync('api/sync-status.js','utf8');
+const app=fs.readFileSync('app.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+for(const token of [
+  'readFundflowValidationAudit','readTopicInstitutionalCoverageAudit','walkForwardPathAudit',
+  'benchmarkSignLockPass','benchmarkSnapshotMatchPass','pathTop1AtLeast60','readyToFinalize','businessUniverseBaseline=161'
+])assert(core.includes(token),`evidence gate missing: ${token}`);
+for(const token of ["view==='fundflow-audit'","action==='institutional-backfill-manual'",'x-stockzone-manual-institutional','clientRevisionMatch'])assert(status.includes(token),`audit/backfill endpoint missing: ${token}`);
+for(const token of ['manualInstitutionalRepair','runFundflowValidation','Path 5D Top1','法人25D'])assert(app.includes(token)||html.includes(token),`settings evidence UI missing: ${token}`);
+assert(core.includes('sign(x)===sign(rawX)'),'benchmark must explicitly verify topic X/raw-X sign lock');
+assert(core.includes('instFlow5Pct:roundNullable(item.inst_flow_ratio_5,3)'),'missing company institutional flow must remain null, not fake zero');
+assert(app.includes('if(v===null||v===undefined||v==="")return "--"'),'fundflow formatter must render missing values as --');
+console.log(`Fundflow evidence validation PASS — causal walk-forward=${audit.top1HitPct}% top1 / ${audit.top2HitPct}% top2 on deterministic fixture + runtime release gate present`);

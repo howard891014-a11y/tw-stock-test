@@ -27,7 +27,7 @@ assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.3.0-signlocked-consol
 assert(core.includes('build_version text'),'daily XY table must persist the current build marker');
 assert(core.includes('isCurrentPreparedPayload'),'current snapshot reads must reject an old same-engine schema');
 assert(api.includes("if(force||pending||wrongSchema)return 'no-store'"),'fallback or schema-stale snapshots must never enter CDN cache');
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.31"'),'fundflow fetches need a deploy cache revision so old v5 CDN keys cannot reappear');
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.32"'),'fundflow fetches need a deploy cache revision so old v5 CDN keys cannot reappear');
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('),'fundflow page read must never rebuild the full engine, even with refresh=1');
