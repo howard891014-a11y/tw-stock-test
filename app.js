@@ -3755,7 +3755,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.5.30";
+const FUND_FLOW_CLIENT_REV="2.6.5.31";
 async function loadFundflowBrowser(force=false,serverRefresh=false){
   if(fundflowBrowserLoading)return;if(!force&&fundflowBrowserFetchedAt&&Date.now()-fundflowBrowserFetchedAt<5*60*1000){renderFundflowBrowser();return}fundflowBrowserLoading=true;
   const loading=$("fundflowBrowserLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}
@@ -3822,11 +3822,11 @@ function fundflowListHtml(groups){
   return groups.slice(0,6).map(g=>{const leaders=(g.leaders||[]).slice(0,3).map(x=>x.name||x.code).filter(Boolean).join("、"),sel=g.tagId===fundflowSelectedTagId?" is-selected":"",proj=g.projection||{},path=fundflowPathState(g);return `<button type="button" class="fundflow-radar-item${sel}" data-fundflow-tag="${escNews(g.tagId)}"><b>${escNews(g.name||g.tagId)}</b><em>${fundflowFmt(path.confidence,0)}%</em><small>${escNews(path.label)}｜${escNews(path.route)}｜X ${fundflowSignedX(g.x)} / Y ${fundflowSignedPct(g.y)}｜C ${fundflowFmt(g.confirmation,0)} / E ${fundflowFmt(g.overheating,0)}${proj?.scenarios?.length?`｜A ${escNews(proj.scenarios[0]?.direction||"--")} ${fundflowFmt(proj.scenarios[0]?.confidence,0)}%${proj.scenarios[1]?` / B ${escNews(proj.scenarios[1]?.direction||"--")} ${fundflowFmt(proj.scenarios[1]?.confidence,0)}%`:""}`:""}${leaders?`｜${escNews(leaders)}`:""}</small></button>`}).join("");
 }
 function renderFundflowXy(){
-  const data=fundflowXyData;if(!data)return renderFundflowChart();const asOfText=data.asOf?String(data.asOf).replaceAll("-","/"):"--";setText("fundflowAsOf","");const badge=$("fundflowTagBadge");if(badge){badge.textContent=asOfText;badge.dataset.locked="1";}setText("fundflowEngineBadge",String(data.engineVersion||"XY v6").replace("xy-","XY "));
+  const data=fundflowXyData;if(!data)return renderFundflowChart();const asOfText=data.asOf?String(data.asOf).replaceAll("-","/"):"--";setText("fundflowAsOf","");const badge=$("fundflowTagBadge");if(badge){badge.textContent=asOfText;badge.dataset.locked="1";}setText("fundflowEngineBadge",String(data.engineVersion||"XY v6.1").replace("xy-","XY "));
   const groups=fundflowEligibleGroups({path:false}),early=groups.filter(g=>["capital-leading","price-leading"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathState(b).confidence-fundflowPathState(a).confidence),confirm=groups.filter(g=>["resonance-up","strong-hold"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathState(b).confidence-fundflowPathState(a).confidence),risk=groups.filter(g=>["capital-retreat","pullback","weakening","chaos"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathState(b).confidence-fundflowPathState(a).confidence);
   setText("fundflowPotentialCount",early.length);setText("fundflowMainlineCount",confirm.length);setText("fundflowRightCount",risk.length);setText("fundflowDaysCount",data.trajectoryDays||0);
   const a=$("fundflowPotentialList"),b=$("fundflowMainlineList"),c=$("fundflowRightList");if(a)a.innerHTML=fundflowListHtml(early);if(b)b.innerHTML=fundflowListHtml(confirm);if(c)c.innerHTML=fundflowListHtml(risk);
-  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v6"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY v6：Y 是近5日真實價格報酬；X 改成每檔股票先用自己的歷史做連續 robust 法人強度，再以業務關聯度×流動性平方根×可靠度 capped 聚合。投票／breadth／一致性／streak 只進 C，不改 X；missing 不當 0。路徑狀態看目前象限 → Path A 5日預測象限；E 只表示過熱／耗竭。轉態樣本 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
+  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v6.1"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY v6.1：Y 是近5日真實價格報酬；X 先逐股用自身歷史做連續 robust 法人強度，再以業務關聯度×流動性平方根×可靠度 capped 聚合；題材最終左右側由實際加權 5D 法人淨流向鎖定，robust 只決定離中心多遠。投票／breadth／一致性／streak 只進 C，不改 X；missing 不當 0。路徑狀態看目前象限 → Path A 5日預測象限；E 只表示過熱／耗竭。轉態樣本 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
   document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>{const active=fundflowScopes.has(btn.dataset.fundflowScope);btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",active?"true":"false")});document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));document.querySelectorAll("[data-fundflow-axis-mode]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowAxisMode===fundflowAxisMode));renderFundflowPhaseControls();renderFundflowChart();
 }
 function fundflowFactorHtml(factors,axis,priorFactors={},group={},priorPoint={}){
@@ -3922,7 +3922,7 @@ async function runManualFundflowWarm(){
     const res=await fetch("/api/sync-status?action=fundflow-warm-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Warm":"1"}});
     const data=await readJson(res,"XY / 分類快照更新");
     const state=data?.after||data?.before||{},asOf=state?.asOf?String(state.asOf):"--";
-    if(status){status.classList.add("is-ok");status.textContent=data?.skipped?`已是最新：${data.engineVersion||"XY v6"}｜資料 ${asOf}`:`更新完成：${data.engineVersion||"XY v6"}｜資料 ${asOf}`;}
+    if(status){status.classList.add("is-ok");status.textContent=data?.skipped?`已是最新：${data.engineVersion||"XY v6.1"}｜資料 ${asOf}`:`更新完成：${data.engineVersion||"XY v6.1"}｜資料 ${asOf}`;}
     fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;
     try{await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)}catch(e){console.warn("手動更新後重新讀取資金流快照失敗",e)}
   }catch(e){console.warn("手動更新 XY / 分類快照失敗",e);if(status){status.classList.add("is-error");status.textContent=`更新失敗：${e?.message||e}`}}
