@@ -7,7 +7,7 @@ const {
   applyCompanyExposureBudget,enrichFlowFeatures,scoreStocksForDate,summarizeTagItemsRaw,normalizeTagSummaries
 }=require('../lib/fundflow-xy');
 
-assert.equal(ENGINE_VERSION,'xy-6.0.0-stock-robust-flow-price','XY v6 engine version mismatch');
+assert.equal(ENGINE_VERSION,'xy-6.1.0-stock-robust-signlocked-flow-price','XY v6.1 engine version mismatch');
 assert.equal(NON_CORE_EXPOSURE_BUDGET,null,'v6 must not use the retired cross-topic exposure cap');
 assert.equal(STOCK_FLOW_LOOKBACK_DAYS,60);assert.equal(STOCK_FLOW_MIN_HISTORY_DAYS,20);
 assert(STOCK_FLOW_SCALE_FLOOR_PCT>0&&TOPIC_SINGLE_STOCK_CAP>0&&TOPIC_SINGLE_STOCK_CAP<.5&&VOTE_NEUTRAL_SCORE>0);
@@ -78,6 +78,13 @@ const split=summarizeTagItemsRaw([item({score:90,raw:.9}),item({score:30,raw:.3}
 assert(consensus.confirmation>split.confirmation,'C should reward member agreement instead of contaminating X');
 assert(consensus.flowBreadth>split.flowBreadth,'buy vote breadth should be separate from X');
 
+// Topic side lock: actual weighted raw institutional flow decides left/right; robust history only sets distance.
+const signFlipGuard=summarizeTagItemsRaw([item({score:-70,raw:.8}),item({score:20,raw:.4}),item({score:20,raw:.3})],{memberCount:3,totalWeight:3});
+assert(signFlipGuard.rawX>0,'fixture raw topic flow should be net-buy');
+assert(signFlipGuard.x>0,'net-buy topic must stay on X>0 even when robust aggregate would otherwise flip left');
+const signFlipSell=summarizeTagItemsRaw([item({score:70,raw:-.8}),item({score:-20,raw:-.4}),item({score:-20,raw:-.3})],{memberCount:3,totalWeight:3});
+assert(signFlipSell.rawX<0&&signFlipSell.x<0,'net-sell topic must stay on X<0');
+
 // Missing member abstains and reduces reliability/coverage rather than voting neutral.
 const missing={...item({score:0,raw:0}),stockFlowScore:null,stockX:null,inst_flow_ratio_1:null,inst_flow_ratio_5:null,inst_flow_ratio_10:null,inst_flow_ratio_20:null,stock_flow_reliability:0};
 const withMissing=summarizeTagItemsRaw([item({score:35,raw:.3}),missing],{memberCount:2,totalWeight:2});
@@ -93,7 +100,7 @@ const shares=capWeightShares([{baseWeight:1000},...Array.from({length:7},()=>({b
 assert(Math.abs(shares.reduce((a,b)=>a+b,0)-1)<1e-9);assert(Math.max(...shares)<=.2500001);
 
 const lib=fs.readFileSync('lib/fundflow-xy.js','utf8');
-for(const token of ["ENGINE_VERSION = 'xy-6.0.0-stock-robust-flow-price'",'continuousStockFlowScore','Math.tanh','Math.sqrt(turnover/medTurnover)','TOPIC_SINGLE_STOCK_CAP','abstainBreadth','flowValidCount'])assert(lib.includes(token),`XY v6 rule missing: ${token}`);
+for(const token of ["ENGINE_VERSION = 'xy-6.1.0-stock-robust-signlocked-flow-price'",'continuousStockFlowScore','Math.tanh','Math.sqrt(turnover/medTurnover)','TOPIC_SINGLE_STOCK_CAP','abstainBreadth','flowValidCount','rawSide*Math.abs(robustAggregate)'])assert(lib.includes(token),`XY v6.1 rule missing: ${token}`);
 for(const old of ['applySelfRelativeX','empiricalMagnitudePercentile'])assert(!lib.includes(old),`retired topic-percentile transform still present: ${old}`);
 assert(!lib.includes('const NON_CORE_EXPOSURE_BUDGET = 1.5'),'old exposure cap must remain removed');
-console.log('Stock-first robust XY v6 validation PASS — Y raw price; X stock-first causal robust flow; capped aggregation; voting in C; missing abstains');
+console.log('Stock-first robust XY v6.1 validation PASS — Y raw price; X stock-first causal robust magnitude + raw-flow side lock; capped aggregation; voting in C; missing abstains');

@@ -11,7 +11,7 @@ for(const token of ['消費性電子','data-fundflow-axis-mode="zoom"','data-fun
 for(const token of ['fundflowPathState','fundflowAxisMode','fundflowZoomBound','fundflow-typhoon-trail','fundflow-typhoon-marker','fundflow-future-uncertainty','animateMotion']) if(!app.includes(token)&&!css.includes(token)&&!html.includes(token))errors.push(`missing v2.6.5.26 XY UI token ${token}`);
 for(const old of ['data-fundflow-phase="germination"','data-fundflow-phase="potential"','data-fundflow-phase="mainline"','冷區／方向未明','過熱／冷卻 <em data-fundflow-phase-count']) if(html.includes(old))errors.push(`old phase UI still visible: ${old}`);
 if(!html.includes('點開：A/B 兩條颱風路徑'))errors.push('Top-2 path legend text missing');
-for(const token of ['XY v6','法人 robust 資金強度','逐股自歷史','Buy / Sell 投票','C，不改 X','讀取共用 XY snapshot'])if(!app.includes(token)&&!html.includes(token))errors.push(`missing v6 semantics token ${token}`);
+for(const token of ['XY v6.1','法人 robust 資金強度','逐股自歷史','實際加權 5D 法人淨流向鎖定','Buy / Sell 投票','C，不改 X','讀取共用 XY snapshot'])if(!app.includes(token)&&!html.includes(token))errors.push(`missing v6 semantics token ${token}`);
 if(app.includes('loadFundflowCoverage'))errors.push('retired fundflow coverage/sync-status loader still present');
 if(html.includes('虛線：模型傾向'))errors.push('old projected legend text still visible');
 if(html.includes('data-fundflow-scope="finance"'))errors.push('finance scope should be merged into traditional');
@@ -21,4 +21,4 @@ if(errors.length){console.error('Fundflow UI validation FAILED');for(const e of 
 assert(app.includes('function fundflowBusinessUniverse()'),'full business-universe helper missing');
 assert(app.includes('業務 ${universe.length}｜可畫 XY ${base.length}｜待法人 X ${pendingX}'),'UI must expose business universe vs true XY coverage');
 assert(app.includes('key==="all"?String(universe.length):String(counts[key]??0)'),'All-path control must show the full business-universe count instead of only XY-eligible businesses');
-console.log(`Fundflow UI v2.6.5.30 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
+console.log(`Fundflow UI v2.6.5.31 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);

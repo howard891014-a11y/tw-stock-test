@@ -11,6 +11,16 @@ for(const fine of ['air_cooling','liquid_cooling','cold_plate','cdu','mlcc','res
   assert(!ids.includes(fine),`${fine} should not be an independent market XY topic`);
 }
 for(const separate of ['cowos','copos','foplp','glass_substrate'])assert(ids.includes(separate),`${separate} must remain separately tradable`);
+// Conservative de-duplication: collapse only near-duplicate market lines while preserving the detailed raw tags.
+assert(!ids.includes('consumer_desktop'),'Desktop should consolidate into PC／Notebook');
+assert(!ids.includes('rigid_flex'),'軟硬結合板 should consolidate into FPCB');
+assert(!ids.includes('specialty_process'),'特殊製程 should consolidate into 成熟／特殊製程晶圓代工');
+assert(!ids.includes('micro_led'),'Micro LED should consolidate into Mini／Micro LED');
+assert(!ids.includes('electronic_distribution_business'),'電子通路 should consolidate into 電子／IC通路');
+assert(marketTopicLinks([{id:'rigid_flex',importance:'core',origin:'test'}],'測試軟硬板').some(x=>x.id==='fpcb'),'rigid-flex source must map to consolidated FPCB topic');
+assert(marketTopicLinks([{id:'specialty_process',importance:'core',origin:'test'}],'測試特殊製程').some(x=>x.id==='mature_foundry'),'specialty process must map to consolidated mature/specialty foundry');
+assert(marketTopicLinks([{id:'micro_led',importance:'core',origin:'test'}],'測試MicroLED').some(x=>x.id==='mini_led'),'Micro LED must map to consolidated Mini/Micro LED');
+assert(marketTopicLinks([{id:'electronic_distribution_business',importance:'core',origin:'test'}],'測試電子通路').some(x=>x.id==='ic_distribution'),'electronic distribution must map to consolidated electronic/IC distribution');
 const glassDef=defs.find(x=>x.id==='glass_substrate');
 assert(glassDef&&glassDef.synthetic,'glass substrate should use explicit market-topic overlay');
 for(const [code,name] of [['6207','雷科'],['8027','鈦昇'],['7828','創新服務'],['3037','欣興'],['6664','群翊'],['8064','東捷']]){
@@ -50,10 +60,10 @@ for(const [code,name] of [['6285','啟碁'],['3105','穩懋'],['6213','聯茂'],
 assert(marketTopicLinks([],'氣立','4555').some(x=>x.id==='robot'),'4555 氣立 should receive 機器人 market-reference overlay');
 
 // v2.6.5.26 consumer/end-device classification must be real taxonomy, not a UI rename.
-const consumerIds=['ai_pc','consumer_notebook','consumer_desktop','consumer_tablet','consumer_mobile','consumer_wearable','consumer_game_console','consumer_display','consumer_audio','consumer_camera','consumer_peripherals','consumer_smart_home','consumer_brand_device'];
+const consumerIds=['ai_pc','consumer_notebook','consumer_tablet','consumer_mobile','consumer_wearable','consumer_game_console','consumer_display','consumer_audio','consumer_camera','consumer_peripherals','consumer_smart_home','consumer_brand_device'];
 for(const id of consumerIds){const d=defs.find(x=>x.id===id);assert(d,`missing consumer-electronics topic ${id}`);assert.equal(d.scope,'electronics-product',`${id} must be in consumer-electronics scope`);}
 assert(marketTopicLinks([{id:'notebook_pc',importance:'core',origin:'test'}],'測試筆電').some(x=>x.id==='consumer_notebook'),'notebook product must map to consumer electronics');
-assert(marketTopicLinks([{id:'desktop_pc',importance:'core',origin:'test'}],'測試桌機').some(x=>x.id==='consumer_desktop'),'desktop product must map to consumer electronics');
+assert(marketTopicLinks([{id:'desktop_pc',importance:'core',origin:'test'}],'測試桌機').some(x=>x.id==='consumer_notebook'),'desktop product should consolidate into PC／Notebook');
 assert(marketTopicLinks([{id:'display_device',importance:'core',origin:'test'}],'測試顯示器').some(x=>x.id==='consumer_display'),'finished display device must map to consumer electronics');
 assert(marketTopicLinks([{id:'consumer_electronics',importance:'core',origin:'test'}],'測試終端').some(x=>x.id==='consumer_brand_device'),'generic finished consumer electronics must map to end-device bucket');
 assert(marketTopicLinks([{id:'computer_peripheral_business',importance:'core',origin:'test'}],'測試週邊').some(x=>x.id==='consumer_peripherals'),'computer peripherals must map to consumer-electronics product scope');
@@ -85,4 +95,4 @@ const bbu=marketTopicLinks([],'AES-KY');
 assert(bbu.some(x=>x.id==='bbu'),'AES-KY should receive BBU market overlay');
 const s=auditSummary();
 assert(s.definitions<284,'market topic layer should reduce over-fragmented vote definitions');
-console.log('Market Topic Taxonomy v1.6 / consumer-electronics validation PASS',s);
+console.log('Market Topic Taxonomy v1.7 / conservative de-duplication + consumer-electronics validation PASS',s);
