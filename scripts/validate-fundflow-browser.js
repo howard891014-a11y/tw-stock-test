@@ -16,9 +16,9 @@ const snapshot = {
   engineVersion:'xy-1.0.0',
   groups:[{
     tagId:'wafer', name:'矽晶圓', parentName:'晶圓製造與製程', scope:'technology-fine',
-    memberCount:3, validCount:3, coveragePct:100, reliability:78,
+    memberCount:3, validCount:3, flowValidCount:3, xAvailable:true, xyEligible:true, coveragePct:100, reliability:78,
     x:71.3, y:48.6, quadrant:'potential', status:'potential-rising', statusLabel:'潛伏升溫',
-    dx3:10.1, dy3:-27.1, trajectory:[{date:'2026-09-22',x:73.9,y:70.8},{date:'2026-09-23',x:71.3,y:48.6}],
+    dx3:10.1, dy3:-27.1, trajectory:[{date:'2026-09-22',x:73.9,y:70.8,xAvailable:true},{date:'2026-09-23',x:71.3,y:48.6,xAvailable:true}],
     leaders:[{code:'3532',name:'台勝科'}]
   }]
 };

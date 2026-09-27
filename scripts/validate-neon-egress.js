@@ -22,12 +22,12 @@ assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_snapshot'),'
 assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_member'),'topic member index missing');
 assert(core.includes('async function readLatestPreparedSnapshotAnyEngine'),'cross-engine small-snapshot fallback missing');
 assert(core.includes('enginePending:!current'),'fallback snapshot must mark both old-engine and old-schema snapshots as pending');
-assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.1.0-v6-ready-taxonomy'"),'versioned fundflow snapshot schema missing');
-assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.1.0-v6-ready-taxonomy'"),'versioned daily build marker missing');
+assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.2.0-business-universe'"),'versioned fundflow snapshot schema missing');
+assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.2.0-business-universe'"),'versioned daily build marker missing');
 assert(core.includes('build_version text'),'daily XY table must persist the current build marker');
 assert(core.includes('isCurrentPreparedPayload'),'current snapshot reads must reject an old same-engine schema');
 assert(api.includes("if(force||pending||wrongSchema)return 'no-store'"),'fallback or schema-stale snapshots must never enter CDN cache');
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.29"'),'fundflow fetches need a deploy cache revision so old v5 CDN keys cannot reappear');
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.30"'),'fundflow fetches need a deploy cache revision so old v5 CDN keys cannot reappear');
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('),'fundflow page read must never rebuild the full engine, even with refresh=1');

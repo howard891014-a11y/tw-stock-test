@@ -1,4 +1,5 @@
 const fs=require("fs");
+const assert=require("assert");
 const html=fs.readFileSync("index.html","utf8");
 const css=fs.readFileSync("style.css","utf8");
 const app=fs.readFileSync("app.js","utf8");
@@ -17,4 +18,7 @@ if(html.includes('data-fundflow-scope="finance"'))errors.push('finance scope sho
 if(html.includes('data-fundflow-scope="all"'))errors.push('top-level all-business scope should be removed');
 for(const token of ['new Set(["technology-upstream","technology-midstream","technology-downstream","electronics-product"])','fundflowScopes.size===1','fundflowScopes.delete(key)','fundflowScopes.add(key)']) if(!app.includes(token))errors.push(`multi-select classification rule missing: ${token}`);
 if(errors.length){console.error('Fundflow UI validation FAILED');for(const e of errors)console.error('-',e);process.exit(1)}
-console.log(`Fundflow UI v2.6.5.29 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
+assert(app.includes('function fundflowBusinessUniverse()'),'full business-universe helper missing');
+assert(app.includes('業務 ${universe.length}｜可畫 XY ${base.length}｜待法人 X ${pendingX}'),'UI must expose business universe vs true XY coverage');
+assert(app.includes('key==="all"?String(universe.length):String(counts[key]??0)'),'All-path control must show the full business-universe count instead of only XY-eligible businesses');
+console.log(`Fundflow UI v2.6.5.30 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);

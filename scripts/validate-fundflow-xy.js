@@ -1,5 +1,5 @@
 const assert=require('assert');
-const {percentileRanks,scoreStocksForDate,computeBusinessFlow,computeTagDetail,quadrant,buildTransitionCalibration,projectGroup}=require('../lib/fundflow-xy');
+const {percentileRanks,scoreStocksForDate,computeBusinessFlow,computeTagDetail,quadrant,buildTransitionCalibration,projectGroup,buildPreparedOverview}=require('../lib/fundflow-xy');
 
 assert.deepStrictEqual(percentileRanks([1,2,3]).map(x=>Math.round(x)),[0,50,100]);
 assert.deepStrictEqual(percentileRanks([5,5]).map(x=>Math.round(x)),[50,50]);
@@ -123,3 +123,35 @@ console.log('Fundflow detail v3 validation PASS',{tag:detail.name,days:detail.tr
   assert(blind.groups.some(x=>x.tagId==='automation_market'),'existing automation tag must remain alongside newly discovered glass substrate');
   assert(blind.groups.some(x=>x.tagId==='leo_satellite'),'runtime main_business should discover LEO satellite without company seed');
 }
+
+// v2.6.5.30 regression: preserve the business universe even when institutional X is missing.
+// Missing flow must remain NULL/abstain in public snapshots; it must never become a fake centre X=0.
+{
+  const noFlowProfiles=[
+    {stock_code:'NF1',stock_name:'無法人甲',market:'上市',industry_code:'31',industry:'其他電子業',auto_business_tags:['advanced_packaging_equipment']},
+    {stock_code:'NF2',stock_name:'無法人乙',market:'上市',industry_code:'31',industry:'其他電子業',auto_business_tags:['advanced_packaging_equipment']}
+  ];
+  const noFlowRows=[];
+  for(const trade_date of ['2026-09-21','2026-09-22','2026-09-23'])for(const p of noFlowProfiles)noFlowRows.push({
+    trade_date,stock_code:p.stock_code,stock_name:p.stock_name,market:p.market,trade_value:1_000_000,trade_volume:10_000,close_price:100,
+    institutional_foreign_net:null,institutional_trust_net:null,institutional_dealer_net:null,institutional_total_net:null,
+    change_pct:1,return_3_pct:2,return_5_pct:3,return_20_pct:4,positive_days_5:4
+  });
+  const noFlow=computeBusinessFlow(noFlowProfiles,noFlowRows,{maxDates:3});
+  const equipment=noFlow.groups.find(x=>x.tagId==='semiconductor_equipment');
+  assert(equipment,'price-valid business must survive aggregation even when all institutional X is missing');
+  assert.equal(equipment.xAvailable,false,'missing institutional flow must mark topic X unavailable');
+  assert.equal(equipment.flowValidCount,0,'missing institutional flow must have zero flow-valid members');
+  assert.equal(equipment.trajectory.length,3,'price-valid business trajectory must be retained');
+  const prepared=buildPreparedOverview(noFlow.groups,noFlow.dates,noFlow.calibration,5);
+  const publicEquipment=prepared.groups.find(x=>x.tagId==='semiconductor_equipment');
+  assert(publicEquipment,'missing-X business must remain visible in prepared overview');
+  assert.equal(publicEquipment.x,null,'public missing X must be NULL, never fake X=0');
+  assert.equal(publicEquipment.xAvailable,false);
+  assert.equal(publicEquipment.xyEligible,false);
+  assert.equal(publicEquipment.statusLabel,'待法人資料');
+  assert.equal(prepared.counts.businessEligible,1,'full business universe count must retain the business');
+  assert.equal(prepared.counts.withXY,0,'missing-X business must not be plotted as valid XY');
+  assert.equal(prepared.counts.pendingX,1,'missing-X business must be counted transparently');
+}
+console.log('Fundflow business-universe regression PASS — missing institutional X stays visible as pending, never fake zero');
