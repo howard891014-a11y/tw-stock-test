@@ -4,7 +4,7 @@ const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDi
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
 const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
-const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser } = require('../lib/fundflow-xy');
+const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 
 
@@ -72,6 +72,8 @@ const CRON_ACTIONS = {
   '0 11 * * 1-5': 'twse',
   '0 14 * * 1-5': 'tpex'
 };
+
+let manualFundflowWarmPromise=null;
 
 function requestedAction(req) {
   const schedule = String(req.headers?.['x-vercel-cron-schedule'] || '').trim();
@@ -672,6 +674,19 @@ module.exports=async function handler(req,res){
     const action=requestedAction(req);
 
     if(schedule && !action)return res.status(400).json({ok:false,error:`未知 Cron schedule：${schedule}`});
+    if(action==='fundflow-warm-manual'){
+      // Development-stage manual warm: explicit Settings POST only, idempotent and DB-only.
+      // Once snapshots match the latest stored common market date, repeated clicks become a cheap no-op.
+      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用手動更新按鈕'});}
+      if(String(req.headers?.['x-stockzone-manual-warm']||'')!=='1')return res.status(403).json({ok:false,error:'缺少手動更新確認標記'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
+      if(!manualFundflowWarmPromise){
+        manualFundflowWarmPromise=warmCurrentEngineFromStoredDb({sql:getSql(),force:false}).finally(()=>{manualFundflowWarmPromise=null});
+      }
+      const warm=await manualFundflowWarmPromise;
+      return res.status(warm.ok?200:503).json({...warm,manual:true});
+    }
     if(action){
       if(!isCronAuthorized(req))return res.status(401).json({ok:false,error:'Unauthorized'});
       let result;
@@ -716,7 +731,7 @@ module.exports=async function handler(req,res){
         const flowDataHealth=await readFlowDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',targetTradingDays:target,backfill,marketHealth,flowDataHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // v2.6.5.17: keep the three existing cron slots and accelerate deep

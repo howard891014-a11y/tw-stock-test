@@ -8,8 +8,9 @@ module.exports=async function handler(req,res){
     const view=String(req.query?.view||'overview').trim().toLowerCase();
     const days=boundedDays(req.query?.days);
     if(view==='browser'||view==='fundflow-browser'){
-      res.setHeader('Cache-Control','public, s-maxage=600, stale-while-revalidate=3600');
-      return res.status(200).json(await getFundflowBusinessBrowser({days}));
+      const force=forceRefresh(req.query?.refresh);
+      res.setHeader('Cache-Control',force?'no-store':'public, s-maxage=600, stale-while-revalidate=3600');
+      return res.status(200).json(await getFundflowBusinessBrowser({days,force}));
     }
     if(view==='detail'||view==='fundflow-detail'){
       const tagId=String(req.query?.tag||req.query?.tagId||'').trim();
