@@ -7,6 +7,7 @@ assert.equal(quadrant(1.2,-3.0),'potential');
 assert.equal(quadrant(1.2,4.0),'mainline');
 assert.equal(quadrant(-.5,2.0),'price-led');
 assert.equal(quadrant(-.5,-2.0),'cold');
+const flowFields=(net=100)=>({trade_value:1_000_000,trade_volume:10_000,close_price:100,institutional_foreign_net:net*.6,institutional_trust_net:net*.25,institutional_dealer_net:net*.15,institutional_total_net:net});
 
 // X institutional base must not move when only Y price factors change (credit correction held fixed).
 const stockBase=[
@@ -33,7 +34,7 @@ for(let di=0;di<dates.length;di++){
   profiles.forEach((p,pi)=>{
     const packaging=['6187','2467','6640','6438'].includes(p.stock_code),cpo=['3363','6442','3163'].includes(p.stock_code);
     const trend=packaging?di*0.18:cpo?di*0.10:di*0.02;
-    activity.push({trade_date:dates[di],stock_code:p.stock_code,stock_name:p.stock_name,market:p.market,
+    activity.push({trade_date:dates[di],stock_code:p.stock_code,stock_name:p.stock_name,market:p.market,...flowFields(packaging?500:cpo?250:50),
       value_ratio_20:1+(packaging?0.8:cpo?0.45:0.1)+trend+pi*.01,value_trend_5_15:1+(packaging?0.4:cpo?0.18:0.05)+trend*.5,
       up_value_share_5:.45+(packaging?.18:cpo?.1:0)+di*.01,positive_days_5:packaging?4:cpo?3:2,
       change_pct:(packaging?0.35:cpo?0.65:0.1)+di*.06,return_3_pct:(packaging?1.0:cpo?1.8:.1)+di*.18,
@@ -63,7 +64,7 @@ assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate mul
 const cal=buildTransitionCalibration(result.groups);
 assert(cal.historyDays===12,'calibration should count history days');
 const projected=projectGroup(adv,cal);assert(projected.points.length===3,'projectGroup primary compatibility should return three horizons');assert(projected.scenarios.length===2,'projectGroup should return two typhoon paths');
-console.log('Fundflow XY v5 self-relative-flow/raw-price + Phase validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
+console.log('Fundflow XY v6 stock-first-robust-flow/raw-price + Path State validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
 const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});
 assert.equal(detail.trajectory.length,10,'detail trajectory should honor requested days');
@@ -85,7 +86,7 @@ assert(detail.projection?.points?.length===3,'detail should expose primary proje
   ];
   const gsProfiles=gsNames.map(([stock_code,stock_name])=>({stock_code,stock_name,market:'上市',industry_code:'24',industry:'半導體業',auto_business_tags:[]}));
   const gsRows=[];
-  for(const trade_date of ['2026-09-23','2026-09-24'])for(const [stock_code,stock_name] of gsNames)gsRows.push({trade_date,stock_code,stock_name,market:'上市',trade_value:100,change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
+  for(const trade_date of ['2026-09-23','2026-09-24'])for(const [stock_code,stock_name] of gsNames)gsRows.push({trade_date,stock_code,stock_name,market:'上市',...flowFields(100),change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
   const gs=computeBusinessFlow(gsProfiles,gsRows,{maxDates:2}).groups.find(x=>x.tagId==='glass_substrate');
   assert(gs,'glass substrate group missing in regression');
   assert.equal(gs.memberCount,gsNames.length,'glass substrate denominator must include all audited market members');
@@ -94,14 +95,14 @@ assert(detail.projection?.points?.length===3,'detail should expose primary proje
 {
   const fpNames=[['3481','群創'],['3535','晶彩科'],['3455','由田'],['3583','辛耘'],['3131','弘塑'],['8027','鈦昇'],['6664','群翊'],['8064','東捷'],['5443','均豪'],['2467','志聖'],['6187','萬潤']];
   const profiles=fpNames.map(([stock_code,stock_name])=>({stock_code,stock_name,market:'上櫃',industry_code:'24',industry:'半導體業',auto_business_tags:[]}));
-  const rows=[];for(const trade_date of ['2026-09-23','2026-09-24'])for(const [stock_code,stock_name] of fpNames)rows.push({trade_date,stock_code,stock_name,market:'上櫃',trade_value:100,change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
+  const rows=[];for(const trade_date of ['2026-09-23','2026-09-24'])for(const [stock_code,stock_name] of fpNames)rows.push({trade_date,stock_code,stock_name,market:'上櫃',...flowFields(100),change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
   const fp=computeBusinessFlow(profiles,rows,{maxDates:2}).groups.find(x=>x.tagId==='foplp');
   assert(fp,'FOPLP group missing in regression');
   assert.equal(fp.memberCount,fpNames.length,'FOPLP denominator missing audited companies');
 }
 {
   const profiles=[{stock_code:'7769',stock_name:'鴻勁',market:'上市',industry_code:'24',industry:'半導體業',auto_business_tags:[]}];
-  const rows=[];for(const trade_date of ['2026-09-23','2026-09-24'])rows.push({trade_date,stock_code:'7769',stock_name:'鴻勁',market:'上市',trade_value:100,change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
+  const rows=[];for(const trade_date of ['2026-09-23','2026-09-24'])rows.push({trade_date,stock_code:'7769',stock_name:'鴻勁',market:'上市',...flowFields(100),change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
   const result=computeBusinessFlow(profiles,rows,{maxDates:2});
   assert(result.groups.some(x=>x.tagId==='cpo_silicon_photonics'),'鴻勁 CPO market-topic overlay missing');
   assert(result.groups.some(x=>x.tagId==='semiconductor_test_equipment_market'),'鴻勁 Handler / semiconductor-test-equipment mapping missing');
@@ -116,7 +117,7 @@ console.log('Fundflow detail v3 validation PASS',{tag:detail.name,days:detail.tr
     {stock_code:'9997',stock_name:'盲測通訊乙',market:'上櫃',industry_code:'27',industry:'通信網路業',auto_business_tags:['network_equipment'],auto_market_topics:[],main_business:'低軌衛星通訊終端與 LEO satellite gateway'}
   ];
   const rows=[];
-  for(const trade_date of ['2026-09-23','2026-09-24'])for(const p of profiles)rows.push({trade_date,stock_code:p.stock_code,stock_name:p.stock_name,market:p.market,trade_value:100,change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
+  for(const trade_date of ['2026-09-23','2026-09-24'])for(const p of profiles)rows.push({trade_date,stock_code:p.stock_code,stock_name:p.stock_name,market:p.market,...flowFields(100),change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
   const blind=computeBusinessFlow(profiles,rows,{maxDates:2});
   assert(blind.groups.some(x=>x.tagId==='glass_substrate'),'runtime main_business should discover glass substrate without company seed');
   assert(blind.groups.some(x=>x.tagId==='automation_market'),'existing automation tag must remain alongside newly discovered glass substrate');

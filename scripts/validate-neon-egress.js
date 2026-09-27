@@ -11,16 +11,33 @@ assert(quote.includes('mode==="live"?(liveStockHint(query,marketHint)||await res
 assert(app.includes('/api/fundflow?view=overview'),'fundflow overview must use dedicated cached API');
 assert(app.includes('/api/fundflow?view=browser'),'fundflow browser must use dedicated cached API');
 assert(app.includes('/api/fundflow?view=detail'),'fundflow detail must use dedicated cached API');
-assert(!app.includes('/api/sync-status?view=fundflow&'),'normal overview must not route through sync-status');
-assert(!app.includes('/api/sync-status?view=fundflow-browser'),'normal browser must not route through sync-status');
-assert(!app.includes('/api/sync-status?view=fundflow-detail'),'normal detail must not route through sync-status');
+assert(!app.includes('loadFundflowCoverage'),'fundflow page must not keep the retired no-store coverage call');
+assert(app.includes('if(view==="fundflow"){loadFundflowXy(false).finally(()=>loadFundflowBrowser(false));}'),'fundflow entry should only load shared XY/browser snapshots');
+assert(app.includes('讀取共用 XY snapshot…'),'fundflow loading copy must reflect snapshot read rather than full-market calculation');
 assert(api.includes("s-maxage=300, stale-while-revalidate=3600"),'overview/detail shared cache header missing');
 assert(api.includes("s-maxage=600, stale-while-revalidate=3600"),'browser shared cache header missing');
 assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_snapshot'),'prepared snapshot table missing');
 assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_member'),'topic member index missing');
+assert(core.includes('async function readLatestPreparedSnapshotAnyEngine'),'cross-engine small-snapshot fallback missing');
+assert(core.includes('enginePending:staleEngineVersion!==ENGINE_VERSION'),'fallback snapshot must tell UI that the new engine is still warming');
+
+const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
+assert(snap.includes("if(force){await refreshBusinessFlowDaily({trajectoryDays:ENGINE_HISTORY_DAYS,sql})"),'only explicit force path should be able to warm the full engine');
+assert(snap.includes("readLatestPreparedSnapshotAnyEngine(sql,'overview',bounded)"),'normal page read should fall back to a previous small overview snapshot');
+assert(!snap.includes('loadEngineInputs('),'normal overview page read must not load full-market raw engine inputs');
+assert(!snap.includes('needsRefresh('),'normal overview page read must not trigger freshness-driven full-market rebuild');
+assert(!snap.includes('rebuildPreparedFromStored('),'normal overview page read must not rebuild snapshots from daily/profile tables');
+
+const browser=core.slice(core.indexOf('async function getFundflowBusinessBrowser'),core.indexOf('async function getFundflowDetail'));
+assert(!browser.includes('getFundflowSnapshot('),'browser page read must not cascade into overview rebuild logic');
+assert(!browser.includes('rebuildPreparedFromStored('),'browser page read must remain snapshot-only');
 assert(core.includes('async function loadTagEngineInputs'),'lazy topic detail loader missing');
+const tagLoader=core.slice(core.indexOf('async function loadTagEngineInputs'),core.indexOf('async function refreshBusinessFlowDaily'));
+assert(tagLoader.includes('JOIN market_business_xy_member'),'detail must be restricted to the selected topic member index');
+assert(tagLoader.includes('const memberEngine=await resolveMemberEngine'),'detail should reuse newest member index while v6 is warming');
+assert(!tagLoader.includes('buildProfileTagMap(profiles)'),'detail read must not rebuild the full-market member index');
 const detail=core.slice(core.indexOf('async function getFundflowDetail'),core.indexOf('\nmodule.exports='));
 assert(!detail.includes('loadEngineInputs(sql,ENGINE_HISTORY_DAYS)'),'detail must not reload full-market engine inputs');
 assert(!detail.includes('needsRefresh(sql)'),'detail request must not trigger full-market freshness rebuild');
-assert(sync.includes("refreshBusinessFlowDaily({trajectoryDays:ENGINE_HISTORY_DAYS})"),'daily sync must warm the full history and prepared snapshots');
-console.log('PASS validate-neon-egress');
+assert(sync.includes("refreshBusinessFlowDaily({trajectoryDays:ENGINE_HISTORY_DAYS})"),'daily sync must warm full history + v6 prepared snapshots in background');
+console.log('PASS validate-neon-egress — fundflow entry no longer calls sync-status; normal page reads cannot bootstrap full-market raw rebuild; detail remains topic-lazy');
