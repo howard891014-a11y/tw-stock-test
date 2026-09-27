@@ -4,7 +4,7 @@ const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDi
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
 const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
-const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb } = require('../lib/fundflow-xy');
+const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, readFundflowValidationAudit } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 
 
@@ -74,6 +74,7 @@ const CRON_ACTIONS = {
 };
 
 let manualFundflowWarmPromise=null;
+let manualInstitutionalBackfillPromise=null;
 
 function requestedAction(req) {
   const schedule = String(req.headers?.['x-vercel-cron-schedule'] || '').trim();
@@ -493,6 +494,17 @@ async function statusResponse(req, res) {
     return res.status(200).json(data);
   }
 
+  if(view==='fundflow-audit'){
+    res.setHeader('Cache-Control','no-store');
+    const targetDays=Math.max(20,Math.min(60,Number(req.query?.target)||25));
+    const data=await readFundflowValidationAudit({sql,targetDays,maxDates:80});
+    const appVersion=String(require('../package.json').version||''),clientRevision=String(req.query?.client||'').trim(),clientRevisionMatch=Boolean(clientRevision&&clientRevision===appVersion);
+    data.appVersion=appVersion;data.clientRevision=clientRevision;data.clientRevisionMatch=clientRevisionMatch;
+    data.releaseGate={...(data.releaseGate||{}),frontendRevision:clientRevisionMatch};
+    data.releaseGate.readyToFinalize=Object.entries(data.releaseGate).filter(([k])=>k!=='readyToFinalize').every(([,v])=>Boolean(v));
+    return res.status(200).json(data);
+  }
+
   if(view==='blind-coverage'){
     res.setHeader('Cache-Control','no-store');
     const limit=Math.max(1,Math.min(1000,Number(req.query?.limit)||300));
@@ -687,6 +699,21 @@ module.exports=async function handler(req,res){
       const warm=await manualFundflowWarmPromise;
       return res.status(warm.ok?200:503).json({...warm,manual:true});
     }
+
+    if(action==='institutional-backfill-manual'){
+      // Development-stage repair button. It fetches only official institutional reports for
+      // missing/partial dates inside the most recent target window; it does not rebuild XY.
+      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用法人補齊按鈕'});}
+      if(String(req.headers?.['x-stockzone-manual-institutional']||'')!=='1')return res.status(403).json({ok:false,error:'缺少法人補齊確認標記'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
+      const target=Math.max(20,Math.min(60,Number(req.query?.target)||25)),batch=Math.max(1,Math.min(12,Number(req.query?.days)||10));
+      if(!manualInstitutionalBackfillPromise){
+        manualInstitutionalBackfillPromise=runInstitutionalBackfill({targetTradingDays:target,maxNewDays:batch,maxRunMs:47000,concurrency:3}).finally(()=>{manualInstitutionalBackfillPromise=null});
+      }
+      const backfill=await manualInstitutionalBackfillPromise;
+      return res.status(200).json({...backfill,manual:true,targetTradingDays:target,batchDays:batch});
+    }
     if(action){
       if(!isCronAuthorized(req))return res.status(401).json({ok:false,error:'Unauthorized'});
       let result;
@@ -731,7 +758,7 @@ module.exports=async function handler(req,res){
         const flowDataHealth=await readFlowDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',targetTradingDays:target,backfill,marketHealth,flowDataHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / institutional-backfill-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // v2.6.5.17: keep the three existing cron slots and accelerate deep
