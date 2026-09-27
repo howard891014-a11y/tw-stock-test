@@ -3754,10 +3754,10 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-async function loadFundflowBrowser(force=false){
+async function loadFundflowBrowser(force=false,serverRefresh=false){
   if(fundflowBrowserLoading)return;if(!force&&fundflowBrowserFetchedAt&&Date.now()-fundflowBrowserFetchedAt<5*60*1000){renderFundflowBrowser();return}fundflowBrowserLoading=true;
   const loading=$("fundflowBrowserLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}
-  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),22000);try{const res=await fetch(`/api/fundflow?view=browser&days=10`,{cache:"default",signal:controller.signal});fundflowBrowserData=await readJson(res,"業務瀏覽器");fundflowBrowserFetchedAt=Date.now();renderFundflowBrowser()}finally{clearTimeout(timer)}}catch(e){console.warn("業務瀏覽器讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`業務分類讀取失敗：${e?.message||e}`}}finally{fundflowBrowserLoading=false}
+  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),22000);try{const res=await fetch(`/api/fundflow?view=browser&days=10${serverRefresh?"&refresh=1":""}`,{cache:serverRefresh?"no-store":"default",signal:controller.signal});fundflowBrowserData=await readJson(res,"業務瀏覽器");fundflowBrowserFetchedAt=Date.now();renderFundflowBrowser()}finally{clearTimeout(timer)}}catch(e){console.warn("業務瀏覽器讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`業務分類讀取失敗：${e?.message||e}`}}finally{fundflowBrowserLoading=false}
 }
 function fundflowBrowserOpen(tagId){
   const item=(fundflowBrowserData?.items||[]).find(x=>x.tagId===tagId);if(!item?.xyEligible)return;
@@ -3911,6 +3911,22 @@ document.querySelectorAll(".settings-open").forEach(btn=>btn.addEventListener("c
 $("closeSettings")?.addEventListener("click",()=>$("settingsModal")?.classList.add("hidden"));
 $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"))$("settingsModal").classList.add("hidden")});
 
+let manualFundflowWarmLoading=false;
+async function runManualFundflowWarm(){
+  if(manualFundflowWarmLoading)return;
+  const btn=$("manualFundflowWarm"),status=$("manualFundflowWarmStatus");
+  manualFundflowWarmLoading=true;if(btn){btn.disabled=true;btn.textContent="更新中…"}if(status){status.classList.remove("is-ok","is-error");status.textContent="使用現有 Neon 歷史資料檢查／重建快照…"}
+  try{
+    const res=await fetch("/api/sync-status?action=fundflow-warm-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Warm":"1"}});
+    const data=await readJson(res,"XY / 分類快照更新");
+    const state=data?.after||data?.before||{},asOf=state?.asOf?String(state.asOf):"--";
+    if(status){status.classList.add("is-ok");status.textContent=data?.skipped?`已是最新：${data.engineVersion||"XY v6"}｜資料 ${asOf}`:`更新完成：${data.engineVersion||"XY v6"}｜資料 ${asOf}`;}
+    fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;
+    try{await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)}catch(e){console.warn("手動更新後重新讀取資金流快照失敗",e)}
+  }catch(e){console.warn("手動更新 XY / 分類快照失敗",e);if(status){status.classList.add("is-error");status.textContent=`更新失敗：${e?.message||e}`}}
+  finally{manualFundflowWarmLoading=false;if(btn){btn.disabled=false;btn.textContent="更新 XY / 分類快照"}}
+}
+$("manualFundflowWarm")?.addEventListener("click",runManualFundflowWarm);
 
 // v2.5.1.11 valuation formula and definition info
 (function(){

@@ -2378,6 +2378,16 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 #settingsModal .settings-ready-grid span{padding:7px 5px;border:1px solid #e4eaf1;border-radius:10px;background:#f7f9fc;color:#8b99aa;font-size:9px;font-weight:900;text-align:center}
 #settingsModal .settings-ready-grid span.is-ready{border-color:#bcdccb;background:#f0faf5;color:#398260}
 #settingsModal .settings-history-note{display:block;margin:8px 2px 0;color:#97a5b5;font-size:9px;line-height:1.45}
+#settingsModal .settings-manual-update{margin-top:14px;padding-top:14px;border-top:1px solid #edf2f7}
+#settingsModal .settings-manual-update-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 8px;color:#20344d;font-size:13px;font-weight:900}
+#settingsModal .settings-manual-update-head small{color:#91a0b2;font-size:9px;font-weight:700}
+#settingsModal .settings-manual-update-box{padding:12px;border:1px solid #e9eef5;border-radius:16px;background:#fff}
+#settingsModal .settings-manual-update-box p{margin:0 0 10px;color:#7b8ca0;font-size:10px;line-height:1.55}
+#settingsModal .settings-manual-update-box button{width:100%;border:1px solid #bcd3ef;border-radius:12px;background:#edf5ff;color:#2f72c8;padding:10px 12px;font-size:11px;font-weight:900;font-family:inherit}
+#settingsModal .settings-manual-update-box button:disabled{opacity:.55;cursor:wait}
+#settingsModal .settings-manual-update-status{display:block;margin-top:8px;color:#8a9aad;font-size:9px;line-height:1.5}
+#settingsModal .settings-manual-update-status.is-ok{color:#398260}
+#settingsModal .settings-manual-update-status.is-error{color:#b85c64}
 @media(max-width:720px){
   #fundamentalPanel #fundamentalCompanyCard>b,#fundamentalPanel #fundamentalContinuationCard>b{font-size:14px!important}
   #settingsModal .settings-card{padding:15px!important;border-radius:22px!important}
@@ -2512,7 +2522,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.26</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.28</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3252,6 +3262,14 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   <div class="settings-ready-grid"><span id="historyLiveReady">20D Live</span><span id="historyBacktestReady">250D Backtest</span><span id="historyResearchReady">500D Research</span></div>
   <small class="settings-history-note" id="historyProgressNote">目標每個交易日最多補 24D；約 20 次有效 Cron 可由 20D 推進至 500D。部署新版不會重跑既有 DB 歷史。</small>
 </section>
+<section class="settings-manual-update" aria-label="XY 快照手動更新">
+  <div class="settings-manual-update-head"><span>XY / 分類快照</span><small>開發模式：手動</small></div>
+  <div class="settings-manual-update-box">
+    <p>只在你按下時，用 Neon 既有歷史資料更新目前 XY Engine 與業務分類快照；不抓交易所即時資料。若已是最新版本／最新日期會直接跳過。</p>
+    <button id="manualFundflowWarm" type="button">更新 XY / 分類快照</button>
+    <small class="settings-manual-update-status" id="manualFundflowWarmStatus">尚未手動更新</small>
+  </div>
+</section>
 </div></div>
 <div class="modal-backdrop hidden" id="targetEditModal"><div class="modal-card">
 <div class="modal-head"><strong>修改目標價資料</strong><button id="closeTargetEdit" type="button">×</button></div>
@@ -3275,7 +3293,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 @media(max-width:720px){.fundflow-master-card-v2631,.fundflow-radar-card,.fundflow-detail-card{padding:16px 13px!important}.fundflow-xy-head h3,.fundflow-radar-head h3{font-size:20px}.fundflow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fundflow-kpis strong{font-size:19px}.fundflow-filter-row{gap:5px}.fundflow-filter-row button{padding:6px 9px;font-size:10px}.fundflow-controls-box{padding:10px 10px;margin:8px 0 14px}.fundflow-control-row{grid-template-columns:42px minmax(0,1fr);column-gap:8px}.fundflow-phase-row{gap:5px;padding:0}.fundflow-phase-caption{width:auto;font-size:10px}.fundflow-row-label{font-size:10px;line-height:30px}.fundflow-control-items{gap:6px}.fundflow-phase-row button,.fundflow-filter-row button,.fundflow-days-row button{padding:5px 8px;font-size:9px}.fundflow-detail-head h3{font-size:20px}.fundflow-detail-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.fundflow-detail-kpis strong{font-size:17px}.fundflow-detail-grid{grid-template-columns:1fr}.fundflow-company-row{grid-template-columns:minmax(0,1fr) auto}.fundflow-chart-wrap svg{min-height:330px}.fundflow-radar-grid{grid-template-columns:1fr}.fundflow-quad-legend{grid-template-columns:repeat(2,1fr);font-size:9px}.fundflow-tag-label{font-size:9px}.fundflow-browser-card{padding:16px 13px!important}.fundflow-browser-head h3{font-size:20px}.fundflow-browser-list{grid-template-columns:1fr}.fundflow-browser-item{padding:10px}.fundflow-browser-search-wrap input{font-size:11px}.fundflow-browser-chips{margin-right:-2px}.fundflow-model-legend{gap:8px 10px}.fundflow-projection-summary{grid-template-columns:1fr}.fundflow-projection-summary strong{text-align:left}.fundflow-projection-summary small{grid-column:1}}}
 .fundflow-axis-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 0}.fundflow-axis-row button{border:1px solid #dfe6ef;background:#fff;color:#8393a6;border-radius:10px;padding:5px 9px;font-size:10px;font-weight:800}.fundflow-axis-row button.active{background:#273d59;color:#fff;border-color:#273d59}.fundflow-typhoon-trail{fill:none;stroke-width:3.2;stroke-linecap:round;pointer-events:none;vector-effect:non-scaling-stroke}.fundflow-typhoon-marker{stroke:#fff;stroke-width:2.6;filter:drop-shadow(0 1px 3px rgba(23,36,58,.28));pointer-events:none}.fundflow-future-uncertainty{fill-opacity:.07;stroke-opacity:.30;stroke-width:1.25;pointer-events:none;vector-effect:non-scaling-stroke}.fundflow-future-uncertainty.is-secondary{fill-opacity:.035;stroke-opacity:.18;stroke-dasharray:5 5}.fundflow-future-uncertainty.is-primary{fill-opacity:.075;stroke-opacity:.34}.fundflow-controls-box .fundflow-axis-row{border:0!important;background:transparent!important;padding:0!important}@media(max-width:720px){.fundflow-axis-row button{padding:5px 8px;font-size:9px}.fundflow-future-label{font-size:9px}.fundflow-typhoon-trail{stroke-width:2.8}}
 </style>
-  <script src="./app.js?v=2.6.5.26"></script>
+  <script src="./app.js?v=2.6.5.28"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
