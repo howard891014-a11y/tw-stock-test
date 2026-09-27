@@ -78,6 +78,6 @@ const generic=detectMarketTopicEvidence('提供機器人軟體整合服務',{min
 assert(generic&&generic.score<AUTO_TOPIC_SCORE,'generic robot mention should remain audit-only');
 const strong=detectMarketTopicEvidence('人形機器人與協作型機器人控制系統',{minScore:0}).find(x=>x.id==='robot');
 assert(strong&&strong.score>=AUTO_TOPIC_SCORE,'strong robot wording should reach auto threshold');
-assert.equal(BLIND_COVERAGE_VERSION,'blind-1.1.0');
+assert.equal(BLIND_COVERAGE_VERSION,'blind-1.2.0');
 
 console.log('Blind Coverage Engine validation PASS — blind discovery self-heals stale auto tags and does not depend on known company seeds');

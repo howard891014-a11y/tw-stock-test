@@ -56,6 +56,8 @@ assert(marketTopicLinks([{id:'notebook_pc',importance:'core',origin:'test'}],'�
 assert(marketTopicLinks([{id:'desktop_pc',importance:'core',origin:'test'}],'測試桌機').some(x=>x.id==='consumer_desktop'),'desktop product must map to consumer electronics');
 assert(marketTopicLinks([{id:'display_device',importance:'core',origin:'test'}],'測試顯示器').some(x=>x.id==='consumer_display'),'finished display device must map to consumer electronics');
 assert(marketTopicLinks([{id:'consumer_electronics',importance:'core',origin:'test'}],'測試終端').some(x=>x.id==='consumer_brand_device'),'generic finished consumer electronics must map to end-device bucket');
+assert(marketTopicLinks([{id:'computer_peripheral_business',importance:'core',origin:'test'}],'測試週邊').some(x=>x.id==='consumer_peripherals'),'computer peripherals must map to consumer-electronics product scope');
+assert(marketTopicLinks([{id:'flash_storage_device',importance:'core',origin:'test'}],'測試儲存裝置').some(x=>x.id==='consumer_peripherals'),'consumer flash storage devices must map to consumer peripherals');
 for(const [tag,id] of [['camera_module','camera_module'],['audio_component','acoustic_component'],['acoustic_component','acoustic_component']]){
   const links=marketTopicLinks([{id:tag,importance:'core',origin:'test'}],`上游${tag}`);
   assert(links.some(x=>x.id===id),`${tag} should remain in its upstream/component market topic`);

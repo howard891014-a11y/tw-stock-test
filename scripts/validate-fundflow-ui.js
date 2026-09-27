@@ -17,4 +17,4 @@ if(html.includes('data-fundflow-scope="finance"'))errors.push('finance scope sho
 if(html.includes('data-fundflow-scope="all"'))errors.push('top-level all-business scope should be removed');
 for(const token of ['new Set(["technology-upstream","technology-midstream","technology-downstream","electronics-product"])','fundflowScopes.size===1','fundflowScopes.delete(key)','fundflowScopes.add(key)']) if(!app.includes(token))errors.push(`multi-select classification rule missing: ${token}`);
 if(errors.length){console.error('Fundflow UI validation FAILED');for(const e of errors)console.error('-',e);process.exit(1)}
-console.log(`Fundflow UI v2.6.5.26 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
+console.log(`Fundflow UI v2.6.5.29 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);

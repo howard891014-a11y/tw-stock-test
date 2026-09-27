@@ -21,7 +21,13 @@ assert(api.includes("s-maxage=600, stale-while-revalidate=3600"),'browser shared
 assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_snapshot'),'prepared snapshot table missing');
 assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_member'),'topic member index missing');
 assert(core.includes('async function readLatestPreparedSnapshotAnyEngine'),'cross-engine small-snapshot fallback missing');
-assert(core.includes('enginePending:staleEngineVersion!==ENGINE_VERSION'),'fallback snapshot must tell UI that the new engine is still warming');
+assert(core.includes('enginePending:!current'),'fallback snapshot must mark both old-engine and old-schema snapshots as pending');
+assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.1.0-v6-ready-taxonomy'"),'versioned fundflow snapshot schema missing');
+assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.1.0-v6-ready-taxonomy'"),'versioned daily build marker missing');
+assert(core.includes('build_version text'),'daily XY table must persist the current build marker');
+assert(core.includes('isCurrentPreparedPayload'),'current snapshot reads must reject an old same-engine schema');
+assert(api.includes("if(force||pending||wrongSchema)return 'no-store'"),'fallback or schema-stale snapshots must never enter CDN cache');
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.29"'),'fundflow fetches need a deploy cache revision so old v5 CDN keys cannot reappear');
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('),'fundflow page read must never rebuild the full engine, even with refresh=1');
@@ -29,18 +35,29 @@ assert(snap.includes("readLatestPreparedSnapshotAnyEngine(sql,'overview',bounded
 assert(!snap.includes('loadEngineInputs('),'normal overview page read must not load full-market raw engine inputs');
 assert(!snap.includes('needsRefresh('),'normal overview page read must not trigger freshness-driven full-market rebuild');
 assert(!snap.includes('rebuildPreparedFromStored('),'normal overview page read must not rebuild snapshots from daily/profile tables');
+assert(snap.includes('&&isCurrentPreparedPayload(hit.value)'),'overview process cache must only serve current-schema v6 snapshots');
+assert(!snap.includes('memoryCache.set(bounded,{savedAt:now,value:fallback})'),'legacy overview fallback must never be process-cached or it can reappear after a manual warm');
 
 const browser=core.slice(core.indexOf('async function getFundflowBusinessBrowser'),core.indexOf('async function getFundflowDetail'));
 assert(!browser.includes('getFundflowSnapshot('),'browser page read must not cascade into overview rebuild logic');
 assert(!browser.includes('rebuildPreparedFromStored('),'browser page read must remain snapshot-only');
+assert(browser.includes('&&isCurrentPreparedPayload(hit.value)'),'browser process cache must only serve current-schema v6 snapshots');
+assert(!browser.includes('browserMemoryCache.set(bounded,{savedAt:now,value:fallback})'),'legacy browser fallback must never be process-cached');
 assert(core.includes('async function loadTagEngineInputs'),'lazy topic detail loader missing');
 const tagLoader=core.slice(core.indexOf('async function loadTagEngineInputs'),core.indexOf('async function refreshBusinessFlowDaily'));
 assert(tagLoader.includes('JOIN market_business_xy_member'),'detail must be restricted to the selected topic member index');
 assert(tagLoader.includes('const memberEngine=await resolveMemberEngine'),'detail should reuse newest member index while v6 is warming');
 assert(!tagLoader.includes('buildProfileTagMap(profiles)'),'detail read must not rebuild the full-market member index');
+assert(!tagLoader.includes('activity_ready IS TRUE'),'v6 detail must not depend on legacy activity_ready');
+assert(tagLoader.includes('return_5_pct IS NOT NULL'),'v6 detail should require the actual 5D price return it uses');
+const inputLoader=core.slice(core.indexOf('async function loadEngineInputs'),core.indexOf('async function resolveMemberEngine'));
+assert(!inputLoader.includes('activity_ready IS TRUE'),'v6 full rebuild must not depend on legacy activity_ready');
+assert(!inputLoader.includes('JOIN credit_dates'),'credit data is optional Chip Quality and must not gate v6 XY dates');
 const detail=core.slice(core.indexOf('async function getFundflowDetail'),core.indexOf('\nmodule.exports='));
 assert(!detail.includes('loadEngineInputs(sql,ENGINE_HISTORY_DAYS)'),'detail must not reload full-market engine inputs');
 assert(!detail.includes('needsRefresh(sql)'),'detail request must not trigger full-market freshness rebuild');
+assert(detail.includes("${snapshot.engineVersion||''}|${snapshot.snapshotSchemaVersion||''}"),'detail process cache key must change across engine/schema rebuilds');
+assert(detail.includes('if(!snapshotPending)detailMemoryCache.set'),'detail must not process-cache a legacy/pending snapshot');
 assert(!sync.includes('refreshBusinessFlowDaily'),'development mode must keep raw market sync separate from XY snapshot rebuild');
 assert(sync.includes("reason:'manual XY snapshot mode during development'"),'price sync should explicitly report XY manual mode');
 assert(core.includes('async function warmCurrentEngineFromStoredDb'),'holiday-safe DB-only snapshot warmer missing');
@@ -58,4 +75,4 @@ assert(app.includes('manualFundflowWarm'),'settings manual update control missin
 assert(app.includes('/api/sync-status?action=fundflow-warm-manual'),'settings manual update must call the DB-only warm action');
 assert(app.includes('await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)'),'manual update should bypass stale CDN/memory snapshots after completion');
 assert(warmer.includes("current-engine-snapshots-already-latest"),'manual warmer must no-op when snapshots already match stored source data');
-console.log('PASS validate-neon-egress — normal page reads stay snapshot-only; development mode uses explicit idempotent DB-only manual warm with no daily fundflow cron');
+console.log('PASS validate-neon-egress — v6 uses versioned snapshots/builds, legacy fallbacks are no-store, normal reads stay snapshot-only, and manual rebuild is DB-only');

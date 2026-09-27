@@ -66,4 +66,22 @@ assert(semEq, '應包含合併後半導體設備市場題材');
 assert(!out.items.some(x=>x.tagId==='wet_process_equipment'), '細製程設備不應再獨立跑 XY/browser 主題');
 
 assert(out.counts.withXY >= 1);
-console.log(`Fundflow business browser validation PASS — ${out.counts.totalDefinitions} definitions, ${out.counts.technologyFineDefinitions} tech-fine`);
+
+const consumerProfiles = [
+  { stock_code:'2353', stock_name:'宏碁', market:'上市', industry_code:'25', industry:'電腦及週邊設備業' },
+  { stock_code:'2357', stock_name:'華碩', market:'上市', industry_code:'25', industry:'電腦及週邊設備業' },
+  { stock_code:'2317', stock_name:'鴻海', market:'上市', industry_code:'31', industry:'其他電子業' },
+  { stock_code:'2324', stock_name:'仁寶', market:'上市', industry_code:'25', industry:'電腦及週邊設備業' },
+  { stock_code:'4938', stock_name:'和碩', market:'上市', industry_code:'31', industry:'其他電子業' },
+  { stock_code:'2498', stock_name:'宏達電', market:'上市', industry_code:'27', industry:'通信網路業' },
+  { stock_code:'2489', stock_name:'瑞軒', market:'上市', industry_code:'26', industry:'光電業' },
+];
+const consumerCatalog=buildBusinessBrowserCatalog(consumerProfiles,{groups:[],engineVersion:'xy-6.0.0-stock-robust-flow-price'});
+const representedConsumer=consumerCatalog.items.filter(x=>x.scope==='electronics-product'&&x.companyCount>0);
+for(const id of ['ai_pc','consumer_notebook','consumer_desktop','consumer_peripherals','consumer_display','consumer_brand_device','consumer_tablet','consumer_mobile','consumer_wearable']){
+  const item=representedConsumer.find(x=>x.tagId===id);
+  assert(item,`${id} should be represented in a freshly rebuilt consumer-electronics browser snapshot`);
+}
+assert(representedConsumer.length>=9,'fresh consumer-electronics browser snapshot must contain the actual end-device taxonomy, not a single legacy bucket');
+
+console.log(`Fundflow business browser validation PASS — ${out.counts.totalDefinitions} definitions, ${out.counts.technologyFineDefinitions} tech-fine, ${representedConsumer.length} represented consumer-product buckets`);
