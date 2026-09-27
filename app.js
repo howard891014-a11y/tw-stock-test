@@ -3716,13 +3716,14 @@ function fundflowPathState(g){
   return {key:hit[0],label:hit[1],route,current,target,confidence,pathGap:gap};
 }
 function fundflowPathAllowed(g){return fundflowPathFilter==="all"||fundflowPathState(g).key===fundflowPathFilter}
-function fundflowEligibleGroups({path=true}={}){return (fundflowXyData?.groups||[]).filter(g=>fundflowAllowed(g)&&(!path||fundflowPathAllowed(g))&&Number(g.validCount)>=2&&Array.isArray(g.trajectory)&&g.trajectory.length>=2)}
+function fundflowBusinessUniverse(){return (fundflowXyData?.groups||[]).filter(g=>fundflowAllowed(g)&&Number(g.validCount)>=2&&Array.isArray(g.trajectory)&&g.trajectory.length>=2&&Number.isFinite(Number(g.y)))}
+function fundflowEligibleGroups({path=true}={}){return fundflowBusinessUniverse().filter(g=>g.xyEligible!==false&&g.xAvailable!==false&&Number.isFinite(Number(g.x))&&Number(g.flowValidCount||0)>0&&(g.trajectory||[]).filter(p=>p.xAvailable!==false&&Number.isFinite(Number(p.x))).length>=2&&(!path||fundflowPathAllowed(g)))}
 function fundflowPathFilterLabel(key){return ({all:"全部路徑","capital-leading":"資金先行","price-leading":"價格先行","resonance-up":"共振轉強","strong-hold":"強勢延續","capital-retreat":"資金撤退",pullback:"回檔觀察",weakening:"轉弱",chaos:"混沌／未明"})[key]||"全部路徑"}
 function renderFundflowPhaseControls(){
-  const base=fundflowEligibleGroups({path:false}),counts={all:base.length,"capital-leading":0,"price-leading":0,"resonance-up":0,"strong-hold":0,"capital-retreat":0,pullback:0,weakening:0,chaos:0};
+  const universe=fundflowBusinessUniverse(),base=fundflowEligibleGroups({path:false}),pendingX=Math.max(0,universe.length-base.length),counts={all:base.length,"capital-leading":0,"price-leading":0,"resonance-up":0,"strong-hold":0,"capital-retreat":0,pullback:0,weakening:0,chaos:0};
   base.forEach(g=>{const k=fundflowPathState(g).key;if(Object.prototype.hasOwnProperty.call(counts,k))counts[k]++});
-  document.querySelectorAll("[data-fundflow-path]").forEach(btn=>{const key=btn.dataset.fundflowPath||"all";btn.classList.toggle("active",key===fundflowPathFilter);const n=btn.querySelector("[data-fundflow-path-count]");if(n)n.textContent=String(counts[key]??0)});
-  setText("fundflowPhaseSummary",`${fundflowPathFilterLabel(fundflowPathFilter)}｜圖上 ${fundflowEligibleGroups().length} 個業務`);
+  document.querySelectorAll("[data-fundflow-path]").forEach(btn=>{const key=btn.dataset.fundflowPath||"all";btn.classList.toggle("active",key===fundflowPathFilter);const n=btn.querySelector("[data-fundflow-path-count]");if(n)n.textContent=key==="all"?String(universe.length):String(counts[key]??0)});
+  setText("fundflowPhaseSummary",`業務 ${universe.length}｜可畫 XY ${base.length}｜待法人 X ${pendingX}${fundflowPathFilter!=="all"?`｜${fundflowPathFilterLabel(fundflowPathFilter)} ${fundflowEligibleGroups().length}`:""}`);
 }
 function fundflowSvg(tag,attrs={},text=""){const el=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,String(v)));if(text!=="")el.textContent=text;return el}
 function fundflowColor(q){return q==="potential"?"#e2a034":q==="mainline"?"#4f9f79":q==="price-led"?"#8a82c8":q==="cold"?"#9aa8b7":"#5e8fd0"}
@@ -3754,7 +3755,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.5.29";
+const FUND_FLOW_CLIENT_REV="2.6.5.30";
 async function loadFundflowBrowser(force=false,serverRefresh=false){
   if(fundflowBrowserLoading)return;if(!force&&fundflowBrowserFetchedAt&&Date.now()-fundflowBrowserFetchedAt<5*60*1000){renderFundflowBrowser();return}fundflowBrowserLoading=true;
   const loading=$("fundflowBrowserLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}
