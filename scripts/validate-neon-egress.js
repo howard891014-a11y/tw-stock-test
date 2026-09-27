@@ -5,6 +5,8 @@ const quote=fs.readFileSync('api/quote.js','utf8');
 const api=fs.readFileSync('api/fundflow.js','utf8');
 const core=fs.readFileSync('lib/fundflow-xy.js','utf8');
 const sync=fs.readFileSync('lib/sync-service.js','utf8');
+const status=fs.readFileSync('api/sync-status.js','utf8');
+const vercel=JSON.parse(fs.readFileSync('vercel.json','utf8'));
 
 assert(quote.includes('function liveStockHint(query,marketHint="")'),'live quote numeric-code fast path missing');
 assert(quote.includes('mode==="live"?(liveStockHint(query,marketHint)||await resolveStock(query,marketHint))'),'live polling must bypass Neon identity lookup when code is already known');
@@ -22,7 +24,7 @@ assert(core.includes('async function readLatestPreparedSnapshotAnyEngine'),'cros
 assert(core.includes('enginePending:staleEngineVersion!==ENGINE_VERSION'),'fallback snapshot must tell UI that the new engine is still warming');
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
-assert(snap.includes("if(force){await refreshBusinessFlowDaily({trajectoryDays:ENGINE_HISTORY_DAYS,sql})"),'only explicit force path should be able to warm the full engine');
+assert(!snap.includes('refreshBusinessFlowDaily('),'fundflow page read must never rebuild the full engine, even with refresh=1');
 assert(snap.includes("readLatestPreparedSnapshotAnyEngine(sql,'overview',bounded)"),'normal page read should fall back to a previous small overview snapshot');
 assert(!snap.includes('loadEngineInputs('),'normal overview page read must not load full-market raw engine inputs');
 assert(!snap.includes('needsRefresh('),'normal overview page read must not trigger freshness-driven full-market rebuild');
@@ -39,5 +41,21 @@ assert(!tagLoader.includes('buildProfileTagMap(profiles)'),'detail read must not
 const detail=core.slice(core.indexOf('async function getFundflowDetail'),core.indexOf('\nmodule.exports='));
 assert(!detail.includes('loadEngineInputs(sql,ENGINE_HISTORY_DAYS)'),'detail must not reload full-market engine inputs');
 assert(!detail.includes('needsRefresh(sql)'),'detail request must not trigger full-market freshness rebuild');
-assert(sync.includes("refreshBusinessFlowDaily({trajectoryDays:ENGINE_HISTORY_DAYS})"),'daily sync must warm full history + v6 prepared snapshots in background');
-console.log('PASS validate-neon-egress — fundflow entry no longer calls sync-status; normal page reads cannot bootstrap full-market raw rebuild; detail remains topic-lazy');
+assert(!sync.includes('refreshBusinessFlowDaily'),'development mode must keep raw market sync separate from XY snapshot rebuild');
+assert(sync.includes("reason:'manual XY snapshot mode during development'"),'price sync should explicitly report XY manual mode');
+assert(core.includes('async function warmCurrentEngineFromStoredDb'),'holiday-safe DB-only snapshot warmer missing');
+const warmer=core.slice(core.indexOf('async function warmCurrentEngineFromStoredDb'),core.indexOf('async function getFundflowSnapshot'));
+assert(warmer.includes('noUpstreamFetch:true'),'snapshot warmer must declare DB-only/no-upstream behavior');
+assert(warmer.includes('refreshBusinessFlowDaily({trajectoryDays:ENGINE_HISTORY_DAYS,sql})'),'warmer must be able to build a missing engine from stored DB inputs');
+assert(!status.includes("'0 10 * * *': 'fundflow-warm'"),'development mode must not keep the daily fundflow warm cron');
+assert(status.includes("action==='fundflow-warm-manual'"),'manual settings warm action missing');
+assert(status.includes("String(req.method||'GET').toUpperCase()!=='POST'"),'manual warm must require explicit POST');
+assert(status.includes("force:false"),'manual warm must be idempotent and must not expose a force rebuild');
+assert(status.includes("x-stockzone-manual-warm"),'manual warm must require the settings confirmation header');
+assert(app.includes("X-StockZone-Manual-Warm"),'settings UI must send the manual-warm confirmation header');
+assert(!(vercel.crons||[]).some(x=>x.schedule==='0 10 * * *'),'daily fundflow warm cron must be disabled during manual-development mode');
+assert(app.includes('manualFundflowWarm'),'settings manual update control missing');
+assert(app.includes('/api/sync-status?action=fundflow-warm-manual'),'settings manual update must call the DB-only warm action');
+assert(app.includes('await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)'),'manual update should bypass stale CDN/memory snapshots after completion');
+assert(warmer.includes("current-engine-snapshots-already-latest"),'manual warmer must no-op when snapshots already match stored source data');
+console.log('PASS validate-neon-egress — normal page reads stay snapshot-only; development mode uses explicit idempotent DB-only manual warm with no daily fundflow cron');
