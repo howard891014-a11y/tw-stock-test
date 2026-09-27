@@ -3672,8 +3672,8 @@ let fundflowBrowserData=null;
 let fundflowBrowserQuery="";
 let fundflowBrowserScope="all";
 let fundflowBrowserLimit=36;
-function fundflowFmt(v,d=1){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):"--"}
-function fundflowSigned(v,d=1){const n=Number(v);return Number.isFinite(n)?`${n>=0?"+":""}${n.toFixed(d)}`:"--"}
+function fundflowFmt(v,d=1){if(v===null||v===undefined||v==="")return "--";const n=Number(v);return Number.isFinite(n)?n.toFixed(d):"--"}
+function fundflowSigned(v,d=1){if(v===null||v===undefined||v==="")return "--";const n=Number(v);return Number.isFinite(n)?`${n>=0?"+":""}${n.toFixed(d)}`:"--"}
 const FUND_FLOW_TECH_UPSTREAM_IDS=new Set(["asic","high_speed_ic","semiconductor_equipment","semiconductor_material"]);
 const FUND_FLOW_TECH_DOWNSTREAM_IDS=new Set(["it_services_market","cloud_market","ems_odm","networking_market","leo_satellite","robot","ai_pc","optical_storage_market"]);
 function fundflowTechStage(g){
@@ -3755,7 +3755,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.5.31";
+const FUND_FLOW_CLIENT_REV="2.6.5.32";
 async function loadFundflowBrowser(force=false,serverRefresh=false){
   if(fundflowBrowserLoading)return;if(!force&&fundflowBrowserFetchedAt&&Date.now()-fundflowBrowserFetchedAt<5*60*1000){renderFundflowBrowser();return}fundflowBrowserLoading=true;
   const loading=$("fundflowBrowserLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}
@@ -3929,6 +3929,49 @@ async function runManualFundflowWarm(){
   finally{manualFundflowWarmLoading=false;if(btn){btn.disabled=false;btn.textContent="更新 XY / 分類快照"}}
 }
 $("manualFundflowWarm")?.addEventListener("click",runManualFundflowWarm);
+
+let manualInstitutionalRepairLoading=false,fundflowValidationLoading=false;
+function renderFundflowValidation(data){
+  const status=$("fundflowValidationStatus"),details=$("fundflowValidationDetails"),r=data?.regression||{},p=data?.path||{},g=data?.releaseGate||{},inst=data?.institutional?.markets||{},bench=(data?.benchmarks||[]).filter(x=>x.available),missing=(data?.topicCoverage?.missingCompanies||[]).slice(0,12);
+  const benchPass=bench.filter(x=>x.signLockPass&&x.yFinite).length,top1=p?.top1HitPct,top2=p?.top2HitPct,q=p?.targetQuadrantHitPct;
+  const parts=[`業務 ${r.businessUniverse??"--"}`,`可畫 ${r.withXY??"--"} (${r.xyCoveragePct??"--"}%)`,`Benchmark ${benchPass}/${bench.length||0}`,`Path 5D Top1 ${top1??"--"}% / Top2 ${top2??"--"}% (n=${p.predictions??0})`];
+  if(status){status.classList.remove("is-ok","is-error","is-warn");status.classList.add(g.readyToFinalize?"is-ok":"is-warn");status.textContent=(g.readyToFinalize?"驗證全過：":"尚未達完成門檻：")+parts.join("｜");}
+  if(details){
+    const marketLine=m=>`${m} 法人完整日 ${inst?.[m]?.completeDays??0}/${data?.institutional?.targetDays??25}`;
+    const benchLines=bench.flatMap(x=>{const head=`${x.name}: rawX ${fundflowSigned(x.rawX,3)}% → X ${fundflowSigned(x.x,1)} / Y ${fundflowSigned(x.y,2)}% / sign ${x.signLockPass?"PASS":"FAIL"} / snapshot ${x.snapshotMatch?"MATCH":"CHECK"}`;const comps=(x.companies||[]).slice(0,4).map(c=>`  ↳ ${c.code} ${c.name||""}: raw ${fundflowSigned(c.rawFlow5,3)}% / stockX ${fundflowSigned(c.stockX,1)} / w ${fundflowFmt(c.weight,2)} / ΔX ${fundflowSigned(c.impactX,2)}`);return [head,...comps]});
+    const missingLines=missing.map(x=>`${x.market} ${x.code} ${x.name||""}: ${x.instDays}/${x.expectedDays}D（缺 ${x.missingDays}D）`);
+    const gateLines=Object.entries(g).filter(([k])=>k!=="readyToFinalize").map(([k,v])=>`${v?"✓":"✗"} ${k}`);
+    details.textContent=[marketLine("上市"),marketLine("上櫃"),"",...benchLines,"",`Walk-forward 5D：Top1 ${top1??"--"}%｜Top2 ${top2??"--"}%｜目標象限 ${q??"--"}%｜樣本 ${p.predictions??0}`,`>=60% 顯示信心樣本：${p.confidence60?.n??0}，實際 Top1 ${p.confidence60?.top1HitPct??"--"}%`,"",...gateLines,...(missingLines.length?["","法人歷史不足公司（前12）：",...missingLines]:[])].join("\n");
+    details.hidden=false;
+  }
+}
+async function runFundflowValidation(){
+  if(fundflowValidationLoading)return;fundflowValidationLoading=true;
+  const btn=$("runFundflowValidation"),status=$("fundflowValidationStatus");if(btn){btn.disabled=true;btn.textContent="驗證中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="讀取小型彙總資料並做 causal walk-forward…"}
+  try{const res=await fetch(`/api/sync-status?view=fundflow-audit&target=25&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:"no-store"}),data=await readJson(res,"XY / Path 驗證");renderFundflowValidation(data)}
+  catch(e){console.warn("XY / Path 驗證失敗",e);if(status){status.classList.add("is-error");status.textContent=`驗證失敗：${e?.message||e}`}}
+  finally{fundflowValidationLoading=false;if(btn){btn.disabled=false;btn.textContent="執行 XY / Path 驗證"}}
+}
+async function runManualInstitutionalRepair(){
+  if(manualInstitutionalRepairLoading)return;manualInstitutionalRepairLoading=true;
+  const btn=$("manualInstitutionalRepair"),status=$("manualInstitutionalRepairStatus");if(btn){btn.disabled=true;btn.textContent="補齊中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="檢查最近25D缺日／半套日期…"}
+  try{
+    let last=null,totalAdded=0;
+    for(let batch=1;batch<=3;batch++){
+      const res=await fetch(`/api/sync-status?action=institutional-backfill-manual&target=25&days=10&_=${Date.now()}`,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Institutional":"1"}}),data=await readJson(res,"法人25D補齊");last=data;
+      const markets=data?.markets||{},added=(Number(markets?.["上市"]?.addedThisRun||0)+Number(markets?.["上櫃"]?.addedThisRun||0));totalAdded+=added;
+      const tw=Number(markets?.["上市"]?.coveredTradingDays||0),tp=Number(markets?.["上櫃"]?.coveredTradingDays||0),complete=tw>=25&&tp>=25;
+      if(status)status.textContent=`第 ${batch} 批：上市 ${tw}/25D｜上櫃 ${tp}/25D｜本批修復 ${added} 日`;
+      if(complete||added===0)break;
+    }
+    const m=last?.markets||{},tw=Number(m?.["上市"]?.coveredTradingDays||0),tp=Number(m?.["上櫃"]?.coveredTradingDays||0),complete=tw>=25&&tp>=25;
+    if(status){status.classList.add(complete?"is-ok":"is-warn");status.textContent=complete?`法人25D已完整（上市 ${tw}/25｜上櫃 ${tp}/25）。共修復 ${totalAdded} 個市場交易日；接著按「更新 XY / 分類快照」。`:`補齊尚未完成（上市 ${tw}/25｜上櫃 ${tp}/25）。本次修復 ${totalAdded} 日，可稍後再按一次。`;}
+    historyProgressFetchedAt=0;await loadHistoryProgress(true);
+  }catch(e){console.warn("法人25D補齊失敗",e);if(status){status.classList.add("is-error");status.textContent=`補齊失敗：${e?.message||e}`}}
+  finally{manualInstitutionalRepairLoading=false;if(btn){btn.disabled=false;btn.textContent="補齊法人 25D"}}
+}
+$("manualInstitutionalRepair")?.addEventListener("click",runManualInstitutionalRepair);
+$("runFundflowValidation")?.addEventListener("click",runFundflowValidation);
 
 // v2.5.1.11 valuation formula and definition info
 (function(){
