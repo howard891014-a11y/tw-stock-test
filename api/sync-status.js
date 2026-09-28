@@ -2,7 +2,7 @@ const { getSql } = require('../lib/db');
 const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
-const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth } = require('../lib/institutional-history');
+const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth, institutionalCoverageByDate } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, readFundflowValidationAudit } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
@@ -367,7 +367,7 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
 
 async function readFlowDataHealth(sql){
   const targets={live:20,backtest:250,research:500};
-  const [institutional,credit,priceHistoryRows,profileRows,syncRows]=await Promise.all([
+  const [institutional,credit,priceHistoryRows,profileRows,syncRows,instCoverageTwse25,instCoverageTpex25]=await Promise.all([
     readInstitutionalHistoryHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     readCreditTradingHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     sql.query(`
@@ -398,7 +398,9 @@ async function readFlowDataHealth(sql){
       FROM sync_status
       WHERE source = ANY($1::text[])
       ORDER BY source
-    `,[['price_daily','market_history_backfill','institutional_flow_twse','institutional_flow_tpex','credit_trading_twse','credit_trading_tpex']]).catch(()=>[])
+    `,[['price_daily','market_history_backfill','institutional_flow_twse','institutional_flow_tpex','credit_trading_twse','credit_trading_tpex']]).catch(()=>[]),
+    institutionalCoverageByDate('上市',25).catch(()=>[]),
+    institutionalCoverageByDate('上櫃',25).catch(()=>[])
   ]);
   const priceHistory={markets:{}};
   for(const row of priceHistoryRows){
@@ -414,6 +416,7 @@ async function readFlowDataHealth(sql){
     '上櫃':{institutional:'institutional_flow_tpex',credit:'credit_trading_tpex'}
   };
   const markets={};
+  const institutionalCoverage25={'上市':instCoverageTwse25||[],'上櫃':instCoverageTpex25||[]};
   const warnings=[];
   for(const market of ['上市','上櫃']){
     const profileCount=profiles[market]||0;
@@ -429,6 +432,7 @@ async function readFlowDataHealth(sql){
     const backtestReady250=liveReady&&priceDays>=targets.backtest&&instDays>=targets.backtest&&creditDays>=targets.backtest;
     const researchReady500=liveReady&&priceDays>=targets.research&&instDays>=targets.research&&creditDays>=targets.research;
     const institutionalCoveragePct=profileCount?pct(inst.latestRows||0,profileCount):0;
+    const instCoverage25=institutionalCoverage25[market]||[],completeDays25=instCoverage25.filter(x=>x.complete).length;
     const creditParticipationPct=profileCount?pct(cred.latestRows||0,profileCount):0;
     const layerState=(days)=>({
       liveReady:days>=targets.live,
@@ -445,7 +449,7 @@ async function readFlowDataHealth(sql){
       ready:liveReady,liveReady,backtestReady250,researchReady500,
       expectedTradeDate:priceDate,profileRows:profileCount,dateAligned,
       price:{...price,...layerState(priceDays),sync:syncBySource.price_daily||null,backfillSync:syncBySource.market_history_backfill||null},
-      institutional:{...inst,fresh:instFresh,...layerState(instDays),coveragePct:institutionalCoveragePct,sync:syncBySource[sourceMap[market].institutional]||null},
+      institutional:{...inst,fresh:instFresh,...layerState(instDays),coveragePct:institutionalCoveragePct,completeDays25,targetDays25:25,complete25:completeDays25>=25,sync:syncBySource[sourceMap[market].institutional]||null},
       credit:{...cred,fresh:creditFresh,...layerState(creditDays),participationPct:creditParticipationPct,sync:syncBySource[sourceMap[market].credit]||null}
     };
   }
@@ -456,7 +460,7 @@ async function readFlowDataHealth(sql){
   return{
     liveReady,backtestReady250,researchReady500,
     readyForAX:liveReady,
-    targetHistoryDays:targets.live,
+    targetHistoryDays:targets.live,institutionalCoverageTargetDays:25,
     targets,markets,warnings:warnings.slice(0,12),
     generatedAt:new Date().toISOString()
   };
