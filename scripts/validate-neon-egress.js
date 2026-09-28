@@ -12,14 +12,17 @@ const vercel=JSON.parse(fs.readFileSync('vercel.json','utf8'));
 
 assert(quote.includes('function liveStockHint(query,marketHint="")'));
 assert(quote.includes('mode==="live"?(liveStockHint(query,marketHint)||await resolveStock(query,marketHint))'));
-for(const view of ['overview','browser','detail'])assert(app.includes(`/api/fundflow?view=${view}`));
+for(const view of ['overview','browser'])assert(app.includes(`/api/fundflow?view=${view}`));
+assert(!app.includes('/api/fundflow?view=detail'),'focus/click must never issue a detail API request');
+assert(!api.includes("view==='detail'")&&!api.includes("view==='fundflow-detail'"),'public fundflow API must not expose legacy detail route');
+assert(!status.includes("view==='fundflow-detail'"),'sync-status API must not expose legacy fundflow-detail route');
 assert(api.includes('stale-while-revalidate=3600'));
 for(const t of ['market_business_xy2_stock_daily','market_business_xy2_topic_daily','market_business_xy2_snapshot','market_business_xy2_member'])assert(core.includes(`CREATE TABLE IF NOT EXISTS ${t}`),`clean table missing: ${t}`);
 assert(core.includes("const FEATURE_VERSION = 'feature-2.0.0-x20raw20-y5-activation02'"));
-assert(core.includes("const PATH_MODEL_VERSION = 'path-1.1.0-inst50-activation30-history20-clean'"));
-assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.6.0-clean-xy2'"));
-assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.6.0-clean-stock-topic-incremental'"));
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.35"'));
+assert(core.includes("const PATH_MODEL_VERSION = 'path-2.0.0-axis-evidence-nearest-trajectory'"));
+assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.7.0-focuspack-path20'"));
+assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.7.0-compact-path-audit'"));
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.36"'));
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('));assert(!snap.includes('loadEngineInputs('));
@@ -28,7 +31,8 @@ assert(snap.includes("readPreparedSnapshot(sql,'overview',bounded)"));
 const browser=core.slice(core.indexOf('async function getFundflowBusinessBrowser'),core.indexOf('async function getFundflowDetail'));
 assert(!browser.includes('rebuildPreparedFromStored('));assert(!browser.includes('market_business_xy_snapshot'));
 const tagLoader=core.slice(core.indexOf('async function loadTagEngineInputs'),core.indexOf('function stockDailyFeatureRow'));
-assert(tagLoader.includes('JOIN market_business_xy2_member'),'detail must use clean member table');assert(!tagLoader.includes('market_business_xy_member m'),'detail must not read legacy member map');
+assert(tagLoader.includes('JOIN market_business_xy2_member'),'maintenance detail loader must use clean member table');assert(!tagLoader.includes('market_business_xy_member m'),'maintenance detail loader must not read legacy member map');
+assert(app.includes('zeroNeonFocus:true'),'focused topic must be built from browser memory');assert(app.includes('fundflowStartFocusAnimation'),'client-only focus animation missing');
 
 const loader=core.slice(core.indexOf('async function loadEngineInputs'),core.indexOf('async function loadTagEngineInputs'));
 assert(loader.includes('INCREMENTAL_SOURCE_DAYS'));assert(loader.includes('FEATURE_HISTORY_SOURCE_DAYS'));assert(!loader.includes('credit_trading_daily'),'full-market clean build should transfer only required raw columns');
@@ -43,8 +47,9 @@ const cleanup=core.slice(core.indexOf('async function cleanupLegacyDerivedData')
 for(const safe of ['market_daily_history','market_activity_daily','institutional_trading_daily','credit_trading_daily','market_company_profile'])assert(cleanup.includes(safe),`preservation marker missing ${safe}`);
 assert(cleanup.includes("safeScope:'legacy-derived-xy-only'"));
 for(const legacy of ['market_business_xy_daily','market_business_xy_snapshot','market_business_xy_member'])assert(core.includes(legacy),`legacy cleanup target missing ${legacy}`);
-const audit=core.slice(core.indexOf('async function loadPersistedBusinessGroupsForAudit'),core.indexOf('async function loadBenchmarkInputs'));
-assert(audit.includes('market_business_xy2_topic_daily'));assert(!audit.includes('market_activity_daily')&&!audit.includes('institutional_trading_daily'));
+const audit=core.slice(core.indexOf('async function readFundflowValidationAudit'),core.indexOf('module.exports='));
+assert(audit.includes('readPathAuditSnapshot(sql)'),'validation must use persisted Path audit');assert(audit.includes('buildCompactBenchmarkEvidence'),'validation benchmark must be compact-only');for(const raw of ['market_activity_daily','institutional_trading_daily','credit_trading_daily','market_daily_history'])assert(!audit.includes(raw),`validation must not scan raw table ${raw}`);
+const stateFn=core.slice(core.indexOf('async function readCurrentPreparedState'),core.indexOf('async function warmCurrentEngineFromStoredDb'));assert(!stateFn.includes('payload'),'state probe must not transfer prepared JSON payloads');
 
 assert(!sync.includes('refreshBusinessFlowDaily'));assert(sync.includes("reason:'manual XY snapshot mode during development'"));
 assert(core.includes('async function warmCurrentEngineFromStoredDb'));assert(status.includes("action==='fundflow-warm-manual'"));assert(status.includes("action==='fundflow-clean-rebuild-manual'"));assert(status.includes('x-stockzone-manual-history'));assert(app.includes('X-StockZone-Manual-History'));
@@ -53,4 +58,4 @@ assert(enrich.includes('DELETE FROM market_business_xy2_topic_daily')&&enrich.in
 assert(!enrich.includes('DELETE FROM market_business_xy_daily'));
 assert(db.includes('pg_database_size(current_database())'));assert(db.includes('pg_total_relation_size(rel)'));assert(db.includes('pruneEnabled:false'));assert(db.includes('idealMb:50,maxMb:100'));
 assert(db.includes("market_business_xy2_topic_daily:'clean-topic-history-to-500d'"));assert(db.includes("market_business_xy_daily:'legacy-derived-delete-after-verified-clean-cutover'"));
-console.log('PASS validate-neon-egress — .35 isolated Clean XY2 tables, safe verified legacy-derived cleanup, 25D daily incremental, 60D DB-only rebuild, no public fallback');
+console.log('PASS validate-neon-egress — .36 zero-query focus, persisted compact Path audit, payload-light state probe, no raw validation scan');

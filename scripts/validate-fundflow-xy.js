@@ -49,7 +49,7 @@ assert(Number.isFinite(adv.activationRate)&&Number.isFinite(adv.overheating),'Ac
 assert(adv.phaseState&&adv.phaseLabel,'phase state should exist');
 assert(adv.projection?.points?.length===3,'primary projection compatibility should expose 3/5/10 horizons');
 assert(Number.isFinite(adv.projection.confidence),'primary projection confidence should be finite');
-assert(adv.projection?.mode==='institutional-activation-history-top2','projection should use v7 Top-2 scenario mode');
+assert(adv.projection?.mode==='institutional-activation-nearest-trajectory-top2','projection should use v8 Path 2.0 Top-2 scenario mode');
 assert(Array.isArray(adv.projection?.scenarios)&&adv.projection.scenarios.length===2,'projection should expose exactly two scenarios');
 assert.deepStrictEqual(adv.projection.scenarios.map(x=>x.id),['A','B'],'scenario ids should be A/B');
 assert(adv.projection.scenarios.every(x=>Array.isArray(x.points)&&x.points.map(p=>p.horizon).join(',')==='3,5,10'),'each scenario should expose 3/5/10 points');
