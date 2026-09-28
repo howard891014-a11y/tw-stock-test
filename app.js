@@ -3663,9 +3663,43 @@ let fundflowPathFilter="all";
 let fundflowAxisMode="zoom";
 let fundflowTrajectoryDays=10;
 let fundflowSelectedTagId="";
-let fundflowTyphoonAnimationPending=false;
 let fundflowDetailLoading=false;
 let fundflowDetailData=null;
+let fundflowFocusAnimation=null;
+const FUND_FLOW_HISTORY_ANIM_MS=3000;
+const FUND_FLOW_FUTURE_ANIM_MS=1800;
+const FUND_FLOW_HOLD_MS=5000;
+function fundflowStopFocusAnimation(){
+  if(fundflowFocusAnimation?.raf)cancelAnimationFrame(fundflowFocusAnimation.raf);
+  fundflowFocusAnimation=null;
+}
+function fundflowStartFocusAnimation(tagId){
+  fundflowStopFocusAnimation();
+  const id=String(tagId||"").trim();if(!id)return;
+  const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+  fundflowFocusAnimation={tagId:id,startedAt:performance.now(),raf:0,reduced,lastPaint:0};
+  if(reduced){renderFundflowChart();return;}
+  const tick=(ts)=>{
+    const state=fundflowFocusAnimation;if(!state||state.tagId!==fundflowSelectedTagId)return;
+    if(!state.lastPaint||ts-state.lastPaint>=32){state.lastPaint=ts;renderFundflowChart();}
+    state.raf=requestAnimationFrame(tick);
+  };
+  fundflowFocusAnimation.raf=requestAnimationFrame(tick);
+}
+function fundflowFocusAnimationState(){
+  const a=fundflowFocusAnimation;if(!a||a.tagId!==fundflowSelectedTagId)return {history:1,future:1,hold:true};
+  if(a.reduced)return {history:1,future:1,hold:true};
+  const cycle=FUND_FLOW_HISTORY_ANIM_MS+FUND_FLOW_FUTURE_ANIM_MS+FUND_FLOW_HOLD_MS,elapsed=Math.max(0,(performance.now()-a.startedAt)%cycle);
+  if(elapsed<FUND_FLOW_HISTORY_ANIM_MS)return {history:elapsed/FUND_FLOW_HISTORY_ANIM_MS,future:0,hold:false};
+  if(elapsed<FUND_FLOW_HISTORY_ANIM_MS+FUND_FLOW_FUTURE_ANIM_MS)return {history:1,future:(elapsed-FUND_FLOW_HISTORY_ANIM_MS)/FUND_FLOW_FUTURE_ANIM_MS,hold:false};
+  return {history:1,future:1,hold:true};
+}
+function fundflowPartialPolyline(points,progress){
+  const pts=Array.isArray(points)?points:[];if(!pts.length)return [];if(pts.length===1||progress<=0)return [pts[0]];if(progress>=1)return pts.slice();
+  const pos=Math.max(0,Math.min(1,progress))*(pts.length-1),i=Math.floor(pos),t=pos-i,out=pts.slice(0,i+1);
+  if(i<pts.length-1){const a=pts[i],b=pts[i+1];out.push({x:(Number(a.x)||0)+((Number(b.x)||0)-(Number(a.x)||0))*t,y:(Number(a.y)||0)+((Number(b.y)||0)-(Number(a.y)||0))*t});}
+  return out;
+}
 let fundflowBrowserLoading=false;
 let fundflowBrowserFetchedAt=0;
 let fundflowBrowserData=null;
@@ -3755,12 +3789,12 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.5.35";
+const FUND_FLOW_CLIENT_REV="2.6.5.36";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 async function loadFundflowBrowser(force=false,serverRefresh=false){
   if(fundflowBrowserLoading)return;if(!force&&fundflowBrowserFetchedAt&&Date.now()-fundflowBrowserFetchedAt<5*60*1000){renderFundflowBrowser();return}fundflowBrowserLoading=true;
   const loading=$("fundflowBrowserLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}
-  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),22000);try{const res=await fetch(`/api/fundflow?view=browser&days=10&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}${serverRefresh?"&refresh=1":""}`,{cache:serverRefresh?"no-store":"default",signal:controller.signal});fundflowBrowserData=await readJson(res,"業務瀏覽器");fundflowBrowserFetchedAt=Date.now();renderFundflowBrowser()}finally{clearTimeout(timer)}}catch(e){console.warn("業務瀏覽器讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`業務分類讀取失敗：${e?.message||e}`}}finally{fundflowBrowserLoading=false}
+  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),22000);try{const res=await fetch(`/api/fundflow?view=browser&days=10&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}${serverRefresh?"&refresh=1":""}`,{cache:serverRefresh?"no-store":"default",signal:controller.signal});fundflowBrowserData=await readJson(res,"業務瀏覽器");fundflowBrowserFetchedAt=Date.now();renderFundflowBrowser();if(fundflowSelectedTagId){const g=(fundflowXyData?.groups||[]).find(x=>x.tagId===fundflowSelectedTagId);if(g){fundflowDetailData=fundflowBuildLocalDetail(g);renderFundflowDetail()}}}finally{clearTimeout(timer)}}catch(e){console.warn("業務瀏覽器讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`業務分類讀取失敗：${e?.message||e}`}}finally{fundflowBrowserLoading=false}
 }
 function fundflowBrowserOpen(tagId){
   const item=(fundflowBrowserData?.items||[]).find(x=>x.tagId===tagId);if(!item?.xyEligible)return;
@@ -3768,13 +3802,21 @@ function fundflowBrowserOpen(tagId){
   fundflowPathFilter=fundflowPathState(item).key;renderFundflowXy();fundflowSelect(tagId,{scroll:true});
 }
 
+function fundflowBuildLocalDetail(group){
+  if(!group)return null;
+  const browser=(fundflowBrowserData?.items||[]).find(x=>x.tagId===group.tagId)||{},traj=(group.trajectory||[]).slice(-fundflowTrajectoryDays);
+  const examples=(browser.examples||[]).map((x,i)=>({code:String(x?.code||""),name:x?.name||"",importance:"member",localOnly:true,impactX:null,impactY:null,stockX:null,stockY:null,instFlow5Pct:null,creditCorrection:null,return3Pct:null,return5Pct:null,return20Pct:null}));
+  return {ok:true,localOnly:true,zeroNeonFocus:true,tagId:group.tagId,name:group.name,parentName:group.parentName||browser.parentName||"",scope:group.scope,asOf:fundflowXyData?.asOf||traj.at(-1)?.date||"",trajectoryDays:traj.length,trajectory:traj,projection:group.projection||null,companies:examples,methodology:{factor:"X20 看中期法人資金位置；Y5 看真實價格報酬。單一題材聚焦資料直接來自已載入 prepared snapshot，不重新查 Neon。"},latest:{...group,factors:group.factors||{},quadrant:group.quadrant||fundflowPointQuadrant(group.x,group.y)}};
+}
 function fundflowSelect(tagId,{scroll=false}={}){
-  const id=String(tagId||"").trim();if(!id)return;const group=(fundflowXyData?.groups||[]).find(g=>g.tagId===id);
+  const id=String(tagId||"").trim();if(!id)return;
+  if(fundflowSelectedTagId===id){fundflowClearSelection();return;}
+  const group=(fundflowXyData?.groups||[]).find(g=>g.tagId===id);if(!group)return;
   if(group&&!fundflowPathAllowed(group))fundflowPathFilter=fundflowPathState(group).key;
-  fundflowSelectedTagId=id;fundflowTyphoonAnimationPending=true;renderFundflowPhaseControls();renderFundflowChart();loadFundflowDetail(id,false);
+  fundflowSelectedTagId=id;fundflowDetailData=fundflowBuildLocalDetail(group);renderFundflowPhaseControls();fundflowStartFocusAnimation(id);renderFundflowDetail();renderFundflowChart();
   if(scroll)setTimeout(()=>$("fundflowDetailCard")?.scrollIntoView({behavior:"smooth",block:"start"}),120);
 }
-function fundflowClearSelection(){fundflowSelectedTagId="";fundflowTyphoonAnimationPending=false;fundflowDetailData=null;$("fundflowDetailCard")?.classList.add("hidden");renderFundflowChart()}
+function fundflowClearSelection(){fundflowStopFocusAnimation();fundflowSelectedTagId="";fundflowPathFilter="all";fundflowDetailData=null;$("fundflowDetailCard")?.classList.add("hidden");renderFundflowPhaseControls();renderFundflowChart()}
 function fundflowNiceBound(values,floor=1){
   const maxAbs=Math.max(floor,...(values||[]).map(v=>Math.abs(Number(v)||0)))*1.12;if(!Number.isFinite(maxAbs)||maxAbs<=0)return floor;
   const pow=10**Math.floor(Math.log10(maxAbs)),n=maxAbs/pow,step=n<=1?1:n<=2?2:n<=5?5:10;return step*pow;
@@ -3789,12 +3831,11 @@ function renderFundflowChart(){
   const svg=$("fundflowXySvg"),loading=$("fundflowChartLoading");if(!svg)return;svg.replaceChildren();
   if(!fundflowXyData){if(loading){loading.classList.remove("hidden");loading.textContent="等待 XY 資料"}return}if(loading)loading.classList.add("hidden");
   const W=760,H=510,L=60,R=24,T=28,B=58,pw=W-L-R,ph=H-T-B;
-  const groups=fundflowEligibleGroups().sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),selected=groups.find(g=>g.tagId===fundflowSelectedTagId)||null;
-  const selectedProjection=(fundflowDetailData?.tagId===fundflowSelectedTagId&&fundflowDetailData?.projection?fundflowDetailData.projection:selected?.projection)||null;
-  const zoomX=[],zoomY=[],rawY=[];for(const g of groups){zoomX.push(Number(g.x)||0);zoomY.push(Number(g.y)||0);rawY.push(Number(g.y)||0);for(const p of g.trajectory||[])rawY.push(Number(p.y)||0)}
-  if(selected)for(const p of selected.trajectory||[]){zoomX.push(Number(p.x)||0);zoomY.push(Number(p.y)||0)}
+  const allGroups=fundflowEligibleGroups().sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),selected=allGroups.find(g=>g.tagId===fundflowSelectedTagId)||null,groups=selected?[selected]:allGroups;
+  const selectedProjection=selected?.projection||null,anim=selected?fundflowFocusAnimationState():{history:1,future:1,hold:true};
+  const zoomX=[],zoomY=[],rawY=[];for(const g of groups){zoomX.push(Number(g.x)||0);zoomY.push(Number(g.y)||0);rawY.push(Number(g.y)||0);for(const p of g.trajectory||[]){if(p.xAvailable===false||!Number.isFinite(Number(p.x)))continue;zoomX.push(Number(p.x)||0);zoomY.push(Number(p.y)||0);rawY.push(Number(p.y)||0)}}
   if(selectedProjection)for(const sc of fundflowProjectionScenarios(selectedProjection))for(const p of sc.points||[]){zoomX.push(Number(p.lowX)||Number(p.x)||0,Number(p.highX)||Number(p.x)||0);zoomY.push(Number(p.lowY)||Number(p.y)||0,Number(p.highY)||Number(p.y)||0);rawY.push(Number(p.lowY)||Number(p.y)||0,Number(p.highY)||Number(p.y)||0)}
-  const rawYBound=fundflowNiceBound(rawY,2),zoomYBase=fundflowZoomBound(zoomY,{floor:2.5,cap:30,step:1,q:.94,pad:1.18}),zoomXFloor=groups.length<=6?8:groups.length<=20?15:25,zoomXStep=groups.length<=6?2:groups.length<=20?5:10,xBound=fundflowAxisMode==="raw"?100:fundflowZoomBound(zoomX,{floor:zoomXFloor,cap:100,step:zoomXStep,q:.94,pad:1.12}),yBound=fundflowAxisMode==="raw"?rawYBound:zoomYBase;
+  const rawYBound=fundflowNiceBound(rawY,2),zoomYBase=fundflowZoomBound(zoomY,{floor:2.5,cap:30,step:1,q:.94,pad:1.18}),zoomXFloor=selected?8:groups.length<=6?8:groups.length<=20?15:25,zoomXStep=selected?2:groups.length<=6?2:groups.length<=20?5:10,xBound=fundflowAxisMode==="raw"?100:fundflowZoomBound(zoomX,{floor:zoomXFloor,cap:100,step:zoomXStep,q:.94,pad:1.12}),yBound=fundflowAxisMode==="raw"?rawYBound:zoomYBase;
   const sx=x=>L+((Math.max(-xBound,Math.min(xBound,Number(x)||0))+xBound)/(2*xBound))*pw,sy=y=>T+((yBound-Math.max(-yBound,Math.min(yBound,Number(y)||0)))/(2*yBound))*ph;
   [{x:L,y:T,w:pw/2,h:ph/2,fill:"#f5f3fb"},{x:L+pw/2,y:T,w:pw/2,h:ph/2,fill:"#f0faf5"},{x:L,y:T+ph/2,w:pw/2,h:ph/2,fill:"#f6f8fb"},{x:L+pw/2,y:T+ph/2,w:pw/2,h:ph/2,fill:"#fff8eb"}].forEach(q=>svg.append(fundflowSvg("rect",{x:q.x,y:q.y,width:q.w,height:q.h,fill:q.fill})));
   const xTicks=[-xBound,-xBound/2,0,xBound/2,xBound],yTicks=[-yBound,-yBound/2,0,yBound/2,yBound];
@@ -3802,20 +3843,23 @@ function renderFundflowChart(){
   yTicks.forEach(v=>{svg.append(fundflowSvg("line",{x1:L,y1:sy(v),x2:L+pw,y2:sy(v),class:v===0?"fundflow-midline":"fundflow-gridline"}));svg.append(fundflowSvg("text",{x:L-10,y:sy(v)+4,class:"fundflow-axis-label","text-anchor":"end"},fundflowAxisTick(v,{percent:true})))});
   svg.append(fundflowSvg("text",{x:L+pw/2,y:H-8,class:"fundflow-axis-label","text-anchor":"middle"},`法人 robust 資金強度 X${fundflowAxisMode==="zoom"?"（Zoom）":"（Raw -100～+100）"} →`));svg.append(fundflowSvg("text",{x:15,y:T+ph/2,class:"fundflow-axis-label",transform:`rotate(-90 15 ${T+ph/2})`,"text-anchor":"middle"},`近5日題材價格漲跌幅 Y${fundflowAxisMode==="zoom"?"（Zoom）":"（Raw）"} (%) →`));
   svg.append(fundflowSvg("text",{x:L+12,y:T+21,class:"fundflow-quadrant-label"},"法人賣・價格漲"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+21,class:"fundflow-quadrant-label","text-anchor":"end"},"法人買・價格漲"));svg.append(fundflowSvg("text",{x:L+12,y:T+ph-12,class:"fundflow-quadrant-label"},"法人賣・價格跌"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+ph-12,class:"fundflow-quadrant-label","text-anchor":"end"},"法人買・價格跌"));
-  if(selected&&selectedProjection){
-    const color=fundflowColor(selected.quadrant),start={x:selected.x,y:selected.y},scenarios=fundflowProjectionScenarios(selectedProjection);
-    scenarios.slice(0,2).forEach((scenario,scenarioIndex)=>{const pts=(scenario?.points||[]).slice(0,3);if(!pts.length)return;const routeClass=scenarioIndex===0?'is-primary':'is-secondary',centers=[start,...pts.map(p=>({x:Number(p.x)||0,y:Number(p.y)||0}))],coords=centers.map(p=>`${sx(p.x)},${sy(p.y)}`).join(" ");svg.append(fundflowSvg("polyline",{points:coords,class:`fundflow-future-path ${routeClass}`,stroke:color,"aria-hidden":"true"}));let lastR=scenarioIndex===0?6:5;
-      pts.forEach((p,i)=>{const xpx=Math.abs(sx(Number(p.highX))-sx(Number(p.lowX)))/2,ypx=Math.abs(sy(Number(p.highY))-sy(Number(p.lowY)))/2,h=Number(p.horizon)||[3,5,10][i]||3,base=h<=3?8:h<=5?12:18,calc=Math.min(36,Math.max(base,Math.hypot(xpx,ypx)*.42)),r=Math.max(base,lastR+2,calc);lastR=r;svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r,class:`fundflow-future-uncertainty ${routeClass}`,stroke:color,fill:color,"aria-hidden":"true"}));svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:scenarioIndex===0?3.8:3.2,class:`fundflow-future-point ${routeClass}`,fill:color,"aria-hidden":"true"}));svg.append(fundflowSvg("text",{x:sx(p.x)+r+4,y:sy(p.y)-4,class:`fundflow-future-label ${routeClass}`},`${scenario.id||(scenarioIndex===0?'A':'B')} ${h}D${i===pts.length-1?` ${fundflowFmt(scenario.confidence,0)}%`:''}`))});
-    });
+  if(selected){
+    const color=fundflowColor(selected.quadrant),rawPts=(selected.trajectory||[]).filter(p=>p.xAvailable!==false&&Number.isFinite(Number(p.x))).slice(-fundflowTrajectoryDays),pts=fundflowPartialPolyline(rawPts,anim.history),common={"data-fundflow-tag":selected.tagId,tabindex:"0",role:"button","aria-label":`${selected.name} XY 軌跡`};
+    if(pts.length>1){const coords=pts.map(p=>`${sx(p.x)},${sy(p.y)}`).join(" ");svg.append(fundflowSvg("polyline",{points:coords,class:"fundflow-typhoon-trail is-focus",stroke:color,opacity:.92,...common}))}
+    const visibleOriginal=Math.max(1,Math.min(rawPts.length,Math.floor(Math.max(0,Math.min(1,anim.history))*(Math.max(1,rawPts.length-1)))+1));
+    rawPts.slice(0,visibleOriginal).forEach((p,i)=>svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:i===visibleOriginal-1?4.6:3.5,fill:color,opacity:.82,class:"fundflow-point-old is-focus",...common})));
+    if(rawPts.length){const first=rawPts[0];if(anim.history<.025)svg.append(fundflowSvg("circle",{cx:sx(first.x),cy:sy(first.y),r:7,fill:color,class:"fundflow-focus-origin","aria-hidden":"true"}))}
+    if(selectedProjection&&anim.future>0){
+      const start={x:selected.x,y:selected.y},scenarios=fundflowProjectionScenarios(selectedProjection);
+      scenarios.slice(0,2).forEach((scenario,scenarioIndex)=>{const rawFuture=[start,...(scenario?.points||[]).slice(0,3).map(p=>({x:Number(p.x)||0,y:Number(p.y)||0,_src:p}))],partial=fundflowPartialPolyline(rawFuture,anim.future);if(partial.length>1){const coords=partial.map(p=>`${sx(p.x)},${sy(p.y)}`).join(" ");svg.append(fundflowSvg("polyline",{points:coords,class:`fundflow-future-path ${scenarioIndex===0?'is-primary':'is-secondary'}`,stroke:color,"aria-hidden":"true"}))}
+        const thresholds=[1/3,2/3,1],src=(scenario?.points||[]).slice(0,3);src.forEach((p,i)=>{if(anim.future+1e-6<thresholds[i])return;const xpx=Math.abs(sx(Number(p.highX))-sx(Number(p.lowX)))/2,ypx=Math.abs(sy(Number(p.highY))-sy(Number(p.lowY)))/2,h=Number(p.horizon)||[3,5,10][i]||3,base=h<=3?8:h<=5?12:18,r=Math.min(36,Math.max(base,Math.hypot(xpx,ypx)*.42));svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r,class:`fundflow-future-uncertainty ${scenarioIndex===0?'is-primary':'is-secondary'}`,stroke:color,fill:color,"aria-hidden":"true"}));svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:scenarioIndex===0?3.8:3.2,class:`fundflow-future-point ${scenarioIndex===0?'is-primary':'is-secondary'}`,fill:color,"aria-hidden":"true"}));svg.append(fundflowSvg("text",{x:sx(p.x)+r+4,y:sy(p.y)-4,class:`fundflow-future-label ${scenarioIndex===0?'is-primary':'is-secondary'}`},`${scenario.id||(scenarioIndex===0?'A':'B')} ${h}D${i===src.length-1?` ${fundflowFmt(scenario.confidence,0)}%`:''}`))});
+      });
+    }
+    const latest=rawPts.at(-1)||selected;if(anim.history>=1)svg.append(fundflowSvg("circle",{cx:sx(latest.x),cy:sy(latest.y),r:7.1,class:"fundflow-point-current",fill:color,...common}));
+    const labelPoint=anim.history>=1?latest:(pts.at(-1)||rawPts[0]||selected);svg.append(fundflowSvg("text",{x:sx(labelPoint.x)+10,y:sy(labelPoint.y)-9,class:"fundflow-label-current",...common},selected.name));
+  }else{
+    [...groups].reverse().forEach(g=>{const color=fundflowColor(g.quadrant),pts=(g.trajectory||[]).filter(p=>p.xAvailable!==false&&Number.isFinite(Number(p.x))).slice(-fundflowTrajectoryDays),common={"data-fundflow-tag":g.tagId,tabindex:"0",role:"button","aria-label":`${g.name} XY 軌跡`};if(pts.length>1){const coords=pts.map(p=>`${sx(p.x)},${sy(p.y)}`).join(" ");svg.append(fundflowSvg("polyline",{points:coords,class:"fundflow-path",stroke:color,...common}))}pts.slice(0,-1).forEach(p=>svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:3,fill:color,class:"fundflow-point-old",...common})));const latest=pts.at(-1)||g;svg.append(fundflowSvg("circle",{cx:sx(latest.x),cy:sy(latest.y),r:6.3,class:"fundflow-point-current",fill:color,...common}));svg.append(fundflowSvg("text",{x:sx(latest.x)+8,y:sy(latest.y)-7,class:"fundflow-label-current",...common},g.name))});
   }
-  const drawOrder=[...groups.filter(g=>g.tagId!==fundflowSelectedTagId).reverse(),...groups.filter(g=>g.tagId===fundflowSelectedTagId)];
-  drawOrder.forEach(g=>{const selectedNow=g.tagId===fundflowSelectedTagId,dim=Boolean(fundflowSelectedTagId&&!selectedNow),color=fundflowColor(g.quadrant),pts=(g.trajectory||[]).slice(-fundflowTrajectoryDays),common={"data-fundflow-tag":g.tagId,tabindex:"0",role:"button","aria-label":`${g.name} XY 軌跡`};
-    if(pts.length>1){if(selectedNow){for(let i=1;i<pts.length;i++){const opacity=.16+.74*(i/(pts.length-1));svg.append(fundflowSvg("line",{x1:sx(pts[i-1].x),y1:sy(pts[i-1].y),x2:sx(pts[i].x),y2:sy(pts[i].y),class:"fundflow-typhoon-trail",stroke:color,opacity,...common}))}}else{const coords=pts.map(p=>`${sx(p.x)},${sy(p.y)}`).join(" ");svg.append(fundflowSvg("polyline",{points:coords,class:`fundflow-path${dim?" is-dim":""}`,stroke:color,...common}))}}
-    pts.slice(0,-1).forEach((p,i)=>svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:selectedNow?3.8:3,fill:color,opacity:selectedNow ? .22+.58*((i+1)/Math.max(1,pts.length-1)) : undefined,class:`fundflow-point-old${dim?" is-dim":""}`,...common})));
-    const cx=sx(g.x),cy=sy(g.y);svg.append(fundflowSvg("circle",{cx,cy,r:selectedNow?8:6.5,fill:color,class:`fundflow-point-latest${selectedNow?" is-selected":""}${dim?" is-dim":""}`,...common}));
-    if(selectedNow&&pts.length>1&&fundflowTyphoonAnimationPending&&!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches){const d=pts.map((p,i)=>`${i?"L":"M"} ${sx(p.x)} ${sy(p.y)}`).join(" "),marker=fundflowSvg("circle",{r:6.2,fill:color,class:"fundflow-typhoon-marker","aria-hidden":"true"}),motion=fundflowSvg("animateMotion",{dur:`${Math.max(1.8,Math.min(3.8,pts.length*.28))}s`,fill:"freeze",repeatCount:"1",calcMode:"linear",path:d});marker.append(motion);svg.append(marker)}if(selectedNow)fundflowTyphoonAnimationPending=false;
-    const right=cx>L+pw*.72,top=cy<T+ph*.18,dx=right?-9:9,dy=top?16:-9;svg.append(fundflowSvg("text",{x:cx+dx,y:cy+dy,class:`fundflow-tag-label${selectedNow?" is-selected":""}${dim?" is-dim":""}`,"text-anchor":right?"end":"start",...common},g.name))});
-  if(!groups.length)svg.append(fundflowSvg("text",{x:W/2,y:H/2,class:"fundflow-axis-label","text-anchor":"middle"},"目前這個路徑／分類沒有足夠的 2 家以上業務群組"));
   svg.onclick=e=>{const node=e.target?.closest?.("[data-fundflow-tag]");if(node)fundflowSelect(node.getAttribute("data-fundflow-tag"),{scroll:false})};svg.onkeydown=e=>{if(e.key!=="Enter"&&e.key!==" ")return;const node=e.target?.closest?.("[data-fundflow-tag]");if(node){e.preventDefault();fundflowSelect(node.getAttribute("data-fundflow-tag"),{scroll:false})}};
 }
 function fundflowListHtml(groups){
@@ -3827,7 +3871,7 @@ function renderFundflowXy(){
   const groups=fundflowEligibleGroups({path:false}),early=groups.filter(g=>["capital-leading","price-leading"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathState(b).confidence-fundflowPathState(a).confidence),confirm=groups.filter(g=>["resonance-up","strong-hold"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathState(b).confidence-fundflowPathState(a).confidence),risk=groups.filter(g=>["capital-retreat","pullback","weakening","chaos"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathState(b).confidence-fundflowPathState(a).confidence);
   setText("fundflowPotentialCount",early.length);setText("fundflowMainlineCount",confirm.length);setText("fundflowRightCount",risk.length);setText("fundflowDaysCount",data.trajectoryDays||0);
   const a=$("fundflowPotentialList"),b=$("fundflowMainlineList"),c=$("fundflowRightList");if(a)a.innerHTML=fundflowListHtml(early);if(b)b.innerHTML=fundflowListHtml(confirm);if(c)c.innerHTML=fundflowListHtml(risk);
-  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v7"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY v7：X＝20D 法人中期資金位置，20D 真實正負決定左右；5D／1D法人只描述短期速度／加速度。Y＝近5日真實價格報酬。題材投票改成等權價格發動率：每家公司當日漲幅 > +0.2% 計1票，其餘0票，不使用法人或權值股權重。Future Path 依法人 > 發動率 > 相似歷史；資料完整度只控制預測門檻與颱風圈。相似歷史 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
+  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v7"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY v8：X＝20D 法人中期資金位置，20D 真實正負決定左右；5D／1D法人只描述短期速度／加速度。Y＝近5日真實價格報酬。題材投票改成等權價格發動率：每家公司當日漲幅 > +0.2% 計1票，其餘0票，不使用法人或權值股權重。Future Path 依法人 > 發動率 > 相似歷史；資料完整度只控制預測門檻與颱風圈。相似歷史 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
   document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>{const active=fundflowScopes.has(btn.dataset.fundflowScope);btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",active?"true":"false")});document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));document.querySelectorAll("[data-fundflow-axis-mode]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowAxisMode===fundflowAxisMode));renderFundflowPhaseControls();renderFundflowChart();
 }
 function fundflowFactorHtml(factors,axis,priorFactors={},group={},priorPoint={}){
@@ -3847,14 +3891,12 @@ function renderFundflowDetail(){
   setText("fundflowDetailProjectionNote",pa&&p5a?`A ${pa.direction||"--"} ${fundflowFmt(pa.confidence,0)}% → 5日 ${fundflowQuadrantShort(fundflowPointQuadrant(p5a.x,p5a.y))}（X ${fundflowFmt(p5a.x)} / Y ${fundflowFmt(p5a.y)}）${pb&&p5b?`｜B ${pb.direction||"--"} ${fundflowFmt(pb.confidence,0)}% → ${fundflowQuadrantShort(fundflowPointQuadrant(p5b.x,p5b.y))}`:""}｜路徑差 ${fundflowFmt(proj.pathGap,0)}｜${proj.chaosLevel||"--"}`:"等待 Top-2 路徑資料");
   const traj=d.trajectory||[],p3=traj[Math.max(0,traj.length-4)]||traj[0]||{},xf=$("fundflowXFactors"),yf=$("fundflowYFactors");if(xf)xf.innerHTML=fundflowFactorHtml(d.latest?.factors?.x,"x",p3?.factors?.x||{},d.latest||{},p3);if(yf)yf.innerHTML=fundflowFactorHtml(d.latest?.factors?.y,"y",p3?.factors?.y||{},d.latest||{},p3);
   const hist=$("fundflowDetailHistory");if(hist)hist.innerHTML=(d.trajectory||[]).map((p,i,arr)=>{const q=fundflowPointQuadrant(p.x,p.y);return `<div class="fundflow-history-item${i===arr.length-1?" latest":""}"><b>${escNews(String(p.date||"").slice(5).replace("-","/"))}</b><strong>X ${fundflowSignedX(p.x)}<br>Y ${fundflowSignedPct(p.y)}</strong><small>${escNews(fundflowQuadrantShort(q))} ${escNews(fundflowQuadrantMeaning(q))}｜發動 ${fundflowFmt(p.activationRate,0)}% / E ${fundflowFmt(p.overheating,0)}</small></div>`}).join("");
-  const list=$("fundflowCompanyList");if(list)list.innerHTML=(d.companies||[]).slice(0,12).map(c=>`<div class="fundflow-company-row"><b>${escNews(c.name||c.code)}<small>${escNews(c.code)}｜${escNews(c.importance||"")}</small></b><div class="impact">X 貢獻 <em>${fundflowSigned(c.impactX,2)}</em>｜Y <em>${fundflowSigned(c.impactY,2)}</em></div><small>個股 X ${fundflowFmt(c.stockX)} / Y ${fundflowFmt(c.stockY)}｜法人5日 ${fundflowSigned(c.instFlow5Pct,3)}%｜信用 ${fundflowSigned(c.creditCorrection,1)} 分｜3日 ${fundflowSigned(c.return3Pct,2)}%｜5日 ${fundflowSigned(c.return5Pct,2)}%｜20日 ${fundflowSigned(c.return20Pct,2)}%</small></div>`).join("")||"<p>暫無可用公司明細。</p>";
-  const note=$("fundflowDetailNote");if(note)note.textContent=`${d?.methodology?.factor||"X20 看中期法人資金位置；Y5 看真實價格報酬。"}｜發動率是一家公司一票的當日價格 breadth；Future Path＝法人 > 發動率 > 相似歷史，資料完整度只控制颱風圈／最低預測門檻。E 是過熱／耗竭風險標籤。｜公司貢獻仍以移除公司後重算差值檢查。`;
-  renderFundflowChart();
+  const list=$("fundflowCompanyList");if(list){if(d.localOnly)list.innerHTML=(d.companies||[]).slice(0,12).map(c=>`<div class="fundflow-company-row"><b>${escNews(c.name||c.code)}<small>${escNews(c.code)}</small></b><small>成員資料來自已載入的 prepared snapshot；聚焦/動畫不重新查 Neon。</small></div>`).join("")||"<p>成員清單未載入；聚焦動畫仍為 0 Neon。</p>";else list.innerHTML=(d.companies||[]).slice(0,12).map(c=>`<div class="fundflow-company-row"><b>${escNews(c.name||c.code)}<small>${escNews(c.code)}｜${escNews(c.importance||"")}</small></b><div class="impact">X 貢獻 <em>${fundflowSigned(c.impactX,2)}</em>｜Y <em>${fundflowSigned(c.impactY,2)}</em></div><small>個股 X ${fundflowFmt(c.stockX)} / Y ${fundflowFmt(c.stockY)}｜法人5日 ${fundflowSigned(c.instFlow5Pct,3)}%｜信用 ${fundflowSigned(c.creditCorrection,1)} 分｜3日 ${fundflowSigned(c.return3Pct,2)}%｜5日 ${fundflowSigned(c.return5Pct,2)}%｜20日 ${fundflowSigned(c.return20Pct,2)}%</small></div>`).join("")||"<p>暫無可用公司明細。</p>";}
+  const note=$("fundflowDetailNote");if(note)note.textContent=`${d?.methodology?.factor||"X20 看中期法人資金位置；Y5 看真實價格報酬。"}｜發動率是一家公司一票的當日價格 breadth；Future Path＝法人 > 發動率 > 相似歷史，資料完整度只控制颱風圈／最低預測門檻。E 是過熱／耗竭風險標籤。${d.localOnly?"｜單一題材聚焦與循環動畫全程使用瀏覽器已載入資料，0 Neon query。":""}`;
+  if(!fundflowFocusAnimation)renderFundflowChart();
 }
-async function loadFundflowDetail(tagId,force=false){
-  const id=String(tagId||"").trim();if(!id||fundflowDetailLoading)return;if(!force&&fundflowDetailData?.tagId===id&&fundflowDetailData?.trajectoryDays===fundflowTrajectoryDays){renderFundflowDetail();return}
-  fundflowDetailLoading=true;const card=$("fundflowDetailCard"),loading=$("fundflowDetailLoading");if(card)card.classList.remove("hidden");if(loading){loading.classList.remove("hidden");loading.textContent="拆解 X/Y、路徑狀態、Top-2 未來路徑與公司貢獻…"}
-  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),22000);try{const res=await fetch(`/api/fundflow?view=detail&tag=${encodeURIComponent(id)}&days=${fundflowTrajectoryDays}&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}`,{cache:"default",signal:controller.signal});fundflowDetailData=await readJson(res,"題材拆解");renderFundflowDetail()}finally{clearTimeout(timer)}}catch(e){console.warn("XY/路徑 題材明細讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`明細讀取失敗：${e?.message||e}`}}finally{fundflowDetailLoading=false;if(loading&&fundflowDetailData?.tagId===id)loading.classList.add("hidden")}
+function loadFundflowDetail(tagId){
+  const id=String(tagId||"").trim(),group=(fundflowXyData?.groups||[]).find(g=>g.tagId===id);if(!group)return;fundflowDetailData=fundflowBuildLocalDetail(group);renderFundflowDetail();
 }
 async function loadFundflowXy(force=false,serverRefresh=false){
   if(fundflowXyLoading)return;if(!force&&fundflowXyFetchedAt&&Date.now()-fundflowXyFetchedAt<2*60*1000){renderFundflowXy();return}fundflowXyLoading=true;const loading=$("fundflowChartLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取共用 XY snapshot…"}
@@ -3862,7 +3904,7 @@ async function loadFundflowXy(force=false,serverRefresh=false){
 }
 document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.addEventListener("click",()=>{const key=btn.dataset.fundflowScope;if(!key)return;if(fundflowScopes.has(key)){if(fundflowScopes.size===1)return;fundflowScopes.delete(key)}else fundflowScopes.add(key);const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&(!fundflowAllowed(selected)||!fundflowPathAllowed(selected)))fundflowClearSelection();renderFundflowXy()}));
 document.querySelectorAll("[data-fundflow-path]").forEach(btn=>btn.addEventListener("click",()=>{fundflowPathFilter=btn.dataset.fundflowPath||"all";const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&!fundflowPathAllowed(selected))fundflowClearSelection();renderFundflowXy()}));
-document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.addEventListener("click",()=>{const d=Number(btn.dataset.fundflowDays);if(![5,10,15].includes(d)||d===fundflowTrajectoryDays)return;fundflowTrajectoryDays=d;fundflowXyFetchedAt=0;fundflowDetailData=null;loadFundflowXy(true,false);if(fundflowSelectedTagId)loadFundflowDetail(fundflowSelectedTagId,true)}));
+document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.addEventListener("click",async()=>{const d=Number(btn.dataset.fundflowDays);if(![5,10,15].includes(d)||d===fundflowTrajectoryDays)return;fundflowTrajectoryDays=d;fundflowXyFetchedAt=0;fundflowDetailData=null;await loadFundflowXy(true,false);if(fundflowSelectedTagId){loadFundflowDetail(fundflowSelectedTagId);fundflowStartFocusAnimation(fundflowSelectedTagId)}}));
 document.querySelectorAll("[data-fundflow-axis-mode]").forEach(btn=>btn.addEventListener("click",()=>{const mode=btn.dataset.fundflowAxisMode==="raw"?"raw":"zoom";if(mode===fundflowAxisMode)return;fundflowAxisMode=mode;document.querySelectorAll("[data-fundflow-axis-mode]").forEach(b=>b.classList.toggle("active",b.dataset.fundflowAxisMode===fundflowAxisMode));renderFundflowChart()}));
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-radar-item[data-fundflow-tag]");if(item)fundflowSelect(item.dataset.fundflowTag,{scroll:true})});
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-browser-item[data-fundflow-browser-tag]");if(item&&!item.disabled)fundflowBrowserOpen(item.dataset.fundflowBrowserTag)});
@@ -3906,7 +3948,8 @@ function renderCompactHistoryStatus(history){
   const h=history||{},days=Number(h.compactDays||0),usable=Number(h.xUsableDays||0),anchors=Number(h.horizonAnchorDays||0),target=Number(h.targetDays||60),ready=Boolean(h.historyReady&&anchors>0);
   status.classList.remove("is-ok","is-error","is-warn");status.classList.add(ready?"is-ok":"is-warn");
   const legacy=Number(h.legacyDerivedRows||0);
-  status.textContent=ready?`乾淨 XY 歷史已就緒：${days}/${target}D｜X20 usable ${usable}D｜5D anchors ${anchors}D｜舊衍生 ${legacy} rows`:`乾淨 XY 歷史：${days}/${target}D｜X20 usable ${usable}D｜5D anchors ${anchors}D｜舊衍生 ${legacy} rows`;
+  status.textContent=ready?`乾淨 XY 歷史已就緒：${days}/${target}D｜X20 usable ${usable}D｜5D anchors ${anchors}D｜舊衍生 ${legacy} rows｜已鎖定，不再 full rebuild`:`乾淨 XY 歷史：${days}/${target}D｜X20 usable ${usable}D｜5D anchors ${anchors}D｜舊衍生 ${legacy} rows`;
+  const rebuild=$("manualFundflowHistory");if(rebuild&&ready&&!manualFundflowHistoryLoading){rebuild.disabled=true;rebuild.textContent="Clean XY 已完成";}else if(rebuild&&!manualFundflowHistoryLoading){rebuild.disabled=false;rebuild.textContent="重建乾淨 XY";}
 }
 function renderHistoryProgress(data){
   const markets=data?.markets||{},names=["上市","上櫃"];
@@ -3917,7 +3960,7 @@ function renderHistoryProgress(data){
   const updated=$("historyProgressUpdated");if(updated){const d=data?.generatedAt?new Date(data.generatedAt):null;updated.textContent=d&&!Number.isNaN(d.getTime())?`更新 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`:"已更新";}
   const repair=$("manualInstitutionalRepairStatus"),inst60=names.map(m=>Number(markets?.[m]?.institutional?.completeDays60||0)),target60=Number(data?.institutionalCoverageTargetDays||60),instReady=inst60.length===2&&inst60.every(x=>x>=target60);if(repair&&!manualInstitutionalRepairLoading){repair.classList.remove("is-ok","is-error","is-warn");repair.classList.add(instReady?"is-ok":"is-warn");repair.textContent=instReady?`DB 法人覆蓋已完整（上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}）`:`DB 法人覆蓋：上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}`;}
   renderCompactHistoryStatus(data?.fundflowCompactHistory);renderNeonStorageAudit(data?.storage);
-  const note=$("historyProgressNote"),warning=(data?.warnings||[])[0];if(note)note.textContent=warning?`注意：${warning}`:"Clean XY v2 先以 60D common raw history 重建；驗證成功後只清舊 XY/Path 衍生資料，不碰 OHLCV／法人／信用／題材原始歷史。";
+  const note=$("historyProgressNote"),warning=(data?.warnings||[])[0];if(note)note.textContent=warning?`注意：${warning}`:"Clean XY v2 已固定；.36 只重建 compact Path snapshot / audit，不再為 Path 改版重跑 raw XY。";
 }
 async function loadHistoryProgress(force=false){
   if(historyProgressLoading)return;if(!force&&historyProgressFetchedAt&&Date.now()-historyProgressFetchedAt<60*1000)return;historyProgressLoading=true;
@@ -3975,7 +4018,7 @@ function renderFundflowValidation(data){
 }
 async function runFundflowValidation(){
   if(fundflowValidationLoading)return;fundflowValidationLoading=true;
-  const btn=$("runFundflowValidation"),status=$("fundflowValidationStatus");if(btn){btn.disabled=true;btn.textContent="驗證中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="只讀 compact topic history，執行 causal walk-forward…"}
+  const btn=$("runFundflowValidation"),status=$("fundflowValidationStatus");if(btn){btn.disabled=true;btn.textContent="驗證中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="讀取已保存的 causal Path audit 與 compact benchmark；不掃 raw stock×day…"}
   try{const res=await fetch(`/api/sync-status?view=fundflow-audit&target=60&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:"no-store"}),data=await readJson(res,"XY / Path 驗證");renderFundflowValidation(data);saveFundflowValidation(data)}
   catch(e){console.warn("XY / Path 驗證失敗",e);if(status){status.classList.add("is-error");status.textContent=`驗證失敗：${e?.message||e}`}}
   finally{fundflowValidationLoading=false;if(btn){btn.disabled=false;btn.textContent="執行 XY / Path 驗證"}}
@@ -3993,7 +4036,7 @@ async function runManualInstitutionalRepair(){
       if(complete||added===0)break;
     }
     const m=last?.markets||{},tw=Number(m?.["上市"]?.coveredTradingDays||0),tp=Number(m?.["上櫃"]?.coveredTradingDays||0),complete=tw>=60&&tp>=60;
-    if(status){status.classList.add(complete?"is-ok":"is-warn");status.textContent=complete?`法人60D已完整（上市 ${tw}/60｜上櫃 ${tp}/60）。共修復 ${totalAdded} 個市場交易日；接著按「重建乾淨 XY」。`:`補齊尚未完成（上市 ${tw}/60｜上櫃 ${tp}/60）。本次修復 ${totalAdded} 日，可再按一次續跑。`;}
+    if(status){status.classList.add(complete?"is-ok":"is-warn");status.textContent=complete?`法人60D已完整（上市 ${tw}/60｜上櫃 ${tp}/60）。共修復 ${totalAdded} 個市場交易日；若 Clean XY 尚未建立才需重建；已完成則只按「更新 XY / 分類快照」。`:`補齊尚未完成（上市 ${tw}/60｜上櫃 ${tp}/60）。本次修復 ${totalAdded} 日，可再按一次續跑。`;}
     clearFundflowValidation();historyProgressFetchedAt=0;await loadHistoryProgress(true);
   }catch(e){console.warn("法人60D補齊失敗",e);if(status){status.classList.add("is-error");status.textContent=`補齊失敗：${e?.message||e}`}}
   finally{manualInstitutionalRepairLoading=false;if(btn){btn.disabled=false;btn.textContent="補齊法人 60D"}}
