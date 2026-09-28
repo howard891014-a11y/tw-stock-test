@@ -4,7 +4,7 @@ const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDi
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
 const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth, institutionalCoverageByDate } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
-const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readFundflowValidationAudit } = require('../lib/fundflow-xy');
+const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readFundflowValidationAudit } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 
 
@@ -489,15 +489,6 @@ async function statusResponse(req, res) {
     res.setHeader('Cache-Control','public, s-maxage=300, stale-while-revalidate=600');
     const days=Math.max(5,Math.min(15,Number(req.query?.days)||10));
     const data=await getFundflowBusinessBrowser({days});
-    return res.status(200).json(data);
-  }
-
-  if(view==='fundflow-detail'){
-    res.setHeader('Cache-Control','public, s-maxage=90, stale-while-revalidate=180');
-    const days=Math.max(5,Math.min(15,Number(req.query?.days)||10));
-    const tagId=String(req.query?.tag||req.query?.tagId||'').trim();
-    if(!tagId||!/^[a-z0-9_-]{2,80}$/i.test(tagId))return res.status(400).json({ok:false,error:'業務 tag 格式錯誤'});
-    const data=await getFundflowDetail({tagId,days});
     return res.status(200).json(data);
   }
 
