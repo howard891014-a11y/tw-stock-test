@@ -2522,7 +2522,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.34</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.35</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3265,10 +3265,10 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <section class="settings-manual-update settings-validation" aria-label="資金流資料修復與驗證">
   <div class="settings-manual-update-head"><span>資金流資料修復 / 驗證</span><small>開發驗收</small></div>
   <div class="settings-manual-update-box">
-    <p>先把官方法人共同歷史補到 60D，再建立一次可續跑的 compact Path 歷史，最後執行 causal walk-forward 驗證。Path 驗證之後只讀題材日彙總，不重掃全市場 raw stock×day。</p>
-    <div class="settings-validation-actions"><button id="manualInstitutionalRepair" type="button">補齊法人 60D</button><button id="manualFundflowHistory" type="button">建立 Path 歷史</button><button id="runFundflowValidation" type="button">執行 XY / Path 驗證</button></div>
+    <p>先確認官方法人共同歷史 60D 完整，再從既有 raw OHLCV／法人歷史重建全新的 Clean XY v2。新 XY 與 prepared snapshot 驗證完整後，系統才會刪除舊 XY／Path 衍生資料；原始股價、法人、信用與題材歷史不會被刪除。最後再執行 causal walk-forward 驗證。</p>
+    <div class="settings-validation-actions"><button id="manualInstitutionalRepair" type="button">補齊法人 60D</button><button id="manualFundflowHistory" type="button">重建乾淨 XY</button><button id="runFundflowValidation" type="button">執行 XY / Path 驗證</button></div>
     <small class="settings-manual-update-status" id="manualInstitutionalRepairStatus">尚未補齊</small>
-    <small class="settings-manual-update-status" id="manualFundflowHistoryStatus">Path 歷史尚未建立</small>
+    <small class="settings-manual-update-status" id="manualFundflowHistoryStatus">Clean XY v2 尚未建立</small>
     <small class="settings-manual-update-status" id="fundflowValidationStatus">尚未驗證</small>
     <pre class="settings-validation-details" id="fundflowValidationDetails" hidden></pre>
   </div>
@@ -3276,7 +3276,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <section class="settings-manual-update" aria-label="XY 快照手動更新">
   <div class="settings-manual-update-head"><span>XY / 分類快照</span><small>開發模式：手動</small></div>
   <div class="settings-manual-update-box">
-    <p>.34 不再 full XY rebuild：有新交易日時只讀最近 25D 的必要 X20/Y5/Activation 欄位、只寫最新題材日，再由 compact history 重建小型 prepared snapshot；若只是 Path 模型版本變更，直接重用 compact 特徵。已是最新日期會 cheap no-op，也不會呼叫 TWSE／TPEx／MIS。</p>
+    <p>.35 完成首次 Clean XY v2 切換後，日常不做 full rebuild：有新交易日時只讀最近 25D 必要資料，加上已保存的 prior raw20 context，只寫最新 stock/topic compact row，再重建小型 prepared snapshot。已是最新日期會 cheap no-op，也不會呼叫 TWSE／TPEx／MIS。</p>
     <button id="manualFundflowWarm" type="button">更新 XY / 分類快照</button>
     <small class="settings-manual-update-status" id="manualFundflowWarmStatus">尚未手動更新</small>
   </div>
@@ -3284,7 +3284,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <section class="settings-manual-update settings-validation" aria-label="Neon 儲存空間稽核">
   <div class="settings-manual-update-head"><span>Neon Storage Audit</span><small>只讀｜不自動刪除</small></div>
   <div class="settings-manual-update-box">
-    <p>先量 DB / table / index 實際大小，再決定 retention；.34 不執行破壞性 prune。</p>
+    <p>先量 DB / table / index 實際大小，再決定 retention；.35 只會在 Clean XY v2 完整驗證後清除三張舊 XY/Path 衍生表的資料，不會 prune 原始 OHLCV／法人／信用／題材歷史。</p>
     <small class="settings-manual-update-status" id="neonStorageStatus">尚未讀取</small>
     <pre class="settings-validation-details" id="neonStorageDetails" hidden></pre>
   </div>
@@ -3316,7 +3316,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.34"></script>
+  <script src="./app.js?v=2.6.5.35"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
