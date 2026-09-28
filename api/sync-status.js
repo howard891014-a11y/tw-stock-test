@@ -707,11 +707,11 @@ module.exports=async function handler(req,res){
       return res.status(warm.ok?200:503).json({...warm,manual:true});
     }
 
-    if(action==='fundflow-history-backfill-manual'){
-      // One-time/resumable DB-only materialization of compact topic-day X20/Y5/Activation history.
-      // It never calls exchange APIs and becomes a cheap no-op once the 60D compact window is ready.
-      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用 Path 歷史建立按鈕'});}
-      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'缺少 Path 歷史建立確認標記'});
+    if(action==='fundflow-clean-rebuild-manual'){
+      // One-time clean XY v2 rebuild from existing raw/reference history. It writes isolated XY2 tables first,
+      // verifies clean snapshots/history, then deletes only legacy XY/Path derived rows. Raw histories are never touched.
+      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用重建乾淨 XY 按鈕'});}
+      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'缺少 Clean XY 重建確認標記'});
       const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
       if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
       const target=Math.max(25,Math.min(60,Number(req.query?.target)||60));
@@ -780,7 +780,7 @@ module.exports=async function handler(req,res){
         const flowDataHealth=await readFlowDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',targetTradingDays:target,backfill,marketHealth,flowDataHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / fundflow-history-backfill-manual / institutional-backfill-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / fundflow-clean-rebuild-manual / institutional-backfill-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // v2.6.5.17: keep the three existing cron slots and accelerate deep
