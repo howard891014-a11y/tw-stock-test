@@ -1,8 +1,5 @@
 const assert=require('assert');
-const {percentileRanks,scoreStocksForDate,computeBusinessFlow,computeTagDetail,quadrant,buildTransitionCalibration,projectGroup,buildPreparedOverview}=require('../lib/fundflow-xy');
-
-assert.deepStrictEqual(percentileRanks([1,2,3]).map(x=>Math.round(x)),[0,50,100]);
-assert.deepStrictEqual(percentileRanks([5,5]).map(x=>Math.round(x)),[50,50]);
+const {scoreStocksForDate,computeBusinessFlow,computeTagDetail,quadrant,buildTransitionCalibration,projectGroup,buildPreparedOverview}=require('../lib/fundflow-xy');
 assert.equal(quadrant(1.2,-3.0),'potential');
 assert.equal(quadrant(1.2,4.0),'mainline');
 assert.equal(quadrant(-.5,2.0),'price-led');
@@ -28,7 +25,7 @@ const profiles=[
   {stock_code:'3163',stock_name:'波若威',market:'上櫃',industry_code:'27',industry:'通信網路業'},
   {stock_code:'2330',stock_name:'台積電',market:'上市',industry_code:'24',industry:'半導體業'},
 ];
-const dates=[];{let d=new Date('2026-08-03T00:00:00Z');while(dates.length<30){const day=d.getUTCDay();if(day!==0&&day!==6)dates.push(d.toISOString().slice(0,10));d.setUTCDate(d.getUTCDate()+1);}}
+const dates=[];{let d=new Date('2026-08-03T00:00:00Z');while(dates.length<50){const day=d.getUTCDay();if(day!==0&&day!==6)dates.push(d.toISOString().slice(0,10));d.setUTCDate(d.getUTCDate()+1);}}
 const activity=[];
 for(let di=0;di<dates.length;di++){
   profiles.forEach((p,pi)=>{
@@ -42,13 +39,13 @@ for(let di=0;di<dates.length;di++){
     });
   });
 }
-const result=computeBusinessFlow(profiles,activity,{maxDates:30});
-assert.equal(result.dates.length,30);
+const result=computeBusinessFlow(profiles,activity,{maxDates:50});
+assert.equal(result.dates.length,50);
 const adv=result.groups.find(x=>x.tagId==='semiconductor_equipment');
 assert(adv,'semiconductor_equipment market topic should exist');
-assert(adv.trajectory.length===30,'trajectory should have thirty dates');
+assert(adv.trajectory.length===50,'trajectory should have fifty dates');
 assert(Number.isFinite(adv.x)&&Number.isFinite(adv.y),'coordinates should be finite');
-assert(Number.isFinite(adv.confirmation)&&Number.isFinite(adv.overheating),'C/E should be finite');
+assert(Number.isFinite(adv.activationRate)&&Number.isFinite(adv.overheating),'Activation/E should be finite');assert(!('confirmation' in adv),'retired confirmation alias must not survive');
 assert(adv.phaseState&&adv.phaseLabel,'phase state should exist');
 assert(adv.projection?.points?.length===3,'primary projection compatibility should expose 3/5/10 horizons');
 assert(Number.isFinite(adv.projection.confidence),'primary projection confidence should be finite');
@@ -64,7 +61,7 @@ assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate mul
 const cal=buildTransitionCalibration(result.groups);
 assert(cal.historyDays>=10,'calibration should count usable X20 history days');
 const projected=projectGroup(adv,cal);assert(projected.points.length===3,'projectGroup primary compatibility should return three horizons');assert(projected.scenarios.length===2,'projectGroup should return two typhoon paths');
-console.log('Fundflow XY v7 X20/Y5 + price activation + Path State validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
+console.log('Clean Fundflow XY X20/Y5 + activation + Path State validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,activation:adv.activationRate,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
 const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});
 assert.equal(detail.trajectory.length,10,'detail trajectory should honor requested days');

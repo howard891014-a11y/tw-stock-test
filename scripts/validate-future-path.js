@@ -5,13 +5,13 @@ function makeHistory(){
   const groups=[];
   for(let g=0;g<5;g++){
     const trajectory=[];
-    for(let i=0;i<40;i++)trajectory.push({date:`2026-${String(7+Math.floor(i/28)).padStart(2,'0')}-${String(i%28+1).padStart(2,'0')}`,xAvailable:true,x:-50+g+i*2.6,y:-4+i*.35,rawX:.3+i*.01,flowValidCount:8,flow5Pct:.6,flow1Pct:.8,activationRate:78,confirmation:78,dataCompleteness:90,reliability:90,phaseState:i<10?'transition':'mainline',phaseLabel:'',phaseConfidence:75,dx1:2.6,dy1:.35,dx3:7.8,dy3:1.05,ddx1:0,ddy1:0});
+    for(let i=0;i<40;i++)trajectory.push({date:`2026-${String(7+Math.floor(i/28)).padStart(2,'0')}-${String(i%28+1).padStart(2,'0')}`,xAvailable:true,x:-50+g+i*2.6,y:-4+i*.35,rawX:.3+i*.01,flowValidCount:8,flow5Pct:.6,flow1Pct:.8,activationRate:78,dataCompleteness:90,reliability:90,phaseState:i<10?'transition':'mainline',phaseLabel:'',phaseConfidence:75,dx1:2.6,dy1:.35,dx3:7.8,dy3:1.05,ddx1:0,ddy1:0});
     groups.push({tagId:`g${g}`,trajectory});
   }
   return groups;
 }
 const calibration=buildTransitionCalibration(makeHistory());
-const g={x:42,y:-.2,phaseState:'transition',phaseConfidence:65,confirmation:80,activationRate:80,flow5Pct:.8,flow1Pct:1.0,dataCompleteness:92,reliability:92,dx3:12,dy3:.7};
+const g={x:42,y:-.2,phaseState:'transition',phaseConfidence:65,activationRate:80,flow5Pct:.8,flow1Pct:1.0,dataCompleteness:92,reliability:92,dx3:12,dy3:.7};
 const p=projectGroup(g,calibration);
 assert.equal(p.mode,'institutional-activation-history-top2');assert.equal(p.scenarios.length,2);assert.deepStrictEqual(p.scenarios.map(x=>x.id),['A','B']);assert(p.scenarios[0].confidence>=p.scenarios[1].confidence);assert.notEqual(p.scenarios[0].direction,p.scenarios[1].direction);
 assert.deepStrictEqual(p.influence,PATH_INFLUENCE);assert(PATH_INFLUENCE.institutional>PATH_INFLUENCE.activation&&PATH_INFLUENCE.activation>PATH_INFLUENCE.history);

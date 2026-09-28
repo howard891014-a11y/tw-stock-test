@@ -12,7 +12,7 @@ function makeGroup(id,shift=0){
       date:`2026-${String(7+Math.floor(i/28)).padStart(2,'0')}-${String(i%28+1).padStart(2,'0')}`,
       xAvailable:true,x,y,rawX:x/10,rawY:y,flowValidCount:6,
       confirmation:78,activationRate:78,flow5Pct:.8,flow1Pct:1.0,dataCompleteness:90,overheating:25,phaseState:i<18?'transition':'mainline',phaseLabel:i<18?'混沌／方向未明':'共振轉強',phaseConfidence:72,
-      dx1:i?3:0,dy1:i?.42:0,dx3:i>=3?9:3,dy3:i>=3?1.26:.42,ddx1:0,ddy1:0,priceBreadth:68,flowBreadth:66,concentrationQuality:75,reliability:85,validCount:8
+      dx1:i?3:0,dy1:i?.42:0,dx3:i>=3?9:3,dy3:i>=3?1.26:.42,ddx1:0,ddy1:0,priceBreadth:68,concentrationQuality:75,reliability:85,validCount:8
     });
   }
   const last=trajectory.at(-1);
@@ -33,8 +33,8 @@ for(const token of [
   'readFundflowValidationAudit','readTopicInstitutionalCoverageAudit','walkForwardPathAudit',
   'benchmarkSignLockPass','benchmarkSnapshotMatchPass','pathTop1AtLeast60','readyToFinalize','businessUniverseBaseline=161'
 ])assert(core.includes(token),`evidence gate missing: ${token}`);
-for(const token of ["view==='fundflow-audit'","action==='institutional-backfill-manual'","action==='fundflow-history-backfill-manual'",'x-stockzone-manual-institutional','x-stockzone-manual-history','clientRevisionMatch'])assert(status.includes(token),`audit/backfill endpoint missing: ${token}`);
-for(const token of ['manualInstitutionalRepair','manualFundflowHistory','runFundflowValidation','Path 5D Top1','補齊法人 60D','Compact history','Neon Storage Audit'])assert(app.includes(token)||html.includes(token),`settings evidence UI missing: ${token}`);
+for(const token of ["view==='fundflow-audit'","action==='institutional-backfill-manual'","action==='fundflow-clean-rebuild-manual'",'x-stockzone-manual-institutional','x-stockzone-manual-history','clientRevisionMatch'])assert(status.includes(token),`audit/backfill endpoint missing: ${token}`);
+for(const token of ['manualInstitutionalRepair','manualFundflowHistory','runFundflowValidation','Path 5D Top1','補齊法人 60D','Clean compact','Neon Storage Audit'])assert(app.includes(token)||html.includes(token),`settings evidence UI missing: ${token}`);
 assert(core.includes('sign(x)===sign(rawX)'),'benchmark must explicitly verify topic X/raw-X sign lock');
 assert(core.includes('instFlow20Pct:roundNullable(item.inst_flow_ratio_20,3)'),'company detail must expose raw X20 flow');
 assert(core.includes('ACTIVATION_THRESHOLD_PCT = 0.2'),'price activation threshold must be explicit');
