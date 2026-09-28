@@ -1,10 +1,10 @@
-const { getSql } = require('../lib/db');
+const { getSql, readDatabaseSizeAudit } = require('../lib/db');
 const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
 const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth, institutionalCoverageByDate } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
-const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, readFundflowValidationAudit } = require('../lib/fundflow-xy');
+const { getFundflowSnapshot, getFundflowDetail, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readFundflowValidationAudit } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 
 
@@ -74,6 +74,7 @@ const CRON_ACTIONS = {
 };
 
 let manualFundflowWarmPromise=null;
+let manualFundflowHistoryPromise=null;
 let manualInstitutionalBackfillPromise=null;
 
 function requestedAction(req) {
@@ -367,7 +368,7 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
 
 async function readFlowDataHealth(sql){
   const targets={live:20,backtest:250,research:500};
-  const [institutional,credit,priceHistoryRows,profileRows,syncRows,instCoverageTwse25,instCoverageTpex25]=await Promise.all([
+  const [institutional,credit,priceHistoryRows,profileRows,syncRows,instCoverageTwse60,instCoverageTpex60,storage,compactHistory]=await Promise.all([
     readInstitutionalHistoryHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     readCreditTradingHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     sql.query(`
@@ -399,8 +400,10 @@ async function readFlowDataHealth(sql){
       WHERE source = ANY($1::text[])
       ORDER BY source
     `,[['price_daily','market_history_backfill','institutional_flow_twse','institutional_flow_tpex','credit_trading_twse','credit_trading_tpex']]).catch(()=>[]),
-    institutionalCoverageByDate('上市',25).catch(()=>[]),
-    institutionalCoverageByDate('上櫃',25).catch(()=>[])
+    institutionalCoverageByDate('上市',60).catch(()=>[]),
+    institutionalCoverageByDate('上櫃',60).catch(()=>[]),
+    readDatabaseSizeAudit(sql).catch(e=>({error:String(e?.message||e),tables:[]})),
+    readCompactFeatureHistoryStatus(sql,{targetDays:60,horizon:5}).catch(e=>({targetDays:60,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)}))
   ]);
   const priceHistory={markets:{}};
   for(const row of priceHistoryRows){
@@ -416,7 +419,7 @@ async function readFlowDataHealth(sql){
     '上櫃':{institutional:'institutional_flow_tpex',credit:'credit_trading_tpex'}
   };
   const markets={};
-  const institutionalCoverage25={'上市':instCoverageTwse25||[],'上櫃':instCoverageTpex25||[]};
+  const institutionalCoverage60={'上市':instCoverageTwse60||[],'上櫃':instCoverageTpex60||[]};
   const warnings=[];
   for(const market of ['上市','上櫃']){
     const profileCount=profiles[market]||0;
@@ -432,7 +435,7 @@ async function readFlowDataHealth(sql){
     const backtestReady250=liveReady&&priceDays>=targets.backtest&&instDays>=targets.backtest&&creditDays>=targets.backtest;
     const researchReady500=liveReady&&priceDays>=targets.research&&instDays>=targets.research&&creditDays>=targets.research;
     const institutionalCoveragePct=profileCount?pct(inst.latestRows||0,profileCount):0;
-    const instCoverage25=institutionalCoverage25[market]||[],completeDays25=instCoverage25.filter(x=>x.complete).length;
+    const instCoverage60=institutionalCoverage60[market]||[],completeDays60=instCoverage60.filter(x=>x.complete).length;
     const creditParticipationPct=profileCount?pct(cred.latestRows||0,profileCount):0;
     const layerState=(days)=>({
       liveReady:days>=targets.live,
@@ -449,7 +452,7 @@ async function readFlowDataHealth(sql){
       ready:liveReady,liveReady,backtestReady250,researchReady500,
       expectedTradeDate:priceDate,profileRows:profileCount,dateAligned,
       price:{...price,...layerState(priceDays),sync:syncBySource.price_daily||null,backfillSync:syncBySource.market_history_backfill||null},
-      institutional:{...inst,fresh:instFresh,...layerState(instDays),coveragePct:institutionalCoveragePct,completeDays25,targetDays25:25,complete25:completeDays25>=25,sync:syncBySource[sourceMap[market].institutional]||null},
+      institutional:{...inst,fresh:instFresh,...layerState(instDays),coveragePct:institutionalCoveragePct,completeDays60,targetDays60:60,complete60:completeDays60>=60,completeDays25:Math.min(25,completeDays60),targetDays25:25,complete25:completeDays60>=25,sync:syncBySource[sourceMap[market].institutional]||null},
       credit:{...cred,fresh:creditFresh,...layerState(creditDays),participationPct:creditParticipationPct,sync:syncBySource[sourceMap[market].credit]||null}
     };
   }
@@ -460,8 +463,8 @@ async function readFlowDataHealth(sql){
   return{
     liveReady,backtestReady250,researchReady500,
     readyForAX:liveReady,
-    targetHistoryDays:targets.live,institutionalCoverageTargetDays:25,
-    targets,markets,warnings:warnings.slice(0,12),
+    targetHistoryDays:targets.live,institutionalCoverageTargetDays:60,
+    targets,markets,storage,fundflowCompactHistory:compactHistory,warnings:warnings.slice(0,12),
     generatedAt:new Date().toISOString()
   };
 }
@@ -500,8 +503,8 @@ async function statusResponse(req, res) {
 
   if(view==='fundflow-audit'){
     res.setHeader('Cache-Control','no-store');
-    const targetDays=Math.max(20,Math.min(60,Number(req.query?.target)||25));
-    const data=await readFundflowValidationAudit({sql,targetDays,maxDates:80});
+    const targetDays=Math.max(25,Math.min(60,Number(req.query?.target)||60));
+    const data=await readFundflowValidationAudit({sql,targetDays,maxDates:120});
     const appVersion=String(require('../package.json').version||''),clientRevision=String(req.query?.client||'').trim(),clientRevisionMatch=Boolean(clientRevision&&clientRevision===appVersion);
     data.appVersion=appVersion;data.clientRevision=clientRevision;data.clientRevisionMatch=clientRevisionMatch;
     data.releaseGate={...(data.releaseGate||{}),frontendRevision:clientRevisionMatch};
@@ -704,6 +707,21 @@ module.exports=async function handler(req,res){
       return res.status(warm.ok?200:503).json({...warm,manual:true});
     }
 
+    if(action==='fundflow-history-backfill-manual'){
+      // One-time/resumable DB-only materialization of compact topic-day X20/Y5/Activation history.
+      // It never calls exchange APIs and becomes a cheap no-op once the 60D compact window is ready.
+      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用 Path 歷史建立按鈕'});}
+      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'缺少 Path 歷史建立確認標記'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
+      const target=Math.max(25,Math.min(60,Number(req.query?.target)||60));
+      if(!manualFundflowHistoryPromise){
+        manualFundflowHistoryPromise=backfillCompactFeatureHistory({targetDays:target,sql:getSql()}).finally(()=>{manualFundflowHistoryPromise=null});
+      }
+      const history=await manualFundflowHistoryPromise;
+      return res.status(history.ok?200:503).json({...history,manual:true,targetDays:target});
+    }
+
     if(action==='institutional-backfill-manual'){
       // Development-stage repair button. It fetches only official institutional reports for
       // missing/partial dates inside the most recent target window; it does not rebuild XY.
@@ -711,7 +729,7 @@ module.exports=async function handler(req,res){
       if(String(req.headers?.['x-stockzone-manual-institutional']||'')!=='1')return res.status(403).json({ok:false,error:'缺少法人補齊確認標記'});
       const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
       if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
-      const target=Math.max(20,Math.min(60,Number(req.query?.target)||25)),batch=Math.max(1,Math.min(12,Number(req.query?.days)||10));
+      const target=Math.max(20,Math.min(60,Number(req.query?.target)||60)),batch=Math.max(1,Math.min(12,Number(req.query?.days)||12));
       if(!manualInstitutionalBackfillPromise){
         manualInstitutionalBackfillPromise=runInstitutionalBackfill({targetTradingDays:target,maxNewDays:batch,maxRunMs:47000,concurrency:3}).finally(()=>{manualInstitutionalBackfillPromise=null});
       }
@@ -762,7 +780,7 @@ module.exports=async function handler(req,res){
         const flowDataHealth=await readFlowDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',targetTradingDays:target,backfill,marketHealth,flowDataHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / institutional-backfill-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / fundflow-history-backfill-manual / institutional-backfill-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // v2.6.5.17: keep the three existing cron slots and accelerate deep
