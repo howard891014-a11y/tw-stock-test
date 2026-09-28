@@ -76,7 +76,7 @@ const consumerProfiles = [
   { stock_code:'2498', stock_name:'宏達電', market:'上市', industry_code:'27', industry:'通信網路業' },
   { stock_code:'2489', stock_name:'瑞軒', market:'上市', industry_code:'26', industry:'光電業' },
 ];
-const consumerCatalog=buildBusinessBrowserCatalog(consumerProfiles,{groups:[],engineVersion:'xy-6.1.0-stock-robust-signlocked-flow-price'});
+const consumerCatalog=buildBusinessBrowserCatalog(consumerProfiles,{groups:[],engineVersion:'xy-7.0.0-x20-y5-activation-causal-path'});
 const representedConsumer=consumerCatalog.items.filter(x=>x.scope==='electronics-product'&&x.companyCount>0);
 for(const id of ['ai_pc','consumer_notebook','consumer_peripherals','consumer_display','consumer_brand_device','consumer_tablet','consumer_mobile','consumer_wearable']){
   const item=representedConsumer.find(x=>x.tagId===id);

@@ -11,7 +11,7 @@ function makeGroup(id,shift=0){
     trajectory.push({
       date:`2026-${String(7+Math.floor(i/28)).padStart(2,'0')}-${String(i%28+1).padStart(2,'0')}`,
       xAvailable:true,x,y,rawX:x/10,rawY:y,flowValidCount:6,
-      confirmation:72,overheating:25,phaseState:i<18?'transition':'mainline',phaseLabel:i<18?'混沌／方向未明':'共振轉強',phaseConfidence:72,
+      confirmation:78,activationRate:78,flow5Pct:.8,flow1Pct:1.0,dataCompleteness:90,overheating:25,phaseState:i<18?'transition':'mainline',phaseLabel:i<18?'混沌／方向未明':'共振轉強',phaseConfidence:72,
       dx1:i?3:0,dy1:i?.42:0,dx3:i>=3?9:3,dy3:i>=3?1.26:.42,ddx1:0,ddy1:0,priceBreadth:68,flowBreadth:66,concentrationQuality:75,reliability:85,validCount:8
     });
   }
@@ -36,6 +36,7 @@ for(const token of [
 for(const token of ["view==='fundflow-audit'","action==='institutional-backfill-manual'",'x-stockzone-manual-institutional','clientRevisionMatch'])assert(status.includes(token),`audit/backfill endpoint missing: ${token}`);
 for(const token of ['manualInstitutionalRepair','runFundflowValidation','Path 5D Top1','法人25D'])assert(app.includes(token)||html.includes(token),`settings evidence UI missing: ${token}`);
 assert(core.includes('sign(x)===sign(rawX)'),'benchmark must explicitly verify topic X/raw-X sign lock');
-assert(core.includes('instFlow5Pct:roundNullable(item.inst_flow_ratio_5,3)'),'missing company institutional flow must remain null, not fake zero');
+assert(core.includes('instFlow20Pct:roundNullable(item.inst_flow_ratio_20,3)'),'company detail must expose raw X20 flow');
+assert(core.includes('ACTIVATION_THRESHOLD_PCT = 0.2'),'price activation threshold must be explicit');
 assert(app.includes('if(v===null||v===undefined||v==="")return "--"'),'fundflow formatter must render missing values as --');
 console.log(`Fundflow evidence validation PASS — causal walk-forward=${audit.top1HitPct}% top1 / ${audit.top2HitPct}% top2 on deterministic fixture + runtime release gate present`);

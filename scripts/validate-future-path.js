@@ -1,19 +1,32 @@
 const assert=require('assert');
 const fs=require('fs');
-const {projectGroup}=require('../lib/fundflow-xy');
-const calibration={historyDays:60,maturityPct:100,stats:{transition:{}}};
-for(const h of [3,5,10])calibration.stats.transition[h]={n:100,medianDx:0,medianDy:0,q20Dx:-12,q80Dx:12,q20Dy:-1.2,q80Dy:1.2,directions:{
-  '右上':{n:46,medianDx:4*h,medianDy:.30*h,q20Dx:2*h,q80Dx:6*h,q20Dy:.15*h,q80Dy:.45*h},
-  '右下':{n:38,medianDx:3.5*h,medianDy:-.28*h,q20Dx:1.5*h,q80Dx:5.5*h,q20Dy:-.42*h,q80Dy:-.14*h},
-  '盤整':{n:16,medianDx:0,medianDy:0,q20Dx:-3,q80Dx:3,q20Dy:-.25,q80Dy:.25}
-}};
-const g={x:42,y:-.2,phaseState:'transition',phaseConfidence:65,confirmation:62,dx3:14,dy3:.25};
+const {buildTransitionCalibration,projectGroup,PATH_INFLUENCE,PATH_MIN_COMPLETENESS_PCT}=require('../lib/fundflow-xy');
+function makeHistory(){
+  const groups=[];
+  for(let g=0;g<5;g++){
+    const trajectory=[];
+    for(let i=0;i<40;i++)trajectory.push({date:`2026-${String(7+Math.floor(i/28)).padStart(2,'0')}-${String(i%28+1).padStart(2,'0')}`,xAvailable:true,x:-50+g+i*2.6,y:-4+i*.35,rawX:.3+i*.01,flowValidCount:8,flow5Pct:.6,flow1Pct:.8,activationRate:78,confirmation:78,dataCompleteness:90,reliability:90,phaseState:i<10?'transition':'mainline',phaseLabel:'',phaseConfidence:75,dx1:2.6,dy1:.35,dx3:7.8,dy3:1.05,ddx1:0,ddy1:0});
+    groups.push({tagId:`g${g}`,trajectory});
+  }
+  return groups;
+}
+const calibration=buildTransitionCalibration(makeHistory());
+const g={x:42,y:-.2,phaseState:'transition',phaseConfidence:65,confirmation:80,activationRate:80,flow5Pct:.8,flow1Pct:1.0,dataCompleteness:92,reliability:92,dx3:12,dy3:.7};
 const p=projectGroup(g,calibration);
-assert.equal(p.mode,'top2-scenario');assert.equal(p.scenarios.length,2);assert.deepStrictEqual(p.scenarios.map(x=>x.id),['A','B']);assert(p.scenarios[0].confidence>=p.scenarios[1].confidence);assert.notEqual(p.scenarios[0].direction,p.scenarios[1].direction);
+assert.equal(p.mode,'institutional-activation-history-top2');assert.equal(p.scenarios.length,2);assert.deepStrictEqual(p.scenarios.map(x=>x.id),['A','B']);assert(p.scenarios[0].confidence>=p.scenarios[1].confidence);assert.notEqual(p.scenarios[0].direction,p.scenarios[1].direction);
+assert.deepStrictEqual(p.influence,PATH_INFLUENCE);assert(PATH_INFLUENCE.institutional>PATH_INFLUENCE.activation&&PATH_INFLUENCE.activation>PATH_INFLUENCE.history);
 for(const route of p.scenarios){assert.deepStrictEqual(route.points.map(x=>x.horizon),[3,5,10]);for(const pt of route.points){assert(pt.lowX<=pt.x&&pt.x<=pt.highX);assert(pt.lowY<=pt.y&&pt.y<=pt.highY)}}
-assert(p.points===p.primary.points);assert.equal(p.confidence,p.primary.confidence);assert(p.top2Share<=100.01&&p.residualPct>=0);assert(Number.isFinite(p.pathGap));
-const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8');
+assert(p.points===p.primary.points);assert.equal(p.confidence,p.primary.routeShare);assert(p.top2Share<=100.01&&p.residualPct>=0);assert(Number.isFinite(p.pathGap));
+// Completeness changes uncertainty, not direction probability.
+const hi=projectGroup({...g,dataCompleteness:100},calibration),lo=projectGroup({...g,dataCompleteness:55},calibration);assert.equal(hi.primary.direction,lo.primary.direction);assert.equal(hi.primary.routeShare,lo.primary.routeShare);
+const h5=hi.primary.points.find(x=>x.horizon===5),l5=lo.primary.points.find(x=>x.horizon===5);assert((l5.highX-l5.lowX)>=(h5.highX-h5.lowX));assert((l5.highY-l5.lowY)>=(h5.highY-h5.lowY));
+const insufficient=projectGroup({...g,dataCompleteness:PATH_MIN_COMPLETENESS_PCT-1},calibration);assert.equal(insufficient.mode,'insufficient-data');assert.equal(insufficient.scenarios.length,0);
+const core=fs.readFileSync('lib/fundflow-xy.js','utf8'),app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8');
+for(const token of ['nearestTransitionStats','pathFeatureDistance','institutional:0.50, activation:0.30, history:0.20','No direction sign enforcement','dataCompleteness','PATH_MIN_COMPLETENESS_PCT'])assert(core.includes(token),`new Path token missing: ${token}`);
 for(const token of ['fundflowProjectionScenarios','fundflow-future-path','fundflow-future-point','fundflow-future-uncertainty','fundflow-typhoon-marker','animateMotion','fundflowPathState','路徑差'])assert(app.includes(token)||html.includes(token),`Top-2/typhoon UI token missing: ${token}`);
-for(const token of ['Top-2 未來路徑','A/B 兩條颱風路徑','3 / 5 / 10 日圓圈'])assert(html.includes(token)||app.includes(token),`Top-2 UI text missing: ${token}`);
-assert(!app.includes('fundflow-forecast-corridor ${routeClass}'),'old wide forecast corridor rendering should be removed');
-console.log('Future Path validation PASS — Top-2 3/5/10D routes + expanding uncertainty circles + historical typhoon animation');
+assert(!core.includes('.62*histProb+.24*trendSim'),'retired history-dominant direction formula remains');
+const signalBlock=core.slice(core.indexOf('function currentSignalState'),core.indexOf('function scenarioDirectionScores'));
+assert(signalBlock.includes('positionForce=tanhUnit(x20,55)'),'institutional Path evidence must include X20 position strength');
+assert(signalBlock.includes('activationForce=clampRange(activation/100,0,1)'),'1/0 activation must be positive-only breadth evidence');
+assert(!signalBlock.includes('(activation-50)/50'),'low activation must not become a synthetic -1/down vote');
+console.log('Future Path v7 validation PASS — institutional > activation > similar-history; completeness only gates/widens uncertainty');

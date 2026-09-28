@@ -28,7 +28,7 @@ const profiles=[
   {stock_code:'3163',stock_name:'波若威',market:'上櫃',industry_code:'27',industry:'通信網路業'},
   {stock_code:'2330',stock_name:'台積電',market:'上市',industry_code:'24',industry:'半導體業'},
 ];
-const dates=['2026-09-08','2026-09-09','2026-09-10','2026-09-11','2026-09-14','2026-09-15','2026-09-16','2026-09-17','2026-09-18','2026-09-21','2026-09-22','2026-09-23'];
+const dates=[];{let d=new Date('2026-08-03T00:00:00Z');while(dates.length<30){const day=d.getUTCDay();if(day!==0&&day!==6)dates.push(d.toISOString().slice(0,10));d.setUTCDate(d.getUTCDate()+1);}}
 const activity=[];
 for(let di=0;di<dates.length;di++){
   profiles.forEach((p,pi)=>{
@@ -42,17 +42,17 @@ for(let di=0;di<dates.length;di++){
     });
   });
 }
-const result=computeBusinessFlow(profiles,activity,{maxDates:12});
-assert.equal(result.dates.length,12);
+const result=computeBusinessFlow(profiles,activity,{maxDates:30});
+assert.equal(result.dates.length,30);
 const adv=result.groups.find(x=>x.tagId==='semiconductor_equipment');
 assert(adv,'semiconductor_equipment market topic should exist');
-assert(adv.trajectory.length===12,'trajectory should have twelve dates');
+assert(adv.trajectory.length===30,'trajectory should have thirty dates');
 assert(Number.isFinite(adv.x)&&Number.isFinite(adv.y),'coordinates should be finite');
 assert(Number.isFinite(adv.confirmation)&&Number.isFinite(adv.overheating),'C/E should be finite');
 assert(adv.phaseState&&adv.phaseLabel,'phase state should exist');
 assert(adv.projection?.points?.length===3,'primary projection compatibility should expose 3/5/10 horizons');
 assert(Number.isFinite(adv.projection.confidence),'primary projection confidence should be finite');
-assert(adv.projection?.mode==='top2-scenario','projection should use Top-2 scenario mode');
+assert(adv.projection?.mode==='institutional-activation-history-top2','projection should use v7 Top-2 scenario mode');
 assert(Array.isArray(adv.projection?.scenarios)&&adv.projection.scenarios.length===2,'projection should expose exactly two scenarios');
 assert.deepStrictEqual(adv.projection.scenarios.map(x=>x.id),['A','B'],'scenario ids should be A/B');
 assert(adv.projection.scenarios.every(x=>Array.isArray(x.points)&&x.points.map(p=>p.horizon).join(',')==='3,5,10'),'each scenario should expose 3/5/10 points');
@@ -62,9 +62,9 @@ assert(['高混沌','中度分歧','有次要劇本','主路徑明確'].includes
 const cpo=result.groups.find(x=>x.tagId==='cpo_silicon_photonics');
 assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate multiple companies');
 const cal=buildTransitionCalibration(result.groups);
-assert(cal.historyDays===12,'calibration should count history days');
+assert(cal.historyDays>=10,'calibration should count usable X20 history days');
 const projected=projectGroup(adv,cal);assert(projected.points.length===3,'projectGroup primary compatibility should return three horizons');assert(projected.scenarios.length===2,'projectGroup should return two typhoon paths');
-console.log('Fundflow XY v6.1 stock-first-robust-signlocked-flow/raw-price + Path State validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
+console.log('Fundflow XY v7 X20/Y5 + price activation + Path State validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,C:adv.confirmation,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
 const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});
 assert.equal(detail.trajectory.length,10,'detail trajectory should honor requested days');

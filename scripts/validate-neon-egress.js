@@ -22,12 +22,12 @@ assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_snapshot'),'
 assert(core.includes('CREATE TABLE IF NOT EXISTS market_business_xy_member'),'topic member index missing');
 assert(core.includes('async function readLatestPreparedSnapshotAnyEngine'),'cross-engine small-snapshot fallback missing');
 assert(core.includes('enginePending:!current'),'fallback snapshot must mark both old-engine and old-schema snapshots as pending');
-assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.3.0-signlocked-consolidated-taxonomy'"),'versioned fundflow snapshot schema missing');
-assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.3.0-signlocked-consolidated-taxonomy'"),'versioned daily build marker missing');
+assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.4.0-x20-activation-path'"),'versioned fundflow snapshot schema missing');
+assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.4.0-x20-activation-incremental'"),'versioned daily build marker missing');
 assert(core.includes('build_version text'),'daily XY table must persist the current build marker');
 assert(core.includes('isCurrentPreparedPayload'),'current snapshot reads must reject an old same-engine schema');
 assert(api.includes("if(force||pending||wrongSchema)return 'no-store'"),'fallback or schema-stale snapshots must never enter CDN cache');
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.32"'),'fundflow fetches need a deploy cache revision so old v5 CDN keys cannot reappear');
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.33"'),'fundflow fetches need a deploy cache revision so old v5 CDN keys cannot reappear');
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('),'fundflow page read must never rebuild the full engine, even with refresh=1');
@@ -35,23 +35,23 @@ assert(snap.includes("readLatestPreparedSnapshotAnyEngine(sql,'overview',bounded
 assert(!snap.includes('loadEngineInputs('),'normal overview page read must not load full-market raw engine inputs');
 assert(!snap.includes('needsRefresh('),'normal overview page read must not trigger freshness-driven full-market rebuild');
 assert(!snap.includes('rebuildPreparedFromStored('),'normal overview page read must not rebuild snapshots from daily/profile tables');
-assert(snap.includes('&&isCurrentPreparedPayload(hit.value)'),'overview process cache must only serve current-schema v6 snapshots');
+assert(snap.includes('&&isCurrentPreparedPayload(hit.value)'),'overview process cache must only serve current-schema current snapshots');
 assert(!snap.includes('memoryCache.set(bounded,{savedAt:now,value:fallback})'),'legacy overview fallback must never be process-cached or it can reappear after a manual warm');
 
 const browser=core.slice(core.indexOf('async function getFundflowBusinessBrowser'),core.indexOf('async function getFundflowDetail'));
 assert(!browser.includes('getFundflowSnapshot('),'browser page read must not cascade into overview rebuild logic');
 assert(!browser.includes('rebuildPreparedFromStored('),'browser page read must remain snapshot-only');
-assert(browser.includes('&&isCurrentPreparedPayload(hit.value)'),'browser process cache must only serve current-schema v6 snapshots');
+assert(browser.includes('&&isCurrentPreparedPayload(hit.value)'),'browser process cache must only serve current-schema current snapshots');
 assert(!browser.includes('browserMemoryCache.set(bounded,{savedAt:now,value:fallback})'),'legacy browser fallback must never be process-cached');
 assert(core.includes('async function loadTagEngineInputs'),'lazy topic detail loader missing');
 const tagLoader=core.slice(core.indexOf('async function loadTagEngineInputs'),core.indexOf('async function refreshBusinessFlowDaily'));
 assert(tagLoader.includes('JOIN market_business_xy_member'),'detail must be restricted to the selected topic member index');
-assert(tagLoader.includes('const memberEngine=await resolveMemberEngine'),'detail should reuse newest member index while v6 is warming');
+assert(tagLoader.includes('const memberEngine=await resolveMemberEngine'),'detail should reuse newest member index while the current engine is warming');
 assert(!tagLoader.includes('buildProfileTagMap(profiles)'),'detail read must not rebuild the full-market member index');
-assert(!tagLoader.includes('activity_ready IS TRUE'),'v6 detail must not depend on legacy activity_ready');
-assert(tagLoader.includes('return_5_pct IS NOT NULL'),'v6 detail should require the actual 5D price return it uses');
+assert(!tagLoader.includes('activity_ready IS TRUE'),'current detail must not depend on legacy activity_ready');
+assert(tagLoader.includes('return_5_pct IS NOT NULL'),'current detail should require the actual 5D price return it uses');
 const inputLoader=core.slice(core.indexOf('async function loadEngineInputs'),core.indexOf('async function resolveMemberEngine'));
-assert(!inputLoader.includes('activity_ready IS TRUE'),'v6 full rebuild must not depend on legacy activity_ready');
+assert(!inputLoader.includes('activity_ready IS TRUE'),'current bounded rebuild must not depend on legacy activity_ready');
 assert(!inputLoader.includes('JOIN credit_dates'),'credit data is optional Chip Quality and must not gate v6 XY dates');
 const detail=core.slice(core.indexOf('async function getFundflowDetail'),core.indexOf('\nmodule.exports='));
 assert(!detail.includes('loadEngineInputs(sql,ENGINE_HISTORY_DAYS)'),'detail must not reload full-market engine inputs');
@@ -63,7 +63,7 @@ assert(sync.includes("reason:'manual XY snapshot mode during development'"),'pri
 assert(core.includes('async function warmCurrentEngineFromStoredDb'),'holiday-safe DB-only snapshot warmer missing');
 const warmer=core.slice(core.indexOf('async function warmCurrentEngineFromStoredDb'),core.indexOf('async function getFundflowSnapshot'));
 assert(warmer.includes('noUpstreamFetch:true'),'snapshot warmer must declare DB-only/no-upstream behavior');
-assert(warmer.includes('refreshBusinessFlowDaily({trajectoryDays:ENGINE_HISTORY_DAYS,sql})'),'warmer must be able to build a missing engine from stored DB inputs');
+assert(warmer.includes('refreshBusinessFlowDaily({sql})'),'warmer must be able to build or increment the current engine from stored DB inputs');
 assert(!status.includes("'0 10 * * *': 'fundflow-warm'"),'development mode must not keep the daily fundflow warm cron');
 assert(status.includes("action==='fundflow-warm-manual'"),'manual settings warm action missing');
 assert(status.includes("String(req.method||'GET').toUpperCase()!=='POST'"),'manual warm must require explicit POST');
@@ -75,4 +75,12 @@ assert(app.includes('manualFundflowWarm'),'settings manual update control missin
 assert(app.includes('/api/sync-status?action=fundflow-warm-manual'),'settings manual update must call the DB-only warm action');
 assert(app.includes('await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)'),'manual update should bypass stale CDN/memory snapshots after completion');
 assert(warmer.includes("current-engine-snapshots-already-latest"),'manual warmer must no-op when snapshots already match stored source data');
-console.log('PASS validate-neon-egress — v6 uses versioned snapshots/builds, legacy fallbacks are no-store, normal reads stay snapshot-only, and manual rebuild is DB-only');
+assert(core.includes('const INCREMENTAL_SOURCE_DAYS = 25'),'bounded 25D incremental source window missing');
+assert(core.includes('const BOOTSTRAP_SOURCE_DAYS = 40'),'bounded 40D one-time bootstrap source window missing');
+assert(core.includes('bootstrap=existingDays<15'),'current engine must distinguish one-time bootstrap from steady-state incremental refresh');
+assert(core.includes('sourceDays=bootstrap?BOOTSTRAP_SOURCE_DAYS:INCREMENTAL_SOURCE_DAYS'),'steady-state raw reads must shrink to 25D after the bounded bootstrap');
+assert(core.includes('writeDates=new Set(bootstrap?computed.dates:[latestDate])'),'steady-state refresh must write only the newest computed date');
+assert(core.includes("writeMode:bootstrap?'seed-window':'latest-date-only'"),'refresh result must report bootstrap vs latest-date-only writes');
+assert(core.includes('Math.min(BOOTSTRAP_SOURCE_DAYS,Number(trajectoryDays)||INCREMENTAL_SOURCE_DAYS)'),'raw engine loader must never exceed the bounded 40D bootstrap window');
+assert(!warmer.includes('trajectoryDays:ENGINE_HISTORY_DAYS'),'manual warm must not request the old 60D raw rebuild');
+console.log('PASS validate-neon-egress — v7 uses a bounded 40D one-time X20 bootstrap, 25D latest-date-only incremental refreshes, versioned snapshots/builds, and snapshot-only normal reads');
