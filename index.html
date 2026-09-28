@@ -2356,8 +2356,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 #fundamentalPanel #fundamentalCompanyCard>b,#fundamentalPanel #fundamentalContinuationCard>b{font-size:15px!important;font-weight:800!important}
 #fundamentalPanel #fundamentalCompanyCard>small,#fundamentalPanel #fundamentalContinuationCard>small{font-size:9.5px!important}
 
-#settingsModal{background:rgba(18,36,58,.34)!important;backdrop-filter:blur(5px)!important;-webkit-backdrop-filter:blur(5px)!important}
-#settingsModal .settings-card{width:min(460px,calc(100vw - 28px))!important;padding:18px!important;border:1px solid #e6edf5!important;border-radius:24px!important;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)!important;box-shadow:0 24px 64px rgba(17,34,61,.20)!important;color:#13233a!important}
+#settingsModal{background:rgba(18,36,58,.34)!important;backdrop-filter:blur(5px)!important;-webkit-backdrop-filter:blur(5px)!important;overflow:hidden!important;padding:max(10px,env(safe-area-inset-top)) 0 max(10px,env(safe-area-inset-bottom))!important}
+#settingsModal .settings-card{width:min(460px,calc(100vw - 28px))!important;max-height:calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;scrollbar-gutter:stable!important;padding:18px 18px calc(18px + env(safe-area-inset-bottom))!important;border:1px solid #e6edf5!important;border-radius:24px!important;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)!important;box-shadow:0 24px 64px rgba(17,34,61,.20)!important;color:#13233a!important}
 #settingsModal .modal-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:2px 2px 14px!important;border-bottom:1px solid #edf2f7!important}
 #settingsModal .modal-head strong{display:flex!important;align-items:center!important;gap:8px!important;color:#13233a!important;font-size:20px!important;font-weight:900!important}
 #settingsModal .modal-head strong::before{content:"";display:inline-block;width:20px;height:20px;background:#5f7691;-webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M19.4 13a7.4 7.4 0 0 0 .05-1 7.4 7.4 0 0 0-.05-1l2.1-1.64-2-3.46-2.52 1.01a7.1 7.1 0 0 0-1.73-1L14.87 3h-4l-.38 2.91a7.1 7.1 0 0 0-1.73 1L6.24 5.9l-2 3.46L6.34 11a7.4 7.4 0 0 0-.05 1 7.4 7.4 0 0 0 .05 1l-2.1 1.64 2 3.46 2.52-1.01a7.1 7.1 0 0 0 1.73 1L10.87 21h4l.38-2.91a7.1 7.1 0 0 0 1.73-1l2.52 1.01 2-3.46L19.4 13zM12.87 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z'/></svg>") center/contain no-repeat;mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M19.4 13a7.4 7.4 0 0 0 .05-1 7.4 7.4 0 0 0-.05-1l2.1-1.64-2-3.46-2.52 1.01a7.1 7.1 0 0 0-1.73-1L14.87 3h-4l-.38 2.91a7.1 7.1 0 0 0-1.73 1L6.24 5.9l-2 3.46L6.34 11a7.4 7.4 0 0 0-.05 1 7.4 7.4 0 0 0 .05 1l-2.1 1.64 2 3.46 2.52-1.01a7.1 7.1 0 0 0 1.73 1L10.87 21h4l.38-2.91a7.1 7.1 0 0 0 1.73-1l2.52 1.01 2-3.46L19.4 13zM12.87 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z'/></svg>") center/contain no-repeat!important}
@@ -2390,7 +2390,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 #settingsModal .settings-manual-update-status.is-error{color:#b85c64}
 @media(max-width:720px){
   #fundamentalPanel #fundamentalCompanyCard>b,#fundamentalPanel #fundamentalContinuationCard>b{font-size:14px!important}
-  #settingsModal .settings-card{padding:15px!important;border-radius:22px!important}
+  #settingsModal .settings-card{width:calc(100vw - 16px)!important;max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;padding:15px 15px calc(15px + env(safe-area-inset-bottom))!important;border-radius:22px!important}
   #settingsModal .modal-head strong{font-size:18px!important}
   #settingsModal .settings-row{grid-template-columns:94px minmax(0,1fr)!important;padding:12px!important;gap:10px!important}
   #settingsModal .settings-row span{font-size:12px!important}
@@ -2522,7 +2522,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.32</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.33</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3275,7 +3275,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <section class="settings-manual-update" aria-label="XY 快照手動更新">
   <div class="settings-manual-update-head"><span>XY / 分類快照</span><small>開發模式：手動</small></div>
   <div class="settings-manual-update-box">
-    <p>只在你按下時，用 Neon 既有歷史資料更新目前 XY Engine 與業務分類快照；不抓交易所即時資料。若已是最新版本／最新日期會直接跳過。</p>
+    <p>只在你按下時使用 Neon 既有資料：首次建立 .33 引擎最多讀 40D 既有資料建立 X20 基準；之後只讀最近 25D 計算最新交易日，再從小型題材日表更新快照。不抓交易所即時資料、不做 60–80D 全市場 raw rebuild；已是最新版本／最新日期會直接跳過。</p>
     <button id="manualFundflowWarm" type="button">更新 XY / 分類快照</button>
     <small class="settings-manual-update-status" id="manualFundflowWarmStatus">尚未手動更新</small>
   </div>
@@ -3305,9 +3305,9 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 </style>
 
 <style id="stockzone-v26532-validation">
-.settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
+.settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.32"></script>
+  <script src="./app.js?v=2.6.5.33"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
