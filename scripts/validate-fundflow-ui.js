@@ -21,8 +21,14 @@ if(errors.length){console.error('Fundflow UI validation FAILED');for(const e of 
 assert(app.includes('function fundflowBusinessUniverse()'),'full business-universe helper missing');
 assert(app.includes('業務 ${universe.length}｜可畫 XY ${base.length}｜待法人 X ${pendingX}'),'UI must expose business universe vs true XY coverage');
 assert(app.includes('key==="all"?String(universe.length):String(counts[key]??0)'),'All-path control must show the full business-universe count instead of only XY-eligible businesses');
-console.log(`Fundflow UI v2.6.5.33 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
+console.log(`Fundflow UI v2.6.5.34 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
 
 assert(html.includes('max-height:calc(100dvh'),'settings modal must have a viewport-bounded scroll height');
 assert(html.includes('overflow-y:auto!important'),'settings modal must scroll on mobile');
 assert(app.includes('FUND_FLOW_VALIDATION_STORAGE_KEY'),'Path audit result persistence missing');
+
+assert(html.includes('補齊法人 60D'),'settings must expose 60D institutional repair');
+assert(html.includes('manualFundflowHistory'),'settings must expose compact Path history materialization');
+assert(html.includes('Neon Storage Audit'),'settings must expose read-only storage audit');
+assert(app.includes('fundflow-history-backfill-manual'),'Path history button must call DB-only compact history endpoint');
+assert(app.includes('fundflow-audit&target=60'),'Path audit must request the 60D history target');

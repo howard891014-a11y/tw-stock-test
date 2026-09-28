@@ -20,7 +20,9 @@ for(const token of [
   'creditBackfill=await runCreditTradingBackfill',
   'flowDataHealth',
   'institutionalCoverageByDate',
-  'completeDays25',
+  'completeDays60',
+  'fundflowCompactHistory',
+  'storage',
   'institutionalCoverageTargetDays'
 ]) assert(sync.includes(token),`missing flow-data-health token: ${token}`);
 
@@ -32,4 +34,4 @@ for(const [name,src] of [['institutional',institutionalLib],['credit',creditLib]
   assert(src.includes('maxDate'),`${name} health must expose maxDate`);
 }
 
-console.log('Flow data health validation PASS — price/institutional/credit freshness + DB-truth institutional 25D coverage + 20/250/500D readiness gates present');
+console.log('Flow data health validation PASS — price/institutional/credit freshness + DB-truth institutional 60D coverage + compact Path/storage observability + 20/250/500D readiness gates present');

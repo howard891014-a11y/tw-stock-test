@@ -6,7 +6,7 @@ const {
   stockFlowScale,continuousStockFlowScore,capWeightShares,applyCompanyExposureBudget,enrichFlowFeatures,scoreStocksForDate,summarizeTagItemsRaw,normalizeTagSummaries
 }=require('../lib/fundflow-xy');
 
-assert.equal(ENGINE_VERSION,'xy-7.0.0-x20-y5-activation-causal-path','XY v7 engine version mismatch');
+assert.equal(ENGINE_VERSION,'xy-7.1.0-feature1-path1','XY v7.1 engine version mismatch');
 assert.equal(NON_CORE_EXPOSURE_BUDGET,null,'retired cross-topic exposure cap must remain disabled');
 assert.equal(STOCK_FLOW_POSITION_DAYS,20);assert.equal(STOCK_FLOW_MOMENTUM_DAYS,5);assert.equal(STOCK_FLOW_LOOKBACK_DAYS,20);assert.equal(STOCK_FLOW_MIN_HISTORY_DAYS,15);
 assert.equal(ACTIVATION_THRESHOLD_PCT,.2);assert(PATH_INFLUENCE.institutional>PATH_INFLUENCE.activation&&PATH_INFLUENCE.activation>PATH_INFLUENCE.history,'Path influence order must be institutional > vote > history');
