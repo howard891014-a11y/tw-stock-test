@@ -3755,7 +3755,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.5.33";
+const FUND_FLOW_CLIENT_REV="2.6.5.34";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 async function loadFundflowBrowser(force=false,serverRefresh=false){
   if(fundflowBrowserLoading)return;if(!force&&fundflowBrowserFetchedAt&&Date.now()-fundflowBrowserFetchedAt<5*60*1000){renderFundflowBrowser();return}fundflowBrowserLoading=true;
@@ -3892,20 +3892,36 @@ document.querySelectorAll("[data-view-open]").forEach(btn=>btn.addEventListener(
 setView("overview");
 
 let historyProgressFetchedAt=0,historyProgressLoading=false;
+function renderNeonStorageAudit(storage){
+  const status=$("neonStorageStatus"),details=$("neonStorageDetails");if(!status||!details)return;
+  status.classList.remove("is-ok","is-error","is-warn");
+  if(!storage||storage.error){status.classList.add("is-warn");status.textContent=storage?.error?`Storage audit 讀取失敗：${storage.error}`:"Storage audit 尚無資料";details.hidden=true;return;}
+  const total=Number(storage.totalMb||0),budget=Number(storage.referenceBudgetMb||512),pct=Number(storage.referenceUsagePct||0),tables=Array.isArray(storage.tables)?storage.tables:[],plan=storage.retentionPlan||{},egress=plan.dailyEgressTarget||{};
+  status.classList.add(pct>=85?"is-warn":"is-ok");status.textContent=`DB ${fundflowFmt(total,2)} MB｜參考 ${budget} MB 的 ${fundflowFmt(pct,1)}%｜只讀稽核／不自動刪除`;
+  const planLines=["",`Retention: ${plan.pruneEnabled?"prune enabled":"audit only / prune disabled"}`,`Daily egress target: ideal ≤${Number(egress.idealMb||50)} MB / max ≤${Number(egress.maxMb||100)} MB`,...Object.entries(plan.tables||{}).map(([k,v])=>`${k}: ${v}`)];
+  details.textContent=[`Database: ${storage.databaseName||"--"}`,`Total: ${fundflowFmt(total,2)} MB`,"",...tables.map(x=>`${x.name}: data ${fundflowFmt(x.dataMb,2)} MB | index ${fundflowFmt(x.indexMb,2)} MB | total ${fundflowFmt(x.totalMb,2)} MB`),...planLines].join("\n");details.hidden=false;
+}
+function renderCompactHistoryStatus(history){
+  const status=$("manualFundflowHistoryStatus");if(!status||manualFundflowHistoryLoading)return;
+  const h=history||{},days=Number(h.compactDays||0),usable=Number(h.xUsableDays||0),anchors=Number(h.horizonAnchorDays||0),target=Number(h.targetDays||60),ready=Boolean(h.historyReady&&anchors>0);
+  status.classList.remove("is-ok","is-error","is-warn");status.classList.add(ready?"is-ok":"is-warn");
+  status.textContent=ready?`Path compact 歷史已就緒：${days}/${target}D｜X20 usable ${usable}D｜5D anchors ${anchors}D`:`Path compact 歷史：${days}/${target}D｜X20 usable ${usable}D｜5D anchors ${anchors}D`;
+}
 function renderHistoryProgress(data){
   const markets=data?.markets||{},names=["上市","上櫃"];
-  const layer=(key)=>{const days=names.map(m=>Number(markets?.[m]?.[key]?.tradingDays||0)),min=Math.min(...days),pct=Math.max(0,Math.min(100,min/500*100));return{days,min,pct}};
+  const layer=(key)=>{const days=names.map(m=>Number(markets?.[m]?.[key]?.tradingDays||0)),min=days.length?Math.min(...days):0,pct=Math.max(0,Math.min(100,min/500*100));return{days,min,pct}};
   const paint=(key,prefix)=>{const x=layer(key),bar=$(prefix+"Bar"),value=$(prefix+"Value"),detail=$(prefix+"Detail");if(bar)bar.style.width=`${x.pct.toFixed(1)}%`;if(value)value.textContent=`${x.min} / 500D`;if(detail)detail.textContent=`上市 ${x.days[0]}D｜上櫃 ${x.days[1]}D`;};
   paint("price","historyPrice");paint("institutional","historyInstitutional");paint("credit","historyCredit");
   const ready=[[$("historyLiveReady"),Boolean(data?.liveReady)],[$("historyBacktestReady"),Boolean(data?.backtestReady250)],[$("historyResearchReady"),Boolean(data?.researchReady500)]];ready.forEach(([el,ok])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${el.id==="historyLiveReady"?"20D Live":el.id==="historyBacktestReady"?"250D Backtest":"500D Research"} ${ok?"✓":""}`.trim()});
   const updated=$("historyProgressUpdated");if(updated){const d=data?.generatedAt?new Date(data.generatedAt):null;updated.textContent=d&&!Number.isNaN(d.getTime())?`更新 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`:"已更新";}
-  const repair=$("manualInstitutionalRepairStatus"),inst25=names.map(m=>Number(markets?.[m]?.institutional?.completeDays25||0)),target25=Number(data?.institutionalCoverageTargetDays||25),instReady=inst25.length===2&&inst25.every(x=>x>=target25);if(repair&&!manualInstitutionalRepairLoading){repair.classList.remove("is-ok","is-error","is-warn");repair.classList.add(instReady?"is-ok":"is-warn");repair.textContent=instReady?`DB 法人覆蓋已完整（上市 ${inst25[0]}/${target25}｜上櫃 ${inst25[1]}/${target25}）`:`DB 法人覆蓋：上市 ${inst25[0]}/${target25}｜上櫃 ${inst25[1]}/${target25}`;}
-  const note=$("historyProgressNote"),warning=(data?.warnings||[])[0];if(note)note.textContent=warning?`注意：${warning}`:"目標每個交易日最多補 24D；約 20 次有效 Cron 可由 20D 推進至 500D。部署新版不會重跑既有 DB 歷史。";
+  const repair=$("manualInstitutionalRepairStatus"),inst60=names.map(m=>Number(markets?.[m]?.institutional?.completeDays60||0)),target60=Number(data?.institutionalCoverageTargetDays||60),instReady=inst60.length===2&&inst60.every(x=>x>=target60);if(repair&&!manualInstitutionalRepairLoading){repair.classList.remove("is-ok","is-error","is-warn");repair.classList.add(instReady?"is-ok":"is-warn");repair.textContent=instReady?`DB 法人覆蓋已完整（上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}）`:`DB 法人覆蓋：上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}`;}
+  renderCompactHistoryStatus(data?.fundflowCompactHistory);renderNeonStorageAudit(data?.storage);
+  const note=$("historyProgressNote"),warning=(data?.warnings||[])[0];if(note)note.textContent=warning?`注意：${warning}`:"Live / Path 先以 60D common history 為目標；250D / 500D 是後續回測研究層。新版不會因部署重跑 full XY。";
 }
 async function loadHistoryProgress(force=false){
   if(historyProgressLoading)return;if(!force&&historyProgressFetchedAt&&Date.now()-historyProgressFetchedAt<60*1000)return;historyProgressLoading=true;
   const updated=$("historyProgressUpdated");if(updated)updated.textContent="讀取中";
-  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);try{const res=await fetch("/api/sync-status?view=flow-data-health",{cache:"no-store",signal:controller.signal});const payload=await readJson(res,"歷史資料進度");renderHistoryProgress(payload?.flowDataHealth||payload);historyProgressFetchedAt=Date.now()}finally{clearTimeout(timer)}}catch(e){console.warn("歷史資料進度讀取失敗",e);if(updated)updated.textContent="讀取失敗"}finally{historyProgressLoading=false}
+  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch("/api/sync-status?view=flow-data-health",{cache:"no-store",signal:controller.signal});const payload=await readJson(res,"歷史資料進度");renderHistoryProgress(payload?.flowDataHealth||payload);historyProgressFetchedAt=Date.now()}finally{clearTimeout(timer)}}catch(e){console.warn("歷史資料進度讀取失敗",e);if(updated)updated.textContent="讀取失敗"}finally{historyProgressLoading=false}
 }
 document.querySelectorAll(".settings-open").forEach(btn=>btn.addEventListener("click",()=>{
   $("settingsModal")?.classList.remove("hidden");
@@ -3920,62 +3936,81 @@ let manualFundflowWarmLoading=false;
 async function runManualFundflowWarm(){
   if(manualFundflowWarmLoading)return;
   const btn=$("manualFundflowWarm"),status=$("manualFundflowWarmStatus");
-  manualFundflowWarmLoading=true;if(btn){btn.disabled=true;btn.textContent="更新中…"}if(status){status.classList.remove("is-ok","is-error");status.textContent="使用現有 Neon 歷史資料檢查／重建快照…"}
+  manualFundflowWarmLoading=true;if(btn){btn.disabled=true;btn.textContent="更新中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="檢查最新 common date；必要時只增量計算最新題材日…"}
   try{
     const res=await fetch("/api/sync-status?action=fundflow-warm-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Warm":"1"}});
     const data=await readJson(res,"XY / 分類快照更新");
-    const state=data?.after||data?.before||{},asOf=state?.asOf?String(state.asOf):"--";
-    if(status){status.classList.add("is-ok");status.textContent=data?.skipped?`已是最新：${data.engineVersion||"XY v7"}｜資料 ${asOf}`:`更新完成：${data.engineVersion||"XY v7"}｜資料 ${asOf}`;}
+    const state=data?.after||data?.before||{},asOf=state?.asOf?String(state.asOf):"--",mode=data?.mode||data?.reason||"compact";
+    if(status){status.classList.add("is-ok");status.textContent=data?.skipped?`已是最新，cheap no-op｜${data.featureVersion||"feature"}｜資料 ${asOf}`:`更新完成｜${mode}｜資料 ${asOf}`;}
     fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;
     try{await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)}catch(e){console.warn("手動更新後重新讀取資金流快照失敗",e)}
+    historyProgressFetchedAt=0;await loadHistoryProgress(true);
   }catch(e){console.warn("手動更新 XY / 分類快照失敗",e);if(status){status.classList.add("is-error");status.textContent=`更新失敗：${e?.message||e}`}}
   finally{manualFundflowWarmLoading=false;if(btn){btn.disabled=false;btn.textContent="更新 XY / 分類快照"}}
 }
 $("manualFundflowWarm")?.addEventListener("click",runManualFundflowWarm);
 
-let manualInstitutionalRepairLoading=false,fundflowValidationLoading=false;
+let manualInstitutionalRepairLoading=false,manualFundflowHistoryLoading=false,fundflowValidationLoading=false;
 function saveFundflowValidation(data){try{localStorage.setItem(FUND_FLOW_VALIDATION_STORAGE_KEY,JSON.stringify({savedAt:Date.now(),data}))}catch{}}
+function clearFundflowValidation(){try{localStorage.removeItem(FUND_FLOW_VALIDATION_STORAGE_KEY)}catch{}const status=$("fundflowValidationStatus"),details=$("fundflowValidationDetails");if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="資料已更新，請重新驗證"}if(details)details.hidden=true;}
 function restoreFundflowValidation(){try{const raw=localStorage.getItem(FUND_FLOW_VALIDATION_STORAGE_KEY);if(!raw)return false;const parsed=JSON.parse(raw);if(!parsed?.data)return false;renderFundflowValidation(parsed.data);const status=$("fundflowValidationStatus");if(status&&parsed.savedAt){const d=new Date(parsed.savedAt);status.textContent+=`｜上次 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`}return true}catch{return false}}
 function renderFundflowValidation(data){
-  const status=$("fundflowValidationStatus"),details=$("fundflowValidationDetails"),r=data?.regression||{},p=data?.path||{},g=data?.releaseGate||{},inst=data?.institutional?.markets||{},bench=(data?.benchmarks||[]).filter(x=>x.available),missing=(data?.topicCoverage?.missingCompanies||[]).slice(0,12);
-  const benchPass=bench.filter(x=>x.signLockPass&&x.yFinite).length,top1=p?.top1HitPct,top2=p?.top2HitPct,q=p?.targetQuadrantHitPct;
-  const parts=[`業務 ${r.businessUniverse??"--"}`,`可畫 ${r.withXY??"--"} (${r.xyCoveragePct??"--"}%)`,`Benchmark ${benchPass}/${bench.length||0}`,`Path 5D Top1 ${top1??"--"}% / Top2 ${top2??"--"}% (n=${p.predictions??0})`];
+  const status=$("fundflowValidationStatus"),details=$("fundflowValidationDetails"),r=data?.regression||{},p=data?.path||{},g=data?.releaseGate||{},inst=data?.institutional?.markets||{},hist=data?.compactHistory||{},bench=(data?.benchmarks||[]).filter(x=>x.available),missing=(data?.topicCoverage?.missingCompanies||[]).slice(0,12);
+  const benchPass=bench.filter(x=>x.signLockPass&&x.yFinite).length,top1=p?.top1HitPct,top2=p?.top2HitPct,q=p?.targetQuadrantHitPct,n=Number(p?.predictions||0),anchors=Number(p?.anchorDates||hist?.horizonAnchorDays||0);
+  const pathText=n?`Path 5D Top1 ${top1??"--"}% / Top2 ${top2??"--"}% (n=${n})`:`Path 尚無樣本（compact ${hist?.compactDays??0}D / X20 ${hist?.xUsableDays??0}D / anchors ${anchors}D）`;
+  const parts=[`業務 ${r.businessUniverse??"--"}`,`可畫 ${r.withXY??"--"} (${r.xyCoveragePct??"--"}%)`,`Benchmark ${benchPass}/${bench.length||0}`,pathText];
   if(status){status.classList.remove("is-ok","is-error","is-warn");status.classList.add(g.readyToFinalize?"is-ok":"is-warn");status.textContent=(g.readyToFinalize?"驗證全過：":"尚未達完成門檻：")+parts.join("｜");}
   if(details){
-    const marketLine=m=>`${m} 法人完整日 ${inst?.[m]?.completeDays??0}/${data?.institutional?.targetDays??25}`;
+    const marketLine=m=>`${m} 法人完整日 ${inst?.[m]?.completeDays??0}/${data?.institutional?.targetDays??60}`;
+    const histLine=`Compact history ${hist?.compactDays??0}/${hist?.targetDays??60}D｜X20 usable ${hist?.xUsableDays??0}D｜5D anchors ${hist?.horizonAnchorDays??0}D｜Path usable dates ${p?.usableDates??0}D｜實際 anchor dates ${p?.anchorDates??0}D`;
+    const noSampleReason=n?"":Number(hist?.compactDays||0)<Number(hist?.targetDays||60)?"Path n=0 原因：compact history 尚未補滿。":Number(hist?.xUsableDays||0)<=5?"Path n=0 原因：X20 可用歷史不足。":Number(hist?.horizonAnchorDays||0)<=0?"Path n=0 原因：沒有可對應 5D future label 的 anchor。":"Path n=0：compact 歷史存在，但沒有形成可預測題材樣本，請查看 benchmark / coverage。";
     const benchLines=bench.flatMap(x=>{const head=`${x.name}: rawX ${fundflowSigned(x.rawX,3)}% → X ${fundflowSigned(x.x,1)} / Y ${fundflowSigned(x.y,2)}% / sign ${x.signLockPass?"PASS":"FAIL"} / snapshot ${x.snapshotMatch?"MATCH":"CHECK"}`;const comps=(x.companies||[]).slice(0,4).map(c=>`  ↳ ${c.code} ${c.name||""}: raw20 ${fundflowSigned(c.rawFlow20,3)}% / stockX ${fundflowSigned(c.stockX,1)} / w ${fundflowFmt(c.weight,2)} / ΔX ${fundflowSigned(c.impactX,2)}`);return [head,...comps]});
     const missingLines=missing.map(x=>`${x.market} ${x.code} ${x.name||""}: ${x.instDays}/${x.expectedDays}D（缺 ${x.missingDays}D）`);
     const gateLines=Object.entries(g).filter(([k])=>k!=="readyToFinalize").map(([k,v])=>`${v?"✓":"✗"} ${k}`);
-    details.textContent=[marketLine("上市"),marketLine("上櫃"),"",...benchLines,"",`Walk-forward 5D：Top1 ${top1??"--"}%｜Top2 ${top2??"--"}%｜目標象限 ${q??"--"}%｜樣本 ${p.predictions??0}`,`>=60% 顯示信心樣本：${p.confidence60?.n??0}，實際 Top1 ${p.confidence60?.top1HitPct??"--"}%`,"",...gateLines,...(missingLines.length?["","法人歷史不足公司（前12）：",...missingLines]:[])].join("\n");
+    details.textContent=[marketLine("上市"),marketLine("上櫃"),histLine,...(noSampleReason?[noSampleReason]:[]),"",...benchLines,"",`Walk-forward 5D：Top1 ${top1??"--"}%｜Top2 ${top2??"--"}%｜目標象限 ${q??"--"}%｜樣本 ${n}`,`>=60% 顯示信心樣本：${p.confidence60?.n??0}，實際 Top1 ${p.confidence60?.top1HitPct??"--"}%`,"",...gateLines,...(missingLines.length?["","法人歷史不足公司（前12）：",...missingLines]:[])].join("\n");
     details.hidden=false;
   }
+  renderCompactHistoryStatus(hist);renderNeonStorageAudit(data?.storage);
 }
 async function runFundflowValidation(){
   if(fundflowValidationLoading)return;fundflowValidationLoading=true;
-  const btn=$("runFundflowValidation"),status=$("fundflowValidationStatus");if(btn){btn.disabled=true;btn.textContent="驗證中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="讀取小型彙總資料並做 causal walk-forward…"}
-  try{const res=await fetch(`/api/sync-status?view=fundflow-audit&target=25&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:"no-store"}),data=await readJson(res,"XY / Path 驗證");renderFundflowValidation(data);saveFundflowValidation(data)}
+  const btn=$("runFundflowValidation"),status=$("fundflowValidationStatus");if(btn){btn.disabled=true;btn.textContent="驗證中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="只讀 compact topic history，執行 causal walk-forward…"}
+  try{const res=await fetch(`/api/sync-status?view=fundflow-audit&target=60&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:"no-store"}),data=await readJson(res,"XY / Path 驗證");renderFundflowValidation(data);saveFundflowValidation(data)}
   catch(e){console.warn("XY / Path 驗證失敗",e);if(status){status.classList.add("is-error");status.textContent=`驗證失敗：${e?.message||e}`}}
   finally{fundflowValidationLoading=false;if(btn){btn.disabled=false;btn.textContent="執行 XY / Path 驗證"}}
 }
 async function runManualInstitutionalRepair(){
   if(manualInstitutionalRepairLoading)return;manualInstitutionalRepairLoading=true;
-  const btn=$("manualInstitutionalRepair"),status=$("manualInstitutionalRepairStatus");if(btn){btn.disabled=true;btn.textContent="補齊中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="檢查最近25D缺日／半套日期…"}
+  const btn=$("manualInstitutionalRepair"),status=$("manualInstitutionalRepairStatus");if(btn){btn.disabled=true;btn.textContent="補齊中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="檢查最近60D缺日／半套日期…"}
   try{
     let last=null,totalAdded=0;
     for(let batch=1;batch<=3;batch++){
-      const res=await fetch(`/api/sync-status?action=institutional-backfill-manual&target=25&days=10&_=${Date.now()}`,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Institutional":"1"}}),data=await readJson(res,"法人25D補齊");last=data;
+      const res=await fetch(`/api/sync-status?action=institutional-backfill-manual&target=60&days=12&_=${Date.now()}`,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Institutional":"1"}}),data=await readJson(res,"法人60D補齊");last=data;
       const markets=data?.markets||{},added=(Number(markets?.["上市"]?.addedThisRun||0)+Number(markets?.["上櫃"]?.addedThisRun||0));totalAdded+=added;
-      const tw=Number(markets?.["上市"]?.coveredTradingDays||0),tp=Number(markets?.["上櫃"]?.coveredTradingDays||0),complete=tw>=25&&tp>=25;
-      if(status)status.textContent=`第 ${batch} 批：上市 ${tw}/25D｜上櫃 ${tp}/25D｜本批修復 ${added} 日`;
+      const tw=Number(markets?.["上市"]?.coveredTradingDays||0),tp=Number(markets?.["上櫃"]?.coveredTradingDays||0),complete=tw>=60&&tp>=60;
+      if(status)status.textContent=`第 ${batch} 批：上市 ${tw}/60D｜上櫃 ${tp}/60D｜本批修復 ${added} 日`;
       if(complete||added===0)break;
     }
-    const m=last?.markets||{},tw=Number(m?.["上市"]?.coveredTradingDays||0),tp=Number(m?.["上櫃"]?.coveredTradingDays||0),complete=tw>=25&&tp>=25;
-    if(status){status.classList.add(complete?"is-ok":"is-warn");status.textContent=complete?`法人25D已完整（上市 ${tw}/25｜上櫃 ${tp}/25）。共修復 ${totalAdded} 個市場交易日；接著按「更新 XY / 分類快照」。`:`補齊尚未完成（上市 ${tw}/25｜上櫃 ${tp}/25）。本次修復 ${totalAdded} 日，可稍後再按一次。`;}
-    historyProgressFetchedAt=0;await loadHistoryProgress(true);
-  }catch(e){console.warn("法人25D補齊失敗",e);if(status){status.classList.add("is-error");status.textContent=`補齊失敗：${e?.message||e}`}}
-  finally{manualInstitutionalRepairLoading=false;if(btn){btn.disabled=false;btn.textContent="補齊法人 25D"}}
+    const m=last?.markets||{},tw=Number(m?.["上市"]?.coveredTradingDays||0),tp=Number(m?.["上櫃"]?.coveredTradingDays||0),complete=tw>=60&&tp>=60;
+    if(status){status.classList.add(complete?"is-ok":"is-warn");status.textContent=complete?`法人60D已完整（上市 ${tw}/60｜上櫃 ${tp}/60）。共修復 ${totalAdded} 個市場交易日；接著按「建立 Path 歷史」。`:`補齊尚未完成（上市 ${tw}/60｜上櫃 ${tp}/60）。本次修復 ${totalAdded} 日，可再按一次續跑。`;}
+    clearFundflowValidation();historyProgressFetchedAt=0;await loadHistoryProgress(true);
+  }catch(e){console.warn("法人60D補齊失敗",e);if(status){status.classList.add("is-error");status.textContent=`補齊失敗：${e?.message||e}`}}
+  finally{manualInstitutionalRepairLoading=false;if(btn){btn.disabled=false;btn.textContent="補齊法人 60D"}}
+}
+async function runManualFundflowHistory(){
+  if(manualFundflowHistoryLoading)return;manualFundflowHistoryLoading=true;
+  const btn=$("manualFundflowHistory"),status=$("manualFundflowHistoryStatus");if(btn){btn.disabled=true;btn.textContent="建立中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="只讀 Neon 已存資料，建立 / 續跑 60D compact topic history…"}
+  try{
+    const res=await fetch(`/api/sync-status?action=fundflow-history-backfill-manual&target=60&_=${Date.now()}`,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-History":"1"}}),data=await readJson(res,"Path 歷史建立"),h=data?.after||data?.before||{};
+    if(status){status.classList.add(h?.historyReady?"is-ok":"is-warn");status.textContent=data?.skipped?`Path history 已就緒，cheap no-op：${h.compactDays??0}/60D｜X20 ${h.xUsableDays??0}D｜5D anchors ${h.horizonAnchorDays??0}D`:`Path history 建立完成：${h.compactDays??0}/60D｜X20 ${h.xUsableDays??0}D｜5D anchors ${h.horizonAnchorDays??0}D｜本次寫入 ${data?.datesWritten??0}D`;}
+    clearFundflowValidation();fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;historyProgressFetchedAt=0;
+    try{await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)}catch(e){console.warn("Path 歷史建立後重新讀取 snapshot 失敗",e)}
+    await loadHistoryProgress(true);
+  }catch(e){console.warn("Path 歷史建立失敗",e);if(status){status.classList.add("is-error");status.textContent=`建立失敗：${e?.message||e}`}}
+  finally{manualFundflowHistoryLoading=false;if(btn){btn.disabled=false;btn.textContent="建立 Path 歷史"}}
 }
 $("manualInstitutionalRepair")?.addEventListener("click",runManualInstitutionalRepair);
+$("manualFundflowHistory")?.addEventListener("click",runManualFundflowHistory);
 $("runFundflowValidation")?.addEventListener("click",runFundflowValidation);
 
 // v2.5.1.11 valuation formula and definition info
