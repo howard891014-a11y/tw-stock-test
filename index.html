@@ -2522,7 +2522,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.37</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.38</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2607,7 +2607,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 
       <section class="dashboard-grid">
         <article class="card detail-panel technical-card" id="technical" data-view-panel="analysis">
-          <div class="card-title theme-white-card-title"><span class="analysis-title-group"><i class="analysis-title-icon" aria-hidden="true"></i><span>技術分析</span></span><span class="badge" id="technicalSource">Yahoo｜--</span></div>
+          <div class="card-title theme-white-card-title"><span class="analysis-title-group"><i class="analysis-title-icon" aria-hidden="true"></i><span>技術分析</span></span><span class="badge" id="technicalSource">--</span></div>
           <section class="tech-overview tech-overview-v2" id="techOverview">
             <div class="tech-overview-v2-inner">
               <span class="tech-overview-kicker">綜合判斷</span>
@@ -2642,7 +2642,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
               <div class="fundamental-title-wrap">
                 <h3 class="fundamental-overview-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-fundamental" aria-hidden="true"></i><span>基本面</span></span></h3>
               </div>
-              <span class="fundamental-overview-chip" id="fundamentalOverviewChip">資料待補</span>
             </div>
             <div class="fundamental-overview-grid">
               <div class="fundamental-metric metric-eps">
@@ -3178,14 +3177,13 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <section class="credit-trading-section" aria-label="信用交易">
               <div class="credit-trading-head"><div><strong>信用交易</strong><small id="creditTradingAsOf">等待同步</small></div><em id="creditTradingSignal" class="tone-neutral">資料暫缺</em></div>
               <div class="credit-trading-grid">
-                <section class="credit-trading-card"><header><strong>融資</strong><small id="creditMarginUsage">使用率 --</small></header><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditMargin1">--</b></div><div><span>融資餘額</span><b id="creditMarginBalance">--</b></div><div><span>5日變化</span><b id="creditMargin5">--</b></div><div><span>10日變化</span><b id="creditMargin10">--</b></div><div><span>20日變化</span><b id="creditMargin20">--</b></div></div></section>
-                <section class="credit-trading-card"><header><strong>融券</strong><small id="creditShortRatio">券資比 --</small></header><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditShort1">--</b></div><div><span>融券餘額</span><b id="creditShortBalance">--</b></div><div><span>5日變化</span><b id="creditShort5">--</b></div><div><span>10日變化</span><b id="creditShort10">--</b></div><div><span>20日變化</span><b id="creditShort20">--</b></div></div></section>
-                <section class="credit-trading-card"><header><strong>借券賣出</strong><small id="creditSblReturn">今日還券 --</small></header><div class="credit-trading-rows"><div><span>今日賣出</span><b id="creditSblSell">--</b></div><div><span>借券餘額</span><b id="creditSblBalance">--</b></div><div><span>5日變化</span><b id="creditSbl5">--</b></div><div><span>10日變化</span><b id="creditSbl10">--</b></div><div><span>20日變化</span><b id="creditSbl20">--</b></div></div></section>
+                <section class="credit-trading-card" data-credit-card="margin"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-margin-icon" aria-hidden="true"></span><span>融資</span></div><small id="creditMarginUsage">使用率 --</small></header><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditMargin1">--</b></div><div><span>融資餘額</span><b id="creditMarginBalance">--</b></div><div><span>5日變化</span><b id="creditMargin5">--</b></div><div><span>10日變化</span><b id="creditMargin10">--</b></div><div><span>20日變化</span><b id="creditMargin20">--</b></div></div></section>
+                <section class="credit-trading-card" data-credit-card="short"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-short-icon" aria-hidden="true"></span><span>融券</span></div><small id="creditShortRatio">券資比 --</small></header><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditShort1">--</b></div><div><span>融券餘額</span><b id="creditShortBalance">--</b></div><div><span>5日變化</span><b id="creditShort5">--</b></div><div><span>10日變化</span><b id="creditShort10">--</b></div><div><span>20日變化</span><b id="creditShort20">--</b></div></div></section>
+                <section class="credit-trading-card" data-credit-card="sbl"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-sbl-icon" aria-hidden="true"></span><span>借券賣出</span></div><small id="creditSblReturn">今日還券 --</small></header><div class="credit-trading-rows"><div><span>今日賣出</span><b id="creditSblSell">--</b></div><div><span>借券餘額</span><b id="creditSblBalance">--</b></div><div><span>5日變化</span><b id="creditSbl5">--</b></div><div><span>10日變化</span><b id="creditSbl10">--</b></div><div><span>20日變化</span><b id="creditSbl20">--</b></div></div></section>
               </div>
-              <div class="credit-trading-judgement"><span>信用籌碼判讀</span><strong id="creditTradingJudgement">等待信用交易歷史資料。</strong></div>
             </section>
-            <div class="institutional-judgement">
-              <span>系統判讀</span><strong id="institutionalJudgement">搜尋股票後顯示法人籌碼方向。</strong>
+            <div class="institutional-comment">
+              <small>系統判讀</small><strong id="institutionalJudgement">搜尋股票後顯示法人與信用籌碼方向。</strong>
             </div>
             <div class="institutional-source-note"><span id="institutionalSource">資料來源：TWSE／TPEx 官方公開資料</span><span>單位：官方原始股數</span></div>
           </div>
@@ -3316,7 +3314,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.37"></script>
+  <script src="./app.js?v=2.6.5.38"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5256,5 +5254,45 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{
 body.mode-screening .dashboard-grid>[data-view-panel="featured"] .hero-value,
 body.mode-screening .dashboard-grid>[data-view-panel="simulation"] .hero-value{
   min-height:170px!important;
+}
+</style>
+
+<style id="stockzone-v26538-ui-unify">
+/* v2.6.5.38 — UI-only refinement based on deployed .37; no fund-flow model/cache revision. */
+#technical .card-title #technicalSource{font-size:10px!important;color:#7C8DA2!important;}
+#overviewResonanceCard .overview-strength-chip strong{font-size:10px!important;color:#7C8DA2!important;}
+
+/* Credit cards follow the same visual grammar as 外資／投信／自營商／三大法人. */
+#institutionalTrend .credit-trading-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important;}
+#institutionalTrend .credit-trading-card{display:flex!important;flex-direction:column!important;min-width:0!important;padding:12px!important;border:1px solid #dfe8f5!important;border-radius:18px!important;background:#eef5ff!important;box-shadow:0 8px 20px rgba(17,34,61,.035)!important;}
+#institutionalTrend .credit-trading-card header{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px!important;margin:0 0 8px!important;}
+#institutionalTrend .credit-trading-title{display:flex!important;align-items:center!important;gap:8px!important;color:#13233a!important;font-size:15px!important;font-weight:800!important;line-height:1.2!important;min-width:0!important;}
+#institutionalTrend .credit-mini-icon{position:relative!important;width:28px!important;height:28px!important;border-radius:10px!important;background:#e3edff!important;flex:0 0 28px!important;}
+#institutionalTrend .credit-mini-icon::before,#institutionalTrend .credit-mini-icon::after{content:"";position:absolute;}
+#institutionalTrend .credit-margin-icon::before{left:6px;right:6px;bottom:7px;height:2px;background:#4e86c7;border-radius:2px;box-shadow:0 -5px 0 #75a4d8,0 -10px 0 #a0c2e7;}
+#institutionalTrend .credit-short-icon::before{left:6px;top:7px;width:14px;height:12px;border:2px solid #4e86c7;border-radius:50%;box-sizing:border-box;}
+#institutionalTrend .credit-short-icon::after{left:12px;top:10px;width:2px;height:8px;background:#4e86c7;transform:rotate(-38deg);border-radius:2px;}
+#institutionalTrend .credit-sbl-icon::before{left:7px;top:7px;width:12px;height:12px;border:2px solid #4e86c7;border-radius:3px;box-sizing:border-box;}
+#institutionalTrend .credit-sbl-icon::after{left:11px;top:12px;width:10px;height:2px;background:#4e86c7;border-radius:2px;box-shadow:4px 4px 0 #75a4d8;}
+#institutionalTrend .credit-trading-card header small{font-style:normal!important;font-size:10px!important;font-weight:800!important;padding:3px 7px!important;border-radius:999px!important;background:#fff!important;color:#5e7f9f!important;border:1px solid #d6e1ec!important;white-space:nowrap!important;}
+#institutionalTrend .credit-trading-rows{margin-top:auto!important;border-top:1px solid #d9e3ef!important;}
+#institutionalTrend .credit-trading-rows>div{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;min-height:35px!important;padding:0!important;border-top:0!important;border-bottom:1px solid #d9e3ef!important;}
+#institutionalTrend .credit-trading-rows>div:last-child{border-bottom:0!important;}
+#institutionalTrend .credit-trading-rows span{color:#8a9aab!important;font-size:11px!important;white-space:nowrap!important;}
+#institutionalTrend .credit-trading-rows b{min-width:0!important;color:#20334d!important;font-size:12px!important;font-weight:800!important;white-space:nowrap!important;text-align:right!important;font-variant-numeric:tabular-nums!important;letter-spacing:-.015em!important;}
+#institutionalTrend .credit-trading-rows b.flow-up{color:#1b9365!important;}
+#institutionalTrend .credit-trading-rows b.flow-down{color:#d05265!important;}
+@media(max-width:760px){#institutionalTrend .credit-trading-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;}#institutionalTrend .credit-trading-card{padding:11px 10px 10px!important;}#institutionalTrend .credit-trading-title{font-size:13px!important;gap:6px!important;}#institutionalTrend .credit-mini-icon{width:26px!important;height:26px!important;flex-basis:26px!important;}#institutionalTrend .credit-trading-card header small{font-size:9px!important;padding:3px 6px!important;}#institutionalTrend .credit-trading-rows span{font-size:10.5px!important;}#institutionalTrend .credit-trading-rows b{font-size:11px!important;}}
+
+/* System judgement now mirrors 基本面評語: divider + caption + text, no small card. */
+#institutionalTrend .institutional-comment{margin-top:12px!important;padding-top:12px!important;border-top:1px solid #edf2f7!important;}
+#institutionalTrend .institutional-comment small{display:block!important;color:#7c8da2!important;font-size:11px!important;line-height:1.45!important;}
+#institutionalTrend .institutional-comment strong{display:block!important;margin-top:5px!important;color:#13233a!important;font-size:13px!important;line-height:1.65!important;font-weight:700!important;}
+@media(max-width:720px){#institutionalTrend .institutional-comment strong{font-size:12px!important;}}
+
+/* 建議玩法：改用指南針策略 icon；尺寸、色彩、線重沿用主題標題 icon 規格。 */
+.theme-icon-playstyle{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='16' cy='16' r='11'/%3E%3Cpath d='M20.5 11.5 18 18l-6.5 2.5L14 14z'/%3E%3Ccircle cx='16' cy='16' r='1.4'/%3E%3Cpath d='M16 3v2M29 16h-2M16 29v-2M3 16h2'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='16' cy='16' r='11'/%3E%3Cpath d='M20.5 11.5 18 18l-6.5 2.5L14 14z'/%3E%3Ccircle cx='16' cy='16' r='1.4'/%3E%3Cpath d='M16 3v2M29 16h-2M16 29v-2M3 16h2'/%3E%3C/g%3E%3C/svg%3E")!important;
 }
 </style>

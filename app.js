@@ -781,16 +781,8 @@ function fundamentalComment(assessment){
   return `${company}，${continuation}${tail}。`;
 }
 function renderFundamentalOverview(){
-  const host=$("fundamentalOverviewChip");
-  if(!host) return;
   if(!latestFundamentalData){resetFundamentalOverview("資料待補");return}
   const fund=longQuantitativeFundamentals(latestValuationData||{}), assessment=buildFundamentalAssessment(fund,latestValuationData||{}), data=latestFundamentalData||{}, off=data?.officialStatement||null, monthly=data?.monthlyRevenue||null, latest=fund.latest||{};
-  const chip=$("fundamentalOverviewChip");
-  if(chip){
-    chip.classList.remove("is-good","is-watch","is-weak");
-    chip.textContent=assessment.companyQuality>=78?"營運強":assessment.companyQuality>=64?"營運佳":assessment.companyQuality>=50?"營運普通":"營運偏弱";
-    chip.classList.add(assessment.companyQuality>=64?"is-good":assessment.companyQuality>=50?"is-watch":"is-weak");
-  }
   setText("fundamentalEpsYoy", fund?.yoyEps?.available && Number.isFinite(fund?.yoyEps?.pct) ? signedPercent(fund.yoyEps.pct) : "--");
   setText("fundamentalEpsDetail", `QoQ ${fund?.qoqEps?.available && Number.isFinite(fund?.qoqEps?.pct) ? signedPercent(fund.qoqEps.pct) : "--"}${fund?.ttmPair?.available && Number.isFinite(fund?.ttmPair?.pct) ? `｜TTM ${signedPercent(fund.ttmPair.pct)}` : ""}`);
 
@@ -2700,7 +2692,7 @@ async function loadTechnical(data){
     const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(code)!==curCode)return;
     latestHistory5Y=hraw?markSystemStress(hraw):null;const a=t.analysis||{},price=Number(data?.last??data?.price??data?.regularMarketPrice),historyRows=(latestHistory5Y?.history?.length?latestHistory5Y.history:stageHistory(t));
     latestTechnicalPersonality=calculateStockPersonality(historyRows);latestTechnicalSeasonality=seasonality5Y(historyRows);latestTechnicalDirection=calculateTechnicalDirection(t,price,latestTechnicalPersonality,latestTechnicalSeasonality);
-    setText("technicalSource",`Yahoo｜${t.updatedAt||"--"}${latestHistory5Y?.history?.length?`｜5年 ${latestHistory5Y.history.length}筆`:""}`);
+    setText("technicalSource",t.updatedAt||"--");
     techSet("techState",latestTechnicalDirection?.direction||"--",latestTechnicalDirection?.tone);updateTechnicalOverview(latestTechnicalDirection,null);
     const stateIcon=document.querySelector('#technical .tech-state-icon');if(stateIcon)stateIcon.textContent=latestTechnicalDirection?.direction==='偏多'?'↑':latestTechnicalDirection?.direction==='偏空'?'↓':'↔';
     setText("overviewTechnicalState",latestTechnicalDirection?.direction||"--");
@@ -2725,7 +2717,7 @@ async function loadTechnical(data){
     const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${latestTechnicalDirection?.tone||"neutral"}`);}
     updateTechnicalOverview(latestTechnicalDirection,null);
     renderFiveStage(t,price);
-  }catch(e){console.warn("技術資料更新失敗",e);latestTechnicalDirection=null;latestTechnicalPersonality=null;latestTechnicalSeasonality=null;setText("technicalSource","Yahoo｜取得失敗");resetFiveStage("技術資料取得失敗")}
+  }catch(e){console.warn("技術資料更新失敗",e);latestTechnicalDirection=null;latestTechnicalPersonality=null;latestTechnicalSeasonality=null;setText("technicalSource","--");resetFiveStage("技術資料取得失敗")}
 }
 async function valuation(query,market,price){
   const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});
@@ -3059,16 +3051,17 @@ function resetInstitutional(note="等待資料"){
   setText("institutionalAsOf","TWSE／TPEx 官方資料");
   for(const key of ["Foreign","Trust","Dealer","Total"]){for(const d of [1,5,10,20])setInstitutionalFlow(`institutional${key}${d}`,null);setText(`institutional${key}Streak`,note);const state=$(`institutional${key}State`);if(state){state.textContent="--";state.className="tone-neutral"}}
   const streak=$("institutionalStreakList");if(streak)streak.innerHTML=`<span>${note}</span>`;
-  setText("institutionalJudgement",note==="讀取中"?"正在讀取官方法人資料…":"搜尋股票後顯示法人籌碼方向。");
+  const creditJudgement=resetCreditTrading(note);
+  setText("institutionalJudgement",note==="讀取中"?"正在讀取官方法人與信用交易資料…":`搜尋股票後顯示法人與信用籌碼方向。 ${creditJudgement}`);
   setText("institutionalSource","資料來源：TWSE／TPEx 官方公開資料");
-  resetCreditTrading(note);
 }
 function creditTradingValue(v){return v===null||v===undefined?"--":institutionalFmtShares(v)}
 function setCreditFlow(id,v){const el=$(id);if(!el)return;el.textContent=creditTradingValue(v);el.classList.remove("flow-up","flow-down");const cls=institutionalSignClass(v);if(cls)el.classList.add(cls)}
 function resetCreditTrading(note="等待資料"){
   setText("creditTradingAsOf",note);const chip=$("creditTradingSignal");if(chip){chip.textContent=note;chip.className="tone-neutral"}
   for(const key of ["Margin1","MarginBalance","Margin5","Margin10","Margin20","Short1","ShortBalance","Short5","Short10","Short20","SblSell","SblBalance","Sbl5","Sbl10","Sbl20"])setCreditFlow(`credit${key}`,null);
-  setText("creditMarginUsage","使用率 --");setText("creditShortRatio","券資比 --");setText("creditSblReturn","今日還券 --");setText("creditTradingJudgement",note==="讀取中"?"正在讀取信用交易資料…":"等待信用交易歷史資料。");
+  setText("creditMarginUsage","使用率 --");setText("creditShortRatio","券資比 --");setText("creditSblReturn","今日還券 --");
+  return note==="讀取中"?"信用籌碼正在讀取中。":`信用籌碼：${note||"資料暫缺"}。`;
 }
 function renderCreditTrading(c){
   if(!c?.available)return resetCreditTrading(c?.signal?.label||"資料暫缺");
@@ -3081,7 +3074,8 @@ function renderCreditTrading(c){
   setText("creditShortRatio",Number.isFinite(Number(latest.short_margin_ratio))?`券資比 ${Number(latest.short_margin_ratio).toFixed(1)}%`:"券資比 --");
   setText("creditSblReturn",latest.sbl_return===null||latest.sbl_return===undefined?"今日還券 --":`今日還券 ${institutionalFmtShares(latest.sbl_return)}`);
   const sig=c.signal||{},chip=$("creditTradingSignal");if(chip){chip.textContent=sig.label||"中性";chip.className=sig.tone==="good"?"tone-good":sig.tone==="bad"?"tone-bad":sig.tone==="watch"?"tone-watch":"tone-neutral"}
-  const reasons=Array.isArray(sig.reasons)&&sig.reasons.length?sig.reasons.join("；"):"信用籌碼目前沒有明顯異常組合";setText("creditTradingJudgement",`${sig.label||"中性"}｜${reasons}。`);
+  const reasons=Array.isArray(sig.reasons)&&sig.reasons.length?sig.reasons.join("；"):"目前沒有明顯異常組合";
+  return `信用籌碼：${sig.label||"中性"}｜${reasons}。`;
 }
 function institutionalChipTone(label){const s=String(label||"");return /偏多/.test(s)?"tone-up":/偏空/.test(s)?"tone-down":s==="中性"?"tone-watch":""}
 function renderInstitutional(data){
@@ -3108,9 +3102,9 @@ function renderInstitutional(data){
       const dir=st?.direction==="buy"?"flow-up":st?.direction==="sell"?"flow-down":"";if(dir)tag.classList.add(dir);host.append(tag);
     }
   }
-  setText("institutionalJudgement",institutionalSystemJudgement(data,label,strength));
+  const creditJudgement=renderCreditTrading(data.creditTrading);
+  setText("institutionalJudgement",`${institutionalSystemJudgement(data,label,strength)} ${creditJudgement}`);
   setText("institutionalSource",`資料來源：${data.source||"TWSE／TPEx 官方公開資料"}`);
-  renderCreditTrading(data.creditTrading);
 }
 
 async function institutional(query,market="",force=false){
