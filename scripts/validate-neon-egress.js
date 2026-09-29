@@ -11,7 +11,9 @@ const enrich=fs.readFileSync('lib/business-enrichment.js','utf8');
 const vercel=JSON.parse(fs.readFileSync('vercel.json','utf8'));
 
 assert(quote.includes('function liveStockHint(query,marketHint="")'));
-assert(quote.includes('mode==="live"?(liveStockHint(query,marketHint)||await resolveStock(query,marketHint))'));
+assert(quote.includes('const numericHint=liveStockHint(query,marketHint);'));
+assert(quote.includes('result=await yahooFor();'));
+assert(!quote.includes('fetchOfficialPrevious('));
 for(const view of ['overview','browser'])assert(app.includes(`/api/fundflow?view=${view}`));
 assert(!app.includes('/api/fundflow?view=detail'),'focus/click must never issue a detail API request');
 assert(!api.includes("view==='detail'")&&!api.includes("view==='fundflow-detail'"),'public fundflow API must not expose legacy detail route');
@@ -22,7 +24,7 @@ assert(core.includes("const FEATURE_VERSION = 'feature-2.0.0-x20raw20-y5-activat
 assert(core.includes("const PATH_MODEL_VERSION = 'path-2.0.0-axis-evidence-nearest-trajectory'"));
 assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.7.0-focuspack-path20'"));
 assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.7.0-compact-path-audit'"));
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.36"'));
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.37"'));
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('));assert(!snap.includes('loadEngineInputs('));
@@ -58,4 +60,4 @@ assert(enrich.includes('DELETE FROM market_business_xy2_topic_daily')&&enrich.in
 assert(!enrich.includes('DELETE FROM market_business_xy_daily'));
 assert(db.includes('pg_database_size(current_database())'));assert(db.includes('pg_total_relation_size(rel)'));assert(db.includes('pruneEnabled:false'));assert(db.includes('idealMb:50,maxMb:100'));
 assert(db.includes("market_business_xy2_topic_daily:'clean-topic-history-to-500d'"));assert(db.includes("market_business_xy_daily:'legacy-derived-delete-after-verified-clean-cutover'"));
-console.log('PASS validate-neon-egress — .36 zero-query focus, persisted compact Path audit, payload-light state probe, no raw validation scan');
+console.log('PASS validate-neon-egress — .37 browser-storage + zero-query focus, persisted compact Path audit, payload-light state probe, no raw validation scan');

@@ -16,7 +16,7 @@ if(app.includes('loadFundflowCoverage'))errors.push('retired fundflow coverage/s
 if(html.includes('虛線：模型傾向'))errors.push('old projected legend text still visible');
 if(html.includes('data-fundflow-scope="finance"'))errors.push('finance scope should be merged into traditional');
 if(html.includes('data-fundflow-scope="all"'))errors.push('top-level all-business scope should be removed');
-for(const token of ['new Set(["technology-upstream","technology-midstream","technology-downstream","electronics-product"])','fundflowScopes.size===1','fundflowScopes.delete(key)','fundflowScopes.add(key)']) if(!app.includes(token))errors.push(`multi-select classification rule missing: ${token}`);
+for(const token of ['["technology-upstream","technology-midstream","technology-downstream","electronics-product"]','fundflowScopes.size===1','fundflowScopes.delete(key)','fundflowScopes.add(key)','saveFundflowSession']) if(!app.includes(token))errors.push(`multi-select/session classification rule missing: ${token}`);
 
 if(app.includes('/api/fundflow?view=detail'))errors.push('focused topic still fetches Neon detail endpoint');
 for(const token of ['if(fundflowSelectedTagId===id){fundflowClearSelection();return;}','groups=selected?[selected]:allGroups','FUND_FLOW_HOLD_MS=5000','fundflowPartialPolyline(rawPts,anim.history)','zeroNeonFocus:true'])if(!app.includes(token))errors.push(`missing .36 focus/animation rule: ${token}`);
@@ -25,7 +25,7 @@ if(errors.length){console.error('Fundflow UI validation FAILED');for(const e of 
 assert(app.includes('function fundflowBusinessUniverse()'),'full business-universe helper missing');
 assert(app.includes('業務 ${universe.length}｜可畫 XY ${base.length}｜待法人 X ${pendingX}'),'UI must expose business universe vs true XY coverage');
 assert(app.includes('key==="all"?String(universe.length):String(counts[key]??0)'),'All-path control must show the full business-universe count instead of only XY-eligible businesses');
-console.log(`Fundflow UI v2.6.5.36 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
+console.log(`Fundflow UI v2.6.5.37 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
 
 assert(html.includes('max-height:calc(100dvh'),'settings modal must have a viewport-bounded scroll height');
 assert(html.includes('overflow-y:auto!important'),'settings modal must scroll on mobile');

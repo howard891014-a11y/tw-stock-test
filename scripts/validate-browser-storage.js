@@ -1,0 +1,24 @@
+const fs=require('fs');
+const assert=require('assert');
+const app=fs.readFileSync('app.js','utf8');
+const targets=fs.readFileSync('api/targets.js','utf8');
+const sync=fs.readFileSync('api/sync-status.js','utf8');
+
+for(const token of ['indexedDB.open(STOCKZONE_IDB_NAME','"marketCache"','"fundflowCache"','"quoteCache"','"simulation"'])assert(app.includes(token),`IndexedDB storage missing ${token}`);
+assert(app.includes('sessionStorage.getItem'),'sessionStorage read layer missing');
+assert(app.includes('sessionStorage.setItem'),'sessionStorage write layer missing');
+assert(app.includes('history5y:'),'5Y history must use IndexedDB marketCache');
+assert(app.includes('fundamentals:'),'fundamentals must use IndexedDB marketCache');
+assert(app.includes('institutional:'),'institutional cache must use IndexedDB marketCache');
+assert(app.includes('technical:'),'technical cache must use IndexedDB marketCache');
+assert(app.includes('fundflowLocalCacheKey'),'fundflow prepared snapshot must have IndexedDB cache key');
+assert(app.includes('writeFundflowLocalCache("overview"'),'fundflow overview must persist to IndexedDB');
+assert(app.includes('writeFundflowLocalCache("browser"'),'fundflow browser must persist to IndexedDB');
+assert(app.includes('FUND_FLOW_SESSION_KEY'),'fundflow tab state must use sessionStorage');
+assert(app.includes('UI_SESSION_KEY'),'current view must use sessionStorage');
+assert(app.includes('phase.weekend||phase.phase==="pre"||session?.status==="holiday"'),'background quote refresh must stop on weekends/holidays/pre-open');
+assert(app.includes('String(base.quoteCloseCycle||"")!==phase.date'),'after-close watchlist quote must update at most once per day');
+assert(targets.includes('public, s-maxage=600, stale-while-revalidate=3600'),'target prices must share CDN cache across devices');
+assert(sync.includes('async function yahooTradingDayProbe()'),'weekday holiday cron guard missing');
+assert(sync.includes("reason:'holiday-no-market-update'"),'holiday cron must skip market updates');
+console.log('PASS validate-browser-storage — IndexedDB + sessionStorage + daily close/holiday scheduling present');
