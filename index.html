@@ -2522,7 +2522,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.38</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.39</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3168,18 +3168,12 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 </div>
               </section>
             </div>
-            <div class="institutional-detail-grid">
-              <section class="institutional-detail-card">
-                <div class="institutional-detail-title"><span>連續性</span><small>最新交易日起算</small></div>
-                <div class="institutional-streak-list" id="institutionalStreakList"><span>搜尋股票後載入法人資料。</span></div>
-              </section>
-            </div>
             <section class="credit-trading-section" aria-label="信用交易">
-              <div class="credit-trading-head"><div><strong>信用交易</strong><small id="creditTradingAsOf">等待同步</small></div><em id="creditTradingSignal" class="tone-neutral">資料暫缺</em></div>
+              <div class="credit-trading-head"><div><strong>信用交易</strong><small id="creditTradingAsOf">等待同步</small></div></div>
               <div class="credit-trading-grid">
-                <section class="credit-trading-card" data-credit-card="margin"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-margin-icon" aria-hidden="true"></span><span>融資</span></div><small id="creditMarginUsage">使用率 --</small></header><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditMargin1">--</b></div><div><span>融資餘額</span><b id="creditMarginBalance">--</b></div><div><span>5日變化</span><b id="creditMargin5">--</b></div><div><span>10日變化</span><b id="creditMargin10">--</b></div><div><span>20日變化</span><b id="creditMargin20">--</b></div></div></section>
-                <section class="credit-trading-card" data-credit-card="short"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-short-icon" aria-hidden="true"></span><span>融券</span></div><small id="creditShortRatio">券資比 --</small></header><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditShort1">--</b></div><div><span>融券餘額</span><b id="creditShortBalance">--</b></div><div><span>5日變化</span><b id="creditShort5">--</b></div><div><span>10日變化</span><b id="creditShort10">--</b></div><div><span>20日變化</span><b id="creditShort20">--</b></div></div></section>
-                <section class="credit-trading-card" data-credit-card="sbl"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-sbl-icon" aria-hidden="true"></span><span>借券賣出</span></div><small id="creditSblReturn">今日還券 --</small></header><div class="credit-trading-rows"><div><span>今日賣出</span><b id="creditSblSell">--</b></div><div><span>借券餘額</span><b id="creditSblBalance">--</b></div><div><span>5日變化</span><b id="creditSbl5">--</b></div><div><span>10日變化</span><b id="creditSbl10">--</b></div><div><span>20日變化</span><b id="creditSbl20">--</b></div></div></section>
+                <section class="credit-trading-card" data-credit-card="margin"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-margin-icon" aria-hidden="true"></span><span>融資</span></div></header><p id="creditMarginUsage">使用率 --</p><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditMargin1">--</b></div><div><span>融資餘額</span><b id="creditMarginBalance">--</b></div><div><span>5日變化</span><b id="creditMargin5">--</b></div><div><span>10日變化</span><b id="creditMargin10">--</b></div><div><span>20日變化</span><b id="creditMargin20">--</b></div></div></section>
+                <section class="credit-trading-card" data-credit-card="short"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-short-icon" aria-hidden="true"></span><span>融券</span></div></header><p id="creditShortRatio">券資比 --</p><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditShort1">--</b></div><div><span>融券餘額</span><b id="creditShortBalance">--</b></div><div><span>5日變化</span><b id="creditShort5">--</b></div><div><span>10日變化</span><b id="creditShort10">--</b></div><div><span>20日變化</span><b id="creditShort20">--</b></div></div></section>
+                <section class="credit-trading-card" data-credit-card="sbl"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-sbl-icon" aria-hidden="true"></span><span>借券賣出</span></div></header><p id="creditSblReturn">今日還券 --</p><div class="credit-trading-rows"><div><span>今日賣出</span><b id="creditSblSell">--</b></div><div><span>借券餘額</span><b id="creditSblBalance">--</b></div><div><span>5日變化</span><b id="creditSbl5">--</b></div><div><span>10日變化</span><b id="creditSbl10">--</b></div><div><span>20日變化</span><b id="creditSbl20">--</b></div></div></section>
               </div>
             </section>
             <div class="institutional-comment">
@@ -3314,7 +3308,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.38"></script>
+  <script src="./app.js?v=2.6.5.39"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5294,5 +5288,50 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"] .hero-value{
 .theme-icon-playstyle{
   -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='16' cy='16' r='11'/%3E%3Cpath d='M20.5 11.5 18 18l-6.5 2.5L14 14z'/%3E%3Ccircle cx='16' cy='16' r='1.4'/%3E%3Cpath d='M16 3v2M29 16h-2M16 29v-2M3 16h2'/%3E%3C/g%3E%3C/svg%3E")!important;
   mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='16' cy='16' r='11'/%3E%3Cpath d='M20.5 11.5 18 18l-6.5 2.5L14 14z'/%3E%3Ccircle cx='16' cy='16' r='1.4'/%3E%3Cpath d='M16 3v2M29 16h-2M16 29v-2M3 16h2'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+</style>
+<style id="stockzone-v26539-ui-polish">
+/* v2.6.5.39 — UI-only polish on .38; no data/model/cache behavior changes. */
+
+/* Resonance strength uses Technical date-pill geometry; Technical date adopts Resonance neutral palette. */
+#technical .card-title #technicalSource,
+#overviewResonanceCard .overview-strength-chip{
+  display:inline-flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:auto!important;
+  min-width:0!important;
+  height:auto!important;
+  padding:4px 8px!important;
+  border:1px solid #e6edf5!important;
+  border-radius:20px!important;
+  background:linear-gradient(180deg,#ffffff,#f8fbff)!important;
+  box-shadow:none!important;
+  white-space:nowrap!important;
+}
+#technical .card-title #technicalSource,
+#overviewResonanceCard .overview-strength-chip strong{
+  font-size:10px!important;
+  font-weight:400!important;
+  line-height:1.2!important;
+  color:#7C8DA2!important;
+  letter-spacing:0!important;
+}
+
+/* Credit metrics become institutional-style subtitles instead of header pills. */
+#institutionalTrend .credit-trading-head{justify-content:flex-start!important;}
+#institutionalTrend .credit-trading-card header{justify-content:flex-start!important;margin-bottom:8px!important;}
+#institutionalTrend .credit-trading-title>span:last-child{white-space:nowrap!important;}
+#institutionalTrend .credit-trading-card>p{
+  margin:0 0 8px!important;
+  min-height:32px!important;
+  color:#65788f!important;
+  font-size:11px!important;
+  line-height:1.45!important;
+  font-weight:400!important;
+}
+@media(max-width:760px){
+  #institutionalTrend .credit-trading-card>p{font-size:10px!important;min-height:30px!important;}
 }
 </style>
