@@ -2522,7 +2522,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.39</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.40</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3111,7 +3111,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <article class="card detail-panel institutional-trend-card" id="institutionalTrend" data-view-panel="targets">
           <div class="card-title theme-white-card-title">
             <span class="theme-title-group"><i class="theme-title-icon theme-icon-institutional" aria-hidden="true"></i><span>法人動向</span></span>
-            <span class="institutional-head-meta"><b id="institutionalSignalChip">等待資料</b><b class="institutional-strength-chip tone-neutral" id="institutionalStrengthChip">法人強度 --/100</b><small id="institutionalAsOf">TWSE／TPEx 官方資料</small></span>
+            <span class="institutional-head-meta"><small id="institutionalAsOf">TWSE／TPEx 官方資料</small></span>
           </div>
           <div class="institutional-trend-body" aria-label="法人動向內容區">
             <div class="institutional-flow-grid">
@@ -3169,7 +3169,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
               </section>
             </div>
             <section class="credit-trading-section" aria-label="信用交易">
-              <div class="credit-trading-head"><div><strong>信用交易</strong><small id="creditTradingAsOf">等待同步</small></div></div>
               <div class="credit-trading-grid">
                 <section class="credit-trading-card" data-credit-card="margin"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-margin-icon" aria-hidden="true"></span><span>融資</span></div></header><p id="creditMarginUsage">使用率 --</p><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditMargin1">--</b></div><div><span>融資餘額</span><b id="creditMarginBalance">--</b></div><div><span>5日變化</span><b id="creditMargin5">--</b></div><div><span>10日變化</span><b id="creditMargin10">--</b></div><div><span>20日變化</span><b id="creditMargin20">--</b></div></div></section>
                 <section class="credit-trading-card" data-credit-card="short"><header><div class="credit-trading-title"><span class="credit-mini-icon credit-short-icon" aria-hidden="true"></span><span>融券</span></div></header><p id="creditShortRatio">券資比 --</p><div class="credit-trading-rows"><div><span>今日增減</span><b id="creditShort1">--</b></div><div><span>融券餘額</span><b id="creditShortBalance">--</b></div><div><span>5日變化</span><b id="creditShort5">--</b></div><div><span>10日變化</span><b id="creditShort10">--</b></div><div><span>20日變化</span><b id="creditShort20">--</b></div></div></section>
@@ -3179,8 +3178,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div class="institutional-comment">
               <small>系統判讀</small><strong id="institutionalJudgement">搜尋股票後顯示法人與信用籌碼方向。</strong>
             </div>
-            <div class="institutional-source-note"><span id="institutionalSource">資料來源：TWSE／TPEx 官方公開資料</span><span>單位：官方原始股數</span></div>
-          </div>
+                      </div>
         </article>
 
         <article class="card targets-card detail-panel target-b-card" id="targets" data-view-panel="targets">
@@ -3308,7 +3306,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.39"></script>
+  <script src="./app.js?v=2.6.5.40"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5334,4 +5332,91 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"] .hero-value{
 @media(max-width:760px){
   #institutionalTrend .credit-trading-card>p{font-size:10px!important;min-height:30px!important;}
 }
+</style>
+<style id="stockzone-v26540-institutional-cleanup">
+/* v2.6.5.40 — 法人頁資訊去重、日期 pill 統一、融資/融券/投信 icon 重畫。UI-only. */
+
+/* 法人頁右側日期：完全比照技術分析日期標籤。 */
+#institutionalTrend .institutional-head-meta{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:0!important;
+  flex-wrap:nowrap!important;
+  width:auto!important;
+}
+#institutionalTrend #institutionalAsOf{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:auto!important;
+  min-width:0!important;
+  height:auto!important;
+  padding:4px 8px!important;
+  border:1px solid #e6edf5!important;
+  border-radius:20px!important;
+  background:linear-gradient(180deg,#ffffff,#f8fbff)!important;
+  box-shadow:none!important;
+  color:#7C8DA2!important;
+  font-size:10px!important;
+  font-weight:400!important;
+  line-height:1.2!important;
+  letter-spacing:0!important;
+  white-space:nowrap!important;
+}
+@media(max-width:520px){
+  #institutionalTrend .institutional-head-meta{width:auto!important;justify-content:flex-end!important;}
+}
+
+/* 信用交易標題列已移除，三張信用卡直接承接法人卡片區。 */
+#institutionalTrend .credit-trading-section{margin-top:12px!important;padding-top:12px!important;}
+
+/* 重新繪製 icon：同尺寸、同底色、同藍色線性語彙。 */
+#institutionalTrend .inst-trust::before{
+  content:""!important;
+  position:absolute!important;
+  inset:5px!important;
+  width:auto!important;
+  height:auto!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#4e86c7!important;
+  transform:none!important;
+  box-shadow:none!important;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 19V8.5M9.5 19v-6M14 19V5M18.5 19v-9'/%3E%3Cpath d='M4 19.5h16'/%3E%3Cpath d='m5 10 4-3 4 2 6-5'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 19V8.5M9.5 19v-6M14 19V5M18.5 19v-9'/%3E%3Cpath d='M4 19.5h16'/%3E%3Cpath d='m5 10 4-3 4 2 6-5'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;
+}
+#institutionalTrend .inst-trust::after{content:none!important;}
+
+#institutionalTrend .credit-margin-icon::before{
+  content:""!important;
+  position:absolute!important;
+  inset:5px!important;
+  width:auto!important;
+  height:auto!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#4e86c7!important;
+  box-shadow:none!important;
+  transform:none!important;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='9' cy='15.5' rx='5' ry='2.5'/%3E%3Cpath d='M4 15.5v3c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-3'/%3E%3Cpath d='M17.5 4.5v7M14 8h7'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='9' cy='15.5' rx='5' ry='2.5'/%3E%3Cpath d='M4 15.5v3c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-3'/%3E%3Cpath d='M17.5 4.5v7M14 8h7'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;
+}
+#institutionalTrend .credit-margin-icon::after{content:none!important;}
+
+#institutionalTrend .credit-short-icon::before{
+  content:""!important;
+  position:absolute!important;
+  inset:5px!important;
+  width:auto!important;
+  height:auto!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#4e86c7!important;
+  box-shadow:none!important;
+  transform:none!important;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='10' height='16' rx='2'/%3E%3Cpath d='M7 8h4M7 12h3'/%3E%3Cpath d='M18 7v10M15 14l3 3 3-3'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='10' height='16' rx='2'/%3E%3Cpath d='M7 8h4M7 12h3'/%3E%3Cpath d='M18 7v10M15 14l3 3 3-3'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;
+}
+#institutionalTrend .credit-short-icon::after{content:none!important;}
 </style>

@@ -3037,12 +3037,11 @@ function institutionalDominantActor(data){
   if(!rows.length)return "";rows.sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));return rows[0][0];
 }
 function institutionalSystemJudgement(data,label,strength){
-  const phrases=[["foreign","外資"],["trust","投信"],["dealer","自營商"]].map(([key,name])=>`${name}${institutionalActorComment(data,key).replace(/。$/,'')}`);
   const signs=["foreign","trust","dealer"].map(key=>Math.sign(institutionalActorScore(data,key))).filter(Boolean),aligned=signs.length>=2&&signs.every(x=>x===signs[0]);
   const dominant=institutionalDominantActor(data),coverage=Number(data?.historyCount)||0;
   const alignment=aligned?`三類法人方向一致${dominant?`，目前以${dominant}的累計買賣超規模最大`:""}`:`三類法人仍有分歧${dominant?`，目前${dominant}的累計變化最明顯`:""}`;
   const coverageNote=coverage<20?`目前取得 ${coverage} 個交易日，較長週期不足時不納入判讀。`:`已取得近20個交易日。`;
-  return `${label}｜法人強度 ${strength}/100。${phrases.join("；")}。${alignment}。${coverageNote}`;
+  return `${alignment}。${coverageNote}`;
 }
 function resetInstitutional(note="等待資料"){
   latestInstitutionalData=null;
