@@ -39,6 +39,52 @@ async function readJson(res,label){
   if(!res.ok || data?.ok===false) throw new Error(data?.error||`${label}查詢失敗（HTTP ${res.status}）`);
   return data;
 }
+
+// Browser storage v1: large/reusable caches go to IndexedDB; transient tab state goes to sessionStorage.
+const STOCKZONE_IDB_NAME="stockzone-cache-v1",STOCKZONE_IDB_VERSION=1;
+const STOCKZONE_IDB_STORES=["marketCache","fundflowCache","quoteCache","simulation"];
+let stockzoneIdbPromise=null;
+function stockzoneIdbOpen(){
+  if(!("indexedDB" in window))return Promise.resolve(null);
+  if(stockzoneIdbPromise)return stockzoneIdbPromise;
+  stockzoneIdbPromise=new Promise(resolve=>{
+    try{
+      const req=indexedDB.open(STOCKZONE_IDB_NAME,STOCKZONE_IDB_VERSION);
+      req.onupgradeneeded=()=>{const db=req.result;for(const name of STOCKZONE_IDB_STORES)if(!db.objectStoreNames.contains(name))db.createObjectStore(name)};
+      req.onsuccess=()=>resolve(req.result);req.onerror=()=>resolve(null);req.onblocked=()=>resolve(null);
+    }catch{resolve(null)}
+  });
+  return stockzoneIdbPromise;
+}
+async function stockzoneIdbGet(store,key){
+  const db=await stockzoneIdbOpen();if(!db)return null;
+  return await new Promise(resolve=>{try{const tx=db.transaction(store,"readonly"),req=tx.objectStore(store).get(key);req.onsuccess=()=>resolve(req.result??null);req.onerror=()=>resolve(null)}catch{resolve(null)}});
+}
+async function stockzoneIdbPut(store,key,value){
+  const db=await stockzoneIdbOpen();if(!db)return false;
+  return await new Promise(resolve=>{try{const tx=db.transaction(store,"readwrite");tx.objectStore(store).put(value,key);tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false);tx.onabort=()=>resolve(false)}catch{resolve(false)}});
+}
+async function stockzoneIdbDelete(store,key){
+  const db=await stockzoneIdbOpen();if(!db)return false;
+  return await new Promise(resolve=>{try{const tx=db.transaction(store,"readwrite");tx.objectStore(store).delete(key);tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false);tx.onabort=()=>resolve(false)}catch{resolve(false)}});
+}
+function readSessionJson(key,fallback=null){try{const raw=sessionStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch{return fallback}}
+function writeSessionJson(key,value){try{sessionStorage.setItem(key,JSON.stringify(value))}catch{}}
+async function migrateLegacyLargeCaches(){
+  const plans=[
+    {key:"stockzone_history5y_v2591",prefix:"history5y:",mapKey:k=>k},
+    {key:"stockzone_fundamentals_v26123",prefix:"fundamentals:",mapKey:k=>k},
+    {key:"stockzone_institutional_v26210",prefix:"institutional:",mapKey:k=>String(k).split("|")[0]}
+  ];
+  for(const plan of plans){
+    let obj=null;try{obj=JSON.parse(localStorage.getItem(plan.key)||"null")}catch{}
+    if(!obj||typeof obj!=="object")continue;
+    let moved=0;
+    for(const [k,v] of Object.entries(obj)){if(!v?.data)continue;const ok=await stockzoneIdbPut("marketCache",`${plan.prefix}${plan.mapKey(k)}`,v);if(ok)moved++}
+    if(moved){try{localStorage.removeItem(plan.key)}catch{}}
+  }
+}
+void migrateLegacyLargeCaches();
 const LOCAL_STOCK_META={
   "1595":{code:"1595",name:"川寶",market:"上櫃",symbol:"1595.TWO"},"川寶":{code:"1595",name:"川寶",market:"上櫃",symbol:"1595.TWO"},
   "6187":{code:"6187",name:"萬潤",market:"上櫃",symbol:"6187.TWO"},"萬潤":{code:"6187",name:"萬潤",market:"上櫃",symbol:"6187.TWO"},
@@ -99,13 +145,36 @@ function mergeStockMeta(data,meta){
   return {...data,code:meta.code||data?.code||data?.symbol,symbol:data?.symbol||meta.symbol||meta.code,name:name||meta.name||data?.name||data?.shortName,shortName:name||meta.name||data?.shortName||data?.name,market:meta.market||data?.market||data?.marketLabel,marketLabel:meta.market||data?.marketLabel||data?.market,industry};
 }
 
+const MARKET_SESSION_STORAGE_KEY="stockzone_market_session_v2637";
+let marketNextProbeAt=0;
 function taipeiMarketClock(now=new Date()){
-  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Taipei",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(now).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
-  return{weekday:parts.weekday||"",minutes:Number(parts.hour||0)*60+Number(parts.minute||0)};
+  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(now).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
+  return{date:`${parts.year}-${parts.month}-${parts.day}`,weekday:parts.weekday||"",minutes:Number(parts.hour||0)*60+Number(parts.minute||0)};
+}
+function taiwanMarketPhase(now=new Date()){
+  const c=taipeiMarketClock(now);
+  if(["Sat","Sun"].includes(c.weekday))return{...c,phase:"holiday",weekend:true};
+  if(c.minutes<9*60)return{...c,phase:"pre",weekend:false};
+  if(c.minutes<13*60+30)return{...c,phase:"live",weekend:false};
+  return{...c,phase:"post",weekend:false};
+}
+function readMarketSession(){try{return JSON.parse(localStorage.getItem(MARKET_SESSION_STORAGE_KEY)||"null")}catch{return null}}
+function writeMarketSession(state){try{localStorage.setItem(MARKET_SESSION_STORAGE_KEY,JSON.stringify(state))}catch{}}
+function marketSessionForToday(){const c=taipeiMarketClock(),s=readMarketSession();return s?.date===c.date?s:null}
+function rememberMarketSessionFromQuote(q,{allowHolidayMark=true}={}){
+  const c=taipeiMarketClock(),tradeDate=dayKey(q?.tradeDate)||dayKey(q?.quoteTime);
+  if(tradeDate===c.date){writeMarketSession({date:c.date,status:"trading",checkedAt:Date.now(),tradeDate,source:q?.source||""});return "trading"}
+  if(allowHolidayMark&&c.minutes>=9*60+5&&tradeDate&&tradeDate<c.date){writeMarketSession({date:c.date,status:"holiday",checkedAt:Date.now(),tradeDate,source:q?.source||""});return "holiday"}
+  return marketSessionForToday()?.status||"unknown";
 }
 function isTaiwanIntraday(now=new Date()){
-  const {weekday,minutes}=taipeiMarketClock(now);
-  return !["Sat","Sun"].includes(weekday)&&minutes>=9*60&&minutes<13*60+30;
+  const c=taiwanMarketPhase(now),s=marketSessionForToday();
+  return c.phase==="live"&&s?.status!=="holiday";
+}
+function shouldBackgroundQuoteUpdate(now=new Date()){
+  const c=taiwanMarketPhase(now),s=marketSessionForToday();
+  if(c.weekend||s?.status==="holiday")return false;
+  return c.phase==="live"||c.phase==="post";
 }
 function dayKey(v){
   const m=String(v||"").match(/(20\d{2})[-\/]?(\d{2})[-\/]?(\d{2})/);
@@ -141,6 +210,17 @@ async function dbCloseQuote(query,market=""){
     return payload?.ok===false?null:payload;
   }catch{return null}finally{clearTimeout(timer)}
 }
+
+function quoteCacheKey(code,market=""){return `close:${String(code||"")}:${String(market||"")}`}
+async function readLocalCloseQuote(code,market=""){
+  const row=await stockzoneIdbGet("quoteCache",quoteCacheKey(code,market));
+  return row?.data||null;
+}
+async function writeLocalCloseQuote(code,market,data){
+  if(!data)return false;
+  return stockzoneIdbPut("quoteCache",quoteCacheKey(code,market),{savedAt:Date.now(),tradeDate:dayKey(data.tradeDate)||dayKey(data.quoteTime),data});
+}
+function isTodayCloseCached(q){const c=taiwanMarketPhase();return c.phase==="post"&&dayKey(q?.tradeDate)===c.date}
 const MIS_CLOSE_VERIFY_KEY="stockzone_mis_close_verify_v26211";
 function taipeiCloseVerifyCycle(now=new Date()){
   let date="",weekday="",minutes=0;
@@ -201,7 +281,7 @@ async function yahooQuote(query,market="",options={}){
     try{
       return await readJson(
         await fetch(`/api/quote?q=${encodeURIComponent(query)}${market?`&market=${encodeURIComponent(market)}`:""}${options?.live?"&mode=live":""}`,{
-          cache:"no-store",signal:controller.signal
+          cache:options?.live?"no-store":"default",signal:controller.signal
         }),
         "股價"
       );
@@ -215,28 +295,50 @@ async function yahooQuote(query,market="",options={}){
   }
 }
 async function quote(query,market="",options={}){
-  // v2.6.5.16：盤後仍先走自己的全市場 price_snapshot；盤中則請後端優先走官方 TWSE/TPEx MIS。
-  // v2.6.5.14 的 DB-first 快速搜尋保留；Yahoo 只作盤中 MIS 或盤後 DB 缺資料時的 fallback。
-  if(!isTaiwanIntraday()){
-    const fast=await dbCloseQuote(query,market);
-    if(fast)return fast;
+  const phase=taiwanMarketPhase(),intraday=phase.phase==="live"&&marketSessionForToday()?.status!=="holiday";
+  if(intraday){
+    const live=await yahooQuote(query,market,{live:true}),c=taipeiMarketClock();
+    const state=rememberMarketSessionFromQuote(live,{allowHolidayMark:true});
+    if(state==="unknown"&&c.minutes<9*60+5){const delay=(9*60+5-c.minutes)*60*1000;marketNextProbeAt=Math.max(marketNextProbeAt,Date.now()+Math.max(30000,delay))}else marketNextProbeAt=0;
+    return live;
   }
-  const intraday=isTaiwanIntraday();
-  const yahoo=await yahooQuote(query,market,{live:intraday});
-  if(intraday)return yahoo;
+
+  const codeHint=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim();
+  if(/^\d{4,6}$/.test(codeHint)){
+    const cached=await readLocalCloseQuote(codeHint,market);
+    if(cached){
+      if(phase.weekend||marketSessionForToday()?.status==="holiday")return cached;
+      if(phase.phase==="pre")return cached;
+      if(isTodayCloseCached(cached))return cached;
+    }
+  }
+
+  let yahoo=null;
+  try{yahoo=await yahooQuote(query,market,{live:false})}catch(e){
+    const db=await dbCloseQuote(query,market);
+    if(db){const code=String(db.code||query||"").trim();if(/^\d{4,6}$/.test(code))void writeLocalCloseQuote(code,db.market||market,db);return db}
+    throw e;
+  }
   const code=String(yahoo?.code||String(yahoo?.symbol||"").split(".")[0]||query||"").trim();
-  if(!/^\d{4,6}$/.test(code))return yahoo;
-  const verifyClose=options?.verifyClose===true;
-  const dbPromise=dbCloseQuote(code,market||yahoo?.market||yahoo?.marketLabel||""),misPromise=verifyClose?misCloseQuote(code,market||yahoo?.market||yahoo?.marketLabel||""):Promise.resolve(null);
-  const [db,mis]=await Promise.all([dbPromise,misPromise]);
-  return pickAfterCloseQuote(yahoo,db,mis);
+  const marketResolved=market||yahoo?.market||yahoo?.marketLabel||"";
+  if(/^\d{4,6}$/.test(code))void writeLocalCloseQuote(code,marketResolved,yahoo);
+  const state=rememberMarketSessionFromQuote(yahoo,{allowHolidayMark:phase.phase!=="pre"});
+  if(state==="holiday")return yahoo;
+
+  // Yahoo is the normal close source. Neon price_snapshot is fallback only when Yahoo is older/unavailable.
+  if(phase.phase==="post"&&dayKey(yahoo?.tradeDate)!==phase.date){
+    const db=await dbCloseQuote(code,marketResolved);
+    const best=pickAfterCloseQuote(yahoo,db,null);
+    if(/^\d{4,6}$/.test(code))void writeLocalCloseQuote(code,best?.market||marketResolved,best);
+    return best;
+  }
+  return yahoo;
 }
 async function autoListQuote(code,market=""){
-  if(isTaiwanIntraday())return quote(code,market,{verifyClose:false});
-  const db=await dbCloseQuote(code,market);
-  if(db)return db;
-  // Neon 暫時沒有快照時才回退 Yahoo；背景清單永遠不做 MIS 核對。
-  return yahooQuote(code,market);
+  const phase=taiwanMarketPhase();
+  if(phase.weekend||marketSessionForToday()?.status==="holiday")return await readLocalCloseQuote(code,market);
+  if(phase.phase==="pre")return await readLocalCloseQuote(code,market);
+  return quote(code,market,{verifyClose:false});
 }
 
 function shortStockName(name){
@@ -313,17 +415,26 @@ async function loadDisposal(stock){
   try{const code=stock?.code||stock?.symbol||"",price=Number(stock?.last??stock?.price??stock?.regularMarketPrice);const d=await disposal(code,stock?.market||stock?.marketLabel||"",price);renderDisposal(d)}catch(e){console.warn("處置資料更新失敗",e);resetDisposal(`處置資料暫時無法取得：${e.message}`)}
 }
 async function technical(query,market){
-  const params=new URLSearchParams({q:String(query||""),market:String(market||"")});
-  return await readJson(await fetch(`/api/technical?${params.toString()}`,{cache:"no-store"}),"技術資料");
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`technical:${code}|${String(market||"")}`,phase=taiwanMarketPhase();
+  const cached=await stockzoneIdbGet("marketCache",key),holiday=phase.weekend||marketSessionForToday()?.status==="holiday",ttl=phase.phase==="live"?15*60*1000:6*60*60*1000;
+  if(cached?.data&&(holiday||Date.now()-Number(cached.savedAt||0)<ttl))return cached.data;
+  const params=new URLSearchParams({q:code,market:String(market||"")});
+  const data=await readJson(await fetch(`/api/technical?${params.toString()}`,{cache:"no-store"}),"技術資料");
+  void stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});return data;
 }
 const HISTORY5Y_CACHE_KEY="stockzone_history5y_v2591",HISTORY5Y_CACHE_MS=12*60*60*1000;
 function readHistory5YCache(){try{return JSON.parse(localStorage.getItem(HISTORY5Y_CACHE_KEY)||"{}")||{}}catch{return{}}}
-function writeHistory5YCache(x){try{localStorage.setItem(HISTORY5Y_CACHE_KEY,JSON.stringify(x))}catch{}}
 async function history5Y(query,market){
-  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`${code}|${String(market||"")}`,all=readHistory5YCache(),cached=all[key];
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`history5y:${code}|${String(market||"")}`;
+  let cached=await stockzoneIdbGet("marketCache",key);
+  if(!cached){
+    const legacy=readHistory5YCache()[`${code}|${String(market||"")}`];
+    if(legacy?.data){cached=legacy;void stockzoneIdbPut("marketCache",key,legacy)}
+  }
   if(cached&&Date.now()-Number(cached.savedAt||0)<HISTORY5Y_CACHE_MS&&Array.isArray(cached.data?.history)&&cached.data?.windowYears===5&&cached.data.history.length>180)return cached.data;
   const params=new URLSearchParams({q:code,market:String(market||"")}),data=await readJson(await fetch(`/api/technical?mode=history&${params.toString()}`,{cache:"default"}),"歷史資料");
-  all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(8))delete all[k];writeHistory5YCache(all);return data;
+  await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});
+  return data;
 }
 
 const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26123",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
@@ -403,8 +514,11 @@ function mergeFundamentalPayload(primary,fallback){
   return {...b,...a,quarters:fundamentalSortedRows({quarters:mergedQ.length?mergedQ:(aq.length?aq:bq)}),officialStatement:mergeFundamentalObject(a.officialStatement,b.officialStatement),monthlyRevenue:mergeFundamentalObject(a.monthlyRevenue,b.monthlyRevenue),company:mergeFundamentalObject(a.company,b.company),profile:mergeFundamentalObject(a.profile,b.profile),financialData:mergeFundamentalObject(a.financialData,b.financialData),source:source||a.source||b.source};
 }
 async function fundamentals(query,market){
-  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`${code}|${String(market||"")}`,all=readFundamentalsCache(),cached=all[key];
-  if(cached&&Date.now()-Number(cached.savedAt||0)<FUNDAMENTALS_CACHE_MS&&Array.isArray(cached.data?.quarters))return cached.data;
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),legacyKey=`${code}|${String(market||"")}`,key=`fundamentals:${legacyKey}`;
+  let cached=await stockzoneIdbGet("marketCache",key);
+  if(!cached){const legacy=readFundamentalsCache()[legacyKey];if(legacy?.data){cached=legacy;void stockzoneIdbPut("marketCache",key,legacy)}}
+  const phase=taiwanMarketPhase(),holiday=phase.weekend||marketSessionForToday()?.status==="holiday";
+  if(cached?.data&&Array.isArray(cached.data?.quarters)&&(holiday||Date.now()-Number(cached.savedAt||0)<FUNDAMENTALS_CACHE_MS))return cached.data;
   const params=new URLSearchParams({q:code,market:String(market||"")});
   const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
   let data=null;
@@ -420,7 +534,7 @@ async function fundamentals(query,market){
     console.warn("官方基本面獨立路由失敗，改用 Yahoo 基本面 fallback",primaryError);
     data=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"長期基本面 fallback");
   }
-  all[key]={savedAt:Date.now(),data};const keys=Object.keys(all).sort((a,b)=>Number(all[b]?.savedAt||0)-Number(all[a]?.savedAt||0));for(const k of keys.slice(12))delete all[k];writeFundamentalsCache(all);return data;
+  await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});return data;
 }
 async function loadFundamentals(stock){
   const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||""),market=stock?.market||stock?.marketLabel||"";
@@ -3000,11 +3114,13 @@ function renderInstitutional(data){
 }
 
 async function institutional(query,market="",force=false){
-  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),cache=readInstitutionalCache(),hit=cache[code];
-  if(!force&&hit?.data&&Date.now()-Number(hit.savedAt||0)<INSTITUTIONAL_CACHE_MS)return hit.data;
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`institutional:${code}`,legacy=readInstitutionalCache()[code];
+  let hit=await stockzoneIdbGet("marketCache",key);if(!hit&&legacy?.data){hit=legacy;void stockzoneIdbPut("marketCache",key,legacy)}
+  const phase=taiwanMarketPhase(),holiday=phase.weekend||marketSessionForToday()?.status==="holiday";
+  if(!force&&hit?.data&&(holiday||Date.now()-Number(hit.savedAt||0)<INSTITUTIONAL_CACHE_MS))return hit.data;
   const params=new URLSearchParams({q:code,market:String(market||"")});
   const data=await readJson(await fetch(`/api/institutional?${params.toString()}`,{cache:"no-store"}),"法人動向");
-  cache[code]={savedAt:Date.now(),data};const keys=Object.keys(cache).sort((a,b)=>Number(cache[b]?.savedAt||0)-Number(cache[a]?.savedAt||0));for(const k of keys.slice(20))delete cache[k];writeInstitutionalCache(cache);return data;
+  await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});return data;
 }
 async function loadInstitutional(stock,force=false){
   const code=institutionalCode(stock),market=stock?.market||stock?.marketLabel||"",card=$("institutionalTrend");if(!code)return;
@@ -3016,11 +3132,19 @@ async function loadInstitutional(stock,force=false){
   }finally{card?.classList.remove("is-loading")}
 }
 
+function quoteUpdateLabel(x){
+  const phase=taiwanMarketPhase(),tradeDate=dayKey(x?.tradeDate),source=String(x?.source||"");
+  if(phase.phase==="live"&&tradeDate===phase.date){
+    try{const t=new Date(x?.quoteTime||Date.now()).toLocaleTimeString("zh-TW",{timeZone:"Asia/Taipei",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});return `即時 ${t}${/Yahoo/i.test(source)?"｜Yahoo":""}`}catch{return /Yahoo/i.test(source)?"即時｜Yahoo":"即時"}
+  }
+  if(tradeDate)return `收盤 ${tradeDate.replaceAll("-","/")}`;
+  return "行情已載入";
+}
 function renderQuoteFields(x){
   const last=Number(x?.last ?? x?.price ?? x?.regularMarketPrice),change=Number(x?.change ?? x?.regularMarketChange),pct=Number(x?.changePct ?? x?.changePercent ?? x?.regularMarketChangePercent);
   setText("currentPrice",fmt(last));setText("metricPrice",fmt(last));setText("decisionPrice",fmt(last));
   const ch=Number.isFinite(change)?`${change>0?"+":""}${fmt(change)}${Number.isFinite(pct)?` (${pct>0?"+":""}${fmt(pct)}%)`:""}`:"—";
-  setText("priceChange",ch);setText("metricChange",ch);setText("updateTime","剛剛更新");if($("updateRow"))$("updateRow").hidden=false;
+  setText("priceChange",ch);setText("metricChange",ch);setText("updateTime",quoteUpdateLabel(x));if($("updateRow"))$("updateRow").hidden=false;
   const cls=change>0?"up":change<0?"down":"";["currentPrice","priceChange","metricChange"].forEach(id=>{const el=$(id);if(el)el.className=cls});
 }
 function patchCurrentQuote(x){
@@ -3051,7 +3175,7 @@ async function search(){
       const code=String(data.code||String(data.symbol||"").split(".")[0]||"").trim();
       if(/^\d{4,6}$/.test(code))meta={code,name:data.name||data.shortName||(/[\u3400-\u9fff]/.test(q)?q:""),market:data.market||data.marketLabel||"",symbol:data.symbol||`${code}${String(data.market||"")==="上櫃"?".TWO":".TW"}`};
     }
-    data=mergeStockMeta(data,meta);renderStock(data);setView("overview");
+    data=mergeStockMeta(data,meta);renderStock(data);setView(readSessionJson(UI_SESSION_KEY,{view:"overview"})?.view||"overview");
     loadValuation(data);loadTechnical(data);void loadFundamentals(data);void loadInstitutional(data);loadDisposal(data);beginTargetSearch(data.code||data.symbol||q);
     setStatus(`搜尋成功：${shortStockName(data.name)||data.code||q}`);btn.disabled=false;
 
@@ -3335,7 +3459,7 @@ async function fetchTargetPayload(code,name){
   const cached=readTargetCache()[String(code)]?.rows||[];
   const recent=cached.length?"&recent=3":"";
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),28000);
-  try{const res=await fetch(`/api/targets?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}${recent}`,{cache:"no-store",signal:controller.signal});return await readJson(res,"目標價")}finally{clearTimeout(timer)}
+  try{const res=await fetch(`/api/targets?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}${recent}`,{cache:"default",signal:controller.signal});return await readJson(res,"目標價")}finally{clearTimeout(timer)}
 }
 async function loadTargetPlay(code,name){
   const expected=String(code||"");
@@ -3593,12 +3717,18 @@ document.querySelectorAll("[data-search-jump]").forEach(btn=>btn.addEventListene
 }));
 
 const CURRENT_QUOTE_MS=30*1000,AUTO_QUOTE_MS=5*60*1000,AUTO_TARGET_MS=2*60*60*1000;
-let currentQuoteRefreshing=false,autoQuoteRefreshing=false,autoTargetRefreshing=false;
+let currentQuoteRefreshing=false,autoQuoteRefreshing=false,autoTargetRefreshing=false,currentCloseRefreshCycle="";
 async function refreshCurrentQuote(){
-  if(currentQuoteRefreshing||!currentStock||!isTaiwanIntraday())return;
+  if(currentQuoteRefreshing||!currentStock||!isTaiwanIntraday()||Date.now()<marketNextProbeAt)return;
   const code=String(currentStock.code||String(currentStock.symbol||"").split(".")[0]||"");if(!/^\d{4,6}$/.test(code))return;
   const market=currentStock.market||currentStock.marketLabel||"";currentQuoteRefreshing=true;
-  try{const d=await quote(code,market);patchCurrentQuote(d)}catch(e){console.warn("個股盤中報價更新失敗",code,e)}finally{currentQuoteRefreshing=false}
+  try{const d=await quote(code,market);patchCurrentQuote(d)}catch(e){console.warn("個股盤中 Yahoo 報價更新失敗",code,e)}finally{currentQuoteRefreshing=false}
+}
+async function refreshCurrentCloseOnce(){
+  const phase=taiwanMarketPhase();if(!currentStock||phase.phase!=="post"||phase.minutes<13*60+35||phase.weekend||marketSessionForToday()?.status==="holiday"||currentCloseRefreshCycle===phase.date)return;
+  const code=String(currentStock.code||String(currentStock.symbol||"").split(".")[0]||"");if(!/^\d{4,6}$/.test(code))return;
+  currentCloseRefreshCycle=phase.date;
+  try{const d=await quote(code,currentStock.market||currentStock.marketLabel||"");if(dayKey(d?.tradeDate)===phase.date)patchCurrentQuote(d);else currentCloseRefreshCycle=""}catch(e){currentCloseRefreshCycle="";console.warn("個股收盤一次性更新失敗",code,e)}
 }
 function autoListStocks(){
  const byCode=new Map();
@@ -3617,13 +3747,30 @@ async function autoPool(items,limit,fn){
  await Promise.all(Array.from({length:Math.min(limit,items.length)},()=>worker()));
 }
 async function autoRefreshQuotes(force=false){
- if(autoQuoteRefreshing)return; autoQuoteRefreshing=true;
+ if(autoQuoteRefreshing)return;
+ const phase=taiwanMarketPhase(),session=marketSessionForToday();
+ if(phase.weekend||phase.phase==="pre"||session?.status==="holiday"||(phase.phase==="post"&&phase.minutes<13*60+35))return;
+ // 09:00 立刻讓目前個股走 Yahoo；清單等到 09:05 再確認是否為交易日，避免假日整批輪詢。
+ if(phase.phase==="live"&&phase.minutes<9*60+5&&session?.status!=="trading")return;
+ autoQuoteRefreshing=true;
  try{
-  const due=autoListStocks().filter(([,base])=>force||!base.quoteUpdatedAt||Date.now()-new Date(base.quoteUpdatedAt).getTime()>=AUTO_QUOTE_MS);
-  await autoPool(due,3,async([code,base])=>{
+  const all=autoListStocks();
+  const due=all.filter(([,base])=>{
+    if(phase.phase==="post")return String(base.quoteCloseCycle||"")!==phase.date;
+    return force||!base.quoteUpdatedAt||Date.now()-new Date(base.quoteUpdatedAt).getTime()>=AUTO_QUOTE_MS;
+  });
+  if(!due.length)return;
+  let firstResult=null;
+  if(!marketSessionForToday()&&due.length){
+    const [code,base]=due[0];
+    try{firstResult=await autoListQuote(code,base.market||"");if(firstResult)rememberMarketSessionFromQuote(firstResult,{allowHolidayMark:true})}catch{}
+    if(marketSessionForToday()?.status==="holiday")return;
+  }
+  await autoPool(due,3,async([code,base],idx)=>{
    try{
-    const d=await autoListQuote(code,base.market||""),last=Number(d.last??d.price??d.regularMarketPrice);
-    const patch={quoteUpdatedAt:new Date().toISOString()};
+    const d=firstResult&&String(firstResult.code)===String(code)?firstResult:await autoListQuote(code,base.market||"");if(!d)return;
+    const last=Number(d.last??d.price??d.regularMarketPrice),patch={quoteUpdatedAt:new Date().toISOString()};
+    if(phase.phase==="post"&&dayKey(d.tradeDate)===phase.date)patch.quoteCloseCycle=phase.date;
     if(Number.isFinite(last))patch.last=last;
     const name=shortStockName(d.name||d.shortName||base.name);if(name)patch.name=name;
     patchAutoListStock(code,patch);renderLists();
@@ -3647,22 +3794,25 @@ async function autoRefreshTargets(force=false){
   }
  }finally{autoTargetRefreshing=false}
 }
-setTimeout(()=>{autoRefreshQuotes(true);autoRefreshTargets(true);refreshCurrentQuote()},800);
+setTimeout(()=>{autoRefreshQuotes(true);autoRefreshTargets(true);refreshCurrentQuote();refreshCurrentCloseOnce()},800);
 setInterval(()=>refreshCurrentQuote(),CURRENT_QUOTE_MS);
-setInterval(()=>autoRefreshQuotes(false),AUTO_QUOTE_MS);
+setInterval(()=>{autoRefreshQuotes(false);refreshCurrentCloseOnce()},AUTO_QUOTE_MS);
 setInterval(()=>autoRefreshTargets(false),AUTO_TARGET_MS);
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){refreshCurrentQuote();autoRefreshQuotes(false);autoRefreshTargets(false)}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){refreshCurrentQuote();refreshCurrentCloseOnce();autoRefreshQuotes(false);autoRefreshTargets(false)}});
 
 renderLists();
 
+const FUND_FLOW_SESSION_KEY="stockzone_fundflow_session_v1",UI_SESSION_KEY="stockzone_ui_session_v1";
+const initialFundflowSession=readSessionJson(FUND_FLOW_SESSION_KEY,{})||{};
 let fundflowXyLoading=false;
 let fundflowXyFetchedAt=0;
 let fundflowXyData=null;
-let fundflowScopes=new Set(["technology-upstream","technology-midstream","technology-downstream","electronics-product"]);
-let fundflowPathFilter="all";
-let fundflowAxisMode="zoom";
-let fundflowTrajectoryDays=10;
+let fundflowScopes=new Set(Array.isArray(initialFundflowSession.scopes)&&initialFundflowSession.scopes.length?initialFundflowSession.scopes:["technology-upstream","technology-midstream","technology-downstream","electronics-product"]);
+let fundflowPathFilter=String(initialFundflowSession.pathFilter||"all");
+let fundflowAxisMode=initialFundflowSession.axisMode==="raw"?"raw":"zoom";
+let fundflowTrajectoryDays=[5,10,15].includes(Number(initialFundflowSession.trajectoryDays))?Number(initialFundflowSession.trajectoryDays):10;
 let fundflowSelectedTagId="";
+function saveFundflowSession(){writeSessionJson(FUND_FLOW_SESSION_KEY,{scopes:[...fundflowScopes],pathFilter:fundflowPathFilter,axisMode:fundflowAxisMode,trajectoryDays:fundflowTrajectoryDays})}
 let fundflowDetailLoading=false;
 let fundflowDetailData=null;
 let fundflowFocusAnimation=null;
@@ -3789,12 +3939,25 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.5.36";
+const FUND_FLOW_CLIENT_REV="2.6.5.37";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
+const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
+function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
+async function readFundflowLocalCache(kind,days,maxAge){
+  const row=await stockzoneIdbGet("fundflowCache",fundflowLocalCacheKey(kind,days));
+  if(!row?.data)return null;
+  return {...row,fresh:Date.now()-Number(row.savedAt||0)<maxAge};
+}
+async function writeFundflowLocalCache(kind,days,data){return stockzoneIdbPut("fundflowCache",fundflowLocalCacheKey(kind,days),{savedAt:Date.now(),data})}
 async function loadFundflowBrowser(force=false,serverRefresh=false){
   if(fundflowBrowserLoading)return;if(!force&&fundflowBrowserFetchedAt&&Date.now()-fundflowBrowserFetchedAt<5*60*1000){renderFundflowBrowser();return}fundflowBrowserLoading=true;
   const loading=$("fundflowBrowserLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取完整業務分類…"}
-  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),22000);try{const res=await fetch(`/api/fundflow?view=browser&days=10&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}${serverRefresh?"&refresh=1":""}`,{cache:serverRefresh?"no-store":"default",signal:controller.signal});fundflowBrowserData=await readJson(res,"業務瀏覽器");fundflowBrowserFetchedAt=Date.now();renderFundflowBrowser();if(fundflowSelectedTagId){const g=(fundflowXyData?.groups||[]).find(x=>x.tagId===fundflowSelectedTagId);if(g){fundflowDetailData=fundflowBuildLocalDetail(g);renderFundflowDetail()}}}finally{clearTimeout(timer)}}catch(e){console.warn("業務瀏覽器讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`業務分類讀取失敗：${e?.message||e}`}}finally{fundflowBrowserLoading=false}
+  let local=null;
+  try{
+    if(!force&&!serverRefresh){local=await readFundflowLocalCache("browser",10,FUND_FLOW_BROWSER_LOCAL_CACHE_MS);if(local?.data){fundflowBrowserData=local.data;fundflowBrowserFetchedAt=Number(local.savedAt||Date.now());renderFundflowBrowser();if(local.fresh){if(loading)loading.classList.add("hidden");return}}}
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),22000);
+    try{const res=await fetch(`/api/fundflow?view=browser&days=10&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}${serverRefresh?"&refresh=1":""}`,{cache:serverRefresh?"no-store":"default",signal:controller.signal});fundflowBrowserData=await readJson(res,"業務瀏覽器");fundflowBrowserFetchedAt=Date.now();void writeFundflowLocalCache("browser",10,fundflowBrowserData);renderFundflowBrowser();if(fundflowSelectedTagId){const g=(fundflowXyData?.groups||[]).find(x=>x.tagId===fundflowSelectedTagId);if(g){fundflowDetailData=fundflowBuildLocalDetail(g);renderFundflowDetail()}}}finally{clearTimeout(timer)}
+  }catch(e){console.warn("業務瀏覽器讀取失敗",e);if(!local?.data&&loading){loading.classList.remove("hidden");loading.textContent=`業務分類讀取失敗：${e?.message||e}`}}finally{fundflowBrowserLoading=false}
 }
 function fundflowBrowserOpen(tagId){
   const item=(fundflowBrowserData?.items||[]).find(x=>x.tagId===tagId);if(!item?.xyEligible)return;
@@ -3900,12 +4063,17 @@ function loadFundflowDetail(tagId){
 }
 async function loadFundflowXy(force=false,serverRefresh=false){
   if(fundflowXyLoading)return;if(!force&&fundflowXyFetchedAt&&Date.now()-fundflowXyFetchedAt<2*60*1000){renderFundflowXy();return}fundflowXyLoading=true;const loading=$("fundflowChartLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取共用 XY snapshot…"}
-  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);try{const res=await fetch(`/api/fundflow?view=overview&days=${fundflowTrajectoryDays}&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}${serverRefresh?"&refresh=1":""}`,{cache:serverRefresh?"no-store":"default",signal:controller.signal});fundflowXyData=await readJson(res,"資金輪動");fundflowXyFetchedAt=Date.now();renderFundflowXy()}finally{clearTimeout(timer)}}catch(e){console.warn("XY 資金輪動讀取失敗",e);if(loading){loading.classList.remove("hidden");loading.textContent=`XY 讀取失敗：${e?.message||e}`}}finally{fundflowXyLoading=false}
+  let local=null;
+  try{
+    if(!force&&!serverRefresh){local=await readFundflowLocalCache("overview",fundflowTrajectoryDays,FUND_FLOW_LOCAL_CACHE_MS);if(local?.data){fundflowXyData=local.data;fundflowXyFetchedAt=Number(local.savedAt||Date.now());renderFundflowXy();if(local.fresh){if(loading)loading.classList.add("hidden");return}}}
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
+    try{const res=await fetch(`/api/fundflow?view=overview&days=${fundflowTrajectoryDays}&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}${serverRefresh?"&refresh=1":""}`,{cache:serverRefresh?"no-store":"default",signal:controller.signal});fundflowXyData=await readJson(res,"資金輪動");fundflowXyFetchedAt=Date.now();void writeFundflowLocalCache("overview",fundflowTrajectoryDays,fundflowXyData);renderFundflowXy()}finally{clearTimeout(timer)}
+  }catch(e){console.warn("XY 資金輪動讀取失敗",e);if(!local?.data&&loading){loading.classList.remove("hidden");loading.textContent=`XY 讀取失敗：${e?.message||e}`}}finally{fundflowXyLoading=false}
 }
-document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.addEventListener("click",()=>{const key=btn.dataset.fundflowScope;if(!key)return;if(fundflowScopes.has(key)){if(fundflowScopes.size===1)return;fundflowScopes.delete(key)}else fundflowScopes.add(key);const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&(!fundflowAllowed(selected)||!fundflowPathAllowed(selected)))fundflowClearSelection();renderFundflowXy()}));
-document.querySelectorAll("[data-fundflow-path]").forEach(btn=>btn.addEventListener("click",()=>{fundflowPathFilter=btn.dataset.fundflowPath||"all";const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&!fundflowPathAllowed(selected))fundflowClearSelection();renderFundflowXy()}));
-document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.addEventListener("click",async()=>{const d=Number(btn.dataset.fundflowDays);if(![5,10,15].includes(d)||d===fundflowTrajectoryDays)return;fundflowTrajectoryDays=d;fundflowXyFetchedAt=0;fundflowDetailData=null;await loadFundflowXy(true,false);if(fundflowSelectedTagId){loadFundflowDetail(fundflowSelectedTagId);fundflowStartFocusAnimation(fundflowSelectedTagId)}}));
-document.querySelectorAll("[data-fundflow-axis-mode]").forEach(btn=>btn.addEventListener("click",()=>{const mode=btn.dataset.fundflowAxisMode==="raw"?"raw":"zoom";if(mode===fundflowAxisMode)return;fundflowAxisMode=mode;document.querySelectorAll("[data-fundflow-axis-mode]").forEach(b=>b.classList.toggle("active",b.dataset.fundflowAxisMode===fundflowAxisMode));renderFundflowChart()}));
+document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.addEventListener("click",()=>{const key=btn.dataset.fundflowScope;if(!key)return;if(fundflowScopes.has(key)){if(fundflowScopes.size===1)return;fundflowScopes.delete(key)}else fundflowScopes.add(key);saveFundflowSession();const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&(!fundflowAllowed(selected)||!fundflowPathAllowed(selected)))fundflowClearSelection();renderFundflowXy()}));
+document.querySelectorAll("[data-fundflow-path]").forEach(btn=>btn.addEventListener("click",()=>{fundflowPathFilter=btn.dataset.fundflowPath||"all";saveFundflowSession();const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&!fundflowPathAllowed(selected))fundflowClearSelection();renderFundflowXy()}));
+document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.addEventListener("click",async()=>{const d=Number(btn.dataset.fundflowDays);if(![5,10,15].includes(d)||d===fundflowTrajectoryDays)return;fundflowTrajectoryDays=d;saveFundflowSession();fundflowXyFetchedAt=0;fundflowDetailData=null;await loadFundflowXy(false,false);if(fundflowSelectedTagId){loadFundflowDetail(fundflowSelectedTagId);fundflowStartFocusAnimation(fundflowSelectedTagId)}}));
+document.querySelectorAll("[data-fundflow-axis-mode]").forEach(btn=>btn.addEventListener("click",()=>{const mode=btn.dataset.fundflowAxisMode==="raw"?"raw":"zoom";if(mode===fundflowAxisMode)return;fundflowAxisMode=mode;saveFundflowSession();document.querySelectorAll("[data-fundflow-axis-mode]").forEach(b=>b.classList.toggle("active",b.dataset.fundflowAxisMode===fundflowAxisMode));renderFundflowChart()}));
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-radar-item[data-fundflow-tag]");if(item)fundflowSelect(item.dataset.fundflowTag,{scroll:true})});
 document.addEventListener("click",e=>{const item=e.target?.closest?.(".fundflow-browser-item[data-fundflow-browser-tag]");if(item&&!item.disabled)fundflowBrowserOpen(item.dataset.fundflowBrowserTag)});
 document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.addEventListener("click",()=>{fundflowBrowserScope=btn.dataset.fundflowBrowserScope||"all";fundflowBrowserLimit=36;renderFundflowBrowser()}));
@@ -3915,6 +4083,7 @@ $("fundflowDetailClose")?.addEventListener("click",fundflowClearSelection);
 
 function setView(view){
   const screeningViews=new Set(["screening","fundflow","featured","simulation"]),management=view==="management";
+  writeSessionJson(UI_SESSION_KEY,{view});
   const mode=screeningViews.has(view)?"screening":management?"management":"analysis";
   document.body.classList.remove("mode-analysis","mode-screening","mode-management");
   document.body.classList.add(`mode-${mode}`);
