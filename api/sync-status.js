@@ -73,6 +73,21 @@ const CRON_ACTIONS = {
   '0 14 * * 1-5': 'tpex'
 };
 
+function taipeiDateKey(now=new Date()){
+  try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(now)}catch{return now.toISOString().slice(0,10)}
+}
+async function yahooTradingDayProbe(){
+  const today=taipeiDateKey();
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4500);
+  try{
+    const r=await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5ETWII?range=5d&interval=1d&events=history',{headers:{'User-Agent':'Mozilla/5.0','Accept':'application/json'},signal:controller.signal});
+    if(!r.ok)throw new Error(`Yahoo market probe HTTP ${r.status}`);
+    const j=await r.json(),ts=j?.chart?.result?.[0]?.timestamp||[];
+    const days=ts.map(x=>taipeiDateKey(new Date(Number(x)*1000))).filter(Boolean);
+    return{ok:true,today,isTradingDay:days.includes(today),latest:days.at(-1)||''};
+  }catch(e){return{ok:false,today,isTradingDay:true,failOpen:true,error:String(e?.message||e)}}finally{clearTimeout(timer)}
+}
+
 let manualFundflowWarmPromise=null;
 let manualFundflowHistoryPromise=null;
 let manualInstitutionalBackfillPromise=null;
@@ -684,6 +699,10 @@ module.exports=async function handler(req,res){
     const action=requestedAction(req);
 
     if(schedule && !action)return res.status(400).json({ok:false,error:`未知 Cron schedule：${schedule}`});
+    if(schedule&&['price','twse','tpex'].includes(action)){
+      const marketDay=await yahooTradingDayProbe();
+      if(marketDay.ok&&!marketDay.isTradingDay)return res.status(200).json({ok:true,skipped:true,reason:'holiday-no-market-update',marketDay});
+    }
     if(action==='fundflow-warm-manual'){
       // Development-stage manual warm: explicit Settings POST only, idempotent and DB-only.
       // Once snapshots match the latest stored common market date, repeated clicks become a cheap no-op.

@@ -14,6 +14,22 @@ function shortName(v){
 }
 function marketLabel(v){const s=String(v||"");return /上櫃|OTC|TPEX|TWO/i.test(s)?"上櫃":/上市|TWSE|TSE/i.test(s)?"上市":""}
 function symbolFor(code,market){return `${code}${market==="上櫃"?".TWO":".TW"}`}
+function taipeiParts(now=new Date()){
+  const p=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(now).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
+  return{date:`${p.year}-${p.month}-${p.day}`,weekday:p.weekday||"",minutes:Number(p.hour||0)*60+Number(p.minute||0)};
+}
+function taipeiDateFromEpoch(sec){
+  const n=Number(sec);if(!Number.isFinite(n))return "";
+  try{return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(n*1000))}catch{return ""}
+}
+function quoteCacheControl(mode){
+  if(mode==="live")return "no-store";
+  const c=taipeiParts();
+  if(["Sat","Sun"].includes(c.weekday))return "public, s-maxage=21600, stale-while-revalidate=43200";
+  if(c.minutes>=13*60+35)return "public, s-maxage=21600, stale-while-revalidate=43200";
+  if(c.minutes<9*60)return "public, s-maxage=300, stale-while-revalidate=1800";
+  return "no-store";
+}
 function liveStockHint(query,marketHint=""){
   const code=cleanName(query).replace(/\.(?:TW|TWO)$/i,"");
   if(!/^\d{4,6}$/.test(code))return null;
@@ -191,19 +207,8 @@ async function resolveStock(query,marketHint=""){
   if(FALLBACK_CODES[q])return{code:FALLBACK_CODES[q],name:q,market:""};
   return null;
 }
-async function fetchOfficialPrevious(stock){
-  try{
-    const prefix=stock?.market==="上櫃"?"otc":"tse";
-    const channel=`${prefix}_${stock.code}.tw`;
-    const url=`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${encodeURIComponent(channel)}&json=1&delay=0`;
-    const data=await fetchJson(url),row=data?.msgArray?.[0];
-    const previous=toNumber(String(row?.y||"").replace(/,/g,""));
-    return previous&&previous>0?previous:null;
-  }catch{return null}
-}
 async function fetchYahoo(symbol,official){
-  const code=symbol.split(".")[0],officialStock=official||{code,market:symbol.endsWith(".TWO")?"上櫃":"上市"};
-  const officialPreviousPromise=fetchOfficialPrevious(officialStock);
+  const code=symbol.split(".")[0];
   const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1m&range=5d&includePrePost=false&events=div%2Csplits`;
   const response=await fetch(url,{headers:HEADERS});if(!response.ok)return null;
   const json=await response.json(),result=json?.chart?.result?.[0];if(!result?.meta)return null;
@@ -212,15 +217,14 @@ async function fetchYahoo(symbol,official){
   for(let i=closes.length-1;i>=0;i--){const close=toNumber(closes[i]),ts=toNumber(timestamps[i]);if(close!==null&&ts!==null){barLast=close;barTime=ts;break}}
   if(barLast!==null&&(last===null||lastTime===null||barTime>=lastTime)){last=barLast;lastTime=barTime}
   if(last===null)return null;
-  const officialPrevious=await officialPreviousPromise;
-  const previousClose=officialPrevious??toNumber(meta.regularMarketPreviousClose??meta.chartPreviousClose??meta.previousClose);
+  const previousClose=toNumber(meta.regularMarketPreviousClose??meta.chartPreviousClose??meta.previousClose);
   const change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null;
-  return{source:"Yahoo Finance",symbol,code,name:shortName(FALLBACK_NAMES[code]||official?.name||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString()};
+  return{source:"Yahoo Finance",realtime:true,officialClose:false,symbol,code,name:shortName(FALLBACK_NAMES[code]||official?.name||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString(),tradeDate:taipeiDateFromEpoch(lastTime)};
 }
 async function handler(req,res){
   const mode=String(req.query?.mode||"").trim().toLowerCase();
   if(mode==="meta")return stockmetaHandler(req,res);
-  res.setHeader("Cache-Control","no-store");res.setHeader("Access-Control-Allow-Origin","*");
+  res.setHeader("Cache-Control",quoteCacheControl(mode));res.setHeader("Access-Control-Allow-Origin","*");
   const query=String(req.query.q||req.query.code||"").trim();if(!query)return res.status(400).json({ok:false,error:"請輸入股票名稱或代碼"});
   const marketHint=String(req.query.market||"").trim();
   try{
@@ -229,23 +233,25 @@ async function handler(req,res){
       if(!result)return res.status(404).json({ok:false,error:"本機收盤資料暫無此股票"});
       return res.status(200).json({ok:true,...result,fetchedAt:new Date().toISOString()});
     }
-    const stock=mode==="live"?(liveStockHint(query,marketHint)||await resolveStock(query,marketHint)):await resolveStock(query,marketHint);
+    const numericHint=liveStockHint(query,marketHint);
+    const stock=numericHint||await resolveStock(query,marketHint);
     if(!stock)return res.status(404).json({ok:false,error:"查無此股票名稱或代碼"});
     let result=null;
-    // v2.6.5.15：盤中由官方 TWSE/TPEx MIS 優先提供最新成交價，Yahoo 只當 fallback。
-    // 避免 Yahoo 台股常見的盤初延遲，並保留 v2.6.5.14 的盤後 DB-first 路徑。
-    if(mode==="live")result=await fetchMisQuote(stock);
-    if(!result){
-      if(stock.market==="上櫃")result=await fetchYahoo(`${stock.code}.TWO`,stock);
-      else if(stock.market==="上市")result=await fetchYahoo(`${stock.code}.TW`,stock);
-      else{
-        const [tw,two]=await Promise.all([fetchYahoo(`${stock.code}.TW`,{...stock,market:"上市"}),fetchYahoo(`${stock.code}.TWO`,{...stock,market:"上櫃"})]);
-        result=tw||two;
-      }
+    const yahooFor=async()=>{
+      if(stock.market==="上櫃")return fetchYahoo(`${stock.code}.TWO`,stock);
+      if(stock.market==="上市")return fetchYahoo(`${stock.code}.TW`,stock);
+      const [tw,two]=await Promise.all([fetchYahoo(`${stock.code}.TW`,{...stock,market:"上市"}),fetchYahoo(`${stock.code}.TWO`,{...stock,market:"上櫃"})]);
+      return tw||two;
+    };
+    // v2.6.5.37: 09:00 起 Yahoo 優先。只有 Yahoo 暫無當日成交/失敗時才用 MIS fallback。
+    result=await yahooFor();
+    if(mode==="live"){
+      const today=taipeiParts().date;
+      if(!result||result.tradeDate!==today){const mis=await fetchMisQuote(stock);if(mis)result=mis}
     }
-    if(!result)return res.status(404).json({ok:false,error:mode==="live"?"官方 MIS／Yahoo 暫無可用行情":"Yahoo 查無此股票"});
+    if(!result)return res.status(404).json({ok:false,error:mode==="live"?"Yahoo／官方 MIS 暫無可用行情":"Yahoo 查無此股票"});
     return res.status(200).json({ok:true,...result,fetchedAt:new Date().toISOString()});
   }catch(error){return res.status(502).json({ok:false,error:"股票名稱或行情暫時無法取得",detail:error.message})}
 }
 module.exports=handler;
-module.exports._test={toNumber,cleanName,shortName,marketLabel,misNumber,misTradeDate,misQuoteTime,liveStockHint,resolveStock,dbResolveStock,dbCloseQuote,fetchMisQuote};
+module.exports._test={toNumber,cleanName,shortName,marketLabel,misNumber,misTradeDate,misQuoteTime,taipeiParts,taipeiDateFromEpoch,quoteCacheControl,liveStockHint,resolveStock,dbResolveStock,dbCloseQuote,fetchMisQuote,fetchYahoo};

@@ -467,7 +467,7 @@ function enrichUnknownFromHints(rows,hints){
     const h=uniq[0];return{...row,broker:h.broker,brokerType:h.brokerType,brokerKey:h.brokerKey||h.broker,brokerSource:"rss-cross-article"};
   });
 }
-module.exports=async function handler(req,res){res.setHeader("Cache-Control","no-store");const rawCode=String(req.query.code||req.query.symbol||"").trim().toUpperCase();
+module.exports=async function handler(req,res){res.setHeader("Cache-Control","public, s-maxage=600, stale-while-revalidate=3600");const rawCode=String(req.query.code||req.query.symbol||"").trim().toUpperCase();
 const code=rawCode.replace(/\.(?:TW|TWO)$/i,"").trim();
 const name=String(req.query.name||"").trim();
 if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:"股票代碼格式錯誤"});try{
