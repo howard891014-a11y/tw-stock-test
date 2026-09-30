@@ -2705,7 +2705,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.55</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.56</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3212,48 +3212,60 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         </article>
 
         <section class="detail-panel disposal-panel" id="disposal" data-view-panel="disposal">
-  <article class="card disposal-status-card">
-    <div class="disposal-status-side">
-      <div class="disposal-card-title">處置狀態</div>
-      <div class="disposal-status-main"><span class="disposal-shield" id="disposalShield">✓</span><div><strong id="disposalState">--</strong><small id="disposalStateNote">搜尋股票後判讀</small></div></div>
+  <article class="card disposal-theme-card">
+    <div class="card-title theme-white-card-title disposal-theme-title">
+      <span class="theme-title-group"><i class="theme-title-icon theme-icon-disposal" aria-hidden="true"></i><span>處置</span></span>
     </div>
-    <div class="disposal-risk-side">
-      <span>處置風險</span><strong id="disposalRisk">--</strong><small id="disposalRiskNote">--</small><small id="disposalRiskDistance">--</small>
+
+    <div class="disposal-theme-body">
+      <article class="card disposal-status-card">
+        <div class="disposal-status-side">
+          <div class="disposal-card-title">處置狀態</div>
+          <div class="disposal-status-main"><span class="disposal-shield" id="disposalShield">✓</span><div><strong id="disposalState">--</strong><small id="disposalStateNote">搜尋股票後判讀</small></div></div>
+        </div>
+        <div class="disposal-risk-side">
+          <span>處置風險</span><strong id="disposalRisk">--</strong><small id="disposalRiskNote">--</small><small id="disposalRiskDistance">--</small>
+        </div>
+      </article>
+
+      <article class="card disposal-progress-card">
+        <div class="disposal-card-title">距離處置進度 <button class="disposal-help" type="button" data-disposal-help="progress">?</button></div>
+        <div class="disposal-progress-list">
+          <div class="disposal-progress-row"><span>近 3 日（3次）</span><div class="disposal-dots" id="disposalDots3"></div><b id="disposalCount3">-- / 3</b><em id="disposalTag3">--</em></div>
+          <div class="disposal-progress-row"><span>近 10 日（6次）</span><div class="disposal-dots" id="disposalDots10"></div><b id="disposalCount10">-- / 6</b><em id="disposalTag10">--</em></div>
+          <div class="disposal-progress-row"><span>近 30 日（12次）</span><div class="disposal-dots" id="disposalDots30"></div><b id="disposalCount30">-- / 12</b><em id="disposalTag30">--</em></div>
+        </div>
+      </article>
+
+      <div class="disposal-two-col">
+        <article class="card disposal-reason-card">
+          <div class="disposal-card-title">今日注意原因</div>
+          <div class="disposal-check-list" id="disposalReasonList">
+            <div><i></i><span>股價漲跌幅異常</span></div><div><i></i><span>成交量異常放大</span></div><div><i></i><span>週轉率過高</span></div><div><i></i><span>集中度過高</span></div><div><i></i><span>本益比／股價淨值比異常</span></div><div><i></i><span>券資比異常</span></div><div><i></i><span>借券賣出異常</span></div>
+          </div>
+          <div class="disposal-reason-note" id="disposalReasonNote">尚未取得今日注意資訊</div>
+        </article>
+
+        <article class="card disposal-exempt-card">
+          <div class="disposal-card-title">豁免條件 <button class="disposal-help" type="button" data-disposal-help="exception">?</button></div>
+          <div class="disposal-exempt-list">
+            <div><span class="disposal-exempt-icon">—</span><span>成交量過低除外</span><b id="disposalExVolume">資料判讀</b></div>
+            <div><span class="disposal-exempt-icon">—</span><span>週轉率過低除外</span><b id="disposalExTurnover">資料判讀</b></div>
+            <div class="disposal-price-line"><span class="disposal-exempt-icon">↘</span><span>價格注意警戒線</span><b id="disposalPriceLine">--</b><small id="disposalPriceLineGap">僅價格款估算</small></div>
+            <div><span class="disposal-exempt-icon">—</span><span>ETF／ETN 除外</span><b id="disposalExEtf">不適用</b></div>
+            <div><span class="disposal-exempt-icon">—</span><span>其他特殊情形</span><b id="disposalExOther">不適用</b></div>
+          </div>
+          <p class="disposal-rule-note">註：除外條件依證交所／櫃買中心公告規則判斷；「價格注意警戒線」只代表價格異常款的估算安全線，不代表一定不會被列注意或處置。</p>
+        </article>
+      </div>
+
+      <div class="disposal-technical-comment">
+        <small>系統判讀</small>
+        <strong id="disposalSummary">搜尋股票後顯示處置風險判讀。</strong>
+      </div>
     </div>
   </article>
 
-  <article class="card disposal-progress-card">
-    <div class="disposal-card-title">距離處置進度 <button class="disposal-help" type="button" data-disposal-help="progress">?</button></div>
-    <div class="disposal-progress-list">
-      <div class="disposal-progress-row"><span>近 3 日（3次）</span><div class="disposal-dots" id="disposalDots3"></div><b id="disposalCount3">-- / 3</b><em id="disposalTag3">--</em></div>
-      <div class="disposal-progress-row"><span>近 10 日（6次）</span><div class="disposal-dots" id="disposalDots10"></div><b id="disposalCount10">-- / 6</b><em id="disposalTag10">--</em></div>
-      <div class="disposal-progress-row"><span>近 30 日（12次）</span><div class="disposal-dots" id="disposalDots30"></div><b id="disposalCount30">-- / 12</b><em id="disposalTag30">--</em></div>
-    </div>
-  </article>
-
-  <div class="disposal-two-col">
-    <article class="card disposal-reason-card">
-      <div class="disposal-card-title">今日注意原因</div>
-      <div class="disposal-check-list" id="disposalReasonList">
-        <div><i></i><span>股價漲跌幅異常</span></div><div><i></i><span>成交量異常放大</span></div><div><i></i><span>週轉率過高</span></div><div><i></i><span>集中度過高</span></div><div><i></i><span>本益比／股價淨值比異常</span></div><div><i></i><span>券資比異常</span></div><div><i></i><span>借券賣出異常</span></div>
-      </div>
-      <div class="disposal-reason-note" id="disposalReasonNote">尚未取得今日注意資訊</div>
-    </article>
-
-    <article class="card disposal-exempt-card">
-      <div class="disposal-card-title">豁免條件 <button class="disposal-help" type="button" data-disposal-help="exception">?</button></div>
-      <div class="disposal-exempt-list">
-        <div><span class="disposal-exempt-icon">—</span><span>成交量過低除外</span><b id="disposalExVolume">資料判讀</b></div>
-        <div><span class="disposal-exempt-icon">—</span><span>週轉率過低除外</span><b id="disposalExTurnover">資料判讀</b></div>
-        <div class="disposal-price-line"><span class="disposal-exempt-icon">↘</span><span>價格注意警戒線</span><b id="disposalPriceLine">--</b><small id="disposalPriceLineGap">僅價格款估算</small></div>
-        <div><span class="disposal-exempt-icon">—</span><span>ETF／ETN 除外</span><b id="disposalExEtf">不適用</b></div>
-        <div><span class="disposal-exempt-icon">—</span><span>其他特殊情形</span><b id="disposalExOther">不適用</b></div>
-      </div>
-      <p class="disposal-rule-note">註：除外條件依證交所／櫃買中心公告規則判斷；「價格注意警戒線」只代表價格異常款的估算安全線，不代表一定不會被列注意或處置。</p>
-    </article>
-  </div>
-
-  <article class="card disposal-summary-card"><div class="disposal-summary-head"><span class="disposal-bulb">💡</span><span class="disposal-card-title">系統判讀</span></div><span class="disposal-summary-sep">|</span><p id="disposalSummary">搜尋股票後顯示處置風險判讀。</p></article>
   <div class="formula-popover disposal-popover" id="disposalPopover" hidden><button class="formula-popover-close" id="disposalPopoverClose" type="button">×</button><strong id="disposalPopoverTitle">規則說明</strong><div id="disposalPopoverText"></div></div>
 </section>
 
@@ -3483,7 +3495,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.55"></script>
+  <script src="./app.js?v=2.6.5.56"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -3911,6 +3923,22 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   body.mode-screening .fundflow-master-card{padding:18px 16px!important;}
   body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:165px!important;}
 }
+</style>
+
+<style id="stockzone-v26556-disposal-theme-unify">
+/* v2.6.5.56 — 處置頁收進單一大白卡；內層主題標題 13px；系統判讀比照技術分析。 */
+#disposal.disposal-panel{width:100%;max-width:100%;}
+#disposal .disposal-theme-card{padding:16px 14px!important;background:#fff!important;border:1px solid #e8eef5!important;box-shadow:0 12px 28px rgba(17,34,61,.05)!important;}
+#disposal .disposal-theme-title{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:10px!important;margin:0 0 14px!important;padding-left:0!important;font-size:20px!important;font-weight:800!important;color:#13233a!important;}
+.theme-icon-disposal{-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 3 26 7v8c0 6.5-4.1 11.1-10 14-5.9-2.9-10-7.5-10-14V7z'/%3E%3Cpath d='M11 16l3.2 3.2L21.5 12'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 3 26 7v8c0 6.5-4.1 11.1-10 14-5.9-2.9-10-7.5-10-14V7z'/%3E%3Cpath d='M11 16l3.2 3.2L21.5 12'/%3E%3C/g%3E%3C/svg%3E")!important;}
+#disposal .disposal-theme-body{display:grid;gap:14px;min-width:0;}
+#disposal .disposal-theme-body>.card,#disposal .disposal-theme-body .disposal-two-col>.card{box-shadow:none!important;}
+#disposal .disposal-card-title,#disposal .disposal-risk-side>span{font-size:13px!important;font-weight:800!important;line-height:1.25!important;color:#13233a!important;}
+#disposal .disposal-progress-card,#disposal .disposal-reason-card,#disposal .disposal-exempt-card{margin:0!important;}
+#disposal .disposal-technical-comment{margin-top:0!important;padding-top:12px!important;border-top:1px solid #edf2f7!important;}
+#disposal .disposal-technical-comment small{display:block!important;color:#7c8da2!important;font-size:11px!important;line-height:1.45!important;}
+#disposal .disposal-technical-comment strong{display:block!important;margin-top:5px!important;color:#13233a!important;font-size:13px!important;line-height:1.65!important;font-weight:700!important;}
+@media(max-width:720px){#disposal .disposal-theme-card{padding:16px 14px!important;}#disposal .disposal-theme-title{font-size:20px!important;margin-bottom:14px!important;}#disposal .disposal-theme-body{gap:10px!important;}#disposal .disposal-card-title,#disposal .disposal-risk-side>span{font-size:13px!important;}#disposal .disposal-technical-comment strong{font-size:12px!important;}}
 </style>
 </body>
 </html>
