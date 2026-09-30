@@ -46,12 +46,12 @@ function genericRows(j){const fields=(j?.fields||[]).map(clean),data=Array.isArr
 async function twse(code){
   const start=minusDays(100),end=date8();
   const [notice,punish,warn]=await Promise.all([
-    jfetch(`https://www.twse.com.tw/rwd/zh/announcement/notice?response=json&startDate=${start}&endDate=${end}&stockNo=${encodeURIComponent(code)}&querytype=2`),
-    jfetch(`https://www.twse.com.tw/rwd/zh/announcement/punish?response=json&startDate=${start}&endDate=${end}&stockNo=${encodeURIComponent(code)}&querytype=2`),
+    jfetch(`https://www.twse.com.tw/rwd/zh/announcement/notice?response=json&startDate=${start}&endDate=${end}&stockNo=${encodeURIComponent(code)}&querytype=1`),
+    jfetch(`https://www.twse.com.tw/rwd/zh/announcement/punish?response=json&startDate=${start}&endDate=${end}&stockNo=${encodeURIComponent(code)}&querytype=1`),
     jfetch(`https://www.twse.com.tw/rwd/zh/announcement/notetrans?response=json`).catch(()=>null)
   ]);
-  const rows=twseRows(notice,code),p=twseRows(punish,code);const warning=genericRows(warn).find(x=>new RegExp(`(^|\s)${String(code).replace(/[-/\^$*+?.()|[\]{}]/g,'\$&')}(\s|$)`).test(x.text))||null;
-  return {rows,punish:p,warning,historyComplete:true,availability:{attention:true,disposal:true,warning:warn!==null}};
+  const rows=twseRows(notice,code),p=twseRows(punish,code),activePunish=p.filter(x=>isActiveDisposal(x));const warning=genericRows(warn).find(x=>new RegExp(`(^|\s)${String(code).replace(/[-/\^$*+?.()|[\]{}]/g,'\$&')}(\s|$)`).test(x.text))||null;
+  return {rows,punish:p,activePunish,warning,historyComplete:true,availability:{attention:true,disposal:true,warning:warn!==null}};
 }
 async function tradingDays(code,market){try{const s=yahooSymbol(code,market),j=await jfetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=3mo&interval=1d&events=history`),r=j?.chart?.result?.[0];return (r?.timestamp||[]).map(x=>{const d=new Date(Number(x)*1000);return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`}).filter(Boolean)}catch{return []}}
 function legacyTpexRows(j){
@@ -133,7 +133,8 @@ export default async function handler(req,res){
   const [td,pl]=await Promise.all([tradingDays(code,market),priceLine(code,market,current)]);
   const attentionAvailable=src.availability?.attention!==false,disposalAvailable=src.availability?.disposal!==false;
   const historyComplete=src.historyComplete!==false;
-  const activePunish=isOtc?(src.activePunish||[]):(src.punish||[]);
+  // 上市／上櫃都只把『今天仍落在官方處置起訖日內』的公告視為處置中，避免歷史處置紀錄誤判為目前仍在處置。
+  const activePunish=Array.isArray(src.activePunish)?src.activePunish:(src.punish||[]).filter(x=>isActiveDisposal(x));
   const counts=countEligibleRows(src.rows,td);
   const warningText=src.warning?clean(Object.values(src.warning).join(' ')):'';
   const fast=historyComplete&&attentionAvailable?fastestFuture(counts,Boolean(src.warning)):src.warning?{days:1,path:'TPEx 官方累計次數異常預警：下一交易日若再次符合注意條件，即可能處置'}:{days:null,path:'TPEx 官方 OpenAPI 僅提供每日注意股快照；未取得完整歷史時不虛算 3／10／30 日次數'};
