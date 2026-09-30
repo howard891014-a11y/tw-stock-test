@@ -2705,7 +2705,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.56</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.57</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3218,15 +3218,19 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     </div>
 
     <div class="disposal-theme-body">
-      <article class="card disposal-status-card">
-        <div class="disposal-status-side">
-          <div class="disposal-card-title">處置狀態</div>
-          <div class="disposal-status-main"><span class="disposal-shield" id="disposalShield">✓</span><div><strong id="disposalState">--</strong><small id="disposalStateNote">搜尋股票後判讀</small></div></div>
-        </div>
-        <div class="disposal-risk-side">
-          <span>處置風險</span><strong id="disposalRisk">--</strong><small id="disposalRiskNote">--</small><small id="disposalRiskDistance">--</small>
-        </div>
-      </article>
+      <div class="disposal-status-grid">
+        <article class="card disposal-status-card">
+          <div class="disposal-status-side">
+            <div class="disposal-card-title">處置狀態</div>
+            <div class="disposal-status-main"><span class="disposal-shield" id="disposalShield">✓</span><div><strong id="disposalState">--</strong><small id="disposalStateNote">搜尋股票後判讀</small></div></div>
+          </div>
+        </article>
+        <article class="card disposal-risk-card">
+          <div class="disposal-risk-side">
+            <span>處置風險</span><strong id="disposalRisk">--</strong><small id="disposalRiskNote">--</small><small id="disposalRiskDistance">--</small>
+          </div>
+        </article>
+      </div>
 
       <article class="card disposal-progress-card">
         <div class="disposal-card-title">距離處置進度 <button class="disposal-help" type="button" data-disposal-help="progress">?</button></div>
@@ -3495,7 +3499,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.56"></script>
+  <script src="./app.js?v=2.6.5.57"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -3939,6 +3943,44 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
 #disposal .disposal-technical-comment small{display:block!important;color:#7c8da2!important;font-size:11px!important;line-height:1.45!important;}
 #disposal .disposal-technical-comment strong{display:block!important;margin-top:5px!important;color:#13233a!important;font-size:13px!important;line-height:1.65!important;font-weight:700!important;}
 @media(max-width:720px){#disposal .disposal-theme-card{padding:16px 14px!important;}#disposal .disposal-theme-title{font-size:20px!important;margin-bottom:14px!important;}#disposal .disposal-theme-body{gap:10px!important;}#disposal .disposal-card-title,#disposal .disposal-risk-side>span{font-size:13px!important;}#disposal .disposal-technical-comment strong{font-size:12px!important;}}
+</style>
+
+<style id="stockzone-v26557-disposal-typography-status-cards">
+/* v2.6.5.57 — 處置狀態/風險拆卡、狀態色與手機字級統一。 */
+#disposal .disposal-status-grid{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:10px!important;}
+#disposal .disposal-status-grid>.card{margin:0!important;min-width:0!important;box-shadow:none!important;}
+#disposal .disposal-status-card,#disposal .disposal-risk-card{display:block!important;padding:14px!important;}
+#disposal .disposal-status-side,#disposal .disposal-risk-side{padding:0!important;border-left:0!important;min-width:0!important;}
+#disposal .disposal-status-main{margin-top:12px!important;gap:9px!important;}
+#disposal .disposal-status-main strong,#disposal .disposal-risk-side>strong{font-size:18px!important;line-height:1.12!important;}
+#disposal #disposalState{color:#2aa96b!important;}
+#disposal.disposal-state-watch #disposalState,#disposal .disposal-state-watch-force #disposalState{color:#d4a514!important;}
+#disposal.disposal-state-danger #disposalState,#disposal .disposal-state-danger-force #disposalState{color:#e44f5f!important;}
+#disposal #disposalRisk.risk-low{color:#2aa96b!important;}
+#disposal #disposalRisk.risk-mid{color:#d4a514!important;}
+#disposal #disposalRisk.risk-high{color:#e44f5f!important;}
+#disposal .disposal-status-main small,#disposal .disposal-risk-side small{font-size:10.5px!important;line-height:1.35!important;}
+#disposal .disposal-help{width:16px!important;height:16px!important;min-width:16px!important;font-size:12px!important;line-height:13px!important;font-weight:400!important;border-width:1.2px!important;vertical-align:1px!important;}
+#disposal .disposal-progress-row>b{color:#13233a!important;}
+#disposal .disposal-check-list>div{font-size:11px!important;}
+#disposal .disposal-reason-note{font-size:11px!important;}
+#disposal .disposal-exempt-list>div{font-size:11px!important;}
+#disposal .disposal-exempt-list b{font-size:11px!important;}
+#disposal .disposal-price-line small{font-size:10.5px!important;}
+#disposal .disposal-rule-note{font-size:10.5px!important;}
+@media(max-width:720px){
+  #disposal .disposal-status-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:8px!important;}
+  #disposal .disposal-status-card,#disposal .disposal-risk-card{padding:12px!important;}
+  #disposal .disposal-status-main{margin-top:10px!important;gap:7px!important;}
+  #disposal .disposal-shield{width:34px!important;height:38px!important;font-size:20px!important;}
+  #disposal .disposal-status-main strong,#disposal .disposal-risk-side>strong{font-size:18px!important;}
+  #disposal .disposal-status-main small,#disposal .disposal-risk-side small{font-size:10.5px!important;}
+  #disposal .disposal-progress-row>b{font-size:11px!important;color:#13233a!important;}
+  #disposal .disposal-check-list>div{font-size:11px!important;}
+  #disposal .disposal-reason-note{font-size:11px!important;}
+  #disposal .disposal-exempt-list>div,#disposal .disposal-exempt-list b{font-size:11px!important;}
+  #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
+}
 </style>
 </body>
 </html>
