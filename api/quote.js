@@ -89,7 +89,7 @@ async function fetchMisChannel(stock,channel){
     const j=await r.json();
     const row=(Array.isArray(j?.msgArray)?j.msgArray:[]).find(x=>String(x?.c||"").trim()===code)||j?.msgArray?.[0];
     const last=misNumber(row?.z);
-    if(!row||last===null)return null;
+    if(!row||last===null||last<=0)return null;
     const previousClose=misNumber(row?.y),change=previousClose!==null?last-previousClose:null;
     const market=channel==="otc"?"上櫃":"上市";
     return{
@@ -176,7 +176,7 @@ async function dbCloseQuote(query,marketHint=""){
       if(rows.length!==1)return null;
     }
     const x=rows[0];if(!x)return null;
-    const last=toNumber(x.close_price),previousClose=toNumber(x.previous_close);if(last===null)return null;
+    const last=toNumber(x.close_price),previousClose=toNumber(x.previous_close);if(last===null||last<=0)return null;
     const change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null;
     const market=String(x.market||hint||"");
     return{
@@ -237,9 +237,9 @@ async function fetchYahoo(symbol,official){
       const json=await response.json(),result=json?.chart?.result?.[0];if(!result?.meta){lastError=new Error("Yahoo chart result missing");continue}
       const meta=result.meta,timestamps=result.timestamp||[],quote=result.indicators?.quote?.[0]||{},closes=quote.close||[];
       let last=toNumber(meta.regularMarketPrice),lastTime=toNumber(meta.regularMarketTime),barLast=null,barTime=null;
-      for(let i=closes.length-1;i>=0;i--){const close=toNumber(closes[i]),ts=toNumber(timestamps[i]);if(close!==null&&ts!==null){barLast=close;barTime=ts;break}}
+      for(let i=closes.length-1;i>=0;i--){const close=toNumber(closes[i]),ts=toNumber(timestamps[i]);if(close!==null&&close>0&&ts!==null){barLast=close;barTime=ts;break}}
       if(barLast!==null&&(last===null||lastTime===null||barTime>=lastTime)){last=barLast;lastTime=barTime}
-      if(last===null){lastError=new Error("Yahoo price missing");continue}
+      if(last===null||last<=0){lastError=new Error("Yahoo price missing or invalid");continue}
       const previousClose=toNumber(meta.regularMarketPreviousClose??meta.chartPreviousClose??meta.previousClose);
       const change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null;
       return{source:"Yahoo Finance",realtime:true,officialClose:false,symbol,code,name:shortName(FALLBACK_NAMES[code]||official?.name||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString(),tradeDate:taipeiDateFromEpoch(lastTime)};
