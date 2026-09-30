@@ -3116,7 +3116,7 @@ function resetInstitutional(note="等待資料"){
   latestInstitutionalData=null;
   const chip=$("institutionalSignalChip");if(chip){chip.textContent=note;chip.classList.remove("tone-up","tone-down","tone-watch")}
   const strengthChip=$("institutionalStrengthChip");if(strengthChip){strengthChip.textContent="法人強度 --/100";strengthChip.classList.remove("tone-good","tone-bad","tone-watch","tone-neutral")}
-  setText("institutionalAsOf","法人--|信用--");
+  setText("institutionalAsOf","法人-- | 信用--");
   for(const key of ["Foreign","Trust","Dealer","Total"]){for(const d of [1,5,10,20])setInstitutionalFlow(`institutional${key}${d}`,null);setText(`institutional${key}Streak`,note);const state=$(`institutional${key}State`);if(state){state.textContent="--";state.className="tone-neutral"}}
   const streak=$("institutionalStreakList");if(streak)streak.innerHTML=`<span>${note}</span>`;
   const creditJudgement=resetCreditTrading(note);
@@ -3159,7 +3159,7 @@ function renderInstitutional(data){
   if(chip){chip.textContent=label;chip.classList.remove("tone-up","tone-down","tone-watch");const tone=institutionalChipTone(label);if(tone)chip.classList.add(tone)}
   const strengthChip=$("institutionalStrengthChip");if(strengthChip){strengthChip.textContent=`法人強度 ${strength}/100`;strengthChip.classList.remove("tone-good","tone-bad","tone-watch","tone-neutral");strengthChip.classList.add(institutionalStrengthTone(strength,label))}
   const institutionalDate=data?.asOfDate||"--",creditDate=data?.creditTrading?.asOfDate||"--";
-  setText("institutionalAsOf",`法人${institutionalDate}|信用${creditDate}`);
+  setText("institutionalAsOf",`法人${institutionalDate} | 信用${creditDate}`);
   const map=[["Foreign","foreign"],["Trust","trust"],["Dealer","dealer"],["Total","total"]];
   for(const [labelKey,key] of map){
     for(const days of [1,5,10,20])setInstitutionalFlow(`institutional${labelKey}${days}`,institutionalPeriod(data,key,days));
