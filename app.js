@@ -2684,40 +2684,59 @@ function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
 }
 function renderTradeOutputs(){const expected=renderExpectedUpside(latestPlayStyleResult);if(expected){const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price),risk=buildDecisionRisk(latestPlayStyleResult,price,expected),decision=renderDecision(latestPlayStyleResult,expected,risk);renderOverviewResonance(latestPlayStyleResult,expected,decision,risk)}}
 
-function technicalPersonalitySeasonJudgement(personality,seasonality){
-  const pd=personality||{},sd=seasonality||{};
-  let personalityText="股性歷史樣本不足，暫時無法判斷主要交易節奏。";
+function technicalSystemJudgement(direction,personality,seasonality){
+  const d=direction||{},pd=personality||{},sd=seasonality||{},f=d.factors||{};
+  const vals={
+    ma:Number(f.ma?.value),volume:Number(f.volume?.value),trend:Number(f.trend?.value),
+    momentum:Number(f.momentum?.value),bollinger:Number(f.bollinger?.value),bias:Number(f.bias?.value)
+  };
+  const valid=Object.entries(vals).filter(([,v])=>Number.isFinite(v));
+  const bull=valid.filter(([,v])=>v>=.28).map(([k])=>k),bear=valid.filter(([,v])=>v<=-.28).map(([k])=>k);
+  const agreement=Number(d.agreement)||0,parts=[];
+
+  if(d.direction==='偏多'){
+    parts.push(agreement>=70
+      ?'整體技術結構由多方主導，多數訊號已經同向，現階段較像趨勢延續而不是單點反彈。'
+      :'整體技術略站在多方，但各項訊號仍有分歧，較適合等結構確認後再看延續。');
+  }else if(d.direction==='偏空'){
+    parts.push(agreement>=70
+      ?'整體技術結構仍由空方主導，多數訊號尚未出現足以確認反轉的同步修復。'
+      :'整體技術仍偏空，但部分訊號已開始修復，目前較像弱勢中的止跌觀察，還不能直接視為反轉。');
+  }else{
+    parts.push('整體技術訊號彼此拉扯，暫時沒有形成明確的多空共識，現階段更接近整理等待方向。');
+  }
+
+  const bias20=Number(f.bias20),rsi=Number(f.rsi),ratio20=Number(f.ratio20);
+  if((Number.isFinite(bias20)&&bias20<=-15)||(Number.isFinite(rsi)&&rsi<=30)){
+    parts.push('位置已偏低或接近超跌，反彈條件正在累積，但仍要看到動能與均線修復才算真正轉強。');
+  }else if((Number.isFinite(bias20)&&bias20>=15)||(Number.isFinite(rsi)&&rsi>=75)){
+    parts.push('目前位置偏熱，若量價無法延續，短線回吐風險會明顯增加。');
+  }else if(bull.length&&bear.length){
+    parts.push('偏多與偏空因子仍互相牽制，單一指標轉好或轉弱都不足以單獨改變整體方向。');
+  }else if(d.direction==='偏多'&&Number.isFinite(ratio20)&&ratio20<.75){
+    parts.push('方向雖偏多，但量能尚未明顯跟上，後續延續仍需要成交量確認。');
+  }else if(d.direction==='偏空'&&Number.isFinite(ratio20)&&ratio20<.75){
+    parts.push('弱勢仍在，但量能沒有同步放大，較像低量整理，後續要觀察是否出現止跌修復。');
+  }
+
   if(pd.valid){
-    const up=Number.isFinite(pd.upDays)?`典型上漲約 ${Math.round(pd.upDays)} 日`:"上漲週期已有歷史樣本";
-    const retrace=Number.isFinite(pd.retrace)?`回吐前波約 ${pd.retrace.toFixed(0)}%`:"回吐幅度仍需更多樣本";
-    const map={
-      "burst":`股性偏爆發短線，${up}，行情發動通常較集中，追蹤重點是爆發後是否快速降溫。`,
-      "short-cycle":`股性偏短週期墊高，${up}，整理後常再嘗試墊高，但節奏通常比典型波段更快。`,
-      "high-vol-short":`股性屬高波動短週期，${up}、${retrace}，快速拉升與深回檔都較常見。`,
-      "hybrid":`股性兼具波段與高波動，${up}、${retrace}，主趨勢可以延續，但中途回檔幅度通常不小。`,
-      "swing-trend":`股性偏波段趨勢，${up}、${retrace}，上漲與整理節奏相對完整，趨勢延續性較值得觀察。`,
-      "range":`股性偏箱型震盪，${up}，價格較常在區間內來回，趨勢延續性相對有限。`,
-      "reset":`股性常出現深回重置，${retrace}，前一段漲幅較容易被大幅回吐，結構重建比追價更重要。`,
-      "mixed":`股性呈混合節奏，${up}、${retrace}，短線與波段特徵都存在，但目前沒有單一節奏明顯主導。`
-    };
-    personalityText=map[pd.kind]||`目前股性屬「${pd.label||"混合節奏"}」，${up}、${retrace}。`;
+    if(pd.kind==='reset')parts.push('這檔股性常出現深回重置，支撐確認比搶反彈更重要。');
+    else if(pd.kind==='high-vol-short')parts.push('這檔股性波動較大，短線轉折速度快，追價與搶反彈都要保留更大的容錯。');
+    else if(pd.kind==='range')parts.push('這檔股性偏箱型，突破能否維持比單次急漲急跌更值得重視。');
+    else if(pd.kind==='swing-trend')parts.push('這檔股性偏波段趨勢，結構未破壞時，趨勢延續的重要性高於單日波動。');
   }
-  let seasonText="季節性樣本不足，目前不把季節因素列為主要判讀依據。";
-  if(sd.valid){
-    const rate=Number(sd.positiveRate),median=Number(sd.median),sample=Number(sd.sample),q=sd.quarter||"--";
-    const tone=Number.isFinite(rate)&&Number.isFinite(median)
-      ?(rate>=60&&median>0?"略偏正向":rate<=40&&median<0?"偏弱":"大致中性")
-      :"大致中性";
-    const medianText=Number.isFinite(median)?stageFmtPct(median):"--";
-    const rateText=Number.isFinite(rate)?`${Math.round(rate)}%`:"--";
-    seasonText=`近5年 Q${q} 的上漲比例約 ${rateText}，中位報酬 ${medianText}，季節性${tone}${Number.isFinite(sample)?`（${sample} 個年度樣本）`:""}；季節性只作輔助，不單獨決定方向。`;
+
+  if(sd.valid&&Number(sd.sample)>=3){
+    const rate=Number(sd.positiveRate),median=Number(sd.median);
+    if(Number.isFinite(rate)&&Number.isFinite(median)&&rate>=70&&median>0)parts.push('季節性略有順風，但只作輔助，不單獨改變技術方向。');
+    else if(Number.isFinite(rate)&&Number.isFinite(median)&&rate<=30&&median<0)parts.push('季節性略偏逆風，需提高對轉弱訊號的敏感度，但仍不單獨決定方向。');
   }
-  return `${personalityText}${seasonText}`;
+  return parts.join('');
 }
 
 async function loadTechnical(data){
   const code=data?.code||data?.symbol||"",market=data?.market||data?.marketLabel||"";
-  resetFiveStage("讀取技術資料中…");setText("technicalJudgement","讀取股性與季節性資料中…");
+  resetFiveStage("讀取技術資料中…");setText("technicalJudgement","讀取整體技術判讀中…");
   try{
     const [t,hraw]=await Promise.all([technical(code,market),history5Y(code,market).catch(e=>{console.warn("五年歷史資料更新失敗",e);return null})]);
     const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(code)!==curCode)return;
@@ -2744,11 +2763,11 @@ async function loadTechnical(data){
     ]);
     const sd=latestTechnicalSeasonality||{};const seasonTone=sd.valid?(sd.median>0&&sd.positiveRate>=60?'good':sd.median<0&&sd.positiveRate<=40?'bad':'watch'):'neutral';techSet("techSeasonState",sd.valid?`Q${sd.quarter} ${sd.median>=0?'偏正':'偏弱'}`:"樣本不足",seasonTone);setText("techSeasonConclusion",sd.label||`近5年Q${sd.quarter||''}｜樣本不足`);
     const qRows=[1,2,3,4].map(q=>{const x=sd.quarters?.[q];return [`Q${q}`,x?.valid?`${x.positiveRate}%上漲｜${stageFmtPct(x.median)}`:"樣本不足"]});
-    technicalMetrics("techSeason",qRows);setText("technicalJudgement",technicalPersonalitySeasonJudgement(pd,sd));
+    technicalMetrics("techSeason",qRows);setText("technicalJudgement",technicalSystemJudgement(latestTechnicalDirection,pd,sd));
     const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${latestTechnicalDirection?.tone||"neutral"}`);}
     updateTechnicalOverview(latestTechnicalDirection,null);
     renderFiveStage(t,price);
-  }catch(e){console.warn("技術資料更新失敗",e);latestTechnicalDirection=null;latestTechnicalPersonality=null;latestTechnicalSeasonality=null;setText("technicalSource","--");setText("technicalJudgement","技術資料取得失敗，暫時無法產生股性與季節性判讀。");resetFiveStage("技術資料取得失敗")}
+  }catch(e){console.warn("技術資料更新失敗",e);latestTechnicalDirection=null;latestTechnicalPersonality=null;latestTechnicalSeasonality=null;setText("technicalSource","--");setText("technicalJudgement","技術資料取得失敗，暫時無法產生整體技術判讀。");resetFiveStage("技術資料取得失敗")}
 }
 async function valuation(query,market,price){
   const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});

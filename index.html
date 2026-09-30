@@ -2522,7 +2522,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.42</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.43</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2632,7 +2632,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div class="tech-tile"><header><b><span class="tech-title-icon tech-icon-season" aria-hidden="true">◷</span>季節性</b><em id="techSeasonState">--</em></header><p id="techSeasonConclusion">--</p><small id="techSeason">--</small></div>
           </section>
           <div class="technical-comment">
-            <small>系統判讀</small><strong id="technicalJudgement">搜尋股票後顯示股性與季節性判讀。</strong>
+            <small>系統判讀</small><strong id="technicalJudgement">搜尋股票後顯示整體技術判讀。</strong>
           </div>
 
         </article>
@@ -3211,14 +3211,12 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <article class="card manage-card manage-panel manage-theme-card active" data-manage-panel="holdings">
           <div class="card-title theme-white-card-title manage-theme-title">
             <span class="theme-title-group"><i class="manage-title-icon manage-title-icon-holdings" aria-hidden="true"></i><span>持股清單</span></span>
-            <span class="badge">本機保存</span>
           </div>
           <div id="holdingsCards" class="manage-list"></div>
         </article>
         <article class="card manage-card manage-panel manage-theme-card" data-manage-panel="watchlist">
           <div class="card-title theme-white-card-title manage-theme-title">
             <span class="theme-title-group"><i class="manage-title-icon manage-title-icon-watchlist" aria-hidden="true"></i><span>觀察清單</span></span>
-            <span class="badge">本機保存</span>
           </div>
           <div id="watchlistCards" class="manage-list"></div>
         </article>
@@ -3311,7 +3309,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.42"></script>
+  <script src="./app.js?v=2.6.5.43"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5516,4 +5514,43 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-state-line strong{color:#278b65!important;}
 #overviewResonanceCard .overview-resonance-metrics>div.metric-up{background:linear-gradient(180deg,#fff5f6,#fff0f2)!important;}
 #overviewResonanceCard .overview-resonance-metrics>div.metric-down{background:linear-gradient(180deg,#eff9f4,#eaf7f1)!important;}
+</style>
+
+<style id="stockzone-v26543-tech-judgement-management-icons-color">
+/* v2.6.5.43 — overall technical judgement + management title icon alignment + overview metric icon colors. */
+
+/* Holdings/watchlist keep their existing glyphs, but use the same dark, frameless proportions as the 技術分析 title icon. */
+#stockManagement .manage-title-icon{
+  position:relative!important;
+  display:inline-block!important;
+  width:24.8px!important;
+  height:21.6px!important;
+  min-width:24.8px!important;
+  flex:0 0 24.8px!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#stockManagement .manage-title-icon::before{
+  content:""!important;
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  background:#415269!important;
+  -webkit-mask-position:center!important;
+  mask-position:center!important;
+  -webkit-mask-size:contain!important;
+  mask-size:contain!important;
+  -webkit-mask-repeat:no-repeat!important;
+  mask-repeat:no-repeat!important;
+}
+#stockManagement .manage-theme-title .theme-title-group{gap:9px!important;}
+@media(max-width:720px){
+  #stockManagement .manage-title-icon{width:24.8px!important;height:21.6px!important;min-width:24.8px!important;flex-basis:24.8px!important;}
+}
+
+/* Taiwan convention: expected upside is positive/red, normal downside is negative/green. Keep the glyph shapes unchanged. */
+#overviewResonanceCard .metric-badge-up{background:#ffd9e0!important;color:#df4d61!important;}
+#overviewResonanceCard .metric-badge-down{background:#d1f0df!important;color:#179f61!important;}
 </style>
