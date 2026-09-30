@@ -181,6 +181,7 @@ function dayKey(v){
   return m?`${m[1]}-${m[2]}-${m[3]}`:"";
 }
 function numeric(v){const n=Number(v);return Number.isFinite(n)?n:null}
+function validPositivePrice(v){const n=Number(v);return Number.isFinite(n)&&n>0}
 function snapshotRow(root){
   const queue=[root],seen=new Set();
   while(queue.length){
@@ -188,7 +189,7 @@ function snapshotRow(root){
     if(!x||typeof x!=="object"||seen.has(x))continue;seen.add(x);
     const close=numeric(x.close_price??x.closePrice);
     const date=dayKey(x.trade_date??x.tradeDate);
-    if(close!==null&&date)return x;
+    if(close!==null&&close>0&&date)return x;
     for(const v of Object.values(x))if(v&&typeof v==="object")queue.push(v);
   }
   return null;
@@ -197,7 +198,7 @@ function normalizeSnapshot(payload,code){
   if(payload?.found===false)return null;
   const row=snapshotRow(payload);if(!row)return null;
   const last=numeric(row.close_price??row.closePrice),previousClose=numeric(row.previous_close??row.previousClose),change=previousClose!==null&&last!==null?last-previousClose:null;
-  if(last===null)return null;
+  if(last===null||last<=0)return null;
   return{source:"Neon price_snapshot",code:String((row.stock_code??row.stockCode??code)||""),name:row.stock_name??row.stockName??"",market:row.market??"",last,previousClose,change,changePct:previousClose&&change!==null?(change/previousClose)*100:null,open:numeric(row.open_price??row.openPrice),high:numeric(row.high_price??row.highPrice),low:numeric(row.low_price??row.lowPrice),quoteTime:row.quote_time??row.quoteTime??row.updated_at??row.updatedAt??null,tradeDate:dayKey(row.trade_date??row.tradeDate),officialClose:true};
 }
 async function dbCloseQuote(query,market=""){
@@ -213,14 +214,18 @@ async function dbCloseQuote(query,market=""){
 
 function quoteCacheKey(code,market=""){return `close:${String(code||"")}:${String(market||"")}`}
 async function readLocalCloseQuote(code,market=""){
-  const row=await stockzoneIdbGet("quoteCache",quoteCacheKey(code,market));
-  return row?.data||null;
+  const key=quoteCacheKey(code,market),row=await stockzoneIdbGet("quoteCache",key),data=row?.data||null;
+  if(data&&!validPositivePrice(data?.last??data?.price??data?.regularMarketPrice)){
+    await stockzoneIdbDelete("quoteCache",key);
+    return null;
+  }
+  return data;
 }
 async function writeLocalCloseQuote(code,market,data){
-  if(!data)return false;
+  if(!data||!validPositivePrice(data?.last??data?.price??data?.regularMarketPrice))return false;
   return stockzoneIdbPut("quoteCache",quoteCacheKey(code,market),{savedAt:Date.now(),tradeDate:dayKey(data.tradeDate)||dayKey(data.quoteTime),data});
 }
-function isTodayCloseCached(q){const c=taiwanMarketPhase();return c.phase==="post"&&dayKey(q?.tradeDate)===c.date}
+function isTodayCloseCached(q){const c=taiwanMarketPhase();return c.phase==="post"&&validPositivePrice(q?.last??q?.price??q?.regularMarketPrice)&&dayKey(q?.tradeDate)===c.date}
 const MIS_CLOSE_VERIFY_KEY="stockzone_mis_close_verify_v26211";
 function taipeiCloseVerifyCycle(now=new Date()){
   let date="",weekday="",minutes=0;
@@ -279,12 +284,14 @@ async function yahooQuote(query,market="",options={}){
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),timeoutMs);
     try{
-      return await readJson(
+      const data=await readJson(
         await fetch(`/api/quote?q=${encodeURIComponent(query)}${market?`&market=${encodeURIComponent(market)}`:""}${options?.live?"&mode=live":""}`,{
           cache:options?.live?"no-store":"default",signal:controller.signal
         }),
         "股價"
       );
+      if(!validPositivePrice(data?.last??data?.price??data?.regularMarketPrice))throw new Error("股價來源回傳無效價格");
+      return data;
     }finally{clearTimeout(timer)}
   }
   try{return await once(15000)}catch(e){
