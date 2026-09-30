@@ -2622,6 +2622,19 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   #targets .target-list-subcard .broker-row{padding:10px 6px!important;}
 }
 </style>
+
+<style id="stockzone-v26549-target-model">
+/* v2.6.5.49 — four-band target ladder and refreshed estimate icon. */
+#targets .target-levels{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
+#targets .target-estimate-icon::before{left:6px!important;top:6px!important;width:14px!important;height:14px!important;border:2px solid #4e86c7!important;border-radius:50%!important;background:transparent!important;box-shadow:none!important;}
+#targets .target-estimate-icon::after{left:11px!important;top:11px!important;width:4px!important;height:4px!important;border:0!important;border-radius:50%!important;background:#4e86c7!important;box-shadow:6px 6px 0 -1px #75a4d8!important;}
+@media(max-width:720px){
+  #targets .target-levels{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;}
+  #targets .target-levels>div{min-height:74px!important;padding:9px 3px!important;}
+  #targets .target-levels span{font-size:12px!important;}
+  #targets .target-levels strong{font-size:15px!important;}
+}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2649,7 +2662,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.48</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.49</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3319,6 +3332,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <div data-target-rate="80"><span>80%</span><strong id="target80">--</strong></div>
                 <div data-target-rate="85"><span>85%</span><strong id="target85">--</strong></div>
                 <div data-target-rate="88"><span>88%</span><strong id="target88">--</strong></div>
+                <div data-target-rate="100"><span>100%</span><strong id="target100">--</strong></div>
               </div>
               <div class="target-history3" id="targetHistory3"></div>
               <div class="target-system-comment"><small>系統判讀</small><strong id="targetSystemJudgement">搜尋股票後顯示目標價判讀。</strong></div>
@@ -3439,7 +3453,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.48"></script>
+  <script src="./app.js?v=2.6.5.49"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

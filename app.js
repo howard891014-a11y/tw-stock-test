@@ -2776,6 +2776,7 @@ async function loadTechnical(data){
     const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${latestTechnicalDirection?.tone||"neutral"}`);}
     updateTechnicalOverview(latestTechnicalDirection,null);
     renderFiveStage(t,price);
+    if(targetRowsCache.length)renderMainTarget(preferredMainTarget());
   }catch(e){console.warn("技術資料更新失敗",e);latestTechnicalDirection=null;latestTechnicalPersonality=null;latestTechnicalSeasonality=null;setText("technicalSource","--");setText("technicalJudgement","技術資料取得失敗，暫時無法產生整體技術判讀。");resetFiveStage("技術資料取得失敗")}
 }
 async function valuation(query,market,price){
@@ -3178,6 +3179,7 @@ function renderInstitutional(data){
   const creditJudgement=renderCreditTrading(data.creditTrading);
   setText("institutionalJudgement",`${institutionalSystemJudgement(data,label,strength)} ${creditJudgement}`);
   setText("institutionalSource",`資料來源：${data.source||"TWSE／TPEx 官方公開資料"}`);
+  if(targetRowsCache.length)renderMainTarget(preferredMainTarget());
 }
 
 async function institutional(query,market="",force=false){
@@ -3377,32 +3379,63 @@ $("mainBrokerSelect")?.addEventListener("change",e=>{
 });
 
 
+function targetSignalAssessment(){
+  const tech=latestTechnicalDirection||{},inst=latestInstitutionalData||{},credit=inst?.creditTrading?.signal||{};
+  let weighted=0,weight=0;const notes=[];
+  const td=String(tech?.direction||"");
+  if(td){
+    const sign=td==="偏多"?1:td==="偏空"?-1:0,agreement=Math.max(.45,Math.min(1,(Number(tech?.agreement)||50)/100));
+    weighted+=sign*agreement*.40;weight+=.40;notes.push(`技術${td}`);
+  }
+  const il=String(inst?.signal?.label||"");
+  if(il){
+    const sign=il==="法人偏多"?1:il==="中性偏多"?.45:il==="法人偏空"?-1:il==="中性偏空"?-.45:0;
+    const strength=Math.max(.45,Math.min(1,(Number(inst?.signal?.strength)||institutionalStrength(inst)||50)/100));
+    weighted+=sign*strength*.35;weight+=.35;notes.push(`法人${il.replace("法人","")}`);
+  }
+  const cl=String(credit?.label||"");
+  if(cl){
+    const sign=cl==="籌碼健康"?1:cl==="偏健康"?.55:cl==="籌碼偏弱"?-1:cl==="偏熱／需觀察"?-.45:0;
+    weighted+=sign*.25;weight+=.25;notes.push(`信用籌碼${cl}`);
+  }
+  return {score:weight?Math.max(-1,Math.min(1,weighted/weight)):0,available:weight>0,notes};
+}
+function targetLikelyRate(assessment,current,basisPrice){
+  const score=Number(assessment?.score)||0,ratio=(Number(current)>0&&Number(basisPrice)>0)?Number(current)/Number(basisPrice):null;
+  if(score>=.72&&ratio!==null&&ratio<.88)return 1.10;
+  if(score>=.55)return 1.05;
+  if(score>=.22)return 1.00;
+  if(score>=-.12)return .88;
+  if(score>=-.45)return .85;
+  return .80;
+}
 function renderTargetSystemJudgement(main,basis,levels,current){
   const el=$("targetSystemJudgement"); if(!el)return;
   if(!main||!basis){el.textContent="搜尋股票後顯示目標價判讀。";return}
-  const broker=targetBrokerName(main.row);
-  const latest=targetPriceValue(main.latest);
-  const h=main.history||[];
+  const broker=targetBrokerName(main.row),latest=targetPriceValue(main.latest),h=main.history||[];
   let basisText="";
   if(h.length>1){
     const prev=targetPriceValue(h[1]);
     if(Number.isFinite(prev)){
-      if(latest>prev)basisText=`${broker}最新目標價 ${targetFmt(latest)} 較前次上調，因此倍率基準沿用前次 ${targetFmt(basis.base)}。`;
-      else if(latest<prev)basisText=`${broker}最新目標價 ${targetFmt(latest)} 較前次下調，因此以最新 ${targetFmt(basis.base)} 作為倍率基準。`;
-      else basisText=`${broker}最新目標價 ${targetFmt(latest)} 與前次持平，因此以最新 ${targetFmt(basis.base)} 作為倍率基準。`;
+      if(latest>prev)basisText=`${broker}最新目標價 ${targetFmt(latest)} 較前次上調，倍率基準沿用前次 ${targetFmt(basis.base)}。`;
+      else if(latest<prev)basisText=`${broker}最新目標價 ${targetFmt(latest)} 較前次下調，倍率基準採最新 ${targetFmt(basis.base)}。`;
+      else basisText=`${broker}最新目標價 ${targetFmt(latest)} 與前次持平，倍率基準採最新 ${targetFmt(basis.base)}。`;
     }
   }
-  if(!basisText)basisText=`${broker}目前只有一筆有效目標價 ${targetFmt(latest)}，因此以最新資料作為倍率基準。`;
-  if(!Number.isFinite(current)||!(current>0)||!Array.isArray(levels)||!levels.length){el.textContent=basisText;return}
-  const sorted=levels.slice().sort((a,b)=>a.price-b.price);
-  const low=sorted[0],high=sorted[sorted.length-1];
-  const nearest=sorted.slice().sort((a,b)=>Math.abs(a.price-current)-Math.abs(b.price-current))[0];
-  const gapPct=nearest.price>0?((current-nearest.price)/nearest.price*100):0;
-  let valuationText="";
-  if(current<low.price){valuationText=`現價 ${targetFmt(current)} 低於 80%～88% 倍率區間，位置偏低，距最近的 ${Math.round(nearest.rate*100)}% 目標約 ${Math.abs(gapPct).toFixed(1)}%。`;}
-  else if(current>high.price){valuationText=`現價 ${targetFmt(current)} 高於 80%～88% 倍率區間，位置偏高，距最近的 ${Math.round(nearest.rate*100)}% 目標約 ${Math.abs(gapPct).toFixed(1)}%。`;}
-  else{valuationText=`現價 ${targetFmt(current)} 位於倍率估值區間內，最接近 ${Math.round(nearest.rate*100)}% 目標 ${targetFmt(nearest.price)}，差距約 ${Math.abs(gapPct).toFixed(1)}%。`;}
-  el.textContent=`${basisText}${valuationText}`;
+  if(!basisText)basisText=`${broker}目前只有一筆有效目標價 ${targetFmt(latest)}，倍率基準採最新資料。`;
+  if(!Number.isFinite(current)||!(current>0)){el.textContent=basisText;return}
+  const assessment=targetSignalAssessment(),likelyRate=targetLikelyRate(assessment,current,basis.base),likelyPrice=Math.floor(basis.base*likelyRate);
+  const baseGap=(current/basis.base-1)*100;
+  let targetView="";
+  if(likelyRate>1){targetView=`綜合技術、法人與信用籌碼後，這個券商目標價目前略偏保守，訊號若延續，較可能落在 100%以上，約 ${Math.round(likelyRate*100)}%（${targetFmt(likelyPrice)}）附近。`;}
+  else if(likelyRate===1){targetView=`綜合技術、法人與信用籌碼後，這個券商目標價目前大致合理，最可能的倍率約為 100%（${targetFmt(likelyPrice)}）。`;}
+  else{targetView=`綜合技術、法人與信用籌碼後，這個券商目標價目前偏樂觀，較可能先以 ${Math.round(likelyRate*100)}%（${targetFmt(likelyPrice)}）作為可達區。`;}
+  let positionText="";
+  if(baseGap<=-20)positionText=`現價 ${targetFmt(current)} 距完整目標仍低約 ${Math.abs(baseGap).toFixed(1)}%，估值位置偏低。`;
+  else if(baseGap<0)positionText=`現價 ${targetFmt(current)} 仍低於完整目標約 ${Math.abs(baseGap).toFixed(1)}%。`;
+  else positionText=`現價 ${targetFmt(current)} 已高於完整目標約 ${Math.abs(baseGap).toFixed(1)}%，需要更強的基本面或籌碼延續才足以支持更高倍率。`;
+  const signalText=assessment.available&&assessment.notes.length?`目前訊號為${assessment.notes.join("、")}。`:"目前跨模組資料尚未完整，倍率判斷先以可用資料為主。";
+  el.textContent=`${basisText}${signalText}${targetView}${positionText}`;
 }
 
 function renderMainTarget(main){
@@ -3415,7 +3448,7 @@ function renderMainTarget(main){
  }
  const basis=targetBasis(main);
  const current=Number(currentStock?.last??currentStock?.price??currentStock?.regularMarketPrice);
- const levels=[.80,.85,.88].map(rate=>({rate,price:Math.floor(basis.base*rate)}));
+ const levels=[.80,.85,.88,1.00].map(rate=>({rate,price:Math.floor(basis.base*rate)}));
  const nearest=Number.isFinite(current)?levels.slice().sort((x,y)=>Math.abs(x.price-current)-Math.abs(y.price-current))[0]:levels[0];
  document.querySelectorAll("#targets .target-levels [data-target-rate]").forEach(el=>{
    el.classList.toggle("target-nearest",Number(el.dataset.targetRate)===Math.round(nearest.rate*100));
@@ -3423,7 +3456,7 @@ function renderMainTarget(main){
  setText("overviewNearestPrice",`${targetFmt(nearest.price)}`);
  setText("overviewNearestRate",`（倍率${Math.round(nearest.rate*100)}%）`);
  setText("overviewMainBrokerLine",`${targetBrokerName(main.row)}：${targetFmt(targetPriceValue(main.latest))}`);
- setText("target80",`${targetFmt(Math.floor(basis.base*.80))}`); setText("target85",`${targetFmt(Math.floor(basis.base*.85))}`); setText("target88",`${targetFmt(Math.floor(basis.base*.88))}`);
+ setText("target80",`${targetFmt(Math.floor(basis.base*.80))}`); setText("target85",`${targetFmt(Math.floor(basis.base*.85))}`); setText("target88",`${targetFmt(Math.floor(basis.base*.88))}`); setText("target100",`${targetFmt(Math.floor(basis.base))}`);
  renderTargetHistory3(main); renderTargetSystemJudgement(main,basis,levels,current); play?.classList.remove("hidden"); renderValuationScenario();
 }
 const TARGET_CORR_KEY="stockzone_target_corrections_v239"; let editingTarget=null;
