@@ -2705,7 +2705,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.52</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.53</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3483,7 +3483,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.52"></script>
+  <script src="./app.js?v=2.6.5.53"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5727,4 +5727,15 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 /* Taiwan convention: expected upside is positive/red, normal downside is negative/green. Keep the glyph shapes unchanged. */
 #overviewResonanceCard .metric-badge-up{background:#ffd9e0!important;color:#df4d61!important;}
 #overviewResonanceCard .metric-badge-down{background:#d1f0df!important;color:#179f61!important;}
+</style>
+
+<style id="stockzone-v26553-stage-news-final-fix">
+/* v2.6.5.53 — final cascade fix: staircase stage icon + news keyword card spacing. */
+#news .news-analysis-head{margin-bottom:4px!important;}
+#news .news-analysis-head>.card-title{margin:0!important;}
+#news .news-summary-editor{margin-top:0!important;}
+.theme-icon-stage{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 26h5v-4h5v-4h5v-4h5v-4h4'/%3E%3Cpath d='M22 7l5-4M23 3h4v4'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 26h5v-4h5v-4h5v-4h5v-4h4'/%3E%3Cpath d='M22 7l5-4M23 3h4v4'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
 </style>
