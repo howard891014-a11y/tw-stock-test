@@ -297,9 +297,11 @@ async function yahooQuote(query,market="",options={}){
 async function quote(query,market="",options={}){
   const phase=taiwanMarketPhase(),intraday=phase.phase==="live"&&marketSessionForToday()?.status!=="holiday";
   if(intraday){
-    const live=await yahooQuote(query,market,{live:true}),c=taipeiMarketClock();
-    const state=rememberMarketSessionFromQuote(live,{allowHolidayMark:true});
-    if(state==="unknown"&&c.minutes<9*60+5){const delay=(9*60+5-c.minutes)*60*1000;marketNextProbeAt=Math.max(marketNextProbeAt,Date.now()+Math.max(30000,delay))}else marketNextProbeAt=0;
+    const live=await yahooQuote(query,market,{live:true});
+    // v2.6.5.44: 09:00 起維持正常 30 秒 probe；09:00~09:05 不再因尚未確認交易日而暫停更新。
+    // holiday 仍只會在 09:05 後由 rememberMarketSessionFromQuote() 標記，不影響收盤流程。
+    rememberMarketSessionFromQuote(live,{allowHolidayMark:true});
+    marketNextProbeAt=0;
     return live;
   }
 
