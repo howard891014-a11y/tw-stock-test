@@ -3038,10 +3038,19 @@ function institutionalDominantActor(data){
 }
 function institutionalSystemJudgement(data,label,strength){
   const signs=["foreign","trust","dealer"].map(key=>Math.sign(institutionalActorScore(data,key))).filter(Boolean),aligned=signs.length>=2&&signs.every(x=>x===signs[0]);
-  const dominant=institutionalDominantActor(data),coverage=Number(data?.historyCount)||0;
-  const alignment=aligned?`三類法人方向一致${dominant?`，目前以${dominant}的累計買賣超規模最大`:""}`:`三類法人仍有分歧${dominant?`，目前${dominant}的累計變化最明顯`:""}`;
-  const coverageNote=coverage<20?`目前取得 ${coverage} 個交易日，較長週期不足時不納入判讀。`:`已取得近20個交易日。`;
-  return `${alignment}。${coverageNote}`;
+  const coverage=Number(data?.historyCount)||0,s=Number(strength)||0,text=String(label||"中性");
+  let direction="法人加權方向目前接近中性",side="中性";
+  if(text==="法人偏多"){direction="法人加權方向明顯站在買方";side="偏多"}
+  else if(text==="中性偏多"){direction="法人加權方向目前稍微站在買方";side="偏多"}
+  else if(text==="法人偏空"){direction="法人加權方向明顯站在賣方";side="偏空"}
+  else if(text==="中性偏空"){direction="法人加權方向目前稍微站在賣方";side="偏空"}
+  let comment="";
+  if(side==="中性")comment=aligned?`${direction}，雖然三類法人方向較一致，但整體力道仍不足，暫時沒有形成明確的多空訊號。`:`${direction}，三類法人買賣方向仍有分歧，暫時沒有形成明確的多空共識。`;
+  else if(s>=70)comment=aligned?`${direction}，而且三類法人方向與連續性較一致，所以${side}訊號的強度也高。`:`${direction}，雖然三類法人仍有部分分歧，但整體方向與連續性仍強，所以${side}訊號強度偏高。`;
+  else if(s>=50)comment=`${direction}，但三類法人仍有部分分歧或連續性普通，所以方向${side}、強度中等。`;
+  else comment=`${direction}，但三類法人彼此分歧或連續性不足，所以方向${side}、強度卻不高。`;
+  if(coverage>0&&coverage<20)comment+=` 目前只有${coverage}個交易日資料，長週期判讀可信度較低。`;
+  return comment;
 }
 function resetInstitutional(note="等待資料"){
   latestInstitutionalData=null;
@@ -3073,8 +3082,14 @@ function renderCreditTrading(c){
   setText("creditShortRatio",Number.isFinite(Number(latest.short_margin_ratio))?`券資比 ${Number(latest.short_margin_ratio).toFixed(1)}%`:"券資比 --");
   setText("creditSblReturn",latest.sbl_return===null||latest.sbl_return===undefined?"今日還券 --":`今日還券 ${institutionalFmtShares(latest.sbl_return)}`);
   const sig=c.signal||{},chip=$("creditTradingSignal");if(chip){chip.textContent=sig.label||"中性";chip.className=sig.tone==="good"?"tone-good":sig.tone==="bad"?"tone-bad":sig.tone==="watch"?"tone-watch":"tone-neutral"}
-  const reasons=Array.isArray(sig.reasons)&&sig.reasons.length?sig.reasons.join("；"):"目前沒有明顯異常組合";
-  return `信用籌碼：${sig.label||"中性"}｜${reasons}。`;
+  const reasons=Array.isArray(sig.reasons)&&sig.reasons.length?sig.reasons:[];
+  const label=String(sig.label||"中性"),detail=reasons.join("；");
+  if(label==="中性")return detail?`${detail}。`:"信用籌碼目前沒有出現明顯的追價、攤平或軋空組合。";
+  if(label==="籌碼健康")return `信用籌碼目前偏健康${detail?`，${detail}`:""}。`;
+  if(label==="偏健康")return `信用籌碼目前略偏健康${detail?`，${detail}`:""}。`;
+  if(label==="偏熱／需觀察")return `信用籌碼目前偏熱、需要留意${detail?`，${detail}`:""}。`;
+  if(label==="籌碼偏弱")return `信用籌碼目前偏弱${detail?`，${detail}`:""}。`;
+  return label==="資料不足"?"信用籌碼資料不足，暫時無法形成明確判讀。":`信用籌碼目前為${label}${detail?`，${detail}`:""}。`;
 }
 function institutionalChipTone(label){const s=String(label||"");return /偏多/.test(s)?"tone-up":/偏空/.test(s)?"tone-down":s==="中性"?"tone-watch":""}
 function renderInstitutional(data){
