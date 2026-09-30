@@ -2656,7 +2656,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 </style>
 
 <style id="stockzone-v26551-news-polish">
-/* v2.6.5.51 — news secondary-text palette, headline emphasis, smaller bookmark, tighter heading spacing */
+/* v2.6.5.52 — news secondary-text palette, headline emphasis, smaller bookmark, tighter heading spacing */
 #news .news-summary-editor label small,
 #news .news-summary-row textarea::placeholder,
 #news .news-summary-status,
@@ -2667,6 +2667,16 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 #news .news-star.active{color:#f2c94c!important;}
 #news .news-analysis-head{margin-bottom:8px!important;}
 #news .news-analysis-head>.card-title{margin-bottom:8px!important;}
+</style>
+
+<style id="stockzone-v26552-ui-refine">
+/* v2.6.5.52 — remove duplicated technical overview, tighten news heading gap, redraw five-stage icon. */
+#news .news-analysis-head{margin-bottom:4px!important;}
+#news .news-analysis-head>.card-title{margin-bottom:0!important;}
+.theme-icon-stage{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 24h22'/%3E%3Cpath d='M7 21h4v-4h4v-4h4V9h6'/%3E%3Cpath d='m21 6 4 3-4 3'/%3E%3Ccircle cx='9' cy='21' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='13' cy='17' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='17' cy='13' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='21' cy='9' r='1.6' fill='black' stroke='none'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 24h22'/%3E%3Cpath d='M7 21h4v-4h4v-4h4V9h6'/%3E%3Cpath d='m21 6 4 3-4 3'/%3E%3Ccircle cx='9' cy='21' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='13' cy='17' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='17' cy='13' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='21' cy='9' r='1.6' fill='black' stroke='none'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
 </style>
 </head>
 <body>
@@ -2695,7 +2705,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.51</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.52</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2779,21 +2789,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       <section class="dashboard-grid">
         <article class="card detail-panel technical-card" id="technical" data-view-panel="analysis">
           <div class="card-title theme-white-card-title"><span class="analysis-title-group"><i class="analysis-title-icon" aria-hidden="true"></i><span>技術分析</span></span><span class="badge" id="technicalSource">--</span></div>
-          <section class="tech-overview tech-overview-v2" id="techOverview">
-            <div class="tech-overview-v2-inner">
-              <span class="tech-overview-kicker">綜合判斷</span>
-              <div class="tech-state-line"><i class="tech-state-icon" aria-hidden="true">↔</i><strong id="techState">--</strong></div>
-              <div class="tech-direction-scale tech-stage-scale" id="techDirectionScale" data-level="3" aria-label="五階段位置">
-                <div class="tech-scale-track" aria-hidden="true"></div>
-                <div class="tech-scale-item" data-level="1"><i aria-hidden="true"></i><span>築底</span></div>
-                <div class="tech-scale-item" data-level="2"><i aria-hidden="true"></i><span>轉強</span></div>
-                <div class="tech-scale-item" data-level="3"><i aria-hidden="true"></i><span>爬坡</span></div>
-                <div class="tech-scale-item" data-level="4"><i aria-hidden="true"></i><span>加速</span></div>
-                <div class="tech-scale-item" data-level="5"><i aria-hidden="true"></i><span>高檔</span></div>
-              </div>
-              <div class="tech-overview-insight tech-overview-risk"><span class="tech-overview-insight-icon" aria-hidden="true">⚠</span><div class="tech-overview-risk-copy"><small>風險評語</small><p id="techSummary">--</p></div></div>
-            </div>
-          </section>
           <section class="tech-grid">
             <div class="tech-tile"><header><b><span class="tech-title-icon tech-icon-ma" aria-hidden="true">𖡬</span>均線</b><em id="techMaState">--</em></header><p id="techMaConclusion">--</p><small id="techMaValues">--</small></div>
             <div class="tech-tile"><header><b><span class="tech-title-icon tech-icon-boll" aria-hidden="true">≋</span>布林通道</b><em id="techBollState">--</em></header><p id="techBollConclusion">--</p><small id="techBoll">--</small></div>
@@ -2808,6 +2803,20 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <small>系統判讀</small><strong id="technicalJudgement">搜尋股票後顯示整體技術判讀。</strong>
           </div>
 
+        </article>
+
+    <article class="card stage-card detail-panel" data-view-panel="analysis" id="stagePositionCard">
+          <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-stage" aria-hidden="true"></i><span>五階段位置</span></span></div>
+          <div class="stage-progress" id="stageSteps">
+            <div class="stage-progress-line" aria-hidden="true"><span class="stage-progress-fill" id="stageProgressFill"></span></div>
+            <div class="stage-step" data-stage="1"><i>1</i><span>築底</span></div><div class="stage-step" data-stage="2"><i>2</i><span>轉強</span></div>
+            <div class="stage-step" data-stage="3"><i>3</i><span>爬坡</span></div><div class="stage-step" data-stage="4"><i>4</i><span>加速</span></div><div class="stage-step" data-stage="5"><i>5</i><span>高檔</span></div>
+          </div>
+          <div class="stage-summary" id="stageSummaryBox">
+            <strong id="stageTitle">--</strong>
+            <p id="stageSummary">搜尋股票後判讀。</p>
+            <small id="stageSignals">--</small>
+          </div>
         </article>
 
         <article class="detail-panel" id="fundamentalPanel" data-view-panel="valuation">
@@ -3178,19 +3187,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     </article>
     <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-featured" aria-hidden="true"></i><span>近期精選</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
     <article class="card detail-panel simple-detail" data-view-panel="simulation"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-simulation" aria-hidden="true"></i><span>模擬交易</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>模擬交易績效</span><strong>◎</strong><small>之後接入智慧選股模擬交易與績效回饋</small></div></article>
-    <article class="card stage-card detail-panel" data-view-panel="analysis" id="stagePositionCard">
-          <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-stage" aria-hidden="true"></i><span>五階段位置</span></span></div>
-          <div class="stage-progress" id="stageSteps">
-            <div class="stage-progress-line" aria-hidden="true"><span class="stage-progress-fill" id="stageProgressFill"></span></div>
-            <div class="stage-step" data-stage="1"><i>1</i><span>築底</span></div><div class="stage-step" data-stage="2"><i>2</i><span>轉強</span></div>
-            <div class="stage-step" data-stage="3"><i>3</i><span>爬坡</span></div><div class="stage-step" data-stage="4"><i>4</i><span>加速</span></div><div class="stage-step" data-stage="5"><i>5</i><span>高檔</span></div>
-          </div>
-          <div class="stage-summary" id="stageSummaryBox">
-            <strong id="stageTitle">--</strong>
-            <p id="stageSummary">搜尋股票後判讀。</p>
-            <small id="stageSignals">--</small>
-          </div>
-        </article>
+
 
         <article class="card decision-card detail-panel" id="decision" data-view-panel="analysis">
           <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-decision" aria-hidden="true"></i><span>買賣決策</span></span><span class="card-title-actions"><span class="badge" id="decisionModeBadge">依玩法</span> <span class="badge decision-risk-badge" id="decisionRiskBadge">風險 --</span></span></div>
@@ -3486,7 +3483,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.51"></script>
+  <script src="./app.js?v=2.6.5.52"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
