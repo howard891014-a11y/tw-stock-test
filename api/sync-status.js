@@ -6,6 +6,7 @@ const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistory
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readFundflowValidationAudit } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
+const { STORAGE_POLICY, runStorageMaintenance } = require('../lib/storage-policy');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -382,8 +383,15 @@ async function readMarketDataHealth(sql,{windowDays=MARKET_HEALTH_WINDOW_DAYS}={
 
 
 async function readFlowDataHealth(sql){
-  const targets={live:20,backtest:250,research:500};
-  const [institutional,credit,priceHistoryRows,profileRows,syncRows,instCoverageTwse60,instCoverageTpex60,storage,compactHistory]=await Promise.all([
+  const targets={
+    live:STORAGE_POLICY.liveMinDays,
+    priceRaw:STORAGE_POLICY.raw.price,
+    institutionalRaw:STORAGE_POLICY.raw.institutional,
+    creditRaw:STORAGE_POLICY.raw.credit,
+    activityRaw:STORAGE_POLICY.raw.activity,
+    research:STORAGE_POLICY.compact.topicResearch
+  };
+  const [institutional,credit,priceHistoryRows,profileRows,syncRows,instCoverageTwse60,instCoverageTpex60,storage,researchCompactHistory]=await Promise.all([
     readInstitutionalHistoryHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     readCreditTradingHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     sql.query(`
@@ -418,8 +426,9 @@ async function readFlowDataHealth(sql){
     institutionalCoverageByDate('上市',60).catch(()=>[]),
     institutionalCoverageByDate('上櫃',60).catch(()=>[]),
     readDatabaseSizeAudit(sql).catch(e=>({error:String(e?.message||e),tables:[]})),
-    readCompactFeatureHistoryStatus(sql,{targetDays:60,horizon:5}).catch(e=>({targetDays:60,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)}))
+    readCompactFeatureHistoryStatus(sql,{targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5}).catch(e=>({targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)}))
   ]);
+  const compactHistory={...researchCompactHistory,targetDays:STORAGE_POLICY.xyOperationalDays,historyReady:Number(researchCompactHistory?.compactDays||0)>=STORAGE_POLICY.xyOperationalDays&&Number(researchCompactHistory?.horizonAnchorDays||0)>0};
   const priceHistory={markets:{}};
   for(const row of priceHistoryRows){
     priceHistory.markets[row.market]={
@@ -436,6 +445,11 @@ async function readFlowDataHealth(sql){
   const markets={};
   const institutionalCoverage60={'上市':instCoverageTwse60||[],'上櫃':instCoverageTpex60||[]};
   const warnings=[];
+  const layerState=(days,target)=>({
+    targetDays:target,
+    targetReady:days>=target,
+    progressPct:Number((Math.min(days,target)/target*100).toFixed(1))
+  });
   for(const market of ['上市','上櫃']){
     const profileCount=profiles[market]||0;
     const price=priceHistory.markets?.[market]||{};
@@ -447,39 +461,35 @@ async function readFlowDataHealth(sql){
     const dateAligned=Boolean(priceDate&&instDate&&creditDate&&priceDate===instDate&&priceDate===creditDate);
     const priceDays=Number(price.tradingDays||0),instDays=Number(inst.tradingDays||0),creditDays=Number(cred.tradingDays||0);
     const liveReady=dateAligned&&instFresh&&creditFresh&&priceDays>=targets.live&&instDays>=targets.live&&creditDays>=targets.live;
-    const backtestReady250=liveReady&&priceDays>=targets.backtest&&instDays>=targets.backtest&&creditDays>=targets.backtest;
-    const researchReady500=liveReady&&priceDays>=targets.research&&instDays>=targets.research&&creditDays>=targets.research;
+    const coreRawReady=liveReady&&priceDays>=targets.priceRaw&&instDays>=targets.institutionalRaw&&creditDays>=targets.creditRaw;
     const institutionalCoveragePct=profileCount?pct(inst.latestRows||0,profileCount):0;
     const instCoverage60=institutionalCoverage60[market]||[],completeDays60=instCoverage60.filter(x=>x.complete).length;
     const creditParticipationPct=profileCount?pct(cred.latestRows||0,profileCount):0;
-    const layerState=(days)=>({
-      liveReady:days>=targets.live,
-      backtestReady250:days>=targets.backtest,
-      researchReady500:days>=targets.research,
-      backtestProgressPct:Number((Math.min(days,targets.backtest)/targets.backtest*100).toFixed(1)),
-      researchProgressPct:Number((Math.min(days,targets.research)/targets.research*100).toFixed(1))
-    });
     if(!dateAligned)warnings.push(`${market}日期未對齊：股價 ${priceDate||'無'}／法人 ${instDate||'無'}／信用 ${creditDate||'無'}`);
     if(priceDays<targets.live)warnings.push(`${market}股價歷史僅 ${priceDays} 日`);
     if(instDays<targets.live)warnings.push(`${market}法人歷史僅 ${instDays} 日`);
     if(creditDays<targets.live)warnings.push(`${market}信用歷史僅 ${creditDays} 日`);
     markets[market]={
-      ready:liveReady,liveReady,backtestReady250,researchReady500,
+      ready:liveReady,liveReady,coreRawReady,
+      backtestReady250:false,researchReady500:false,
       expectedTradeDate:priceDate,profileRows:profileCount,dateAligned,
-      price:{...price,...layerState(priceDays),sync:syncBySource.price_daily||null,backfillSync:syncBySource.market_history_backfill||null},
-      institutional:{...inst,fresh:instFresh,...layerState(instDays),coveragePct:institutionalCoveragePct,completeDays60,targetDays60:60,complete60:completeDays60>=60,completeDays25:Math.min(25,completeDays60),targetDays25:25,complete25:completeDays60>=25,sync:syncBySource[sourceMap[market].institutional]||null},
-      credit:{...cred,fresh:creditFresh,...layerState(creditDays),participationPct:creditParticipationPct,sync:syncBySource[sourceMap[market].credit]||null}
+      price:{...price,...layerState(priceDays,targets.priceRaw),sync:syncBySource.price_daily||null,backfillSync:syncBySource.market_history_backfill||null},
+      institutional:{...inst,fresh:instFresh,...layerState(instDays,targets.institutionalRaw),coveragePct:institutionalCoveragePct,completeDays60,targetDays60:60,complete60:completeDays60>=60,completeDays25:Math.min(25,completeDays60),targetDays25:25,complete25:completeDays60>=25,sync:syncBySource[sourceMap[market].institutional]||null},
+      credit:{...cred,fresh:creditFresh,...layerState(creditDays,targets.creditRaw),participationPct:creditParticipationPct,sync:syncBySource[sourceMap[market].credit]||null}
     };
   }
   const allMarkets=Object.values(markets);
   const liveReady=allMarkets.length===2&&allMarkets.every(x=>x.liveReady);
-  const backtestReady250=allMarkets.length===2&&allMarkets.every(x=>x.backtestReady250);
-  const researchReady500=allMarkets.length===2&&allMarkets.every(x=>x.researchReady500);
+  const coreRawReady=allMarkets.length===2&&allMarkets.every(x=>x.coreRawReady);
+  const researchReady250=liveReady&&Boolean(researchCompactHistory?.historyReady);
+  const backtestReady250=researchReady250; // compatibility alias for older UI/clients
+  const researchReady500=false; // compatibility only; 500D raw research was retired in .59
+  if(Number(storage?.totalMb||0)>=STORAGE_POLICY.softTargetMb)warnings.unshift(`Neon DB ${storage.totalMb} MB 已達 ${STORAGE_POLICY.softTargetMb} MB 軟上限；Retention 會優先阻止 raw 繼續膨脹`);
   return{
-    liveReady,backtestReady250,researchReady500,
+    liveReady,coreRawReady,researchReady250,backtestReady250,researchReady500,
     readyForAX:liveReady,
     targetHistoryDays:targets.live,institutionalCoverageTargetDays:60,
-    targets,markets,storage,fundflowCompactHistory:compactHistory,warnings:warnings.slice(0,12),
+    targets,markets,storage,fundflowCompactHistory:compactHistory,researchCompactHistory,warnings:warnings.slice(0,12),
     generatedAt:new Date().toISOString()
   };
 }
@@ -746,6 +756,14 @@ module.exports=async function handler(req,res){
       const backfill=await manualInstitutionalBackfillPromise;
       return res.status(200).json({...backfill,manual:true,targetTradingDays:target,batchDays:batch});
     }
+    if(action==='storage-maintenance-manual'){
+      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用安全整理按鈕'});}
+      if(String(req.headers?.['x-stockzone-storage-maintenance']||'')!=='1')return res.status(403).json({ok:false,error:'缺少 Storage 整理確認標記'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
+      const maintenance=await runStorageMaintenance({sql:getSql()});
+      return res.status(200).json({...maintenance,manual:true});
+    }
     if(action){
       if(!isCronAuthorized(req))return res.status(401).json({ok:false,error:'Unauthorized'});
       let result;
@@ -767,51 +785,49 @@ module.exports=async function handler(req,res){
       else if(action==='credit')result=await runCreditTradingSync();
       else if(action==='institutional')result=await runInstitutionalSync();
       else if(action==='institutional-backfill'){
-        const target=Math.max(20,Math.min(500,Number(req.query?.target)||500));
-        const backfill=await runInstitutionalBackfill({targetTradingDays:target,maxNewDays:Math.max(1,Math.min(30,Number(req.query?.days)||24)),maxRunMs:45000,concurrency:3});
+        const target=Math.max(20,Math.min(STORAGE_POLICY.raw.institutional,Number(req.query?.target)||STORAGE_POLICY.raw.institutional));
+        const backfill=await runInstitutionalBackfill({targetTradingDays:target,maxNewDays:Math.max(1,Math.min(20,Number(req.query?.days)||12)),maxRunMs:45000,concurrency:3});
         return res.status(200).json(backfill);
       }
       else if(action==='credit-backfill'){
-        const target=Math.max(20,Math.min(500,Number(req.query?.target)||500));
-        const backfill=await runCreditTradingBackfill({targetTradingDays:target,maxNewDays:Math.max(1,Math.min(30,Number(req.query?.days)||24)),maxRunMs:45000,concurrency:2});
+        const target=Math.max(20,Math.min(STORAGE_POLICY.raw.credit,Number(req.query?.target)||STORAGE_POLICY.raw.credit));
+        const backfill=await runCreditTradingBackfill({targetTradingDays:target,maxNewDays:Math.max(1,Math.min(20,Number(req.query?.days)||12)),maxRunMs:45000,concurrency:2});
         return res.status(200).json(backfill);
       }
       else if(action==='market-backfill'||action==='market-rebuild'){
         const rebuild=action==='market-rebuild';
-        const target=Math.max(20,Math.min(500,Number(req.query?.target)||500));
+        const target=Math.max(20,Math.min(STORAGE_POLICY.raw.price,Number(req.query?.target)||STORAGE_POLICY.raw.price));
         const backfill=await runMarketHistoryBackfill({
           targetTradingDays:target,
           maxNewDays:rebuild?35:12,
           delayMs:rebuild?150:250,
           maxRunMs:rebuild?47000:42000,
-          scanCalendarDays:900
+          scanCalendarDays:320
         });
         const marketHealth=await readMarketDataHealth(getSql());
         const flowDataHealth=await readFlowDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',targetTradingDays:target,backfill,marketHealth,flowDataHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / fundflow-clean-rebuild-manual / institutional-backfill-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / fundflow-clean-rebuild-manual / institutional-backfill-manual / storage-maintenance-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
-        // v2.6.5.17: keep the three existing cron slots and accelerate deep
-        // history toward ~one-month completion.  Latest institutional/credit
-        // syncs are no longer duplicated across the 19:00/22:00 slots, leaving
-        // more of the 60s function budget for resumable DB backfill.
+        // v2.6.5.59: keep three cron slots, but bound raw history to the storage policy.
+        // Long research is retained as compact topic history rather than 500D raw stock×day tables.
         if(['twse','tpex'].includes(action)){
           if(action==='twse'){
             try{result.body.institutionalTrading=await runInstitutionalSync().then(x=>x.body)}
             catch(e){result.body.institutionalTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
             result.body.creditTrading={ok:true,skipped:true,reason:'latest credit sync assigned to 22:00 cron'};
-            try{result.body.institutionalBackfill=await runInstitutionalBackfill({targetTradingDays:500,maxNewDays:24,maxRunMs:45000,concurrency:3})}
+            try{result.body.institutionalBackfill=await runInstitutionalBackfill({targetTradingDays:STORAGE_POLICY.raw.institutional,maxNewDays:12,maxRunMs:40000,concurrency:3})}
             catch(e){result.body.institutionalBackfill={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
-            result.body.creditBackfill={ok:true,skipped:true,reason:'500D credit backfill assigned to 22:00 cron'};
+            result.body.creditBackfill={ok:true,skipped:true,reason:`${STORAGE_POLICY.raw.credit}D credit raw target assigned to 22:00 cron`};
           }else{
             try{result.body.creditTrading=await runCreditTradingSync().then(x=>x.body)}
             catch(e){result.body.creditTrading={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
             result.body.institutionalTrading={ok:true,skipped:true,reason:'latest institutional sync assigned to 19:00 cron'};
-            try{result.body.creditBackfill=await runCreditTradingBackfill({targetTradingDays:500,maxNewDays:24,maxRunMs:45000,concurrency:2})}
+            try{result.body.creditBackfill=await runCreditTradingBackfill({targetTradingDays:STORAGE_POLICY.raw.credit,maxNewDays:12,maxRunMs:40000,concurrency:2})}
             catch(e){result.body.creditBackfill={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
-            result.body.institutionalBackfill={ok:true,skipped:true,reason:'500D institutional backfill assigned to 19:00 cron'};
+            result.body.institutionalBackfill={ok:true,skipped:true,reason:`${STORAGE_POLICY.raw.institutional}D institutional raw target assigned to 19:00 cron`};
           }
         }
 
@@ -820,10 +836,12 @@ module.exports=async function handler(req,res){
         catch(e){result.body.companyProfiles={ok:false,error:String(e?.message||e)}}
 
         if(action==='price'){
-          try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:500,maxNewDays:24,delayMs:100,maxRunMs:48000,scanCalendarDays:900})}
+          try{result.body.storageMaintenance=await runStorageMaintenance({sql:getSql()})}
+          catch(e){result.body.storageMaintenance={ok:false,preservedData:true,error:String(e?.message||e)}}
+          try{result.body.marketBootstrap=await runMarketHistoryBackfill({targetTradingDays:STORAGE_POLICY.raw.price,maxNewDays:12,delayMs:100,maxRunMs:35000,scanCalendarDays:320})}
           catch(e){result.body.marketBootstrap={ok:false,error:String(e?.message||e)}}
         }else{
-          result.body.marketBootstrap={ok:true,skipped:true,reason:'500D price-history backfill assigned to 15:00 cron'};
+          result.body.marketBootstrap={ok:true,skipped:true,reason:`${STORAGE_POLICY.raw.price}D price raw target assigned to 15:00 cron`};
         }
 
         // Blind Coverage is a separate paused/legacy concern. Preserve the old
@@ -832,10 +850,14 @@ module.exports=async function handler(req,res){
         if(action==='price'&&result.body.marketBootstrap?.ok&&Number(result.body.marketBootstrap.newDays||0)===0&&Number(result.body.marketBootstrap.recentCommonTradingDays||0)>=80){
           try{result.body.blindCoverage=await runBusinessEnrichment({limit:70,maxRunMs:12000,concurrency:8})}
           catch(e){result.body.blindCoverage={ok:false,error:String(e?.message||e)}}
-        }else result.body.blindCoverage={ok:true,skipped:true,reason:'deep history backfill has priority'};
+        }else result.body.blindCoverage={ok:true,skipped:true,reason:'raw history catch-up has priority'};
 
+        if(action==='tpex'){
+          try{result.body.compactResearch=await warmCurrentEngineFromStoredDb({sql:getSql(),force:false})}
+          catch(e){result.body.compactResearch={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
+        }
         try{result.body.flowDataHealth=await readFlowDataHealth(getSql())}
-        catch(e){result.body.flowDataHealth={liveReady:false,backtestReady250:false,researchReady500:false,error:String(e?.message||e)}}
+        catch(e){result.body.flowDataHealth={liveReady:false,coreRawReady:false,researchReady250:false,backtestReady250:false,researchReady500:false,error:String(e?.message||e)}}
       }
       return res.status(result.httpStatus).json(result.body);
     }
