@@ -4240,9 +4240,9 @@ function renderNeonStorageAudit(storage){
   const status=$("neonStorageStatus"),details=$("neonStorageDetails");if(!status||!details)return;
   status.classList.remove("is-ok","is-error","is-warn");
   if(!storage||storage.error){status.classList.add("is-warn");status.textContent=storage?.error?`Storage audit 讀取失敗：${storage.error}`:"Storage audit 尚無資料";details.hidden=true;return;}
-  const total=Number(storage.totalMb||0),budget=Number(storage.referenceBudgetMb||512),pct=Number(storage.referenceUsagePct||0),tables=Array.isArray(storage.tables)?storage.tables:[],plan=storage.retentionPlan||{},egress=plan.dailyEgressTarget||{};
-  status.classList.add(pct>=85?"is-warn":"is-ok");status.textContent=`DB ${fundflowFmt(total,2)} MB｜參考 ${budget} MB 的 ${fundflowFmt(pct,1)}%｜只讀稽核／不自動刪除`;
-  const planLines=["",`Retention: ${plan.pruneEnabled?"prune enabled":"audit only / prune disabled"}`,`Daily egress target: ideal ≤${Number(egress.idealMb||50)} MB / max ≤${Number(egress.maxMb||100)} MB`,...Object.entries(plan.tables||{}).map(([k,v])=>`${k}: ${v}`)];
+  const total=Number(storage.totalMb||0),budget=Number(storage.referenceBudgetMb||512),pct=Number(storage.referenceUsagePct||0),tables=Array.isArray(storage.tables)?storage.tables:[],plan=storage.retentionPlan||{},egress=plan.dailyEgressTarget||{},soft=Number(plan.softTargetMb||storage.softTargetMb||400);
+  status.classList.add(total>=soft?"is-warn":"is-ok");status.textContent=`DB ${fundflowFmt(total,2)} MB｜目標 < ${soft} MB｜Free 參考 ${budget} MB 的 ${fundflowFmt(pct,1)}%｜Retention ${plan.pruneEnabled?"已啟用":"未啟用"}`;
+  const planLines=["",`Storage policy: ${plan.policyVersion||"--"}`,`Soft target: < ${soft} MB｜warning ${Number(plan.warningMb||390)} MB｜hard guard ${Number(plan.hardGuardMb||440)} MB`,`Research target: ${Number(plan.researchTargetDays||250)}D compact｜個股長價：Yahoo ${Number(plan.browserPriceHistoryYears||5)}Y / Browser IndexedDB`,`Daily egress target: ideal ≤${Number(egress.idealMb||50)} MB / max ≤${Number(egress.maxMb||100)} MB`,...Object.entries(plan.tables||{}).map(([k,v])=>`${k}: ${v}`)];
   details.textContent=[`Database: ${storage.databaseName||"--"}`,`Total: ${fundflowFmt(total,2)} MB`,"",...tables.map(x=>`${x.name}: data ${fundflowFmt(x.dataMb,2)} MB | index ${fundflowFmt(x.indexMb,2)} MB | total ${fundflowFmt(x.totalMb,2)} MB`),...planLines].join("\n");details.hidden=false;
 }
 function renderCompactHistoryStatus(history){
@@ -4254,21 +4254,36 @@ function renderCompactHistoryStatus(history){
   const rebuild=$("manualFundflowHistory");if(rebuild&&ready&&!manualFundflowHistoryLoading){rebuild.disabled=true;rebuild.textContent="Clean XY 已完成";}else if(rebuild&&!manualFundflowHistoryLoading){rebuild.disabled=false;rebuild.textContent="重建乾淨 XY";}
 }
 function renderHistoryProgress(data){
-  const markets=data?.markets||{},names=["上市","上櫃"];
-  const layer=(key)=>{const days=names.map(m=>Number(markets?.[m]?.[key]?.tradingDays||0)),min=days.length?Math.min(...days):0,pct=Math.max(0,Math.min(100,min/500*100));return{days,min,pct}};
-  const paint=(key,prefix)=>{const x=layer(key),bar=$(prefix+"Bar"),value=$(prefix+"Value"),detail=$(prefix+"Detail");if(bar)bar.style.width=`${x.pct.toFixed(1)}%`;if(value)value.textContent=`${x.min} / 500D`;if(detail)detail.textContent=`上市 ${x.days[0]}D｜上櫃 ${x.days[1]}D`;};
+  const markets=data?.markets||{},names=["上市","上櫃"],targets=data?.targets||{};
+  const targetMap={price:Number(targets.priceRaw||120),institutional:Number(targets.institutionalRaw||120),credit:Number(targets.creditRaw||90)};
+  const layer=(key)=>{const days=names.map(m=>Number(markets?.[m]?.[key]?.tradingDays||0)),min=days.length?Math.min(...days):0,target=targetMap[key]||120,pct=Math.max(0,Math.min(100,min/target*100));return{days,min,target,pct}};
+  const paint=(key,prefix)=>{const x=layer(key),bar=$(prefix+"Bar"),value=$(prefix+"Value"),detail=$(prefix+"Detail");if(bar)bar.style.width=`${x.pct.toFixed(1)}%`;if(value)value.textContent=`${x.min} / ${x.target}D`;if(detail)detail.textContent=`上市 ${x.days[0]}D｜上櫃 ${x.days[1]}D`;};
   paint("price","historyPrice");paint("institutional","historyInstitutional");paint("credit","historyCredit");
-  const ready=[[$("historyLiveReady"),Boolean(data?.liveReady)],[$("historyBacktestReady"),Boolean(data?.backtestReady250)],[$("historyResearchReady"),Boolean(data?.researchReady500)]];ready.forEach(([el,ok])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${el.id==="historyLiveReady"?"20D Live":el.id==="historyBacktestReady"?"250D Backtest":"500D Research"} ${ok?"✓":""}`.trim()});
+  const research=data?.researchCompactHistory||{},researchDays=Number(research.compactDays||0),researchTarget=Number(research.targetDays||targets.research||250);
+  const ready=[[$("historyLiveReady"),Boolean(data?.liveReady),"20D Live"],[$("historyBacktestReady"),Boolean(data?.coreRawReady),"近期 Raw"],[$("historyResearchReady"),Boolean(data?.researchReady250),`${researchTarget}D Research`]];ready.forEach(([el,ok,label])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${label} ${ok?"✓":""}`.trim()});
   const updated=$("historyProgressUpdated");if(updated){const d=data?.generatedAt?new Date(data.generatedAt):null;updated.textContent=d&&!Number.isNaN(d.getTime())?`更新 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`:"已更新";}
   const repair=$("manualInstitutionalRepairStatus"),inst60=names.map(m=>Number(markets?.[m]?.institutional?.completeDays60||0)),target60=Number(data?.institutionalCoverageTargetDays||60),instReady=inst60.length===2&&inst60.every(x=>x>=target60);if(repair&&!manualInstitutionalRepairLoading){repair.classList.remove("is-ok","is-error","is-warn");repair.classList.add(instReady?"is-ok":"is-warn");repair.textContent=instReady?`DB 法人覆蓋已完整（上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}）`:`DB 法人覆蓋：上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}`;}
   renderCompactHistoryStatus(data?.fundflowCompactHistory);renderNeonStorageAudit(data?.storage);
-  const note=$("historyProgressNote"),warning=(data?.warnings||[])[0];if(note)note.textContent=warning?`注意：${warning}`:"Clean XY v2 已固定；.36 只重建 compact Path snapshot / audit，不再為 Path 改版重跑 raw XY。";
+  const note=$("historyProgressNote"),warning=(data?.warnings||[])[0];if(note)note.textContent=warning?`注意：${warning}`:`Raw：股價 ${targetMap.price}D／法人 ${targetMap.institutional}D／信用 ${targetMap.credit}D；研究 compact ${researchDays}/${researchTarget}D。長期個股股價繼續使用 Yahoo 5Y Browser cache。`;
 }
+
 async function loadHistoryProgress(force=false){
   if(historyProgressLoading)return;if(!force&&historyProgressFetchedAt&&Date.now()-historyProgressFetchedAt<60*1000)return;historyProgressLoading=true;
   const updated=$("historyProgressUpdated");if(updated)updated.textContent="讀取中";
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch("/api/sync-status?view=flow-data-health",{cache:"no-store",signal:controller.signal});const payload=await readJson(res,"歷史資料進度");renderHistoryProgress(payload?.flowDataHealth||payload);historyProgressFetchedAt=Date.now()}finally{clearTimeout(timer)}}catch(e){console.warn("歷史資料進度讀取失敗",e);if(updated)updated.textContent="讀取失敗"}finally{historyProgressLoading=false}
 }
+let storageMaintenanceLoading=false;
+async function runManualStorageMaintenance(){
+  if(storageMaintenanceLoading)return;storageMaintenanceLoading=true;
+  const btn=$("manualStorageMaintenance"),status=$("manualStorageMaintenanceStatus");if(btn){btn.disabled=true;btn.textContent="整理中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="依安全 retention 清理可重建／過舊資料，不動目前功能需要的 window…"}
+  try{
+    const res=await fetch("/api/sync-status?action=storage-maintenance-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Storage-Maintenance":"1"}}),data=await readJson(res,"Neon 安全整理"),before=Number(data?.before?.totalMb||0),after=Number(data?.after?.totalMb||0),deleted=Number(data?.deletedRows||0);
+    if(status){status.classList.add("is-ok");status.textContent=`安全整理完成｜刪除 ${deleted.toLocaleString()} rows｜DB audit ${fundflowFmt(before,2)} → ${fundflowFmt(after,2)} MB（實體空間統計可能延遲）`;}
+    historyProgressFetchedAt=0;await loadHistoryProgress(true);
+  }catch(e){console.warn("Neon 安全整理失敗",e);if(status){status.classList.add("is-error");status.textContent=`整理失敗：${e?.message||e}`}}
+  finally{storageMaintenanceLoading=false;if(btn){btn.disabled=false;btn.textContent="執行安全整理"}}
+}
+$("manualStorageMaintenance")?.addEventListener("click",runManualStorageMaintenance);
 document.querySelectorAll(".settings-open").forEach(btn=>btn.addEventListener("click",()=>{
   $("settingsModal")?.classList.remove("hidden");
   $("sidebar")?.classList.remove("open"); $("overlay")?.classList.remove("show");

@@ -2705,7 +2705,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.58</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.59</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3439,11 +3439,11 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <div class="settings-row"><span>基本面來源</span><strong id="fundamentalSource">基本面來源待補</strong></div>
 <section class="settings-history" aria-label="歷史資料進度">
   <div class="settings-history-head"><span>歷史資料進度</span><small id="historyProgressUpdated">讀取中</small></div>
-  <div class="settings-history-row"><span>股價</span><div class="settings-progress-track"><i id="historyPriceBar"></i></div><strong id="historyPriceValue">-- / 500D</strong><small id="historyPriceDetail">上市 --｜上櫃 --</small></div>
-  <div class="settings-history-row"><span>法人</span><div class="settings-progress-track"><i id="historyInstitutionalBar"></i></div><strong id="historyInstitutionalValue">-- / 500D</strong><small id="historyInstitutionalDetail">上市 --｜上櫃 --</small></div>
-  <div class="settings-history-row"><span>信用</span><div class="settings-progress-track"><i id="historyCreditBar"></i></div><strong id="historyCreditValue">-- / 500D</strong><small id="historyCreditDetail">上市 --｜上櫃 --</small></div>
-  <div class="settings-ready-grid"><span id="historyLiveReady">20D Live</span><span id="historyBacktestReady">250D Backtest</span><span id="historyResearchReady">500D Research</span></div>
-  <small class="settings-history-note" id="historyProgressNote">目標每個交易日最多補 24D；約 20 次有效 Cron 可由 20D 推進至 500D。部署新版不會重跑既有 DB 歷史。</small>
+  <div class="settings-history-row"><span>股價</span><div class="settings-progress-track"><i id="historyPriceBar"></i></div><strong id="historyPriceValue">-- / 120D</strong><small id="historyPriceDetail">上市 --｜上櫃 --</small></div>
+  <div class="settings-history-row"><span>法人</span><div class="settings-progress-track"><i id="historyInstitutionalBar"></i></div><strong id="historyInstitutionalValue">-- / 120D</strong><small id="historyInstitutionalDetail">上市 --｜上櫃 --</small></div>
+  <div class="settings-history-row"><span>信用</span><div class="settings-progress-track"><i id="historyCreditBar"></i></div><strong id="historyCreditValue">-- / 90D</strong><small id="historyCreditDetail">上市 --｜上櫃 --</small></div>
+  <div class="settings-ready-grid"><span id="historyLiveReady">20D Live</span><span id="historyBacktestReady">近期 Raw</span><span id="historyResearchReady">250D Research</span></div>
+  <small class="settings-history-note" id="historyProgressNote">Raw 採 bounded retention；250D 研究改存 compact feature history，長期個股股價沿用 Yahoo 5Y Browser cache。</small>
 </section>
 <section class="settings-manual-update settings-validation" aria-label="資金流資料修復與驗證">
   <div class="settings-manual-update-head"><span>資金流資料修復 / 驗證</span><small>開發驗收</small></div>
@@ -3465,9 +3465,11 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   </div>
 </section>
 <section class="settings-manual-update settings-validation" aria-label="Neon 儲存空間稽核">
-  <div class="settings-manual-update-head"><span>Neon Storage Audit</span><small>只讀｜不自動刪除</small></div>
+  <div class="settings-manual-update-head"><span>Neon Storage Audit</span><small>400MB 目標｜安全 retention</small></div>
   <div class="settings-manual-update-box">
-    <p>先量 DB / table / index 實際大小，再決定 retention；.35 只會在 Clean XY v2 完整驗證後清除三張舊 XY/Path 衍生表的資料，不會 prune 原始 OHLCV／法人／信用／題材歷史。</p>
+    <p>.59 採固定安全窗：股價 120D、法人 120D、信用 90D、Activity 80D；stock compact 45D，重要 topic research compact 最多 250D。個股長期價格維持 Yahoo 5Y／Browser IndexedDB，不重複塞 Neon。</p>
+    <button id="manualStorageMaintenance" type="button">執行安全整理</button>
+    <small class="settings-manual-update-status" id="manualStorageMaintenanceStatus">尚未執行手動整理；每日 15:00 cron 會自動套用 retention。</small>
     <small class="settings-manual-update-status" id="neonStorageStatus">尚未讀取</small>
     <pre class="settings-validation-details" id="neonStorageDetails" hidden></pre>
   </div>
@@ -3499,7 +3501,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.58"></script>
+  <script src="./app.js?v=2.6.5.59"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5810,4 +5812,4 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 }
 </style>
 
-<!-- v2.6.5.58 — 修正 TWSE 處置股查詢與有效處置期間判斷。 -->
+<!-- v2.6.5.59 — Neon bounded-retention：400MB 目標、250D compact research、120/120/90/80D raw windows。 -->
