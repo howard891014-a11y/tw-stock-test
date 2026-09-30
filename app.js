@@ -3380,6 +3380,7 @@ function renderMainTarget(main){
  const play=$("targetPlay");
  if(!main){
   play?.classList.add("hidden");
+  document.querySelectorAll("#targets .target-levels [data-target-rate]").forEach(el=>el.classList.remove("target-nearest"));
   setText("overviewNearestPrice","--"); setText("overviewNearestRate","倍率--");
   setText("overviewMainBrokerLine","目標券商：--"); renderValuationScenario(); return;
  }
@@ -3387,6 +3388,9 @@ function renderMainTarget(main){
  const current=Number(currentStock?.last??currentStock?.price??currentStock?.regularMarketPrice);
  const levels=[.80,.85,.88].map(rate=>({rate,price:Math.floor(basis.base*rate)}));
  const nearest=Number.isFinite(current)?levels.slice().sort((x,y)=>Math.abs(x.price-current)-Math.abs(y.price-current))[0]:levels[0];
+ document.querySelectorAll("#targets .target-levels [data-target-rate]").forEach(el=>{
+   el.classList.toggle("target-nearest",Number(el.dataset.targetRate)===Math.round(nearest.rate*100));
+ });
  setText("overviewNearestPrice",`${targetFmt(nearest.price)}`);
  setText("overviewNearestRate",`（倍率${Math.round(nearest.rate*100)}%）`);
  setText("overviewMainBrokerLine",`${targetBrokerName(main.row)}：${targetFmt(targetPriceValue(main.latest))}`);
