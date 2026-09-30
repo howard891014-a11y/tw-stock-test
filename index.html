@@ -2598,6 +2598,30 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   #targets .target-list-subcard .broker-row>time{font-size:10.5px!important;}
 }
 </style>
+
+<style id="stockzone-v26548-target-refine">
+/* v2.6.5.48 — target-price judgement, compact selector, separator rows, and subtopic icons. */
+#targets .target-b-kicker{display:flex!important;align-items:center!important;gap:7px!important;}
+#targets .target-mini-icon{position:relative!important;width:28px!important;height:28px!important;flex:0 0 28px!important;border-radius:10px!important;background:#e3edff!important;display:inline-block!important;}
+#targets .target-mini-icon::before,#targets .target-mini-icon::after{content:"";position:absolute!important;box-sizing:border-box!important;}
+#targets .target-estimate-icon::before{left:7px!important;right:7px!important;bottom:7px!important;height:2px!important;background:#4e86c7!important;border-radius:2px!important;box-shadow:0 -5px 0 #75a4d8,0 -10px 0 #a0c2e7!important;}
+#targets .target-estimate-icon::after{right:5px!important;top:5px!important;width:6px!important;height:6px!important;border-top:2px solid #4e86c7!important;border-right:2px solid #4e86c7!important;}
+#targets .target-list-icon::before{left:7px!important;top:7px!important;width:14px!important;height:2px!important;background:#4e86c7!important;border-radius:2px!important;box-shadow:0 5px 0 #75a4d8,0 10px 0 #a0c2e7!important;}
+#targets .target-list-icon::after{left:5px!important;top:7px!important;width:2px!important;height:2px!important;background:#4e86c7!important;border-radius:50%!important;box-shadow:0 5px 0 #75a4d8,0 10px 0 #a0c2e7!important;}
+#targets .target-play-head{padding-bottom:12px!important;}
+#targets .target-play-head select{height:40px!important;padding:0 12px!important;}
+#targets .target-system-comment{margin-top:12px!important;padding-top:11px!important;border-top:1px solid #dce6f1!important;display:flex!important;flex-direction:column!important;gap:5px!important;}
+#targets .target-system-comment small{font-size:10.5px!important;color:#7c8da2!important;font-weight:400!important;}
+#targets .target-system-comment strong{font-size:11px!important;line-height:1.65!important;color:#13233a!important;font-weight:700!important;}
+#targets .target-list-subcard .broker-row{border:0!important;border-bottom:1px solid #e7edf3!important;border-radius:0!important;background:transparent!important;margin-top:0!important;}
+#targets .target-list-subcard .broker-row:last-child{border-bottom:0!important;}
+#targets .target-list-subcard .broker-row:hover,#targets .target-list-subcard .broker-row.selected{background:#f8fbff!important;border-left:0!important;border-right:0!important;border-top:0!important;border-bottom-color:#e7edf3!important;}
+@media(max-width:720px){
+  #targets .target-mini-icon{width:26px!important;height:26px!important;flex-basis:26px!important;border-radius:9px!important;}
+  #targets .target-play-head select{height:36px!important;padding:0 10px!important;}
+  #targets .target-list-subcard .broker-row{padding:10px 6px!important;}
+}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2625,7 +2649,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.47</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.48</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3289,20 +3313,19 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-target" aria-hidden="true"></i><span>目標價</span></span></div>
           <div class="target-subcards">
             <section id="targetPlay" class="target-play target-b-main target-subcard hidden">
-              <div class="target-b-kicker">目標價估計</div>
+              <div class="target-b-kicker"><span class="target-mini-icon target-estimate-icon" aria-hidden="true"></span><span>目標價估計</span></div>
               <div class="target-play-head"><select id="mainBrokerSelect"><option value="">自動選擇</option></select></div>
               <div class="target-levels">
                 <div data-target-rate="80"><span>80%</span><strong id="target80">--</strong></div>
                 <div data-target-rate="85"><span>85%</span><strong id="target85">--</strong></div>
                 <div data-target-rate="88"><span>88%</span><strong id="target88">--</strong></div>
               </div>
-              <div class="target-play-base"><span>倍率基準</span><strong id="targetBase">--</strong></div>
-              <div class="target-b-reason"><span>原因</span><strong id="targetRule">--</strong></div>
               <div class="target-history3" id="targetHistory3"></div>
+              <div class="target-system-comment"><small>系統判讀</small><strong id="targetSystemJudgement">搜尋股票後顯示目標價判讀。</strong></div>
             </section>
 
             <section class="target-subcard target-list-subcard" id="targetsListCard">
-              <div class="target-b-kicker">券商目標價列表</div>
+              <div class="target-b-kicker"><span class="target-mini-icon target-list-icon" aria-hidden="true"></span><span>券商目標價列表</span></div>
               <div class="target-b-list">
                 <div class="target-tabs"><button class="active" data-target-type="外資">外資</button><button data-target-type="本土">本土</button><button data-target-type="未知">未知</button></div>
                 <div class="target-b-columns"><span>券商</span><span>目標價</span><span>日期</span><i></i><i></i></div>
@@ -3416,7 +3439,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.47"></script>
+  <script src="./app.js?v=2.6.5.48"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

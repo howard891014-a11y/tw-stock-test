@@ -3376,13 +3376,42 @@ $("mainBrokerSelect")?.addEventListener("change",e=>{
   renderTradeOutputs();
 });
 
+
+function renderTargetSystemJudgement(main,basis,levels,current){
+  const el=$("targetSystemJudgement"); if(!el)return;
+  if(!main||!basis){el.textContent="搜尋股票後顯示目標價判讀。";return}
+  const broker=targetBrokerName(main.row);
+  const latest=targetPriceValue(main.latest);
+  const h=main.history||[];
+  let basisText="";
+  if(h.length>1){
+    const prev=targetPriceValue(h[1]);
+    if(Number.isFinite(prev)){
+      if(latest>prev)basisText=`${broker}最新目標價 ${targetFmt(latest)} 較前次上調，因此倍率基準沿用前次 ${targetFmt(basis.base)}。`;
+      else if(latest<prev)basisText=`${broker}最新目標價 ${targetFmt(latest)} 較前次下調，因此以最新 ${targetFmt(basis.base)} 作為倍率基準。`;
+      else basisText=`${broker}最新目標價 ${targetFmt(latest)} 與前次持平，因此以最新 ${targetFmt(basis.base)} 作為倍率基準。`;
+    }
+  }
+  if(!basisText)basisText=`${broker}目前只有一筆有效目標價 ${targetFmt(latest)}，因此以最新資料作為倍率基準。`;
+  if(!Number.isFinite(current)||!(current>0)||!Array.isArray(levels)||!levels.length){el.textContent=basisText;return}
+  const sorted=levels.slice().sort((a,b)=>a.price-b.price);
+  const low=sorted[0],high=sorted[sorted.length-1];
+  const nearest=sorted.slice().sort((a,b)=>Math.abs(a.price-current)-Math.abs(b.price-current))[0];
+  const gapPct=nearest.price>0?((current-nearest.price)/nearest.price*100):0;
+  let valuationText="";
+  if(current<low.price){valuationText=`現價 ${targetFmt(current)} 低於 80%～88% 倍率區間，位置偏低，距最近的 ${Math.round(nearest.rate*100)}% 目標約 ${Math.abs(gapPct).toFixed(1)}%。`;}
+  else if(current>high.price){valuationText=`現價 ${targetFmt(current)} 高於 80%～88% 倍率區間，位置偏高，距最近的 ${Math.round(nearest.rate*100)}% 目標約 ${Math.abs(gapPct).toFixed(1)}%。`;}
+  else{valuationText=`現價 ${targetFmt(current)} 位於倍率估值區間內，最接近 ${Math.round(nearest.rate*100)}% 目標 ${targetFmt(nearest.price)}，差距約 ${Math.abs(gapPct).toFixed(1)}%。`;}
+  el.textContent=`${basisText}${valuationText}`;
+}
+
 function renderMainTarget(main){
  const play=$("targetPlay");
  if(!main){
   play?.classList.add("hidden");
   document.querySelectorAll("#targets .target-levels [data-target-rate]").forEach(el=>el.classList.remove("target-nearest"));
   setText("overviewNearestPrice","--"); setText("overviewNearestRate","倍率--");
-  setText("overviewMainBrokerLine","目標券商：--"); renderValuationScenario(); return;
+  setText("overviewMainBrokerLine","目標券商：--"); renderTargetSystemJudgement(null); renderValuationScenario(); return;
  }
  const basis=targetBasis(main);
  const current=Number(currentStock?.last??currentStock?.price??currentStock?.regularMarketPrice);
@@ -3394,9 +3423,8 @@ function renderMainTarget(main){
  setText("overviewNearestPrice",`${targetFmt(nearest.price)}`);
  setText("overviewNearestRate",`（倍率${Math.round(nearest.rate*100)}%）`);
  setText("overviewMainBrokerLine",`${targetBrokerName(main.row)}：${targetFmt(targetPriceValue(main.latest))}`);
- setText("targetBase",`${targetFmt(basis.base)}`); setText("targetRule",basis.rule);
  setText("target80",`${targetFmt(Math.floor(basis.base*.80))}`); setText("target85",`${targetFmt(Math.floor(basis.base*.85))}`); setText("target88",`${targetFmt(Math.floor(basis.base*.88))}`);
- renderTargetHistory3(main); play?.classList.remove("hidden"); renderValuationScenario();
+ renderTargetHistory3(main); renderTargetSystemJudgement(main,basis,levels,current); play?.classList.remove("hidden"); renderValuationScenario();
 }
 const TARGET_CORR_KEY="stockzone_target_corrections_v239"; let editingTarget=null;
 function readCorr(){try{return JSON.parse(localStorage.getItem(TARGET_CORR_KEY)||"{}")||{}}catch{return{}}}
