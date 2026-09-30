@@ -7,6 +7,7 @@ const core=fs.readFileSync('lib/fundflow-xy.js','utf8');
 const sync=fs.readFileSync('lib/sync-service.js','utf8');
 const status=fs.readFileSync('api/sync-status.js','utf8');
 const db=fs.readFileSync('lib/db.js','utf8');
+const storagePolicy=fs.readFileSync('lib/storage-policy.js','utf8');
 const enrich=fs.readFileSync('lib/business-enrichment.js','utf8');
 const vercel=JSON.parse(fs.readFileSync('vercel.json','utf8'));
 
@@ -58,6 +59,9 @@ assert(core.includes('async function warmCurrentEngineFromStoredDb'));assert(sta
 assert(!(vercel.crons||[]).some(x=>x.schedule==='0 10 * * *'));
 assert(enrich.includes('DELETE FROM market_business_xy2_topic_daily')&&enrich.includes('DELETE FROM market_business_xy2_snapshot')&&enrich.includes('DELETE FROM market_business_xy2_member'));
 assert(!enrich.includes('DELETE FROM market_business_xy_daily'));
-assert(db.includes('pg_database_size(current_database())'));assert(db.includes('pg_total_relation_size(rel)'));assert(db.includes('pruneEnabled:false'));assert(db.includes('idealMb:50,maxMb:100'));
-assert(db.includes("market_business_xy2_topic_daily:'clean-topic-history-to-500d'"));assert(db.includes("market_business_xy_daily:'legacy-derived-delete-after-verified-clean-cutover'"));
-console.log('PASS validate-neon-egress — .37 browser-storage + zero-query focus, persisted compact Path audit, payload-light state probe, no raw validation scan');
+assert(db.includes('pg_database_size(current_database())'));assert(db.includes('pg_total_relation_size(rel)'));assert(db.includes('pruneEnabled:true'));assert(db.includes('softTargetMb:STORAGE_POLICY.softTargetMb'));assert(db.includes('idealMb:50,maxMb:100'));
+assert(db.includes('compact-research-${STORAGE_POLICY.compact.topicResearch}d'));assert(db.includes("market_business_xy_daily:'legacy-derived-delete-after-verified-clean-cutover'"));
+for(const token of ["softTargetMb: 400","price: 120","institutional: 120","credit: 90","activity: 80","topicResearch: 250","runStorageMaintenance"])assert(storagePolicy.includes(token),`storage policy missing ${token}`);
+assert(status.includes("action==='storage-maintenance-manual'"));assert(status.includes('runStorageMaintenance({sql:getSql()})'));
+assert(app.includes('X-StockZone-Storage-Maintenance'));
+console.log('PASS validate-neon-egress — browser 5Y cache + bounded Neon raw retention + 250D compact research + zero-query focus');

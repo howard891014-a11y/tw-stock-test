@@ -12,8 +12,9 @@ for(const token of [
   "view==='flow-data-health'",
   'readyForAX',
   'liveReady',
-  'backtestReady250',
-  'researchReady500',
+  'coreRawReady',
+  'researchReady250',
+  'researchCompactHistory',
   'price:{...price',
   'expectedTradeDate',
   'institutionalBackfill=await runInstitutionalBackfill',
@@ -33,5 +34,4 @@ for(const [name,src] of [['institutional',institutionalLib],['credit',creditLib]
   assert(src.includes('tradingDays'),`${name} health must expose tradingDays`);
   assert(src.includes('maxDate'),`${name} health must expose maxDate`);
 }
-
-console.log('Flow data health validation PASS — price/institutional/credit freshness + DB-truth institutional 60D coverage + compact Path/storage observability + 20/250/500D readiness gates present');
+console.log('Flow data health validation PASS — live freshness + bounded raw readiness + 250D compact research + storage observability');
