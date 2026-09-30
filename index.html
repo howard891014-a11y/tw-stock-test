@@ -2522,7 +2522,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.41</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.42</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2552,8 +2552,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <div class="update-row" id="updateRow" hidden><button id="manualRefreshBtn" class="manual-refresh" type="button" aria-label="手動更新" title="更新股價、法人、新聞、目標價">↻</button><small id="updateTime"></small></div>
         </div>
       </section>
-
-      <section class="mode-page-heading" id="managementHeading"><div class="eyebrow">股票管理</div></section>
 
       <nav class="section-tabs analysis-tabs" id="analysisTabs" aria-label="個股分析導覽">
         <button class="active" data-view="overview" type="button">總覽</button>
@@ -2633,6 +2631,9 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div class="tech-tile"><header><b><span class="tech-title-icon tech-icon-personality" aria-hidden="true">◈</span>股性</b><em id="techPersonalityState">--</em></header><p id="techPersonalityConclusion">--</p><small id="techPersonality">--</small></div>
             <div class="tech-tile"><header><b><span class="tech-title-icon tech-icon-season" aria-hidden="true">◷</span>季節性</b><em id="techSeasonState">--</em></header><p id="techSeasonConclusion">--</p><small id="techSeason">--</small></div>
           </section>
+          <div class="technical-comment">
+            <small>系統判讀</small><strong id="technicalJudgement">搜尋股票後顯示股性與季節性判讀。</strong>
+          </div>
 
         </article>
 
@@ -3206,18 +3207,22 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       </section>
 
 
-      <section class="card manage-card overview-only" id="stockManagement">
-        <div class="card-title">股票管理 <span class="badge">本機保存</span></div>
-        <div class="manage-tabs">
-          <button class="active" type="button" data-manage-tab="holdings">持股清單 <span id="holdingsCount">0</span></button>
-          <button type="button" data-manage-tab="watchlist">觀察清單 <span id="watchlistCount">0</span></button>
-        </div>
-        <div class="manage-panel active" data-manage-panel="holdings">
+      <section class="management-list-shell overview-only" id="stockManagement">
+        <article class="card manage-card manage-panel manage-theme-card active" data-manage-panel="holdings">
+          <div class="card-title theme-white-card-title manage-theme-title">
+            <span class="theme-title-group"><i class="manage-title-icon manage-title-icon-holdings" aria-hidden="true"></i><span>持股清單</span></span>
+            <span class="badge">本機保存</span>
+          </div>
           <div id="holdingsCards" class="manage-list"></div>
-        </div>
-        <div class="manage-panel" data-manage-panel="watchlist">
+        </article>
+        <article class="card manage-card manage-panel manage-theme-card" data-manage-panel="watchlist">
+          <div class="card-title theme-white-card-title manage-theme-title">
+            <span class="theme-title-group"><i class="manage-title-icon manage-title-icon-watchlist" aria-hidden="true"></i><span>觀察清單</span></span>
+            <span class="badge">本機保存</span>
+          </div>
           <div id="watchlistCards" class="manage-list"></div>
-        </div>
+        </article>
+        <span id="holdingsCount" hidden>0</span><span id="watchlistCount" hidden>0</span>
       </section>
 
       <section class="legacy-pages">
@@ -3306,7 +3311,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.41"></script>
+  <script src="./app.js?v=2.6.5.42"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5419,4 +5424,96 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"] .hero-value{
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='10' height='16' rx='2'/%3E%3Cpath d='M7 8h4M7 12h3'/%3E%3Cpath d='M18 7v10M15 14l3 3 3-3'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;
 }
 #institutionalTrend .credit-short-icon::after{content:none!important;}
+</style>
+
+<style id="stockzone-v26542-ui-management-color-technical-judgement">
+/* v2.6.5.42 — management visual refresh + Taiwan red-good/green-bad convention + technical judgement. */
+
+/* Management: keep only the top mode eyebrow; each list owns its own white theme card. */
+body.mode-management #managementHeading{display:none!important;}
+#stockManagement.management-list-shell{margin-top:12px!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;}
+#stockManagement .manage-panel{display:none!important;}
+#stockManagement .manage-panel.active{display:block!important;}
+#stockManagement .manage-theme-card{width:100%!important;margin:0!important;padding:16px 14px!important;background:#fff!important;border:1px solid #e8eef5!important;border-radius:22px!important;box-shadow:0 12px 28px rgba(17,34,61,.05)!important;color:#13233a!important;}
+#stockManagement .manage-theme-title{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;margin:0 0 12px!important;color:#13233a!important;font-size:20px!important;font-weight:900!important;}
+#stockManagement .manage-theme-title .theme-title-group{display:inline-flex!important;align-items:center!important;gap:10px!important;min-width:0!important;}
+#stockManagement .manage-title-icon{position:relative!important;display:inline-flex!important;width:32px!important;height:32px!important;min-width:32px!important;border-radius:11px!important;background:#e8efff!important;box-shadow:inset 0 0 0 1px rgba(78,134,199,.08)!important;}
+#stockManagement .manage-title-icon::before{content:""!important;position:absolute!important;inset:6px!important;background:#4e86c7!important;}
+#stockManagement .manage-title-icon-holdings::before{-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='7' width='18' height='13' rx='2'/%3E%3Cpath d='M8 7V5h8v2M3 11h18M9 14h6'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='7' width='18' height='13' rx='2'/%3E%3Cpath d='M8 7V5h8v2M3 11h18M9 14h6'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;}
+#stockManagement .manage-title-icon-watchlist::before{-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z'/%3E%3Ccircle cx='12' cy='12' r='2.5'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z'/%3E%3Ccircle cx='12' cy='12' r='2.5'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat!important;}
+#stockManagement .manage-list{display:grid!important;gap:9px!important;}
+#stockManagement .manage-empty{padding:28px 12px!important;border:1px dashed #dfe7f0!important;border-radius:16px!important;background:#fafcff!important;color:#8a9aad!important;text-align:center!important;font-size:12px!important;}
+#stockManagement .manage-stock{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto 28px!important;gap:8px!important;align-items:center!important;padding:12px!important;border:1px solid #dfe8f3!important;border-radius:17px!important;background:linear-gradient(180deg,#fbfdff,#f5f8fc)!important;box-shadow:0 7px 18px rgba(17,34,61,.035)!important;color:#13233a!important;}
+#stockManagement .manage-stock-main{min-width:0!important;cursor:pointer!important;}
+#stockManagement .manage-stock-main strong{display:block!important;color:#13233a!important;font-size:15px!important;font-weight:850!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+#stockManagement .manage-stock-main strong small{display:inline!important;margin-left:4px!important;color:#7f90a4!important;font-size:11px!important;font-weight:700!important;}
+#stockManagement .list-market{color:#7f90a4!important;font-size:10px!important;white-space:nowrap!important;}
+#stockManagement .list-price{color:#20334d!important;font-size:16px!important;font-weight:850!important;text-align:right!important;white-space:nowrap!important;}
+#stockManagement .remove-list{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:28px!important;height:28px!important;padding:0!important;border:0!important;border-radius:999px!important;background:#eef3f8!important;color:#7c8da2!important;font-size:18px!important;line-height:1!important;}
+#stockManagement .remove-list:hover{background:#fff0f2!important;color:#d84f5d!important;}
+#stockManagement .holding-profile{grid-column:1/-1!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;gap:8px!important;align-items:end!important;margin-top:2px!important;padding-top:11px!important;border-top:1px solid #e5ecf4!important;}
+#stockManagement .holding-profile label{display:flex!important;flex-direction:column!important;gap:5px!important;color:#7c8da2!important;font-size:10px!important;font-weight:700!important;}
+#stockManagement .holding-profile input{width:100%!important;min-width:0!important;height:36px!important;border:1px solid #d8e3ef!important;border-radius:10px!important;background:#fff!important;color:#20334d!important;padding:0 10px!important;outline:0!important;}
+#stockManagement .holding-profile input:focus{border-color:#89b6ee!important;box-shadow:0 0 0 3px rgba(47,128,255,.08)!important;}
+#stockManagement .holding-profile button{height:36px!important;border:1px solid #7fb0e8!important;border-radius:10px!important;background:#eef6ff!important;color:#3577bd!important;padding:0 13px!important;font-weight:800!important;}
+#stockManagement .holding-profile-note{grid-column:1/-1!important;color:#8b9aab!important;font-size:9px!important;line-height:1.45!important;}
+@media(max-width:720px){
+  #stockManagement .manage-theme-card{padding:15px 13px!important;}
+  #stockManagement .manage-theme-title{font-size:19px!important;}
+  #stockManagement .manage-title-icon{width:30px!important;height:30px!important;min-width:30px!important;}
+  #stockManagement .manage-stock{grid-template-columns:minmax(0,1fr) 48px 74px 28px!important;padding:11px 10px!important;gap:6px!important;}
+  #stockManagement .manage-stock-main strong{font-size:14px!important;}
+  #stockManagement .list-price{font-size:15px!important;}
+  #stockManagement .holding-profile{grid-template-columns:1fr 1fr 58px!important;gap:6px!important;}
+  #stockManagement .holding-profile input,#stockManagement .holding-profile button{height:34px!important;}
+}
+
+/* Taiwan market color convention: bullish/positive = red, bearish/negative = green. */
+.price-block strong.up,.price-block span.up,#currentPrice.up,#priceChange.up{color:#ff5c67!important;}
+.price-block strong.down,.price-block span.down,#currentPrice.down,#priceChange.down{color:#1fa86a!important;}
+.buy{color:#d84f5d!important;border-color:#d99aa3!important;}
+.sell{color:#278b65!important;border-color:#8fc7b0!important;}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-up strong{color:#d84f5d!important;}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-down strong{color:#278b65!important;}
+
+/* Small-card state labels. Class names stay semantic; only presentation follows red-good/green-bad. */
+#technical .tech-tile header em.tone-good,
+#institutionalTrend .institutional-flow-head em.tone-good,
+#institutionalTrend .institutional-strength-chip.tone-good,
+#valuation .valuation-tech-tile header em.tone-good,
+#valuation .valuation-model-tiles .valuation-tech-tile header em.tone-good{color:#d84f5d!important;border-color:#dea1a8!important;background:#fff!important;}
+#technical .tech-tile header em.tone-bad,
+#institutionalTrend .institutional-flow-head em.tone-bad,
+#institutionalTrend .institutional-strength-chip.tone-bad,
+#valuation .valuation-tech-tile header em.tone-bad,
+#valuation .valuation-model-tiles .valuation-tech-tile header em.tone-bad{color:#278b65!important;border-color:#91c3ad!important;background:#fff!important;}
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-good{--tech-accent:#d84f5d!important;--tech-accent-soft:#fff0f2!important;}
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad{--tech-accent:#278b65!important;--tech-accent-soft:#eaf7f1!important;}
+
+/* Institutional + credit quantities: positive/buy red, negative/sell green. */
+#institutionalTrend .institutional-flow-rows b.flow-up,
+#institutionalTrend .credit-trading-rows b.flow-up,
+#institutionalTrend .institutional-periods b.flow-up,
+#institutionalTrend .institutional-flow-card>strong.flow-up{color:#d84f5d!important;}
+#institutionalTrend .institutional-flow-rows b.flow-down,
+#institutionalTrend .credit-trading-rows b.flow-down,
+#institutionalTrend .institutional-periods b.flow-down,
+#institutionalTrend .institutional-flow-card>strong.flow-down{color:#278b65!important;}
+#institutionalTrend .institutional-streak-list span.flow-up{background:#fff0f2!important;color:#c84b58!important;}
+#institutionalTrend .institutional-streak-list span.flow-down{background:#eaf7f1!important;color:#247e5c!important;}
+
+/* Technical system judgement mirrors the institutional/fundamental plain-text judgement style. */
+#technical .technical-comment{margin-top:12px!important;padding-top:12px!important;border-top:1px solid #edf2f7!important;}
+#technical .technical-comment small{display:block!important;color:#7c8da2!important;font-size:11px!important;line-height:1.45!important;}
+#technical .technical-comment strong{display:block!important;margin-top:5px!important;color:#13233a!important;font-size:13px!important;line-height:1.65!important;font-weight:700!important;}
+@media(max-width:720px){#technical .technical-comment strong{font-size:12px!important;}}
+</style>
+<style id="stockzone-v26542-color-final-fix">
+/* Final semantic-color specificity guard. */
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-good .tech-state-icon{background:#fff0f2!important;color:#d84f5d!important;}
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-good .tech-state-line strong{color:#d84f5d!important;}
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-state-icon{background:#eaf7f1!important;color:#278b65!important;}
+body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-state-line strong{color:#278b65!important;}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-up{background:linear-gradient(180deg,#fff5f6,#fff0f2)!important;}
+#overviewResonanceCard .overview-resonance-metrics>div.metric-down{background:linear-gradient(180deg,#eff9f4,#eaf7f1)!important;}
 </style>

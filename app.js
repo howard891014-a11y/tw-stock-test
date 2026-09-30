@@ -2684,9 +2684,40 @@ function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
 }
 function renderTradeOutputs(){const expected=renderExpectedUpside(latestPlayStyleResult);if(expected){const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price),risk=buildDecisionRisk(latestPlayStyleResult,price,expected),decision=renderDecision(latestPlayStyleResult,expected,risk);renderOverviewResonance(latestPlayStyleResult,expected,decision,risk)}}
 
+function technicalPersonalitySeasonJudgement(personality,seasonality){
+  const pd=personality||{},sd=seasonality||{};
+  let personalityText="股性歷史樣本不足，暫時無法判斷主要交易節奏。";
+  if(pd.valid){
+    const up=Number.isFinite(pd.upDays)?`典型上漲約 ${Math.round(pd.upDays)} 日`:"上漲週期已有歷史樣本";
+    const retrace=Number.isFinite(pd.retrace)?`回吐前波約 ${pd.retrace.toFixed(0)}%`:"回吐幅度仍需更多樣本";
+    const map={
+      "burst":`股性偏爆發短線，${up}，行情發動通常較集中，追蹤重點是爆發後是否快速降溫。`,
+      "short-cycle":`股性偏短週期墊高，${up}，整理後常再嘗試墊高，但節奏通常比典型波段更快。`,
+      "high-vol-short":`股性屬高波動短週期，${up}、${retrace}，快速拉升與深回檔都較常見。`,
+      "hybrid":`股性兼具波段與高波動，${up}、${retrace}，主趨勢可以延續，但中途回檔幅度通常不小。`,
+      "swing-trend":`股性偏波段趨勢，${up}、${retrace}，上漲與整理節奏相對完整，趨勢延續性較值得觀察。`,
+      "range":`股性偏箱型震盪，${up}，價格較常在區間內來回，趨勢延續性相對有限。`,
+      "reset":`股性常出現深回重置，${retrace}，前一段漲幅較容易被大幅回吐，結構重建比追價更重要。`,
+      "mixed":`股性呈混合節奏，${up}、${retrace}，短線與波段特徵都存在，但目前沒有單一節奏明顯主導。`
+    };
+    personalityText=map[pd.kind]||`目前股性屬「${pd.label||"混合節奏"}」，${up}、${retrace}。`;
+  }
+  let seasonText="季節性樣本不足，目前不把季節因素列為主要判讀依據。";
+  if(sd.valid){
+    const rate=Number(sd.positiveRate),median=Number(sd.median),sample=Number(sd.sample),q=sd.quarter||"--";
+    const tone=Number.isFinite(rate)&&Number.isFinite(median)
+      ?(rate>=60&&median>0?"略偏正向":rate<=40&&median<0?"偏弱":"大致中性")
+      :"大致中性";
+    const medianText=Number.isFinite(median)?stageFmtPct(median):"--";
+    const rateText=Number.isFinite(rate)?`${Math.round(rate)}%`:"--";
+    seasonText=`近5年 Q${q} 的上漲比例約 ${rateText}，中位報酬 ${medianText}，季節性${tone}${Number.isFinite(sample)?`（${sample} 個年度樣本）`:""}；季節性只作輔助，不單獨決定方向。`;
+  }
+  return `${personalityText}${seasonText}`;
+}
+
 async function loadTechnical(data){
   const code=data?.code||data?.symbol||"",market=data?.market||data?.marketLabel||"";
-  resetFiveStage("讀取技術資料中…");
+  resetFiveStage("讀取技術資料中…");setText("technicalJudgement","讀取股性與季節性資料中…");
   try{
     const [t,hraw]=await Promise.all([technical(code,market),history5Y(code,market).catch(e=>{console.warn("五年歷史資料更新失敗",e);return null})]);
     const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(code)!==curCode)return;
@@ -2713,11 +2744,11 @@ async function loadTechnical(data){
     ]);
     const sd=latestTechnicalSeasonality||{};const seasonTone=sd.valid?(sd.median>0&&sd.positiveRate>=60?'good':sd.median<0&&sd.positiveRate<=40?'bad':'watch'):'neutral';techSet("techSeasonState",sd.valid?`Q${sd.quarter} ${sd.median>=0?'偏正':'偏弱'}`:"樣本不足",seasonTone);setText("techSeasonConclusion",sd.label||`近5年Q${sd.quarter||''}｜樣本不足`);
     const qRows=[1,2,3,4].map(q=>{const x=sd.quarters?.[q];return [`Q${q}`,x?.valid?`${x.positiveRate}%上漲｜${stageFmtPct(x.median)}`:"樣本不足"]});
-    technicalMetrics("techSeason",qRows);
+    technicalMetrics("techSeason",qRows);setText("technicalJudgement",technicalPersonalitySeasonJudgement(pd,sd));
     const overallBox=$("techOverview"); if(overallBox){overallBox.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral");overallBox.classList.add(`tone-${latestTechnicalDirection?.tone||"neutral"}`);}
     updateTechnicalOverview(latestTechnicalDirection,null);
     renderFiveStage(t,price);
-  }catch(e){console.warn("技術資料更新失敗",e);latestTechnicalDirection=null;latestTechnicalPersonality=null;latestTechnicalSeasonality=null;setText("technicalSource","--");resetFiveStage("技術資料取得失敗")}
+  }catch(e){console.warn("技術資料更新失敗",e);latestTechnicalDirection=null;latestTechnicalPersonality=null;latestTechnicalSeasonality=null;setText("technicalSource","--");setText("technicalJudgement","技術資料取得失敗，暫時無法產生股性與季節性判讀。");resetFiveStage("技術資料取得失敗")}
 }
 async function valuation(query,market,price){
   const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});
