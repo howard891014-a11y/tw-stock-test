@@ -21,4 +21,9 @@ assert(!api.includes('fetchOfficialPrevious('),'Yahoo quote path must not fetch 
 assert(app.includes('isTodayCloseCached(cached)'),'after-close same-day close must be served from local cache');
 assert(app.includes('Yahoo is the normal close source. Neon price_snapshot is fallback only'),'Neon close snapshot must be fallback, not first choice');
 assert(app.includes('quoteUpdateLabel(x)'),'UI must show real quote/close time instead of fake just-updated text');
+assert(api.includes('if(last===null||last<=0){lastError=new Error("Yahoo price missing or invalid")'), 'Yahoo must reject zero/negative prices');
+assert(api.includes('if(!row||last===null||last<=0)return null;'), 'MIS must reject zero/negative prices');
+assert(app.includes('function validPositivePrice(v)'), 'client positive-price guard missing');
+assert(app.includes('await stockzoneIdbDelete("quoteCache",key)'), 'invalid cached close must be self-healed by deletion');
+
 console.log('PASS validate-intraday-quote — 09:00 Yahoo-first + 3m freshness, MIS stale fallback, close path preserved');
