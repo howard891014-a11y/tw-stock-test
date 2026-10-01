@@ -24,8 +24,9 @@ for(const t of ['market_business_xy2_stock_daily','market_business_xy2_topic_dai
 assert(core.includes("const FEATURE_VERSION = 'feature-2.0.0-x20raw20-y5-activation02'"));
 assert(core.includes("const PATH_MODEL_VERSION = 'path-2.0.0-axis-evidence-nearest-trajectory'"));
 assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.7.0-focuspack-path20'"));
-assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.7.0-compact-path-audit'"));
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.37"'));
+assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.8.0-taxonomy18'"));
+assert(core.includes("const TOPIC_TAXONOMY_VERSION = `taxonomy-${marketTopicTaxonomy.version}`"));
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.64"'));
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('));assert(!snap.includes('loadEngineInputs('));
@@ -42,6 +43,8 @@ assert(loader.includes('INCREMENTAL_SOURCE_DAYS'));assert(loader.includes('FEATU
 assert(loader.includes('institutional_total_net'));assert(loader.includes('change_pct'));
 assert(core.includes('const INCREMENTAL_SOURCE_DAYS = 25'));assert(core.includes('const FEATURE_HISTORY_TARGET_DAYS = 60'));assert(core.includes('const FEATURE_HISTORY_SOURCE_DAYS = 60'));
 
+const taxonomyRebuild=core.slice(core.indexOf('async function rebuildTopicTaxonomyHistory'),core.indexOf('async function refreshBusinessFlowDaily'));
+assert(taxonomyRebuild.includes("mode:'taxonomy-only-topic-history-rebuild'"));assert(taxonomyRebuild.includes('persistCompactDailyFeatures'));assert(taxonomyRebuild.includes('persistBusinessMembers'));assert(!taxonomyRebuild.includes('persistStockDailyFeatures'),'taxonomy-only rebuild must not rewrite stock compact rows');assert(taxonomyRebuild.includes('noStockFeatureRewrite:true'));
 const refresh=core.slice(core.indexOf('async function refreshBusinessFlowDaily'),core.indexOf('async function backfillCompactFeatureHistory'));
 assert(refresh.includes("mode:'clean-latest-date-incremental'"));assert(refresh.includes('loadPriorRaw20History(sql,latestDate)'),'daily X20 scale must use the true prior raw20 history before the latest date');assert(!refresh.includes('loadPriorRaw20History(sql,input.dates[0])'),'daily X20 must not seed scale from the start of the 25D raw window');assert(refresh.includes('computeLatestBusinessFlow'));assert(refresh.includes('persistStockDailyFeatures'));assert(refresh.includes('persistCompactDailyFeatures'));assert(refresh.includes('INCREMENTAL_SOURCE_DAYS'));
 const history=core.slice(core.indexOf('async function backfillCompactFeatureHistory'),core.indexOf('async function needsRefresh'));

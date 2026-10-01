@@ -78,10 +78,10 @@ const consumerProfiles = [
 ];
 const consumerCatalog=buildBusinessBrowserCatalog(consumerProfiles,{groups:[],engineVersion:'xy-7.0.0-x20-y5-activation-causal-path'});
 const representedConsumer=consumerCatalog.items.filter(x=>x.scope==='electronics-product'&&x.companyCount>0);
-for(const id of ['ai_pc','consumer_notebook','consumer_peripherals','consumer_display','consumer_brand_device','consumer_tablet','consumer_mobile','consumer_wearable']){
+for(const id of ['ai_pc','consumer_notebook','consumer_peripherals','consumer_brand_device']){
   const item=representedConsumer.find(x=>x.tagId===id);
   assert(item,`${id} should be represented in a freshly rebuilt consumer-electronics browser snapshot`);
 }
-assert(representedConsumer.length>=8,'fresh consumer-electronics browser snapshot must contain the actual end-device taxonomy, not a single legacy bucket');
+assert(representedConsumer.length>=4,'fresh consumer-electronics browser snapshot should keep broad co-moving endpoint buckets without re-fragmenting device subtypes');
 
 console.log(`Fundflow business browser validation PASS — ${out.counts.totalDefinitions} definitions, ${out.counts.technologyFineDefinitions} tech-fine, ${representedConsumer.length} represented consumer-product buckets`);

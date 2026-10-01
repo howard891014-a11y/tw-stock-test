@@ -26,11 +26,11 @@ assert(bbu.marketTopics.includes('bbu'),'BBU should be discovered from MOPS-like
 const stale=blindCoverageForProfile({stock_code:'9994',stock_name:'盲測丙',auto_business_tags:['semiconductor_chemicals_materials'],auto_market_topics:['semiconductor_material']},'各種精密探針製造、探針用測試治具研發製造');
 assert(!stale.rawTags.includes('semiconductor_chemicals_materials'),'stale auto raw tag should self-heal instead of being unioned forever');
 assert(!stale.marketTopics.includes('semiconductor_material'),'stale auto market topic should self-heal instead of being unioned forever');
-assert(stale.marketTopics.includes('test_interface_market'),'probe/test-fixture wording must map to test interface');
+assert(stale.marketTopics.includes('semiconductor_test_equipment_market'),'probe/test-fixture wording must map to test interface');
 
 // Real blind-audit phrases: these companies were not supplied as discovery seeds.
 const precision=blindCoverageForProfile({stock_code:'6510',stock_name:'精測',auto_business_tags:[],auto_market_topics:[]},'晶圓測試卡、IC測試板、技術服務與其他');
-assert(precision.marketTopics.includes('test_interface_market'),'晶圓測試卡 / IC測試板 must map to 測試介面');
+assert(precision.marketTopics.includes('semiconductor_test_equipment_market'),'晶圓測試卡 / IC測試板 must map to 測試介面');
 const lianjun=blindCoverageForProfile({stock_code:'3450',stock_name:'聯鈞',auto_business_tags:[],auto_market_topics:[]},'光資訊及光通訊產品、功率半導體封裝測試');
 assert(lianjun.marketTopics.includes('optical_communication_market'),'光通訊產品 must map to 光通訊');
 assert(lianjun.marketTopics.includes('power_semiconductor'),'功率半導體 wording must map to 功率半導體');
@@ -56,8 +56,8 @@ const blindAuditCases=[
   ['4541','晟田','航太零組件、半導體設備及相關零組件、自動化精密傳動相關零組件','semiconductor_equipment'],
   ['5299','杰力','積體電路設計業、功率元件、電源管理積體電路','power_semiconductor'],
   ['6138','茂達','半導體功率IC和其模組、半導體功率元件和其模組','power_semiconductor'],
-  ['6217','中探針','各種精密探針製造、各種探針用測試治具之研發製造銷售','test_interface_market'],
-  ['6510','精測','晶圓測試卡、IC測試板、技術服務與其他','test_interface_market'],
+  ['6217','中探針','各種精密探針製造、各種探針用測試治具之研發製造銷售','semiconductor_test_equipment_market'],
+  ['6510','精測','晶圓測試卡、IC測試板、技術服務與其他','semiconductor_test_equipment_market'],
   ['6680','鑫創電子','軍規強固智能運算及無人載具電腦產品之研發製造與銷售','drone'],
   ['6693','廣閎科','功率半導體元件(功率金氧半場效電晶體)之研發設計與銷售','power_semiconductor'],
   ['7402','邑錡','AI影像機器人視覺產品與低功耗相機模組','robot'],
