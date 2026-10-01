@@ -4272,6 +4272,27 @@ async function loadHistoryProgress(force=false){
   const updated=$("historyProgressUpdated");if(updated)updated.textContent="讀取中";
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch("/api/sync-status?view=flow-data-health",{cache:"no-store",signal:controller.signal});const payload=await readJson(res,"歷史資料進度");renderHistoryProgress(payload?.flowDataHealth||payload);historyProgressFetchedAt=Date.now()}finally{clearTimeout(timer)}}catch(e){console.warn("歷史資料進度讀取失敗",e);if(updated)updated.textContent="讀取失敗"}finally{historyProgressLoading=false}
 }
+function renderNeonStorageDeepAudit(data){
+  const status=$("manualStorageDeepAuditStatus"),details=$("neonStorageDeepDetails");if(!status||!details)return;
+  status.classList.remove("is-ok","is-error","is-warn");
+  if(!data||data.error){status.classList.add("is-error");status.textContent=`深度檢查失敗：${data?.error||"unknown"}`;details.hidden=true;return;}
+  const recs=Array.isArray(data.recommendations)?data.recommendations:[],tables=Array.isArray(data.tables)?data.tables:[],indexes=Array.isArray(data.indexes)?data.indexes:[];
+  const candidates=recs.filter(x=>x.type==="duplicate-index"||x.type==="zero-scan-index"||x.type==="legacy-empty-table");
+  status.classList.add(candidates.length?"is-warn":"is-ok");status.textContent=`深度檢查完成｜${tables.filter(x=>Number(x.totalMb)>0).length} tables｜${indexes.length} indexes｜${recs.length} 項建議｜只讀未修改`;
+  const tableLines=tables.filter(x=>Number(x.totalMb)>0).map(x=>`${x.name}: live ${Number(x.liveRows||0).toLocaleString()} | dead ${Number(x.deadRows||0).toLocaleString()} (${fundflowFmt(x.deadPct,1)}%) | data ${fundflowFmt(x.dataMb,2)} MB | index ${fundflowFmt(x.indexMb,2)} MB | seq/idx scan ${Number(x.seqScan||0).toLocaleString()}/${Number(x.idxScan||0).toLocaleString()} | autoVac ${x.lastAutovacuum?String(x.lastAutovacuum).slice(0,19).replace("T"," "):"--"}`);
+  const indexLines=indexes.filter(x=>Number(x.sizeMb)>=0.10).map(x=>`${x.table}.${x.name}: ${fundflowFmt(x.sizeMb,2)} MB | scans ${Number(x.idxScan||0).toLocaleString()}${x.primary?" | PRIMARY":""}${x.unique&&!x.primary?" | UNIQUE":""}`);
+  const recLines=recs.length?recs.map((x,i)=>`${i+1}. [${x.risk||"review"}] ${x.type} | ${x.table||""}${x.index?`.`+x.index:""} | reclaim≈${fundflowFmt(x.reclaimMb||0,2)} MB | ${x.note||""}`):["沒有自動辨識到可直接清理的候選；保留現況。"];
+  details.textContent=[`Deep audit: ${data.generatedAt||"--"}`,`DB: ${fundflowFmt(data.totalMb,2)} MB｜read-only`,"","[TABLES]",...tableLines,"","[INDEXES >= 0.10 MB]",...indexLines,"","[RECOMMENDATIONS]",...recLines,"",...(data.notes||[])].join("\n");details.hidden=false;
+}
+let storageDeepAuditLoading=false;
+async function runManualStorageDeepAudit(){
+  if(storageDeepAuditLoading)return;storageDeepAuditLoading=true;
+  const btn=$("manualStorageDeepAudit"),status=$("manualStorageDeepAuditStatus");if(btn){btn.disabled=true;btn.textContent="檢查中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="讀取 table / dead rows / index size / index scan；不刪資料…"}
+  try{const res=await fetch("/api/sync-status?action=storage-deep-audit-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Storage-Audit":"1"}}),data=await readJson(res,"Neon 深度稽核");renderNeonStorageDeepAudit(data)}
+  catch(e){console.warn("Neon 深度稽核失敗",e);if(status){status.classList.add("is-error");status.textContent=`深度檢查失敗：${e?.message||e}`}}
+  finally{storageDeepAuditLoading=false;if(btn){btn.disabled=false;btn.textContent="執行深度檢查"}}
+}
+$("manualStorageDeepAudit")?.addEventListener("click",runManualStorageDeepAudit);
 let storageMaintenanceLoading=false;
 async function runManualStorageMaintenance(){
   if(storageMaintenanceLoading)return;storageMaintenanceLoading=true;

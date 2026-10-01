@@ -528,3 +528,6 @@ body.view-overview .overview-only{display:block}
 .fundflow-typhoon-trail.is-focus{stroke-opacity:.92!important;stroke-width:3.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .fundflow-point-old.is-focus{opacity:.82!important}
 .fundflow-focus-origin{stroke:#fff;stroke-width:2.8;filter:drop-shadow(0 1px 4px rgba(23,36,58,.30));pointer-events:none}
+
+/* v2.6.5.62 storage deep-audit controls */
+.settings-storage-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.settings-storage-actions button{width:100%}@media(max-width:520px){.settings-storage-actions{grid-template-columns:1fr}}
