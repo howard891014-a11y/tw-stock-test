@@ -40,6 +40,24 @@ function newerLiveQuote(a,b){
   const ta=quoteEpochMs(a)??-Infinity,tb=quoteEpochMs(b)??-Infinity;
   return tb>ta?b:a;
 }
+function derivePreviousCloseFromBars(timestamps,closes,tradeDate){
+  if(!tradeDate||!Array.isArray(timestamps)||!Array.isArray(closes))return null;
+  let bestTs=-Infinity,best=null;
+  for(let i=0;i<Math.min(timestamps.length,closes.length);i++){
+    const ts=toNumber(timestamps[i]),close=toNumber(closes[i]);
+    if(ts===null||close===null||close<=0)continue;
+    const d=taipeiDateFromEpoch(ts);
+    if(d&&d<tradeDate&&ts>bestTs){bestTs=ts;best=close}
+  }
+  return best;
+}
+function rebaseQuotePreviousClose(q,previousClose){
+  if(!q)return q;
+  const pc=toNumber(previousClose),last=toNumber(q.last);
+  if(pc===null||pc<=0||last===null||last<=0)return q;
+  const change=last-pc;
+  return{...q,previousClose:pc,change,changePct:(change/pc)*100};
+}
 function quoteCacheControl(mode){
   if(mode==="live")return "no-store";
   const c=taipeiParts();
@@ -245,9 +263,13 @@ async function fetchYahoo(symbol,official){
       for(let i=closes.length-1;i>=0;i--){const close=toNumber(closes[i]),ts=toNumber(timestamps[i]);if(close!==null&&close>0&&ts!==null){barLast=close;barTime=ts;break}}
       if(barLast!==null&&(last===null||lastTime===null||barTime>=lastTime)){last=barLast;lastTime=barTime}
       if(last===null||last<=0){lastError=new Error("Yahoo price missing or invalid");continue}
-      const previousClose=toNumber(meta.regularMarketPreviousClose??meta.chartPreviousClose??meta.previousClose);
+      const tradeDate=taipeiDateFromEpoch(lastTime);
+      // v2.6.5.61: Yahoo meta.previousClose can briefly point at an intraday/opening reference
+      // during the first minutes. Derive the prior session close from the actual 1-minute bars first.
+      const barPreviousClose=derivePreviousCloseFromBars(timestamps,closes,tradeDate);
+      const previousClose=barPreviousClose??toNumber(meta.regularMarketPreviousClose??meta.chartPreviousClose??meta.previousClose);
       const change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null;
-      return{source:"Yahoo Finance",realtime:true,officialClose:false,symbol,code,name:shortName(FALLBACK_NAMES[code]||official?.name||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString(),tradeDate:taipeiDateFromEpoch(lastTime)};
+      return{source:"Yahoo Finance",realtime:true,officialClose:false,symbol,code,name:shortName(FALLBACK_NAMES[code]||official?.name||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString(),tradeDate};
     }catch(e){lastError=e}
   }
   if(lastError)throw lastError;
@@ -285,6 +307,8 @@ async function handler(req,res){
       const [yahoo,mis]=await Promise.allSettled([yahooFor(),fetchMisQuote(stock)]);
       const y=yahoo.status==="fulfilled"?yahoo.value:null,m=mis.status==="fulfilled"?mis.value:null;
       result=newerLiveQuote(y,m);
+      // Price may come from Yahoo, but the official MIS y-field is the authoritative prior close.
+      if(m?.previousClose)result=rebaseQuotePreviousClose(result,m.previousClose);
     }else{
       result=await yahooFor();
       if(mode==="live"&&!isFreshLiveQuote(result)){
@@ -297,4 +321,4 @@ async function handler(req,res){
   }catch(error){return res.status(502).json({ok:false,error:"股票名稱或行情暫時無法取得",detail:error.message})}
 }
 module.exports=handler;
-module.exports._test={toNumber,cleanName,shortName,marketLabel,misNumber,misTradeDate,misQuoteTime,taipeiParts,taipeiDateFromEpoch,quoteCacheControl,liveStockHint,isFreshLiveQuote,newerLiveQuote,resolveStock,dbResolveStock,dbCloseQuote,fetchMisQuote,fetchYahoo};
+module.exports._test={toNumber,cleanName,shortName,marketLabel,misNumber,misTradeDate,misQuoteTime,taipeiParts,taipeiDateFromEpoch,quoteCacheControl,liveStockHint,isFreshLiveQuote,newerLiveQuote,derivePreviousCloseFromBars,rebaseQuotePreviousClose,resolveStock,dbResolveStock,dbCloseQuote,fetchMisQuote,fetchYahoo};
