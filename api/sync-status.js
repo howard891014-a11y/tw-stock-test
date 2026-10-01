@@ -1,4 +1,4 @@
-const { getSql, readDatabaseSizeAudit } = require('../lib/db');
+const { getSql, readDatabaseSizeAudit, readDatabaseDeepAudit } = require('../lib/db');
 const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
 const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
@@ -756,6 +756,14 @@ module.exports=async function handler(req,res){
       const backfill=await manualInstitutionalBackfillPromise;
       return res.status(200).json({...backfill,manual:true,targetTradingDays:target,batchDays:batch});
     }
+    if(action==='storage-deep-audit-manual'){
+      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用深度檢查按鈕'});}
+      if(String(req.headers?.['x-stockzone-storage-audit']||'')!=='1')return res.status(403).json({ok:false,error:'缺少 Storage 深度稽核確認標記'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
+      const audit=await readDatabaseDeepAudit(getSql());
+      return res.status(200).json({...audit,manual:true});
+    }
     if(action==='storage-maintenance-manual'){
       if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用安全整理按鈕'});}
       if(String(req.headers?.['x-stockzone-storage-maintenance']||'')!=='1')return res.status(403).json({ok:false,error:'缺少 Storage 整理確認標記'});
@@ -808,7 +816,7 @@ module.exports=async function handler(req,res){
         const flowDataHealth=await readFlowDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',targetTradingDays:target,backfill,marketHealth,flowDataHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / fundflow-clean-rebuild-manual / institutional-backfill-manual / storage-maintenance-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / fundflow-clean-rebuild-manual / institutional-backfill-manual / storage-deep-audit-manual / storage-maintenance-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // v2.6.5.59: keep three cron slots, but bound raw history to the storage policy.
