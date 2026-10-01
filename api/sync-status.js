@@ -6,7 +6,7 @@ const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistory
 const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readFundflowValidationAudit } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
-const { STORAGE_POLICY, runStorageMaintenance } = require('../lib/storage-policy');
+const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = require('../lib/storage-policy');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -763,6 +763,14 @@ module.exports=async function handler(req,res){
       if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
       const audit=await readDatabaseDeepAudit(getSql());
       return res.status(200).json({...audit,manual:true});
+    }
+    if(action==='storage-legacy-cleanup-manual'){
+      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用低風險清理按鈕'});}
+      if(String(req.headers?.['x-stockzone-storage-legacy-cleanup']||'')!=='1')return res.status(403).json({ok:false,error:'缺少 legacy 清理確認標記'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
+      const cleanup=await runVerifiedLegacyCleanup({sql:getSql(),vacuumCredit:true});
+      return res.status(200).json({...cleanup,manual:true});
     }
     if(action==='storage-maintenance-manual'){
       if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用安全整理按鈕'});}
