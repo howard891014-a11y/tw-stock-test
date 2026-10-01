@@ -6,9 +6,12 @@ const api=fs.readFileSync('api/quote.js','utf8');
 assert(app.includes('options?.live?"&mode=live":""'),'client intraday quote must request mode=live');
 assert(app.includes('phase.phase==="live"&&marketSessionForToday()?.status!=="holiday"'),'client must start live mode at Taiwan 09:00 and honor holiday suppression');
 assert(api.includes('https://query1.finance.yahoo.com/v8/finance/chart/'),'quote API must use Yahoo chart endpoint');
-assert(api.includes('// v2.6.5.60: live quote latency guard.'),'live mode must use v60 latency guard');
+assert(api.includes('// v2.6.5.60: live quote latency guard.'),'live mode must preserve v60 latency guard');
 assert(api.includes('Promise.allSettled([yahooFor(),fetchMisQuote(stock)])'),'09:00-09:10 must dual-query Yahoo and MIS');
 assert(api.includes('result=newerLiveQuote(y,m);'),'open dual-source mode must choose newest timestamp');
+assert(api.includes('function derivePreviousCloseFromBars(timestamps,closes,tradeDate)'),'Yahoo prior-close derivation helper missing');
+assert(api.includes('const barPreviousClose=derivePreviousCloseFromBars(timestamps,closes,tradeDate);'),'Yahoo must derive prior close from the previous session bars before trusting meta');
+assert(api.includes('if(m?.previousClose)result=rebaseQuotePreviousClose(result,m.previousClose);'),'opening Yahoo price must be rebased to official MIS prior close');
 assert(api.includes('result=await yahooFor();'),'Yahoo must remain primary after the opening guard');
 assert(api.includes('if(mode==="live"&&!isFreshLiveQuote(result))'),'live mode must reject stale Yahoo quotes');
 assert(api.includes('const mis=await fetchMisQuote(stock);'),'stale Yahoo quote must trigger MIS fallback');
@@ -30,4 +33,4 @@ assert(api.includes('if(!row||last===null||last<=0)return null;'), 'MIS must rej
 assert(app.includes('function validPositivePrice(v)'), 'client positive-price guard missing');
 assert(app.includes('await stockzoneIdbDelete("quoteCache",key)'), 'invalid cached close must be self-healed by deletion');
 
-console.log('PASS validate-intraday-quote — 09:00~09:10 Yahoo+MIS newest-wins + 60s freshness + dynamic Yahoo window');
+console.log('PASS validate-intraday-quote — newest live price + authoritative prior-close rebasing + 60s freshness');
