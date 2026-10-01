@@ -1,0 +1,20 @@
+const fs=require('fs');
+const assert=require('assert');
+const storage=fs.readFileSync('lib/storage-policy.js','utf8');
+const api=fs.readFileSync('api/sync-status.js','utf8');
+const app=fs.readFileSync('app.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+
+for(const t of ['market_business_xy_member','market_business_xy_daily','market_business_xy_snapshot']) assert(storage.includes(`'${t}'`),`verified legacy allowlist missing ${t}`);
+assert(storage.includes("if (before.rows !== 0)"),'must refuse DROP when legacy table is not empty');
+assert(storage.includes('DROP TABLE IF EXISTS public.${table}'),'must DROP only allowlisted verified legacy table');
+assert(!storage.includes('DROP TABLE IF EXISTS public.${table} CASCADE'),'must never CASCADE legacy cleanup');
+assert(storage.includes('VACUUM (ANALYZE) public.credit_trading_daily'),'credit cleanup must use plain VACUUM ANALYZE');
+assert(!/sql\.query\(`VACUUM\s+FULL/i.test(storage),'must never execute VACUUM FULL');
+for(const keep of ['market_daily_history','institutional_trading_daily','credit_trading_daily','market_activity_daily','market_business_xy2_stock_daily','market_business_xy2_topic_daily','market_business_xy2_snapshot','market_business_xy2_member']) assert(storage.includes(keep),`preserved-table marker missing ${keep}`);
+assert(api.includes("action==='storage-legacy-cleanup-manual'"),'manual cleanup endpoint missing');
+assert(api.includes("x-stockzone-storage-legacy-cleanup"),'manual cleanup confirmation header missing');
+assert(api.includes('runVerifiedLegacyCleanup({sql:getSql(),vacuumCredit:true})'),'endpoint must call guarded cleanup');
+assert(html.includes('id="manualStorageLegacyCleanup"'),'settings cleanup button missing');
+assert(app.includes('X-StockZone-Storage-Legacy-Cleanup'),'client cleanup confirmation header missing');
+console.log('PASS validate-storage-cleanup — only empty legacy XY tables are dropped; no CASCADE; credit uses plain VACUUM ANALYZE');

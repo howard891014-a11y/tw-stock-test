@@ -60,7 +60,7 @@ assert(!(vercel.crons||[]).some(x=>x.schedule==='0 10 * * *'));
 assert(enrich.includes('DELETE FROM market_business_xy2_topic_daily')&&enrich.includes('DELETE FROM market_business_xy2_snapshot')&&enrich.includes('DELETE FROM market_business_xy2_member'));
 assert(!enrich.includes('DELETE FROM market_business_xy_daily'));
 assert(db.includes('pg_database_size(current_database())'));assert(db.includes('pg_total_relation_size(rel)'));assert(db.includes('pruneEnabled:true'));assert(db.includes('softTargetMb:STORAGE_POLICY.softTargetMb'));assert(db.includes('idealMb:50,maxMb:100'));
-assert(db.includes('compact-research-${STORAGE_POLICY.compact.topicResearch}d'));assert(db.includes("market_business_xy_daily:'legacy-derived-delete-after-verified-clean-cutover'"));
+assert(db.includes('compact-research-${STORAGE_POLICY.compact.topicResearch}d'));assert(db.includes("market_business_xy_daily:'legacy-derived-drop-after-verified-clean-cutover'"));
 for(const token of ["softTargetMb: 400","price: 120","institutional: 120","credit: 90","activity: 80","topicResearch: 250","runStorageMaintenance"])assert(storagePolicy.includes(token),`storage policy missing ${token}`);
 assert(status.includes("action==='storage-maintenance-manual'"));assert(status.includes('runStorageMaintenance({sql:getSql()})'));
 assert(app.includes('X-StockZone-Storage-Maintenance'));
