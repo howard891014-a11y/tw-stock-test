@@ -26,7 +26,7 @@ assert(core.includes("const PATH_MODEL_VERSION = 'path-2.0.0-axis-evidence-neare
 assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.7.0-focuspack-path20'"));
 assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.8.0-taxonomy18'"));
 assert(core.includes("const TOPIC_TAXONOMY_VERSION = `taxonomy-${marketTopicTaxonomy.version}`"));
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.64"'));
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.5.65"'));
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('));assert(!snap.includes('loadEngineInputs('));
@@ -44,7 +44,7 @@ assert(loader.includes('institutional_total_net'));assert(loader.includes('chang
 assert(core.includes('const INCREMENTAL_SOURCE_DAYS = 25'));assert(core.includes('const FEATURE_HISTORY_TARGET_DAYS = 60'));assert(core.includes('const FEATURE_HISTORY_SOURCE_DAYS = 60'));
 
 const taxonomyRebuild=core.slice(core.indexOf('async function rebuildTopicTaxonomyHistory'),core.indexOf('async function refreshBusinessFlowDaily'));
-assert(taxonomyRebuild.includes("mode:'taxonomy-only-topic-history-rebuild'"));assert(taxonomyRebuild.includes('persistCompactDailyFeatures'));assert(taxonomyRebuild.includes('persistBusinessMembers'));assert(!taxonomyRebuild.includes('persistStockDailyFeatures'),'taxonomy-only rebuild must not rewrite stock compact rows');assert(taxonomyRebuild.includes('noStockFeatureRewrite:true'));
+assert(taxonomyRebuild.includes("mode:'taxonomy-only-topic-history-rebuild'"));assert(taxonomyRebuild.includes('persistCompactDailyFeatures'));assert(taxonomyRebuild.includes('persistBusinessMembers'));assert(!taxonomyRebuild.includes('persistStockDailyFeatures'),'taxonomy-only rebuild must not rewrite stock compact rows');assert(taxonomyRebuild.includes('noStockFeatureRewrite:true'));assert(taxonomyRebuild.includes('pendingDates'),'taxonomy migration must resume from completed dates');assert(!taxonomyRebuild.includes('rebuildPreparedFromStored(sql)'),'taxonomy history rewrite must not share a request with prepared/Path rebuild');assert(taxonomyRebuild.includes('followupRequired:Boolean(after.ready)'));
 const refresh=core.slice(core.indexOf('async function refreshBusinessFlowDaily'),core.indexOf('async function backfillCompactFeatureHistory'));
 assert(refresh.includes("mode:'clean-latest-date-incremental'"));assert(refresh.includes('loadPriorRaw20History(sql,latestDate)'),'daily X20 scale must use the true prior raw20 history before the latest date');assert(!refresh.includes('loadPriorRaw20History(sql,input.dates[0])'),'daily X20 must not seed scale from the start of the 25D raw window');assert(refresh.includes('computeLatestBusinessFlow'));assert(refresh.includes('persistStockDailyFeatures'));assert(refresh.includes('persistCompactDailyFeatures'));assert(refresh.includes('INCREMENTAL_SOURCE_DAYS'));
 const history=core.slice(core.indexOf('async function backfillCompactFeatureHistory'),core.indexOf('async function needsRefresh'));
@@ -58,7 +58,7 @@ assert(audit.includes('readPathAuditSnapshot(sql)'),'validation must use persist
 const stateFn=core.slice(core.indexOf('async function readCurrentPreparedState'),core.indexOf('async function warmCurrentEngineFromStoredDb'));assert(!stateFn.includes('payload'),'state probe must not transfer prepared JSON payloads');
 
 assert(!sync.includes('refreshBusinessFlowDaily'));assert(sync.includes("reason:'manual XY snapshot mode during development'"));
-assert(core.includes('async function warmCurrentEngineFromStoredDb'));assert(status.includes("action==='fundflow-warm-manual'"));assert(status.includes("action==='fundflow-clean-rebuild-manual'"));assert(status.includes('x-stockzone-manual-history'));assert(app.includes('X-StockZone-Manual-History'));
+assert(core.includes('async function warmCurrentEngineFromStoredDb'));assert(core.includes("followupStage:'prepared-snapshot-path-audit'"));assert(app.includes('for(let step=0;step<3;step++)'));assert(app.includes('platformHint=status>=500'));assert(status.includes("action==='fundflow-warm-manual'"));assert(status.includes("action==='fundflow-clean-rebuild-manual'"));assert(status.includes('x-stockzone-manual-history'));assert(app.includes('X-StockZone-Manual-History'));
 assert(!(vercel.crons||[]).some(x=>x.schedule==='0 10 * * *'));
 assert(enrich.includes('DELETE FROM market_business_xy2_topic_daily')&&enrich.includes('DELETE FROM market_business_xy2_snapshot')&&enrich.includes('DELETE FROM market_business_xy2_member'));
 assert(!enrich.includes('DELETE FROM market_business_xy_daily'));
