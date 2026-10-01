@@ -4293,6 +4293,19 @@ async function runManualStorageDeepAudit(){
   finally{storageDeepAuditLoading=false;if(btn){btn.disabled=false;btn.textContent="執行深度檢查"}}
 }
 $("manualStorageDeepAudit")?.addEventListener("click",runManualStorageDeepAudit);
+let storageLegacyCleanupLoading=false;
+async function runManualStorageLegacyCleanup(){
+  if(storageLegacyCleanupLoading)return;storageLegacyCleanupLoading=true;
+  const btn=$("manualStorageLegacyCleanup"),status=$("manualStorageLegacyCleanupStatus");if(btn){btn.disabled=true;btn.textContent="清理中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="再次驗證三張 legacy XY 表必須為空；DROP 不使用 CASCADE，信用表只做普通 VACUUM (ANALYZE)…"}
+  try{
+    const res=await fetch("/api/sync-status?action=storage-legacy-cleanup-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Storage-Legacy-Cleanup":"1"}}),data=await readJson(res,"Neon 低風險清理"),before=Number(data?.before?.totalMb||0),after=Number(data?.after?.totalMb||0),expected=Number(data?.expectedReclaimMb||0),actual=Number(data?.reclaimedAuditMb||0),dropped=Array.isArray(data?.droppedTables)?data.droppedTables:[],vac=data?.vacuum||{};
+    if(status){status.classList.add(vac.ok===false?"is-warn":"is-ok");status.textContent=`低風險清理完成｜DROP ${dropped.length} 張空 legacy 表｜預估 ${fundflowFmt(expected,2)} MB｜DB audit ${fundflowFmt(before,2)} → ${fundflowFmt(after,2)} MB（${fundflowFmt(actual,2)} MB）｜信用 VACUUM ${vac.ok===false?"未完成，資料未受影響":"完成"}`;}
+    historyProgressFetchedAt=0;await loadHistoryProgress(true);
+    await runManualStorageDeepAudit();
+  }catch(e){console.warn("Neon 低風險清理失敗",e);if(status){status.classList.add("is-error");status.textContent=`低風險清理失敗：${e?.message||e}`}}
+  finally{storageLegacyCleanupLoading=false;if(btn){btn.disabled=false;btn.textContent="執行低風險清理"}}
+}
+$("manualStorageLegacyCleanup")?.addEventListener("click",runManualStorageLegacyCleanup);
 let storageMaintenanceLoading=false;
 async function runManualStorageMaintenance(){
   if(storageMaintenanceLoading)return;storageMaintenanceLoading=true;

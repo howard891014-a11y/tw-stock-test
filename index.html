@@ -2705,7 +2705,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.62</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.63</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3468,10 +3468,11 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   <div class="settings-manual-update-head"><span>Neon Storage Audit</span><small>400MB 目標｜安全 retention</small></div>
   <div class="settings-manual-update-box">
     <p>.59 採固定安全窗：股價 120D、法人 120D、信用 90D、Activity 80D；stock compact 45D，重要 topic research compact 最多 250D。個股長期價格維持 Yahoo 5Y／Browser IndexedDB，不重複塞 Neon。</p>
-    <div class="settings-storage-actions"><button id="manualStorageDeepAudit" type="button">執行深度檢查</button><button id="manualStorageMaintenance" type="button">執行安全整理</button></div>
+    <div class="settings-storage-actions"><button id="manualStorageDeepAudit" type="button">執行深度檢查</button><button id="manualStorageMaintenance" type="button">執行安全整理</button><button id="manualStorageLegacyCleanup" type="button">執行低風險清理</button></div>
     <small class="settings-manual-update-status" id="manualStorageDeepAuditStatus">尚未執行深度檢查；此操作只讀，不刪資料。</small>
     <pre class="settings-validation-details" id="neonStorageDeepDetails" hidden></pre>
     <small class="settings-manual-update-status" id="manualStorageMaintenanceStatus">尚未執行手動整理；每日 15:00 cron 會自動套用 retention。</small>
+    <small class="settings-manual-update-status" id="manualStorageLegacyCleanupStatus">深度稽核已確認後可用：只 DROP 三張空 legacy XY 表，並對信用表做普通 VACUUM (ANALYZE)。</small>
     <small class="settings-manual-update-status" id="neonStorageStatus">尚未讀取</small>
     <pre class="settings-validation-details" id="neonStorageDetails" hidden></pre>
   </div>
@@ -3503,7 +3504,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.62"></script>
+  <script src="./app.js?v=2.6.5.63"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5814,4 +5815,4 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 }
 </style>
 
-<!-- v2.6.5.62 — Neon deep storage audit (read-only) + bounded-retention architecture. -->
+<!-- v2.6.5.63 — verified empty legacy XY drop + safe credit VACUUM ANALYZE; no CASCADE / no VACUUM FULL. -->
