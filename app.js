@@ -3992,7 +3992,7 @@ let fundflowBrowserLimit=36;
 function fundflowFmt(v,d=1){if(v===null||v===undefined||v==="")return "--";const n=Number(v);return Number.isFinite(n)?n.toFixed(d):"--"}
 function fundflowSigned(v,d=1){if(v===null||v===undefined||v==="")return "--";const n=Number(v);return Number.isFinite(n)?`${n>=0?"+":""}${n.toFixed(d)}`:"--"}
 const FUND_FLOW_TECH_UPSTREAM_IDS=new Set(["asic","high_speed_ic","semiconductor_equipment","semiconductor_material"]);
-const FUND_FLOW_TECH_DOWNSTREAM_IDS=new Set(["it_services_market","cloud_market","ems_odm","networking_market","leo_satellite","robot","ai_pc","optical_storage_market"]);
+const FUND_FLOW_TECH_DOWNSTREAM_IDS=new Set(["it_services_market","ems_odm","networking_market","leo_satellite","robot","ai_pc","optical_storage_market"]);
 function fundflowTechStage(g){
   const tagId=String(g?.tagId||"").toLowerCase(),parent=String(g?.parentName||""),name=String(g?.name||"");
   if(FUND_FLOW_TECH_UPSTREAM_IDS.has(tagId)||/IC設計|半導體材料|半導體設備/.test(parent))return "technology-upstream";
@@ -4072,7 +4072,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.5.37";
+const FUND_FLOW_CLIENT_REV="2.6.5.64";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4331,7 +4331,7 @@ let manualFundflowWarmLoading=false;
 async function runManualFundflowWarm(){
   if(manualFundflowWarmLoading)return;
   const btn=$("manualFundflowWarm"),status=$("manualFundflowWarmStatus");
-  manualFundflowWarmLoading=true;if(btn){btn.disabled=true;btn.textContent="更新中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="檢查最新 common date；必要時只增量計算最新題材日…"}
+  manualFundflowWarmLoading=true;if(btn){btn.disabled=true;btn.textContent="更新中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="檢查最新 common date／分類版本；必要時 DB-only 套用新版分類或增量計算最新題材日…"}
   try{
     const res=await fetch("/api/sync-status?action=fundflow-warm-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Warm":"1"}});
     const data=await readJson(res,"XY / 分類快照更新");

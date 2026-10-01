@@ -2705,7 +2705,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.63</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.5.64</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3459,7 +3459,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <section class="settings-manual-update" aria-label="XY 快照手動更新">
   <div class="settings-manual-update-head"><span>XY / 分類快照</span><small>開發模式：手動</small></div>
   <div class="settings-manual-update-box">
-    <p>.36 沿用 Clean XY v2，不做 full rebuild：Path 改版直接重用 compact feature history；有新交易日時才讀最近 25D 必要資料，只寫最新 stock/topic compact row，再重建 prepared snapshot 與 Path audit。已是最新日期會 cheap no-op，不呼叫 TWSE／TPEx／MIS。</p>
+    <p>.64 分類改版採 taxonomy-only migration：第一次按更新會用既有 DB 60D 重算 topic history／member／snapshot，不重寫 stock compact、不呼叫 TWSE／TPEx／MIS；之後有新交易日時仍只做最近 25D 的最新日增量更新。</p>
     <button id="manualFundflowWarm" type="button">更新 XY / 分類快照</button>
     <small class="settings-manual-update-status" id="manualFundflowWarmStatus">尚未手動更新</small>
   </div>
@@ -3504,7 +3504,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.5.63"></script>
+  <script src="./app.js?v=2.6.5.64"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5815,4 +5815,4 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 }
 </style>
 
-<!-- v2.6.5.63 — verified empty legacy XY drop + safe credit VACUUM ANALYZE; no CASCADE / no VACUUM FULL. -->
+<!-- v2.6.5.64 — market-topic consolidation + glass-substrate coverage audit; taxonomy-only 60D DB rebuild keeps stock compact rows intact. -->
