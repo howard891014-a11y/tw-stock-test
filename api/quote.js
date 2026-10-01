@@ -22,7 +22,8 @@ function taipeiDateFromEpoch(sec){
   const n=Number(sec);if(!Number.isFinite(n))return "";
   try{return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(n*1000))}catch{return ""}
 }
-const LIVE_QUOTE_STALE_MS=3*60*1000;
+const LIVE_QUOTE_STALE_MS=60*1000;
+const OPEN_DUAL_SOURCE_UNTIL_MINUTES=9*60+10;
 function quoteEpochMs(q){
   const t=Date.parse(String(q?.quoteTime||""));
   return Number.isFinite(t)?t:null;
@@ -226,9 +227,13 @@ async function resolveStock(query,marketHint=""){
 }
 async function fetchYahoo(symbol,official){
   const code=symbol.split(".")[0];
+  // v2.6.5.60: use a moving period window instead of a static range=5d URL.
+  // The dynamic period2 also gives Yahoo/CDN a changing cache key during live trading.
+  const nowSec=Math.floor(Date.now()/1000),period1=nowSec-6*24*60*60,period2=nowSec+120;
+  const query=`interval=1m&period1=${period1}&period2=${period2}&includePrePost=false&events=div%2Csplits`;
   const urls=[
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1m&range=5d&includePrePost=false&events=div%2Csplits`,
-    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1m&range=5d&includePrePost=false&events=div%2Csplits`
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${query}`,
+    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${query}`
   ];
   let lastError=null;
   for(const url of urls){
@@ -271,13 +276,21 @@ async function handler(req,res){
       const [tw,two]=await Promise.all([fetchYahoo(`${stock.code}.TW`,{...stock,market:"上市"}),fetchYahoo(`${stock.code}.TWO`,{...stock,market:"上櫃"})]);
       return tw||two;
     };
-    // v2.6.5.44: 09:00 起 Yahoo 優先；盤中只接受「今天且足夠新」的 Yahoo 報價。
-    // Yahoo 當日報價若停滯超過 3 分鐘，立即查官方 MIS，並採用時間較新的那一筆。
-    // 此 freshness gate 僅存在 mode=live，不改動收盤／歷史資料流程。
-    result=await yahooFor();
-    if(mode==="live"&&!isFreshLiveQuote(result)){
-      const mis=await fetchMisQuote(stock);
-      if(mis)result=newerLiveQuote(result,mis);
+    // v2.6.5.60: live quote latency guard.
+    // 09:00~09:10 Yahoo + official MIS are both queried and the newest timestamp wins;
+    // after 09:10 Yahoo remains primary, but anything older than 60s immediately falls back to MIS.
+    // This path intentionally bypasses Neon for numeric live quotes.
+    const clock=taipeiParts();
+    if(mode==="live"&&clock.minutes<OPEN_DUAL_SOURCE_UNTIL_MINUTES){
+      const [yahoo,mis]=await Promise.allSettled([yahooFor(),fetchMisQuote(stock)]);
+      const y=yahoo.status==="fulfilled"?yahoo.value:null,m=mis.status==="fulfilled"?mis.value:null;
+      result=newerLiveQuote(y,m);
+    }else{
+      result=await yahooFor();
+      if(mode==="live"&&!isFreshLiveQuote(result)){
+        const mis=await fetchMisQuote(stock);
+        if(mis)result=newerLiveQuote(result,mis);
+      }
     }
     if(!result)return res.status(404).json({ok:false,error:mode==="live"?"Yahoo／官方 MIS 暫無可用行情":"Yahoo 查無此股票"});
     return res.status(200).json({ok:true,...result,fetchedAt:new Date().toISOString()});
