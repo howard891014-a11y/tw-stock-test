@@ -4075,7 +4075,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.5.68";
+const FUND_FLOW_CLIENT_REV="2.6.6.0";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4334,7 +4334,7 @@ let manualFundflowWarmLoading=false;
 async function runManualFundflowWarm(){
   if(manualFundflowWarmLoading)return;
   const btn=$("manualFundflowWarm"),status=$("manualFundflowWarmStatus");
-  manualFundflowWarmLoading=true;if(btn){btn.disabled=true;btn.textContent="更新中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="檢查最新 common date／分類版本；必要時 DB-only 套用新版分類或增量計算最新題材日…"}
+  manualFundflowWarmLoading=true;if(btn){btn.disabled=true;btn.textContent="更新中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="檢查上市／上櫃最新交易日；若只缺一邊就補該日，再增量更新 XY／分類快照…"}
   try{
     let data=null;
     for(let step=0;step<3;step++){
@@ -4345,8 +4345,9 @@ async function runManualFundflowWarm(){
       await new Promise(r=>setTimeout(r,180));
     }
     if(data?.followupRequired)throw new Error("分類遷移已保存，但快照尚未完成；請再按一次即可續跑");
-    const state=data?.after||data?.before||{},asOf=state?.asOf?String(state.asOf):"--",mode=data?.mode||data?.reason||"compact";
-    if(status){status.classList.remove("is-warn");status.classList.add("is-ok");status.textContent=data?.skipped?`已是最新，cheap no-op｜${data.featureVersion||"feature"}｜資料 ${asOf}`:`更新完成｜${mode}｜資料 ${asOf}`;}
+    const state=data?.after||data?.before||{},asOf=state?.asOf?String(state.asOf):"--",mode=data?.mode||data?.reason||"compact",gap=data?.latestMarketGapRepair||null;
+    const gapNote=gap?.repaired?`先補齊 ${gap.market||"市場"} ${gap.targetDate||"最新交易日"}｜`:"";
+    if(status){status.classList.remove("is-warn");status.classList.add("is-ok");status.textContent=data?.skipped?`已是最新，cheap no-op｜${data.featureVersion||"feature"}｜資料 ${asOf}`:`${gapNote}更新完成｜${mode}｜資料 ${asOf}`;}
     fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;
     try{await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)}catch(e){console.warn("手動更新後重新讀取資金流快照失敗",e)}
     historyProgressFetchedAt=0;await loadHistoryProgress(true);
