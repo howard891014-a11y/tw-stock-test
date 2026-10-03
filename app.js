@@ -3971,7 +3971,7 @@ function fundflowStartFocusAnimation(tagId){
   if(reduced){renderFundflowChart();return;}
   const tick=(ts)=>{
     const state=fundflowFocusAnimation;if(!state||state.tagId!==fundflowSelectedTagId)return;
-    if(!state.lastPaint||ts-state.lastPaint>=32){state.lastPaint=ts;renderFundflowChart();}
+    if(!state.lastPaint||ts-state.lastPaint>=16){state.lastPaint=ts;renderFundflowChart();}
     state.raf=requestAnimationFrame(tick);
   };
   fundflowFocusAnimation.raf=requestAnimationFrame(tick);
@@ -4032,7 +4032,8 @@ function fundflowPathAngle(a,b){
 function fundflowFutureOpposed(a,b,a5,b5){
   if(!a||!b||!a5||!b5)return {opposed:false,angle:null,shareRatio:0};
   const primary=Math.max(0,Number(a.routeShare??a.confidence)||0),secondary=Math.max(0,Number(b.routeShare??b.confidence)||0),shareRatio=primary>0?secondary/primary:0,angle=fundflowPathAngle(a5,b5);
-  return {opposed:Number.isFinite(angle)&&angle>=135&&shareRatio>=.60,angle,shareRatio};
+  const meaningful=secondary>=15&&shareRatio>=.45;
+  return {opposed:Boolean(meaningful&&Number.isFinite(angle)&&angle>=100),angle,shareRatio,meaningful};
 }
 function fundflowPathState(g){
   const projection=g?.projection||{},scenarios=fundflowProjectionScenarios(projection),a=scenarios[0],b=scenarios[1];
@@ -4041,11 +4042,10 @@ function fundflowPathState(g){
   const target=a5?fundflowPointQuadrant(a5.x,a5.y):"",confidence=Number(a?.confidence??projection?.confidence)||0,gap=Number(projection?.pathGap),route=`${fundflowQuadrantShort(current)} → ${target?fundflowQuadrantShort(target):"--"}`;
   const aDx=Number(a5?.dx),aDy=Number(a5?.dy),futureX=Number(a5?.x),futureY=Number(a5?.y),opp=fundflowFutureOpposed(a,b,a5,b5);
   const meta={route,current,target,confidence,pathGap:Number.isFinite(gap)?gap:null,oppositionAngle:Number.isFinite(opp.angle)?opp.angle:null,secondaryShareRatio:opp.shareRatio};
-  // Path 3.0 only publishes a directional state when the aggregated A family owns at least half
-  // of the total probability mass. This gate is applied AFTER micro-path family aggregation,
-  // so it does not recreate the old 10–20% fragmentation problem.
-  const familyProbabilityWeak=String(projection?.mode||"").startsWith("path-family-")&&confidence<50;
-  if(opp.opposed||familyProbabilityWeak)return {key:"direction-unclear",label:"方向不明",...meta};
+  // Path 3.1 never manufactures a >50% A. Direction-unclear is structural only:
+  // (1) two non-trivial families point materially different ways, or (2) micro-paths are genuinely diffuse.
+  const familyDiffuse=Boolean(projection?.diffuse);
+  if(opp.opposed||familyDiffuse)return {key:"direction-unclear",label:"方向不明",...meta};
 
   const capitalUp=dx3>=2||(Number.isFinite(aDx)&&aDx>=2),capitalFastUp=dx3>=4||(Number.isFinite(aDx)&&aDx>=4),capitalDown=dx3<=-4||(Number.isFinite(aDx)&&aDx<=-4),priceUp=dy3>=.8||(Number.isFinite(aDy)&&aDy>=.8),priceDown=dy3<=-1||(Number.isFinite(aDy)&&aDy<=-1)||(y<0&&x>=0);
   const capitalHolding=dx3>-4&&(!Number.isFinite(aDx)||aDx>-4),futureUpperRight=Number.isFinite(futureX)&&Number.isFinite(futureY)&&futureX>=0&&futureY>=0;
@@ -4114,7 +4114,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.6.6";
+const FUND_FLOW_CLIENT_REV="2.6.6.7";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4172,14 +4172,19 @@ function fundflowConeRadiusPx(p,sx,sy){
   if(!p)return 0;const cx=sx(Number(p.x)||0),cy=sy(Number(p.y)||0),rx=Math.abs(sx(Number(p.highX))-sx(Number(p.lowX)))/2,ry=Math.abs(sy(Number(p.highY))-sy(Number(p.lowY)))/2;
   return Math.max(5,Math.min(72,Math.sqrt(Math.max(1,rx)*Math.max(1,ry))));
 }
-function fundflowFutureConePolygon(start,points,sx,sy){
-  const src=(points||[]).filter(Boolean);if(!start||!src.length)return '';
-  const nodes=[{x:Number(start.x)||0,y:Number(start.y)||0,r:0},...src.map(p=>({x:Number(p.x)||0,y:Number(p.y)||0,r:fundflowConeRadiusPx(p,sx,sy)}))].map(p=>({...p,px:sx(p.x),py:sy(p.y)}));
-  if(nodes.length<2)return '';
-  const upper=[],lower=[];
-  for(let i=0;i<nodes.length;i++){const p=nodes[i],prev=nodes[Math.max(0,i-1)],next=nodes[Math.min(nodes.length-1,i+1)],tx=next.px-prev.px,ty=next.py-prev.py,len=Math.hypot(tx,ty)||1,nx=-ty/len,ny=tx/len,r=Number(p.r)||0;upper.push(`${p.px+nx*r},${p.py+ny*r}`);lower.push(`${p.px-nx*r},${p.py-ny*r}`)}
-  return [...upper,...lower.reverse()].join(' ');
+function fundflowCatmullPoint(a,b,c,d,t){const t2=t*t,t3=t2*t;return {x:.5*((2*b.x)+(-a.x+c.x)*t+(2*a.x-5*b.x+4*c.x-d.x)*t2+(-a.x+3*b.x-3*c.x+d.x)*t3),y:.5*((2*b.y)+(-a.y+c.y)*t+(2*a.y-5*b.y+4*c.y-d.y)*t2+(-a.y+3*b.y-3*c.y+d.y)*t3)};}
+function fundflowFutureCurveSamples(start,points,sx,sy,progress=1){
+  const src=(points||[]).filter(Boolean),raw=[{x:Number(start?.x)||0,y:Number(start?.y)||0,r:0,h:0},...src.map(p=>({x:Number(p.x)||0,y:Number(p.y)||0,r:fundflowConeRadiusPx(p,sx,sy),h:Number(p.horizon)||10}))];if(raw.length<2)return [];
+  const nodes=raw.map(p=>({x:sx(p.x),y:sy(p.y),r:p.r,h:p.h})),p=Math.max(0,Math.min(1,Number(progress)||0)),maxU=(nodes.length-1)*p,count=Math.max(2,Math.ceil(64*p));const out=[];
+  for(let j=0;j<=count;j++){const u=maxU*(j/count),i=Math.min(nodes.length-2,Math.floor(u)),t=Math.max(0,Math.min(1,u-i)),a=nodes[Math.max(0,i-1)],b=nodes[i],c=nodes[i+1],d=nodes[Math.min(nodes.length-1,i+2)],pt=fundflowCatmullPoint(a,b,c,d,t),r=b.r+(c.r-b.r)*t;out.push({x:pt.x,y:pt.y,r:Math.max(0,r)});}return out;
 }
+function fundflowScreenPath(samples,{close=false}={}){const a=(samples||[]).filter(Boolean);if(!a.length)return '';let d=`M ${a[0].x.toFixed(2)} ${a[0].y.toFixed(2)}`;for(let i=1;i<a.length;i++)d+=` L ${a[i].x.toFixed(2)} ${a[i].y.toFixed(2)}`;return close?`${d} Z`:d;}
+function fundflowFutureConePath(start,points,sx,sy,progress=1){
+  const center=fundflowFutureCurveSamples(start,points,sx,sy,progress);if(center.length<2)return '';
+  const upper=[],lower=[];for(let i=0;i<center.length;i++){const p=center[i],prev=center[Math.max(0,i-1)],next=center[Math.min(center.length-1,i+1)],tx=next.x-prev.x,ty=next.y-prev.y,len=Math.hypot(tx,ty)||1,nx=-ty/len,ny=tx/len,r=p.r||0;upper.push({x:p.x+nx*r,y:p.y+ny*r});lower.push({x:p.x-nx*r,y:p.y-ny*r});}
+  return fundflowScreenPath([...upper,...lower.reverse()],{close:true});
+}
+function fundflowFutureCenterPath(start,points,sx,sy,progress=1){return fundflowScreenPath(fundflowFutureCurveSamples(start,points,sx,sy,progress));}
 function fundflowNiceBound(values,floor=1){
   const maxAbs=Math.max(floor,...(values||[]).map(v=>Math.abs(Number(v)||0)))*1.12;if(!Number.isFinite(maxAbs)||maxAbs<=0)return floor;
   const pow=10**Math.floor(Math.log10(maxAbs)),n=maxAbs/pow,step=n<=1?1:n<=2?2:n<=5?5:10;return step*pow;
@@ -4214,9 +4219,8 @@ function renderFundflowChart(){
     if(rawPts.length){const first=rawPts[0];if(anim.history<.025)svg.append(fundflowSvg("circle",{cx:sx(first.x),cy:sy(first.y),r:7,fill:color,class:"fundflow-focus-origin","aria-hidden":"true"}))}
     if(selectedProjection&&anim.future>0){
       const start={x:selected.x,y:selected.y},scenarios=fundflowProjectionScenarios(selectedProjection);
-      scenarios.slice(0,2).forEach((scenario,scenarioIndex)=>{const thresholds=[1/3,2/3,1],src=(scenario?.points||[]).slice(0,3),visible=src.filter((p,i)=>anim.future+1e-6>=thresholds[i]),conePoints=fundflowFutureConePolygon(start,visible,sx,sy);if(conePoints)svg.append(fundflowSvg("polygon",{points:conePoints,class:`fundflow-future-cone ${scenarioIndex===0?'is-primary':'is-secondary'}`,fill:color,stroke:color,"aria-hidden":"true"}));
-        const rawFuture=[start,...src.map(p=>({x:Number(p.x)||0,y:Number(p.y)||0,_src:p}))],partial=fundflowPartialPolyline(rawFuture,anim.future);if(partial.length>1){const coords=partial.map(p=>`${sx(p.x)},${sy(p.y)}`).join(" ");svg.append(fundflowSvg("polyline",{points:coords,class:`fundflow-future-path ${scenarioIndex===0?'is-primary':'is-secondary'}`,stroke:color,"aria-hidden":"true"}))}
-        src.forEach((p,i)=>{if(anim.future+1e-6<thresholds[i])return;const h=Number(p.horizon)||[3,5,10][i]||3,r=fundflowConeRadiusPx(p,sx,sy);svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:scenarioIndex===0?3.8:3.2,class:`fundflow-future-point ${scenarioIndex===0?'is-primary':'is-secondary'}`,fill:color,"aria-hidden":"true"}));svg.append(fundflowSvg("text",{x:sx(p.x)+Math.min(46,r)+4,y:sy(p.y)-4,class:`fundflow-future-label ${scenarioIndex===0?'is-primary':'is-secondary'}`},`${scenario.id||(scenarioIndex===0?'A':'B')} ${h}D${i===src.length-1?` ${fundflowFmt(scenario.confidence,0)}%`:''}`))});
+      scenarios.slice(0,2).forEach((scenario,scenarioIndex)=>{const src=(scenario?.points||[]).slice(0,3),conePath=fundflowFutureConePath(start,src,sx,sy,anim.future),centerPath=fundflowFutureCenterPath(start,src,sx,sy,anim.future),klass=scenarioIndex===0?'is-primary':'is-secondary';if(conePath)svg.append(fundflowSvg("path",{d:conePath,class:`fundflow-future-cone ${klass}`,fill:scenarioIndex===0?color:"none",stroke:color,"aria-hidden":"true"}));if(centerPath)svg.append(fundflowSvg("path",{d:centerPath,class:`fundflow-future-path ${klass}`,stroke:color,"aria-hidden":"true"}));
+        src.forEach((p,i)=>{const h=Number(p.horizon)||[3,5,10][i]||3,threshold=Math.max(0,Math.min(1,h/10));if(anim.future+1e-6<threshold)return;const r=fundflowConeRadiusPx(p,sx,sy);svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:scenarioIndex===0?3.5:3,class:`fundflow-future-point ${klass}`,fill:scenarioIndex===0?color:"#fff",stroke:color,"aria-hidden":"true"}));svg.append(fundflowSvg("text",{x:sx(p.x)+Math.min(46,r)+4,y:sy(p.y)-4,class:`fundflow-future-label ${klass}`},`${scenario.id||(scenarioIndex===0?'A':'B')} ${h}D${i===src.length-1?` ${fundflowFmt(scenario.confidence,0)}%`:''}`))});
       });
     }
     const latest=rawPts.at(-1)||selected;if(anim.history>=1)svg.append(fundflowSvg("circle",{cx:sx(latest.x),cy:sy(latest.y),r:7.1,class:"fundflow-point-current",fill:color,...common}));
@@ -4235,7 +4239,7 @@ function renderFundflowXy(){
   const groups=fundflowEligibleGroups({path:false}),early=groups.filter(g=>["institutional-layout","main-rise-confirmation"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),confirm=groups.filter(g=>fundflowPathState(g).key==="strong-continuation").sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),risk=groups.filter(g=>["early-reaction","pullback","weakening","direction-unclear","cold"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a));
   setText("fundflowPotentialCount",early.length);setText("fundflowMainlineCount",confirm.length);setText("fundflowRightCount",risk.length);setText("fundflowDaysCount",data.trajectoryDays||0);
   const a=$("fundflowPotentialList"),b=$("fundflowMainlineList"),c=$("fundflowRightList");if(a)a.innerHTML=fundflowListHtml(early);if(b)b.innerHTML=fundflowListHtml(confirm);if(c)c.innerHTML=fundflowListHtml(risk);
-  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v7"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY v8：X＝20D 法人中期資金位置，20D 真實正負決定左右；5D／1D法人只描述短期速度／加速度。Y＝近5日真實價格報酬。路線分類改用「目前 XY 位置＋近3日 ΔX/ΔY＋Future Path A 5D」；Path 3.0 聚類完成後 A family 若仍低於50%就判「方向不明」；另外 A/B 兩條 5D 位移夾角 ≥135°、且 B 權重至少為 A 的60% 時也判「方向不明」。價格發動率仍採等權投票：當日漲幅 > +0.2% 計1票。Future Path 3.0 先聚合同走法微路徑成 A/B family，再加總同族機率；預測錐採歷史 causal forecast error P70 校準。資料完整度只控制預測門檻與錐形寬度。相似歷史 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
+  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v7"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY v8：X＝20D 法人中期資金位置，20D 真實正負決定左右；5D／1D法人只描述短期速度／加速度。Y＝近5日真實價格報酬。路線分類改用「目前 XY 位置＋近3日 ΔX/ΔY＋Future Path A 5D」；Path 3.1 不設 A 50% 人工門檻：A 就是真實最大家族機率。只有 A/B 都不可忽視且方向夾角明顯（約100°以上），或微路徑本身高度分散無法形成主家族，才判「方向不明」。價格發動率仍採等權投票：當日漲幅 > +0.2% 計1票。Future Path 3.1 採點→線→家族→機率→面；所有微路徑機率合計100%，同族直接加總，P70只決定預測面積。B只有形成不可忽視替代家族時才顯示。資料完整度只控制預測門檻與錐形寬度。相似歷史 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
   document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>{const active=fundflowScopes.has(btn.dataset.fundflowScope);btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",active?"true":"false")});document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));document.querySelectorAll("[data-fundflow-axis-mode]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowAxisMode===fundflowAxisMode));renderFundflowPhaseControls();renderFundflowChart();
 }
 function fundflowFactorHtml(factors,axis,priorFactors={},group={},priorPoint={}){
@@ -4274,7 +4278,7 @@ function renderFundflowDetail(){
   const traj=d.trajectory||[],p3=traj[Math.max(0,traj.length-4)]||traj[0]||{},xf=$("fundflowXFactors"),yf=$("fundflowYFactors");if(xf)xf.innerHTML=fundflowFactorHtml(d.latest?.factors?.x,"x",p3?.factors?.x||{},d.latest||{},p3);if(yf)yf.innerHTML=fundflowFactorHtml(d.latest?.factors?.y,"y",p3?.factors?.y||{},d.latest||{},p3);
   const hist=$("fundflowDetailHistory");if(hist)hist.innerHTML=(d.trajectory||[]).map((p,i,arr)=>{const q=fundflowPointQuadrant(p.x,p.y);return `<div class="fundflow-history-item${i===arr.length-1?" latest":""}"><b>${escNews(String(p.date||"").slice(5).replace("-","/"))}</b><strong>X ${fundflowSignedX(p.x)}<br>Y ${fundflowSignedPct(p.y)}</strong><small>${escNews(fundflowQuadrantShort(q))} ${escNews(fundflowQuadrantMeaning(q))}｜發動 ${fundflowFmt(p.activationRate,0)}% / E ${fundflowFmt(p.overheating,0)}</small></div>`}).join("");
   renderFundflowCompanyList(d);
-  const note=$("fundflowDetailNote");if(note)note.textContent=`${d?.methodology?.factor||"X20 看中期法人資金位置；Y5 看真實價格報酬。"}｜發動率是一家公司一票的當日價格 breadth；Future Path 3.0＝法人 > 發動率 > 相似歷史先形成微路徑權重，再聚類為 A/B family；預測錐用歷史 causal forecast error P70 校準，資料完整度只控制錐形寬度／最低預測門檻。E 是過熱／耗竭風險標籤。${d.localOnly?"｜圖表聚焦與循環動畫仍只使用本機 snapshot；公司貢獻明細會在選取題材時載入一次並快取。":"｜公司貢獻已載入完整成員，可切換 X / Y 貢獻排序。"}`;
+  const note=$("fundflowDetailNote");if(note)note.textContent=`${d?.methodology?.factor||"X20 看中期法人資金位置；Y5 看真實價格報酬。"}｜發動率是一家公司一票的當日價格 breadth；Future Path 3.1＝點→線→家族→機率→面；法人 > 發動率 > 相似歷史只決定微路徑相對機率，總和固定100%；完整3/5/10D線形聚類後同族直接加總。P70只畫預測範圍，B僅在不可忽視時以虛線顯示。E 是過熱／耗竭風險標籤。${d.localOnly?"｜圖表聚焦與循環動畫仍只使用本機 snapshot；公司貢獻明細會在選取題材時載入一次並快取。":"｜公司貢獻已載入完整成員，可切換 X / Y 貢獻排序。"}`;
   if(!fundflowFocusAnimation)renderFundflowChart();
 }
 async function loadFundflowXy(force=false,serverRefresh=false){
