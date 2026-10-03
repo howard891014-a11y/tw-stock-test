@@ -26,7 +26,7 @@ assert(core.includes("const PATH_MODEL_VERSION = 'path-2.0.0-axis-evidence-neare
 assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.7.0-focuspack-path20'"));
 assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.8.0-taxonomy18'"));
 assert(core.includes("const TOPIC_TAXONOMY_VERSION = `taxonomy-${marketTopicTaxonomy.version}`"));
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.6.0"'));
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.6.1"'));
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('));assert(!snap.includes('loadEngineInputs('));

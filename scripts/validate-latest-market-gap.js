@@ -15,7 +15,8 @@ assert.strictEqual(JSON.stringify(latestMarketGapPlan({'上市':'2026-10-01','�
 const repair=syncService.slice(syncService.indexOf('async function runLatestMarketGapRepair'),syncService.indexOf('async function runMarketHistoryBackfill'));
 assert(repair.includes("if (!plan.needed)"),'aligned path must cheap-no-op before upstream work');
 assert(repair.indexOf('if (!plan.needed)') < repair.indexOf('loadCompanyUniverse(sql)'),'cheap no-op must not load company master');
-assert(repair.includes('fetchTwseHistoricalRows(plan.targetDate)')&&repair.includes('fetchTpexHistoricalRows(plan.targetDate)'),'repair must fetch only the missing market/date historical endpoint');
+assert(repair.includes('fetchCurrentRowsForExactDate(plan.market,plan.targetDate)'),'repair should prefer the current official feed when it exactly matches the target date');
+assert(repair.includes('fetchTwseHistoricalRows(plan.targetDate)')&&repair.includes('fetchTpexHistoricalRows(plan.targetDate)'),'repair must retain historical fallback for the missing market/date');
 assert(repair.includes('noFullBackfill:true'),'repair must explicitly remain targeted');
 assert(repair.includes('refreshMarketActivityFactors()'),'repaired day must refresh local activity factors');
 assert(repair.includes('refreshPriceSnapshotFromMarketHistory()'),'repaired day must refresh snapshot');
@@ -32,3 +33,7 @@ assert(app.includes('若只缺一邊就補該日'),'manual UI must explain targe
 assert.strictEqual((vercel.crons||[]).length,3,'must keep exactly the existing three cron slots');
 assert.deepStrictEqual((vercel.crons||[]).map(x=>x.schedule),['0 7 * * 1-5','0 11 * * 1-5','0 14 * * 1-5']);
 console.log('Latest market gap validation PASS — auto/manual targeted repair + cheap no-op + unchanged 3 cron slots');
+
+assert(syncService.includes("const TPEX_HISTORY_URL = 'https://www.tpex.org.tw/www/zh-tw/afterTrading/otc';"),'TPEx historical primary must use current afterTrading/otc route');
+assert(syncService.includes('date=${encodeURIComponent(roc)}&type=EW&order=0&sort=asc'),'TPEx historical primary must use ROC date and EW scope');
+assert(manual.includes("error:latestMarketGapRepair.error||'最新交易日缺口修補失敗'"),'manual 503 must surface the nested repair error');
