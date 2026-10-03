@@ -29,4 +29,12 @@ const signalBlock=core.slice(core.indexOf('function currentSignalState'),core.in
 assert(signalBlock.includes('positionForce=tanhUnit(x20,55)'),'institutional Path evidence must include X20 position strength');
 assert(signalBlock.includes('activationForce=clampRange(activation/100,0,1)'),'1/0 activation must be positive-only breadth evidence');
 assert(!signalBlock.includes('(activation-50)/50'),'low activation must not become a synthetic -1/down vote');
-console.log('Future Path 2.0 validation PASS — institutional X-axis > positive-only activation > causal nearest trajectory; completeness only gates/widens uncertainty');
+
+// .66 regression: overview/browser freshness alone must never hide a missing Path audit after a timed-out taxonomy migration.
+assert(core.includes('rebuildPathAuditFromStored'),'missing compact-only Path audit repair helper');
+assert(core.includes('auditNeedsRepair=auditMissing||auditSuspiciousZero'),'warm path must detect missing/stale-zero Path audit');
+const warmBlock=core.slice(core.indexOf('async function warmCurrentEngineFromStoredDb'),core.indexOf('async function getFundflowSnapshot'));
+assert(warmBlock.indexOf('auditNeedsRepair')<warmBlock.indexOf("clean-engine-snapshots-and-path-audit-already-latest"),'Path audit gate must run before cheap no-op');
+assert(warmBlock.includes("mode:result?.mode||'path-audit-repair-from-compact'"),'missing compact Path-audit-only repair mode');
+
+console.log('Future Path 2.0 validation PASS — institutional X-axis > positive-only activation > causal nearest trajectory; completeness only gates/widens uncertainty; .66 Path-audit repair gate PASS');
