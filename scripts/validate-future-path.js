@@ -13,15 +13,16 @@ function makeHistory(){
 const calibration=buildTransitionCalibration(makeHistory());
 assert.equal(calibration.cone?.method,'causal-nearest-path-error-p70');
 assert.equal(calibration.cone?.coveragePct,70);
-assert(calibration.pathSamples.length>0,'Path 3.0 needs complete 3D/5D/10D micro trajectories');
+assert(calibration.pathSamples.length>0,'Path 3.1 needs complete 3D/5D/10D micro trajectories');
 const r3=calibration.cone.radii[3].radiusNorm,r5=calibration.cone.radii[5].radiusNorm,r10=calibration.cone.radii[10].radiusNorm;
 assert(r3>0&&r5>=r3&&r10>=r5,'P70 cone radii must be positive and non-decreasing');
 
 const g={tagId:'new',x:42,y:-.2,phaseState:'transition',phaseConfidence:65,activationRate:80,flow5Pct:.8,flow1Pct:1.0,dataCompleteness:92,reliability:92,dx3:12,dy3:.7};
 const p=projectGroup(g,calibration);
-assert.equal(p.mode,'path-family-cone-p70-top2');assert(p.scenarios.length>=1&&p.scenarios.length<=2);assert.equal(p.scenarios[0].id,'A');if(p.scenarios[1])assert.equal(p.scenarios[1].id,'B');
+assert.equal(p.mode,'path-family-cone-p70-point-line-area');assert(p.scenarios.length>=1&&p.scenarios.length<=2);assert.equal(p.scenarios[0].id,'A');if(p.scenarios[1])assert.equal(p.scenarios[1].id,'B');
 assert.deepStrictEqual(p.influence,PATH_INFLUENCE);assert(PATH_INFLUENCE.institutional>PATH_INFLUENCE.activation&&PATH_INFLUENCE.activation>PATH_INFLUENCE.history);
-assert(p.primary.routeShare>=50,'a strongly coherent synthetic history should aggregate micro-paths into a majority A family');
+assert(Math.abs(Number(p.familyProbabilityTotalPct)-100)<.02,'all micro-path family probability must sum to 100%');
+assert(p.primary.routeShare>0&&p.primary.routeShare<=100,'A must be the literal largest family share, without an artificial floor');
 for(const route of p.scenarios){assert.deepStrictEqual(route.points.map(x=>x.horizon),[3,5,10]);assert(route.familySize>=1);for(const pt of route.points){assert(pt.lowX<=pt.x&&pt.x<=pt.highX);assert(pt.lowY<=pt.y&&pt.y<=pt.highY);assert(pt.radiusNorm>0);assert.equal(pt.coveragePct,70)}}
 assert(p.points===p.primary.points);assert.equal(p.confidence,p.primary.routeShare);assert(p.top2Share<=100.01&&p.residualPct>=0);assert(Number.isFinite(p.pathGap));assert.equal(p.cone.coveragePct,70);
 // Completeness widens the cone but must not reassign family probability.
@@ -30,8 +31,8 @@ const h5=hi.primary.points.find(x=>x.horizon===5),l5=lo.primary.points.find(x=>x
 const insufficient=projectGroup({...g,dataCompleteness:PATH_MIN_COMPLETENESS_PCT-1},calibration);assert.equal(insufficient.mode,'insufficient-data');assert.equal(insufficient.scenarios.length,0);
 
 const core=fs.readFileSync('lib/fundflow-xy.js','utf8'),app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),css=fs.readFileSync('style.css','utf8');
-for(const token of ['buildHistoricalPathErrorCalibration','nearestPathCandidates','buildPathFamilies','pathFamilyCompatible','PATH_CONE_COVERAGE=0.70','causal-nearest-path-error-p70','path-family-cone-p70-top2','institutional:0.50, activation:0.30, history:0.20','PATH_MIN_COMPLETENESS_PCT'])assert(core.includes(token),`Path 3.0 token missing: ${token}`);
-for(const token of ['fundflowProjectionScenarios','fundflow-future-path','fundflow-future-point','fundflow-future-cone','fundflowFutureConePolygon','fundflowStartFocusAnimation','fundflowPathState','路徑差'])assert(app.includes(token)||html.includes(token)||css.includes(token),`Path 3.0 cone UI token missing: ${token}`);
+for(const token of ['buildHistoricalPathErrorCalibration','nearestPathCandidates','buildPathFamilies','pathFamilyCompatible','pathTrajectoryDistance','pathFamilyAdaptiveRadius','PATH_CONE_COVERAGE=0.70','causal-nearest-path-error-p70','path-family-cone-p70-point-line-area','institutional:0.50, activation:0.30, history:0.20','PATH_MIN_COMPLETENESS_PCT'])assert(core.includes(token),`Path 3.1 token missing: ${token}`);
+for(const token of ['fundflowProjectionScenarios','fundflow-future-path','fundflow-future-point','fundflow-future-cone','fundflowFutureConePath','fundflowStartFocusAnimation','fundflowPathState','路徑差'])assert(app.includes(token)||html.includes(token)||css.includes(token),`Path 3.1 forecast UI token missing: ${token}`);
 assert(!core.includes('.62*histProb+.24*trendSim'),'retired history-dominant direction formula remains');
 const signalBlock=core.slice(core.indexOf('function currentSignalState'),core.indexOf('function directionEvidenceScores'));
 assert(signalBlock.includes('positionForce=tanhUnit(x20,55)'),'institutional Path evidence must include X20 position strength');
@@ -47,4 +48,4 @@ assert(warmBlock.includes("mode:result?.mode||'path-audit-repair-from-compact'")
 assert(core.includes('auditStale=Boolean(pathAudit&&before?.asOf&&isoDate(pathAudit?.asOf)!==isoDate(before.asOf))'),'warm must detect stale path-audit by asOf');
 assert(core.includes('auditNeedsRepair=auditMissing||auditSuspiciousZero||auditStale'),'stale path-audit must enter repair path');
 
-console.log('Future Path 3.0 validation PASS — micro-path families aggregate probability; causal P70 forecast cone calibrated; completeness only widens cone');
+console.log('Future Path 3.1 validation PASS — micro-path probability conserves 100%; point→line→family aggregation and causal P70 forecast area verified');

@@ -49,18 +49,18 @@ assert(Number.isFinite(adv.activationRate)&&Number.isFinite(adv.overheating),'Ac
 assert(adv.phaseState&&adv.phaseLabel,'phase state should exist');
 assert(adv.projection?.points?.length===3,'primary projection compatibility should expose 3/5/10 horizons');
 assert(Number.isFinite(adv.projection.confidence),'primary projection confidence should be finite');
-assert(adv.projection?.mode==='path-family-cone-p70-top2','projection should use Path 3.0 family-cone Top-2 mode');
+assert(adv.projection?.mode==='path-family-cone-p70-point-line-area','projection should use Path 3.1 point-line-family mode');
 assert(Array.isArray(adv.projection?.scenarios)&&adv.projection.scenarios.length>=1&&adv.projection.scenarios.length<=2,'projection should expose up to two route families');
 assert.equal(adv.projection.scenarios[0].id,'A','primary family id should be A');if(adv.projection.scenarios[1])assert.equal(adv.projection.scenarios[1].id,'B','secondary family id should be B');
 assert(adv.projection.scenarios.every(x=>Array.isArray(x.points)&&x.points.map(p=>p.horizon).join(',')==='3,5,10'),'each scenario should expose 3/5/10 points');
 if(adv.projection.scenarios[1])assert(adv.projection.scenarios[0].confidence>=adv.projection.scenarios[1].confidence,'Path A must be the higher-confidence route');
 assert(Number.isFinite(adv.projection.pathGap)&&adv.projection.pathGap>=0,'A-B path gap should be finite and non-negative');
-assert(['高混沌','中度分歧','有次要劇本','主路徑明確'].includes(adv.projection.chaosLevel),'chaos level missing');
+assert(['路徑分散','雙主路徑','明顯次路徑','主路徑領先','單一主路徑'].includes(adv.projection.chaosLevel),'chaos level missing');
 const cpo=result.groups.find(x=>x.tagId==='cpo_silicon_photonics');
 assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate multiple companies');
 const cal=buildTransitionCalibration(result.groups);
 assert(cal.historyDays>=10,'calibration should count usable X20 history days');
-const projected=projectGroup(adv,cal);assert(projected.points.length===3,'projectGroup primary compatibility should return three horizons');assert(projected.scenarios.length>=1&&projected.scenarios.length<=2,'projectGroup should return one or two typhoon families');assert.equal(projected.cone?.coveragePct,70,'Path 3.0 cone must expose P70 coverage');
+const projected=projectGroup(adv,cal);assert(projected.points.length===3,'projectGroup primary compatibility should return three horizons');assert(projected.scenarios.length>=1&&projected.scenarios.length<=2,'projectGroup should return one or two typhoon families');assert.equal(projected.cone?.coveragePct,70,'Path 3.1 forecast area must expose P70 coverage');
 console.log('Clean Fundflow XY X20/Y5 + activation + Path State validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,activation:adv.activationRate,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
 const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});

@@ -8,8 +8,8 @@ const {
 }=require('../lib/fundflow-xy');
 
 assert.equal(FEATURE_VERSION,'feature-2.0.0-x20raw20-y5-activation02');
-assert.equal(PATH_MODEL_VERSION,'path-3.0.0-family-cone-p70');
-assert.equal(ENGINE_VERSION,'xy-8.2.0-clean-feature2-path30-taxonomy19');
+assert.equal(PATH_MODEL_VERSION,'path-3.1.0-point-line-family-p70');
+assert.equal(ENGINE_VERSION,'xy-8.3.0-clean-feature2-path31-taxonomy19');
 assert.equal(NON_CORE_EXPOSURE_BUDGET,null);
 assert.equal(STOCK_FLOW_POSITION_DAYS,20);assert.equal(STOCK_FLOW_MOMENTUM_DAYS,5);assert.equal(STOCK_FLOW_LOOKBACK_DAYS,20);assert.equal(STOCK_FLOW_MIN_HISTORY_DAYS,15);
 assert.equal(ACTIVATION_THRESHOLD_PCT,.2);assert(PATH_INFLUENCE.institutional>PATH_INFLUENCE.activation&&PATH_INFLUENCE.activation>PATH_INFLUENCE.history);

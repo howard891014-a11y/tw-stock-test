@@ -8,7 +8,7 @@ const ids=[...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
 if(new Set(ids).size!==ids.length)errors.push("duplicate DOM ids found");
 for(const token of ['data-fundflow-scope="technology-upstream"','data-fundflow-scope="technology-midstream"','data-fundflow-scope="technology-downstream"','data-fundflow-scope="electronics-product"','data-fundflow-browser-scope="electronics-product"','fundflowTechStage','g.scope==="electronics-product"']) if(!html.includes(token)&&!app.includes(token)) errors.push(`missing classification token ${token}`);
 for(const token of ['消費性電子','data-fundflow-axis-mode="zoom"','data-fundflow-axis-mode="raw"','data-fundflow-path="cold"','data-fundflow-path="direction-unclear"','data-fundflow-path="early-reaction"','data-fundflow-path="institutional-layout"','data-fundflow-path="strong-continuation"','data-fundflow-path="main-rise-confirmation"','data-fundflow-path="weakening"','data-fundflow-path="pullback"']) if(!html.includes(token))errors.push(`missing v2.6.6.4 route control token ${token}`);
-for(const token of ['fundflowPathState','fundflowPathAngle','fundflowFutureOpposed','fundflowAxisMode','fundflowZoomBound','fundflow-typhoon-trail','fundflow-future-cone','fundflowStartFocusAnimation','fundflowFocusAnimationState','fundflowPartialPolyline']) if(!app.includes(token)&&!css.includes(token)&&!html.includes(token))errors.push(`missing Path 3.0 XY UI token ${token}`);
+for(const token of ['fundflowPathState','fundflowPathAngle','fundflowFutureOpposed','fundflowAxisMode','fundflowZoomBound','fundflow-typhoon-trail','fundflow-future-cone','fundflowStartFocusAnimation','fundflowFocusAnimationState','fundflowPartialPolyline']) if(!app.includes(token)&&!css.includes(token)&&!html.includes(token))errors.push(`missing Path 3.1 XY UI token ${token}`);
 for(const old of ['data-fundflow-phase="germination"','data-fundflow-phase="potential"','data-fundflow-phase="mainline"','冷區／方向未明','過熱／冷卻 <em data-fundflow-phase-count']) if(html.includes(old))errors.push(`old phase UI still visible: ${old}`);
 for(const old of ['data-fundflow-path="capital-leading"','data-fundflow-path="price-leading"','data-fundflow-path="resonance-up"','data-fundflow-path="strong-hold"','data-fundflow-path="capital-retreat"','data-fundflow-path="chaos"']) if(html.includes(old))errors.push(`old route control still visible: ${old}`);
 if(!html.includes('點開：原點→歷史→A/B 颱風路徑循環動畫'))errors.push('focus animation legend text missing');
@@ -24,11 +24,14 @@ for(const token of ['/api/fundflow?view=detail','fundflowDetailCache','fundflowC
 if(app.includes('(d.companies||[]).slice(0,12)'))errors.push('company contribution list must not truncate to 12 rows');
 if(!app.includes('依 ${axis.toUpperCase()} 軸貢獻高 → 低'))errors.push('company contribution sort direction text missing');
 if(!css.includes('.fundflow-typhoon-trail.is-focus{stroke-opacity:.92!important'))errors.push('focused historical trail must keep uniform opacity');
+
+for(const token of ['fundflowFutureCurveSamples','fundflowFutureConePath','fundflowFutureCenterPath','stroke-dasharray:5 5','fill:none!important'])if(!app.includes(token)&&!css.includes(token)&&!html.includes(token))errors.push(`missing smooth Path 3.1 forecast rendering token ${token}`);
+if(app.includes('familyProbabilityWeak'))errors.push('artificial A>=50% direction gate must be removed');
 if(errors.length){console.error('Fundflow UI validation FAILED');for(const e of errors)console.error('-',e);process.exit(1)}
 assert(app.includes('function fundflowBusinessUniverse()'),'full business-universe helper missing');
 assert(app.includes('業務 ${universe.length}｜可畫 XY ${base.length}｜待法人 X ${pendingX}'),'UI must expose business universe vs true XY coverage');
 assert(app.includes('key==="all"?String(universe.length):String(counts[key]??0)'),'All-path control must show the full business-universe count instead of only XY-eligible businesses');
-console.log(`Fundflow UI v2.6.6.6 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
+console.log(`Fundflow UI v2.6.6.7 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
 
 assert(html.includes('max-height:calc(100dvh'),'settings modal must have a viewport-bounded scroll height');
 assert(html.includes('overflow-y:auto!important'),'settings modal must scroll on mobile');
