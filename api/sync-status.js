@@ -1,6 +1,6 @@
 const { getSql, readDatabaseSizeAudit, readDatabaseDeepAudit } = require('../lib/db');
 const { isCronAuthorized, ensureMarketHistorySchema, ensureCompanyProfileSchema } = require('../lib/sync-common');
-const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill } = require('../lib/sync-service');
+const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDisposalSync, runTpexDisposalSync, runMarketHistoryBackfill, runLatestMarketGapRepair } = require('../lib/sync-service');
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
 const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth, institutionalCoverageByDate } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
@@ -714,14 +714,19 @@ module.exports=async function handler(req,res){
       if(marketDay.ok&&!marketDay.isTradingDay)return res.status(200).json({ok:true,skipped:true,reason:'holiday-no-market-update',marketDay});
     }
     if(action==='fundflow-warm-manual'){
-      // Development-stage manual warm: explicit Settings POST only, idempotent and DB-only.
-      // Once snapshots match the latest stored common market date, repeated clicks become a cheap no-op.
+      // Manual warm: explicit Settings POST only and idempotent. First repair only a newest cross-market date gap if present;
+      // once both markets and snapshots are aligned, repeated clicks become a cheap DB-only no-op.
       if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用手動更新按鈕'});}
       if(String(req.headers?.['x-stockzone-manual-warm']||'')!=='1')return res.status(403).json({ok:false,error:'缺少手動更新確認標記'});
       const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
       if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
       if(!manualFundflowWarmPromise){
-        manualFundflowWarmPromise=warmCurrentEngineFromStoredDb({sql:getSql(),force:false}).finally(()=>{manualFundflowWarmPromise=null});
+        manualFundflowWarmPromise=(async()=>{
+          const latestMarketGapRepair=await runLatestMarketGapRepair({sql:getSql()});
+          if(!latestMarketGapRepair.ok)return {ok:false,skipped:true,reason:'latest-market-gap-repair-failed',preservedLastGood:true,latestMarketGapRepair};
+          const warm=await warmCurrentEngineFromStoredDb({sql:getSql(),force:false});
+          return {...warm,noUpstreamFetch:Boolean(warm?.noUpstreamFetch&&!latestMarketGapRepair?.upstreamFetch),latestMarketGapRepair};
+        })().finally(()=>{manualFundflowWarmPromise=null});
       }
       const warm=await manualFundflowWarmPromise;
       return res.status(warm.ok?200:503).json({...warm,manual:true});
@@ -869,8 +874,14 @@ module.exports=async function handler(req,res){
         }else result.body.blindCoverage={ok:true,skipped:true,reason:'raw history catch-up has priority'};
 
         if(action==='tpex'){
-          try{result.body.compactResearch=await warmCurrentEngineFromStoredDb({sql:getSql(),force:false})}
-          catch(e){result.body.compactResearch={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
+          try{result.body.latestMarketGapRepair=await runLatestMarketGapRepair({sql:getSql()})}
+          catch(e){result.body.latestMarketGapRepair={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
+          if(result.body.latestMarketGapRepair?.ok){
+            try{result.body.compactResearch=await warmCurrentEngineFromStoredDb({sql:getSql(),force:false})}
+            catch(e){result.body.compactResearch={ok:false,preservedLastGood:true,error:String(e?.message||e)}}
+          }else{
+            result.body.compactResearch={ok:false,skipped:true,preservedLastGood:true,reason:'latest-market-gap-repair-failed'};
+          }
         }
         try{result.body.flowDataHealth=await readFlowDataHealth(getSql())}
         catch(e){result.body.flowDataHealth={liveReady:false,coreRawReady:false,researchReady250:false,backtestReady250:false,researchReady500:false,error:String(e?.message||e)}}
