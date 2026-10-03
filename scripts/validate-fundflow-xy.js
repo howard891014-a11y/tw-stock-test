@@ -49,18 +49,18 @@ assert(Number.isFinite(adv.activationRate)&&Number.isFinite(adv.overheating),'Ac
 assert(adv.phaseState&&adv.phaseLabel,'phase state should exist');
 assert(adv.projection?.points?.length===3,'primary projection compatibility should expose 3/5/10 horizons');
 assert(Number.isFinite(adv.projection.confidence),'primary projection confidence should be finite');
-assert(adv.projection?.mode==='institutional-activation-nearest-trajectory-top2','projection should use v8 Path 2.0 Top-2 scenario mode');
-assert(Array.isArray(adv.projection?.scenarios)&&adv.projection.scenarios.length===2,'projection should expose exactly two scenarios');
-assert.deepStrictEqual(adv.projection.scenarios.map(x=>x.id),['A','B'],'scenario ids should be A/B');
+assert(adv.projection?.mode==='path-family-cone-p70-top2','projection should use Path 3.0 family-cone Top-2 mode');
+assert(Array.isArray(adv.projection?.scenarios)&&adv.projection.scenarios.length>=1&&adv.projection.scenarios.length<=2,'projection should expose up to two route families');
+assert.equal(adv.projection.scenarios[0].id,'A','primary family id should be A');if(adv.projection.scenarios[1])assert.equal(adv.projection.scenarios[1].id,'B','secondary family id should be B');
 assert(adv.projection.scenarios.every(x=>Array.isArray(x.points)&&x.points.map(p=>p.horizon).join(',')==='3,5,10'),'each scenario should expose 3/5/10 points');
-assert(adv.projection.scenarios[0].confidence>=adv.projection.scenarios[1].confidence,'Path A must be the higher-confidence route');
+if(adv.projection.scenarios[1])assert(adv.projection.scenarios[0].confidence>=adv.projection.scenarios[1].confidence,'Path A must be the higher-confidence route');
 assert(Number.isFinite(adv.projection.pathGap)&&adv.projection.pathGap>=0,'A-B path gap should be finite and non-negative');
 assert(['高混沌','中度分歧','有次要劇本','主路徑明確'].includes(adv.projection.chaosLevel),'chaos level missing');
 const cpo=result.groups.find(x=>x.tagId==='cpo_silicon_photonics');
 assert(cpo&&cpo.validCount>=3,'CPO／矽光子 market topic should aggregate multiple companies');
 const cal=buildTransitionCalibration(result.groups);
 assert(cal.historyDays>=10,'calibration should count usable X20 history days');
-const projected=projectGroup(adv,cal);assert(projected.points.length===3,'projectGroup primary compatibility should return three horizons');assert(projected.scenarios.length===2,'projectGroup should return two typhoon paths');
+const projected=projectGroup(adv,cal);assert(projected.points.length===3,'projectGroup primary compatibility should return three horizons');assert(projected.scenarios.length>=1&&projected.scenarios.length<=2,'projectGroup should return one or two typhoon families');assert.equal(projected.cone?.coveragePct,70,'Path 3.0 cone must expose P70 coverage');
 console.log('Clean Fundflow XY X20/Y5 + activation + Path State validation PASS', {dates:result.dates.length,groups:result.groups.length,advancedPackaging:{x:adv.x,y:adv.y,activation:adv.activationRate,E:adv.overheating,phase:adv.phaseLabel,projection:adv.projection.tendency},cpo:{x:cpo.x,y:cpo.y}});
 
 const detail=computeTagDetail(profiles,activity,'semiconductor_equipment',{maxDates:10});
@@ -72,7 +72,7 @@ assert(Array.isArray(detail.companies)&&detail.companies.length>=4,'detail shoul
 assert.equal(detail.companies.length,detail.latest.memberCount,'detail should list every topic member, not a top-N subset');
 assert(detail.companies.every(x=>Object.prototype.hasOwnProperty.call(x,'dataAvailable')),'company contribution rows should expose availability');
 assert(detail.companies.every(x=>Number.isFinite(x.impactX)&&Number.isFinite(x.impactY)),'company impacts should be finite');
-assert(detail.projection?.points?.length===3,'detail should expose primary projection compatibility');assert(detail.projection?.scenarios?.length===2,'detail should expose Top-2 scenarios');
+assert(detail.projection?.points?.length===3,'detail should expose primary projection compatibility');assert(detail.projection?.scenarios?.length>=1&&detail.projection?.scenarios?.length<=2,'detail should expose up to Top-2 families');
 
 
 // v2.6.4.2 priority market-topic regressions.

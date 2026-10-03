@@ -35,4 +35,10 @@ assert(opposed.oppositionAngle>=179,'opposition angle should be near 180°');
 assert(opposed.secondaryShareRatio>=.60,'secondary route must be meaningful');
 const weakSecondary=classify(g({x:-2,y:2,dx3:3,dy3:1,a:sc('A',30,10,2,8,4),b:sc('B',10,-10,-2,-12,0)}));
 assert.notEqual(weakSecondary.key,'direction-unclear','tiny reverse route must not override the main path');
-console.log('Fundflow route classification v2.6.6.3 PASS — 8 states + opposed-path gate verified');
+
+const weakFamily={x:-2,y:2,dx3:3,dy3:1,projection:{mode:'path-family-cone-p70-top2',pathGap:18,scenarios:[sc('A',48,3,1,1,3),sc('B',30,1,.2,-1,2.2)]}};
+assert.equal(key(weakFamily),'direction-unclear','Path 3.0 must not publish a directional state when A family is below 50%');
+const majorityFamily={x:-2,y:2,dx3:3,dy3:1,projection:{mode:'path-family-cone-p70-top2',pathGap:28,scenarios:[sc('A',58,3,1,1,3),sc('B',30,1,.2,-1,2.2)]}};
+assert.notEqual(key(majorityFamily),'direction-unclear','Path 3.0 may publish direction once A family owns at least 50% and A/B are not opposed');
+
+console.log('Fundflow route classification v2.6.6.6 PASS — 8 states + opposed-path gate + Path 3.0 A-family 50% floor verified');
