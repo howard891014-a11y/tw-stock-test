@@ -90,6 +90,7 @@ async function yahooTradingDayProbe(){
 }
 
 let manualFundflowWarmPromise=null;
+let manualFundflowGapPromise=null;
 let manualFundflowHistoryPromise=null;
 let manualInstitutionalBackfillPromise=null;
 
@@ -713,21 +714,25 @@ module.exports=async function handler(req,res){
       const marketDay=await yahooTradingDayProbe();
       if(marketDay.ok&&!marketDay.isTradingDay)return res.status(200).json({ok:true,skipped:true,reason:'holiday-no-market-update',marketDay});
     }
-    if(action==='fundflow-warm-manual'){
-      // Manual warm: explicit Settings POST only and idempotent. First repair only a newest cross-market date gap if present;
-      // once both markets and snapshots are aligned, repeated clicks become a cheap DB-only no-op.
+    if(action==='fundflow-gap-repair-manual'){
+      // v2.6.6.2: give the targeted latest-date repair its own serverless budget. The browser then starts
+      // the DB-only XY warm as a second request, eliminating the observed combined-request 504.
       if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用手動更新按鈕'});}
       if(String(req.headers?.['x-stockzone-manual-warm']||'')!=='1')return res.status(403).json({ok:false,error:'缺少手動更新確認標記'});
       const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
       if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
-      if(!manualFundflowWarmPromise){
-        manualFundflowWarmPromise=(async()=>{
-          const latestMarketGapRepair=await runLatestMarketGapRepair({sql:getSql()});
-          if(!latestMarketGapRepair.ok)return {ok:false,skipped:true,reason:'latest-market-gap-repair-failed',preservedLastGood:true,error:latestMarketGapRepair.error||'最新交易日缺口修補失敗',latestMarketGapRepair};
-          const warm=await warmCurrentEngineFromStoredDb({sql:getSql(),force:false});
-          return {...warm,noUpstreamFetch:Boolean(warm?.noUpstreamFetch&&!latestMarketGapRepair?.upstreamFetch),latestMarketGapRepair};
-        })().finally(()=>{manualFundflowWarmPromise=null});
-      }
+      if(!manualFundflowGapPromise)manualFundflowGapPromise=runLatestMarketGapRepair({sql:getSql()}).finally(()=>{manualFundflowGapPromise=null});
+      const gap=await manualFundflowGapPromise;
+      return res.status(gap.ok?200:503).json({...gap,manual:true});
+    }
+    if(action==='fundflow-warm-manual'){
+      // Stage 2 is DB-only and independently retryable. If a previous invocation timed out after persisting
+      // prepared snapshots, warmCurrentEngineFromStoredDb detects a stale Path audit and resumes only that stage.
+      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用手動更新按鈕'});}
+      if(String(req.headers?.['x-stockzone-manual-warm']||'')!=='1')return res.status(403).json({ok:false,error:'缺少手動更新確認標記'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
+      if(!manualFundflowWarmPromise)manualFundflowWarmPromise=warmCurrentEngineFromStoredDb({sql:getSql(),force:false}).finally(()=>{manualFundflowWarmPromise=null});
       const warm=await manualFundflowWarmPromise;
       return res.status(warm.ok?200:503).json({...warm,manual:true});
     }
@@ -829,7 +834,7 @@ module.exports=async function handler(req,res){
         const flowDataHealth=await readFlowDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',targetTradingDays:target,backfill,marketHealth,flowDataHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-warm-manual / fundflow-clean-rebuild-manual / institutional-backfill-manual / storage-deep-audit-manual / storage-maintenance-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-gap-repair-manual / fundflow-warm-manual / fundflow-clean-rebuild-manual / institutional-backfill-manual / storage-deep-audit-manual / storage-maintenance-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // v2.6.5.59: keep three cron slots, but bound raw history to the storage policy.
