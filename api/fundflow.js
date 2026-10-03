@@ -1,4 +1,4 @@
-const { getFundflowSnapshot, getFundflowBusinessBrowser, SNAPSHOT_SCHEMA_VERSION } = require('../lib/fundflow-xy');
+const { getFundflowSnapshot, getFundflowBusinessBrowser, getFundflowDetail, SNAPSHOT_SCHEMA_VERSION } = require('../lib/fundflow-xy');
 
 function boundedDays(v){return Math.max(5,Math.min(15,Number(v)||10))}
 function forceRefresh(v){const s=String(v||'').toLowerCase();return s==='true'||s==='1'}
@@ -19,6 +19,13 @@ module.exports=async function handler(req,res){
     if(view==='browser'||view==='fundflow-browser'){
       const force=forceRefresh(req.query?.refresh),data=await getFundflowBusinessBrowser({days,force});
       res.setHeader('Cache-Control',cacheHeader(data,{force,browser:true}));
+      return res.status(200).json(data);
+    }
+    if(view==='detail'||view==='fundflow-detail'){
+      const tagId=String(req.query?.tagId||req.query?.tag||'').trim();
+      if(!tagId)return res.status(400).json({ok:false,error:'缺少業務 tag'});
+      const data=await getFundflowDetail({tagId,days});
+      res.setHeader('Cache-Control','public, s-maxage=600, stale-while-revalidate=3600');
       return res.status(200).json(data);
     }
     if(!['overview','fundflow',''].includes(view))return res.status(400).json({ok:false,error:'未知 fundflow view'});
