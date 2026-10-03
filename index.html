@@ -2705,7 +2705,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.6.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.6.4</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3103,14 +3103,14 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
               <span class="fundflow-row-label fundflow-phase-caption">路徑</span>
               <div class="fundflow-control-items">
                 <button class="active" type="button" data-fundflow-path="all">全部 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="capital-leading">資金先行 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="price-leading">價格先行 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="resonance-up">共振轉強 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="strong-hold">強勢延續 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="capital-retreat">資金撤退 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="pullback">回檔觀察 <em data-fundflow-path-count>--</em></button>
+                <button type="button" data-fundflow-path="cold">冷區 <em data-fundflow-path-count>--</em></button>
+                <button type="button" data-fundflow-path="direction-unclear">方向不明 <em data-fundflow-path-count>--</em></button>
+                <button type="button" data-fundflow-path="early-reaction">提前反應 <em data-fundflow-path-count>--</em></button>
+                <button type="button" data-fundflow-path="institutional-layout">法人佈局 <em data-fundflow-path-count>--</em></button>
+                <button type="button" data-fundflow-path="strong-continuation">強勢延續 <em data-fundflow-path-count>--</em></button>
+                <button type="button" data-fundflow-path="main-rise-confirmation">主升確認 <em data-fundflow-path-count>--</em></button>
                 <button type="button" data-fundflow-path="weakening">轉弱 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="chaos">混沌／未明 <em data-fundflow-path-count>--</em></button>
+                <button type="button" data-fundflow-path="pullback">回檔 <em data-fundflow-path-count>--</em></button>
               </div>
             </div>
             <div class="fundflow-control-row fundflow-days-row" role="group" aria-label="XY 軌跡日數">
@@ -3171,7 +3171,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div class="fundflow-detail-panel"><h4>Y 價格強度拆解</h4><div id="fundflowYFactors" class="fundflow-factor-list"></div></div>
           </div>
           <div class="fundflow-detail-panel fundflow-history-panel"><h4>每日 XY 象限軌跡</h4><div id="fundflowDetailHistory" class="fundflow-history-list"></div></div>
-          <div class="fundflow-detail-panel"><div class="fundflow-company-head"><h4>公司貢獻</h4><small>移除該公司後重新計算 XY 的差值</small></div><div id="fundflowCompanyList" class="fundflow-company-list"></div></div>
+          <div class="fundflow-detail-panel"><div class="fundflow-company-head"><div><h4>公司貢獻</h4><small id="fundflowCompanyMeta">全部成員｜正值推高該軸，負值拖低該軸</small></div><div class="fundflow-company-sort" role="group" aria-label="公司貢獻排序"><button type="button" class="active" data-fundflow-company-sort="x">X 軸貢獻 ↓</button><button type="button" data-fundflow-company-sort="y">Y 軸貢獻 ↓</button></div></div><div id="fundflowCompanyList" class="fundflow-company-list"></div></div>
           <small class="fundflow-detail-note" id="fundflowDetailNote"></small>
         </div>
       </section>
@@ -3182,7 +3182,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <div><h4>趨勢確認</h4><div id="fundflowMainlineList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
           <div><h4>風險轉折</h4><div id="fundflowRightList" class="fundflow-radar-list"><p>讀取中…</p></div></div>
         </div>
-        <small class="fundflow-method-note" id="fundflowMethodNote">Y 看價格是否有肉；X 看法人資金品質；路徑狀態用目前象限 → Future Path A 的未來象限判讀。</small>
+        <small class="fundflow-method-note" id="fundflowMethodNote">分類先看 A/B 是否近乎反向；其餘用目前 XY 位置、近3日速度與 Future Path A 5D 一起判讀。</small>
       </section>
     </article>
     <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-featured" aria-hidden="true"></i><span>近期精選</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
@@ -3504,7 +3504,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.6.2"></script>
+  <script src="./app.js?v=2.6.6.4"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5815,8 +5815,15 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 }
 </style>
 
+
+<style id="stockzone-v2664-company-contribution">
+/* v2.6.6.4 — full company contribution list with X/Y sort switch. */
+.fundflow-company-head{align-items:center;flex-wrap:wrap}.fundflow-company-head>div:first-child{min-width:0}.fundflow-company-head h4{margin-bottom:2px}.fundflow-company-sort{display:flex;gap:5px;flex-wrap:wrap}.fundflow-company-sort button{border:1px solid #dfe6ef;background:#fff;color:#778aa1;border-radius:999px;padding:5px 9px;font-size:9px;font-weight:850;white-space:nowrap}.fundflow-company-sort button.active{background:#273d59;border-color:#273d59;color:#fff}.fundflow-company-list{max-height:520px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}.fundflow-company-row{grid-template-columns:minmax(0,1fr) minmax(190px,.9fr)}.fundflow-company-row b{display:flex;align-items:center;gap:5px;min-width:0}.fundflow-company-row b small{white-space:nowrap}.fundflow-company-rank{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;padding:0 4px;border-radius:999px;background:#f0f4f9;color:#7f91a6;font-size:8px;font-style:normal;font-weight:900}.fundflow-company-row .impact{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.fundflow-company-row .impact span{white-space:nowrap}.fundflow-company-row .impact.sort-x span:first-child,.fundflow-company-row .impact.sort-y span:last-child{color:#244d7c;font-weight:850}.fundflow-company-row .impact.is-pending{color:#99a7b8;font-style:italic}.fundflow-company-row.is-pending{opacity:.78}.fundflow-company-list>p{margin:8px 0;color:#91a0b2;font-size:10px}.fundflow-company-list::-webkit-scrollbar{width:7px}.fundflow-company-list::-webkit-scrollbar-thumb{background:#d6dee8;border-radius:999px}@media(max-width:720px){.fundflow-company-head{align-items:flex-start}.fundflow-company-sort{width:100%;margin-top:7px}.fundflow-company-sort button{flex:1}.fundflow-company-list{max-height:460px}.fundflow-company-row{grid-template-columns:1fr}.fundflow-company-row .impact{justify-content:flex-start}.fundflow-company-row>small{grid-column:1}}
+</style>
+
 <!-- v2.6.6.1 — auto/manual latest-market gap repair before XY warm; keeps three existing cron slots and cheap no-op. -->
 
 <!-- v2.6.6.1 — latest TPEx gap repair fallback hardening + actionable manual error surface. -->
 
 <!-- v2.6.6.2 — split manual latest-gap repair from XY warm to avoid one-request 60s timeout; targeted activity refresh and stale Path-audit recovery. -->
+<!-- v2.6.6.4 — route classification v2 + full company contribution detail with X/Y high-to-low sorting. -->

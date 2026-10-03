@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.6.2",
+  "version": "2.6.6.4",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"
@@ -16,7 +16,7 @@
     "validate:blind-coverage": "node scripts/validate-blind-coverage.js",
     "validate:layout": "node scripts/validate-project-layout.js",
     "validate:storage-cleanup": "node scripts/validate-storage-cleanup.js",
-    "validate:all": "npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification",
+    "validate:all": "npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-path-classification && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification",
     "validate:market-topics": "node scripts/validate-market-topics.js",
     "validate:fundflow-browser": "node scripts/validate-fundflow-browser.js",
     "validate:fundflow-ui": "node scripts/validate-fundflow-ui.js",
@@ -29,6 +29,7 @@
     "validate:flow-data-health": "node scripts/validate-flow-data-health.js",
     "validate:history-foundation": "node scripts/validate-history-foundation.js",
     "validate:future-path": "node scripts/validate-future-path.js",
+    "validate:fundflow-path-classification": "node scripts/validate-fundflow-path-classification.js",
     "validate:neon-egress": "node scripts/validate-neon-egress.js",
     "validate:fundflow-evidence": "node scripts/validate-fundflow-evidence.js",
     "validate:browser-storage": "node scripts/validate-browser-storage.js",
