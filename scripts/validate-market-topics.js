@@ -1,5 +1,6 @@
 const assert=require('assert');
-const {TOPIC_SPECS,listMarketDefinitions,marketTopicLinks,auditSummary}=require('../lib/market-topic-taxonomy');
+const taxonomy=require('../lib/market-topic-taxonomy');
+const {TOPIC_SPECS,listMarketDefinitions,marketTopicLinks,auditSummary}=taxonomy;
 
 const defs=listMarketDefinitions();
 const ids=defs.map(x=>x.id);
@@ -117,4 +118,5 @@ for(const spec of TOPIC_SPECS){
 
 const s=auditSummary();
 assert(s.definitions<284,'market topic layer should reduce over-fragmented vote definitions');
-console.log('Market Topic Taxonomy v1.8 / market co-movement consolidation + coverage validation PASS',s);
+assert.equal(taxonomy.version,'1.9.1');
+console.log('Market Topic Taxonomy v1.9.1 / membership audit + market co-movement validation PASS',s);
