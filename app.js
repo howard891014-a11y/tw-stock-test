@@ -4075,7 +4075,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.5.67";
+const FUND_FLOW_CLIENT_REV="2.6.5.68";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
