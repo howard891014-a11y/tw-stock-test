@@ -69,6 +69,8 @@ assert(detail.latest&&Number.isFinite(detail.latest.x)&&Number.isFinite(detail.l
 assert(detail.latest.factors?.x?.inst5!==undefined,'detail should expose raw institutional-flow diagnostics');
 assert(detail.latest.factors?.y?.return3Pct!==undefined,'detail should expose 3-day Y factor');
 assert(Array.isArray(detail.companies)&&detail.companies.length>=4,'detail should expose company contributions');
+assert.equal(detail.companies.length,detail.latest.memberCount,'detail should list every topic member, not a top-N subset');
+assert(detail.companies.every(x=>Object.prototype.hasOwnProperty.call(x,'dataAvailable')),'company contribution rows should expose availability');
 assert(detail.companies.every(x=>Number.isFinite(x.impactX)&&Number.isFinite(x.impactY)),'company impacts should be finite');
 assert(detail.projection?.points?.length===3,'detail should expose primary projection compatibility');assert(detail.projection?.scenarios?.length===2,'detail should expose Top-2 scenarios');
 

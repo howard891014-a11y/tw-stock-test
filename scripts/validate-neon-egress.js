@@ -16,8 +16,8 @@ assert(quote.includes('const numericHint=liveStockHint(query,marketHint);'));
 assert(quote.includes('result=await yahooFor();'));
 assert(!quote.includes('fetchOfficialPrevious('));
 for(const view of ['overview','browser'])assert(app.includes(`/api/fundflow?view=${view}`));
-assert(!app.includes('/api/fundflow?view=detail'),'focus/click must never issue a detail API request');
-assert(!api.includes("view==='detail'")&&!api.includes("view==='fundflow-detail'"),'public fundflow API must not expose legacy detail route');
+assert(app.includes('/api/fundflow?view=detail'),'company contribution should lazy-load one detail payload per selected topic');
+assert(api.includes("view==='detail'")&&api.includes('getFundflowDetail'),'public fundflow API should expose the bounded clean detail route');
 assert(!status.includes("view==='fundflow-detail'"),'sync-status API must not expose legacy fundflow-detail route');
 assert(api.includes('stale-while-revalidate=3600'));
 for(const t of ['market_business_xy2_stock_daily','market_business_xy2_topic_daily','market_business_xy2_snapshot','market_business_xy2_member'])assert(core.includes(`CREATE TABLE IF NOT EXISTS ${t}`),`clean table missing: ${t}`);
@@ -26,7 +26,7 @@ assert(core.includes("const PATH_MODEL_VERSION = 'path-2.0.0-axis-evidence-neare
 assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.7.0-focuspack-path20'"));
 assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.8.0-taxonomy18'"));
 assert(core.includes("const TOPIC_TAXONOMY_VERSION = `taxonomy-${marketTopicTaxonomy.version}`"));
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.6.2"'));
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.6.4"'));
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('));assert(!snap.includes('loadEngineInputs('));
@@ -36,7 +36,7 @@ const browser=core.slice(core.indexOf('async function getFundflowBusinessBrowser
 assert(!browser.includes('rebuildPreparedFromStored('));assert(!browser.includes('market_business_xy_snapshot'));
 const tagLoader=core.slice(core.indexOf('async function loadTagEngineInputs'),core.indexOf('function stockDailyFeatureRow'));
 assert(tagLoader.includes('JOIN market_business_xy2_member'),'maintenance detail loader must use clean member table');assert(!tagLoader.includes('market_business_xy_member m'),'maintenance detail loader must not read legacy member map');
-assert(app.includes('zeroNeonFocus:true'),'focused topic must be built from browser memory');assert(app.includes('fundflowStartFocusAnimation'),'client-only focus animation missing');
+assert(app.includes('zeroNeonFocus:true'),'focused chart should paint immediately from browser memory');assert(app.includes('fundflowStartFocusAnimation'),'client-only focus animation missing');assert(app.includes('const fundflowDetailCache=new Map()'),'detail requests must be cached in the browser session');const animation=app.slice(app.indexOf('function fundflowStartFocusAnimation'),app.indexOf('function fundflowFocusAnimationState'));assert(!animation.includes('fetch('),'focus animation must never query Neon repeatedly');
 
 const loader=core.slice(core.indexOf('async function loadEngineInputs'),core.indexOf('async function loadTagEngineInputs'));
 assert(loader.includes('INCREMENTAL_SOURCE_DAYS'));assert(loader.includes('FEATURE_HISTORY_SOURCE_DAYS'));assert(!loader.includes('credit_trading_daily'),'full-market clean build should transfer only required raw columns');
@@ -67,4 +67,4 @@ assert(db.includes('compact-research-${STORAGE_POLICY.compact.topicResearch}d'))
 for(const token of ["softTargetMb: 400","price: 120","institutional: 120","credit: 90","activity: 80","topicResearch: 250","runStorageMaintenance"])assert(storagePolicy.includes(token),`storage policy missing ${token}`);
 assert(status.includes("action==='storage-maintenance-manual'"));assert(status.includes('runStorageMaintenance({sql:getSql()})'));
 assert(app.includes('X-StockZone-Storage-Maintenance'));
-console.log('PASS validate-neon-egress — browser 5Y cache + bounded Neon raw retention + 250D compact research + zero-query focus');
+console.log('PASS validate-neon-egress — bounded raw retention + cached on-demand company detail + zero-query focus animation');
