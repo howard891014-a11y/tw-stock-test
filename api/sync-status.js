@@ -723,7 +723,7 @@ module.exports=async function handler(req,res){
       if(!manualFundflowWarmPromise){
         manualFundflowWarmPromise=(async()=>{
           const latestMarketGapRepair=await runLatestMarketGapRepair({sql:getSql()});
-          if(!latestMarketGapRepair.ok)return {ok:false,skipped:true,reason:'latest-market-gap-repair-failed',preservedLastGood:true,latestMarketGapRepair};
+          if(!latestMarketGapRepair.ok)return {ok:false,skipped:true,reason:'latest-market-gap-repair-failed',preservedLastGood:true,error:latestMarketGapRepair.error||'最新交易日缺口修補失敗',latestMarketGapRepair};
           const warm=await warmCurrentEngineFromStoredDb({sql:getSql(),force:false});
           return {...warm,noUpstreamFetch:Boolean(warm?.noUpstreamFetch&&!latestMarketGapRepair?.upstreamFetch),latestMarketGapRepair};
         })().finally(()=>{manualFundflowWarmPromise=null});
