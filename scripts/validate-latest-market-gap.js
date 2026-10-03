@@ -18,12 +18,16 @@ assert(repair.indexOf('if (!plan.needed)') < repair.indexOf('loadCompanyUniverse
 assert(repair.includes('fetchCurrentRowsForExactDate(plan.market,plan.targetDate)'),'repair should prefer the current official feed when it exactly matches the target date');
 assert(repair.includes('fetchTwseHistoricalRows(plan.targetDate)')&&repair.includes('fetchTpexHistoricalRows(plan.targetDate)'),'repair must retain historical fallback for the missing market/date');
 assert(repair.includes('noFullBackfill:true'),'repair must explicitly remain targeted');
-assert(repair.includes('refreshMarketActivityFactors()'),'repaired day must refresh local activity factors');
+assert(repair.includes('refreshMarketActivityFactorsForDate(plan.targetDate)'),'repaired day must refresh only the repaired activity date');
+assert(!repair.includes('await refreshMarketActivityFactors();'),'latest-gap repair must not rewrite the full retained activity window');
 assert(repair.includes('refreshPriceSnapshotFromMarketHistory()'),'repaired day must refresh snapshot');
 
-const manual=status.slice(status.indexOf("if(action==='fundflow-warm-manual')"),status.indexOf("if(action==='fundflow-clean-rebuild-manual')"));
-assert(manual.includes('runLatestMarketGapRepair({sql:getSql()})'),'manual XY refresh must repair latest market gap first');
-assert(manual.indexOf('runLatestMarketGapRepair') < manual.indexOf('warmCurrentEngineFromStoredDb'),'manual gap repair must precede XY warm');
+const manualGap=status.slice(status.indexOf("if(action==='fundflow-gap-repair-manual')"),status.indexOf("if(action==='fundflow-warm-manual')"));
+const manualWarm=status.slice(status.indexOf("if(action==='fundflow-warm-manual')"),status.indexOf("if(action==='fundflow-clean-rebuild-manual')"));
+assert(manualGap.includes('runLatestMarketGapRepair({sql:getSql()})'),'manual stage 1 must repair latest market gap');
+assert(!manualGap.includes('warmCurrentEngineFromStoredDb'),'manual gap-repair request must not also spend budget warming XY');
+assert(manualWarm.includes('warmCurrentEngineFromStoredDb({sql:getSql(),force:false})'),'manual stage 2 must warm XY from stored DB');
+assert(!manualWarm.includes('runLatestMarketGapRepair'),'manual warm request must remain DB-only');
 
 const auto=status.slice(status.indexOf("if(action==='tpex'){\n          try{result.body.latestMarketGapRepair"),status.indexOf('try{result.body.flowDataHealth'));
 assert(auto.includes('runLatestMarketGapRepair({sql:getSql()})'),'22:00 cron must repair latest market gap');
@@ -36,4 +40,5 @@ console.log('Latest market gap validation PASS — auto/manual targeted repair +
 
 assert(syncService.includes("const TPEX_HISTORY_URL = 'https://www.tpex.org.tw/www/zh-tw/afterTrading/otc';"),'TPEx historical primary must use current afterTrading/otc route');
 assert(syncService.includes('date=${encodeURIComponent(roc)}&type=EW&order=0&sort=asc'),'TPEx historical primary must use ROC date and EW scope');
-assert(manual.includes("error:latestMarketGapRepair.error||'最新交易日缺口修補失敗'"),'manual 503 must surface the nested repair error');
+assert(app.includes('action=fundflow-gap-repair-manual'),'manual UI must call the dedicated gap-repair stage');
+assert(app.includes('主快照可能已保存（HTTP ${res.status}）；正在自動續跑未完成階段'),'manual UI must automatically continue after a 502/504 gateway timeout');

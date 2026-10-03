@@ -38,3 +38,9 @@ assert(warmBlock.indexOf('auditNeedsRepair')<warmBlock.indexOf("clean-engine-sna
 assert(warmBlock.includes("mode:result?.mode||'path-audit-repair-from-compact'"),'missing compact Path-audit-only repair mode');
 
 console.log('Future Path 2.0 validation PASS — institutional X-axis > positive-only activation > causal nearest trajectory; completeness only gates/widens uncertainty; .66 Path-audit repair gate PASS');
+
+// v2.6.6.2 timeout recovery: a prepared snapshot can be newer than path-audit after a 60s gateway cut.
+const fundflowSource=fs.readFileSync('lib/fundflow-xy.js','utf8');
+assert(fundflowSource.includes('auditStale=Boolean(pathAudit&&before?.asOf&&isoDate(pathAudit?.asOf)!==isoDate(before.asOf))'),'warm must detect stale path-audit by asOf');
+assert(fundflowSource.includes('auditNeedsRepair=auditMissing||auditSuspiciousZero||auditStale'),'stale path-audit must enter repair path');
+assert(fundflowSource.includes("mode:result?.mode||'path-audit-repair-from-compact'"),'stale audit recovery must use compact-only repair');
