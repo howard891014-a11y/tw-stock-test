@@ -4,7 +4,7 @@ const {classifyBusinessText,BLIND_COVERAGE_VERSION}=require('../lib/business-enr
 const taxonomy=require('../lib/market-topic-taxonomy');
 const {marketTopicLinks,isMarketTopicExcluded}=taxonomy;
 
-assert.equal(taxonomy.version,'1.9.1');
+assert.equal(taxonomy.version,'2.0.0');
 assert.equal(BLIND_COVERAGE_VERSION,'blind-1.2.0','membership-only release must not trigger a full business-enrichment rewrite');
 
 function topicIds(name,code,rawLinks=[],context={}){
@@ -15,15 +15,15 @@ function hasTopic(name,code,topic){return topicIds(name,code).has(topic);}
 const additions=[
   ['中美晶','5483','wafer'],['嘉晶','3016','wafer'],
   ['鼎翰','3611','automatic_data_capture'],['精聯','3652','automatic_data_capture'],
-  ['威剛','3260','ssd'],['創見','2451','ssd'],['宇瞻','8271','ssd'],['宜鼎','5289','ssd'],['十銓','4967','ssd'],['廣穎電通','4973','ssd'],
+  ['威剛','3260','memory_module'],['創見','2451','memory_module'],['宇瞻','8271','memory_module'],['宜鼎','5289','memory_module'],['十銓','4967','memory_module'],['廣穎電通','4973','memory_module'],
   ['晶心科','6533','semiconductor_ip'],['鑫創電子','6680','defense'],
   ['威強電','3022','io_interface_card'],['弘憶股','3312','io_interface_card'],['磐儀','3594','io_interface_card'],
   ['聯寶','6821','power_module'],['康聯訊','3672','optical_communication_market'],['陞泰','8072','security_surveillance'],
-  ['長盛','3492','cable_assembly'],['維熹','3501','cable_assembly'],['映興','3597','cable_assembly'],['良維','6290','cable_assembly'],
+  ['長盛','3492','general_connector'],['維熹','3501','general_connector'],['映興','3597','general_connector'],['良維','6290','general_connector'],
   ['泰碩','3338','electrical_cable'],['瑞軒','2489','panel_market'],['長華*','8070','advanced_packaging_material'],
   ['中興電','1513','renewable_energy_equipment'],['盈正','3628','renewable_energy_equipment'],['寶碩','5210','renewable_energy_equipment'],
   ['勤凱科技','4760','functional_electronic_material'],['晟銘電','3013','precision_mold'],['健策','3653','precision_mold'],['禾昌','6158','precision_mold'],
-  ['日月光投控','3711','sip_module_packaging'],['光寶科','2301','optocoupler'],
+  ['日月光投控','3711','osat'],['光寶科','2301','optocoupler'],
 ];
 for(const [name,code,topic] of additions)assert(hasTopic(name,code,topic),`missing audited overlay ${code} ${name} -> ${topic}`);
 

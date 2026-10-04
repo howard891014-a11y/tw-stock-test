@@ -118,5 +118,5 @@ for(const spec of TOPIC_SPECS){
 
 const s=auditSummary();
 assert(s.definitions<284,'market topic layer should reduce over-fragmented vote definitions');
-assert.equal(taxonomy.version,'1.9.1');
+assert.equal(taxonomy.version,'2.0.0');
 console.log('Market Topic Taxonomy v1.9.1 / membership audit + market co-movement validation PASS',s);

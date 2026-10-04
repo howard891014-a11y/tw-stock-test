@@ -43,4 +43,4 @@ assert.equal(key(diffuseFamily),'direction-unclear','genuinely dispersed micro-p
 const sameDirectionFamilies={x:-2,y:2,dx3:3,dy3:1,projection:{mode:'path-family-cone-p70-point-line-area',diffuse:false,pathGap:15,scenarios:[sc('A',50,4,2,2,4),sc('B',35,3,1.7,1,3.7)]}};
 assert.notEqual(key(sameDirectionFamilies),'direction-unclear','two meaningful families moving in similar directions are not direction-unclear');
 
-console.log('Fundflow route classification v2.6.6.7 PASS — 8 states + structural conflict/diffusion unknown gate; no artificial A-family floor');
+console.log('Fundflow route classification v2.6.6.8 PASS — 8 states + structural conflict/diffusion unknown gate; no artificial A-family floor');

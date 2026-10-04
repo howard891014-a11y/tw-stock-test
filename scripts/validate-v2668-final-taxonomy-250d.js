@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');
+const tax=require('../lib/market-topic-taxonomy');
+const {STORAGE_POLICY}=require('../lib/storage-policy');
+assert.equal(tax.version,'2.0.0');
+assert.equal(STORAGE_POLICY.compact.topicResearch,250);
+assert.equal(STORAGE_POLICY.compact.wResearch,250);
+assert.equal(STORAGE_POLICY.raw.price,120);
+assert.equal(STORAGE_POLICY.raw.institutional,120);
+for(const [a,b] of Object.entries({ssd_controller:'storage_controller_ic',hdd_controller_ic:'storage_controller_ic',optical_storage_controller_ic:'storage_controller_ic',ceramic_substrate:'functional_electronic_material',digital_media_streaming:'media',furniture:'home_living'}))assert.equal(tax.FINAL_TOPIC_ALIASES[a],b);
+assert(tax.FINAL_COMPANY_TOPICS['8033'].includes('drone'));
+assert(tax.FINAL_COMPANY_TOPICS['5209'].includes('engineering_service'));
+const fs=require('node:fs');const xy=fs.readFileSync(require.resolve('../lib/fundflow-xy'),'utf8');
+assert(xy.includes('market_business_xy2_research_daily'));assert(xy.includes('FEATURE_HISTORY_SOURCE_DAYS = 250'));assert(xy.includes('persistCompactResearchRows'));
+console.log('v2.6.6.8 final taxonomy + low-egress 250D compact research validation PASS');

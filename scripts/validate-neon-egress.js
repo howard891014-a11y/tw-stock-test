@@ -24,9 +24,9 @@ for(const t of ['market_business_xy2_stock_daily','market_business_xy2_topic_dai
 assert(core.includes("const FEATURE_VERSION = 'feature-2.0.0-x20raw20-y5-activation02'"));
 assert(core.includes("const PATH_MODEL_VERSION = 'path-3.1.0-point-line-family-p70'"));
 assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-6.9.0-focuspack-path31'"));
-assert(core.includes("const DAILY_BUILD_VERSION = 'daily-6.9.0-taxonomy19'"));
+assert(core.includes("const DAILY_BUILD_VERSION = 'daily-7.0.0-taxonomy20'"));
 assert(core.includes("const TOPIC_TAXONOMY_VERSION = `taxonomy-${marketTopicTaxonomy.version}`"));
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.6.7"'));
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.6.8"'));
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('));assert(!snap.includes('loadEngineInputs('));
@@ -41,7 +41,7 @@ assert(app.includes('zeroNeonFocus:true'),'focused chart should paint immediatel
 const loader=core.slice(core.indexOf('async function loadEngineInputs'),core.indexOf('async function loadTagEngineInputs'));
 assert(loader.includes('INCREMENTAL_SOURCE_DAYS'));assert(loader.includes('FEATURE_HISTORY_SOURCE_DAYS'));assert(!loader.includes('credit_trading_daily'),'full-market clean build should transfer only required raw columns');
 assert(loader.includes('institutional_total_net'));assert(loader.includes('change_pct'));
-assert(core.includes('const INCREMENTAL_SOURCE_DAYS = 25'));assert(core.includes('const FEATURE_HISTORY_TARGET_DAYS = 60'));assert(core.includes('const FEATURE_HISTORY_SOURCE_DAYS = 60'));
+assert(core.includes('const INCREMENTAL_SOURCE_DAYS = 25'));assert(core.includes('const FEATURE_HISTORY_TARGET_DAYS = 60'));assert(core.includes('const FEATURE_HISTORY_SOURCE_DAYS = 250'));
 
 const taxonomyRebuild=core.slice(core.indexOf('async function rebuildTopicTaxonomyHistory'),core.indexOf('async function refreshBusinessFlowDaily'));
 assert(taxonomyRebuild.includes("mode:'taxonomy-only-topic-history-rebuild'"));assert(taxonomyRebuild.includes('persistCompactDailyFeatures'));assert(taxonomyRebuild.includes('persistBusinessMembers'));assert(!taxonomyRebuild.includes('persistStockDailyFeatures'),'taxonomy-only rebuild must not rewrite stock compact rows');assert(taxonomyRebuild.includes('noStockFeatureRewrite:true'));assert(taxonomyRebuild.includes('pendingDates'),'taxonomy migration must resume from completed dates');assert(!taxonomyRebuild.includes('rebuildPreparedFromStored(sql)'),'taxonomy history rewrite must not share a request with prepared/Path rebuild');assert(taxonomyRebuild.includes('followupRequired:Boolean(after.ready)'));
