@@ -85,3 +85,10 @@ for(const id of ['ai_pc','consumer_notebook','consumer_peripherals','consumer_br
 assert(representedConsumer.length>=4,'fresh consumer-electronics browser snapshot should keep broad co-moving endpoint buckets without re-fragmenting device subtypes');
 
 console.log(`Fundflow business browser validation PASS — ${out.counts.totalDefinitions} definitions, ${out.counts.technologyFineDefinitions} tech-fine, ${representedConsumer.length} represented consumer-product buckets`);
+
+// Regression: prepared production snapshots own the frozen taxonomy universe.
+// Legacy/static definitions must not leak back into Browser as zero-member topics.
+const frozenSnapshot={...snapshot,topicTaxonomyVersion:'taxonomy-2.0.0'};
+const frozenCatalog=buildBusinessBrowserCatalog(profiles,frozenSnapshot);
+assert.equal(frozenCatalog.counts.totalDefinitions,frozenSnapshot.groups.length,'prepared Browser must match prepared overview taxonomy universe exactly');
+assert.deepEqual(frozenCatalog.items.map(x=>x.tagId),frozenSnapshot.groups.map(x=>x.tagId),'Browser must not resurrect legacy/static definitions outside prepared overview');
