@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const freeze=require('../lib/final-taxonomy-freeze');
+const core=fs.readFileSync(require.resolve('../lib/fundflow-xy'),'utf8');
+assert.deepEqual(freeze.RETIRED_COMPANY_CODES,['8183']);
+assert.equal(freeze.companyTopicPairs('8183'),null);
+assert.equal(freeze.STATS.companyUniverseCount,1987);
+assert.equal(freeze.STATS.taggedCompanyCount,1981);
+assert.equal(freeze.STATS.membershipEdges,3165);
+assert.equal(freeze.STATS.coreEdges,2262);
+assert.equal(freeze.STATS.relatedEdges,903);
+assert(core.includes('managedCodes=[...new Set([...frozenCodes,...retiredCodes])]'));
+assert(core.includes('[JSON.stringify(desired),managedCodes]'));
+assert(core.includes('companyMapFreezeVersion:marketTopicTaxonomy.finalTaxonomyFreeze.VERSION'));
+console.log('PASS v2.6.6.13 retired-company cleanup — 8183 removed from active map and included in Neon cleanup scope');

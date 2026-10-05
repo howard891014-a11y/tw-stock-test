@@ -15,4 +15,4 @@ for(const id of ['ceramic_substrate','ssd','cable_assembly','image_sensor_module
 assert.equal(tax.FINAL_TOPIC_ALIASES.biomedical_health,'medical_device');
 const fs=require('node:fs');const xy=fs.readFileSync(require.resolve('../lib/fundflow-xy'),'utf8');
 assert(xy.includes('market_business_xy2_research_daily'));assert(xy.includes('FEATURE_HISTORY_SOURCE_DAYS = 250'));assert(xy.includes('persistCompactResearchRows'));
-console.log('v2.6.6.12 final taxonomy freeze + low-egress 250D compact research validation PASS');
+console.log('v2.6.6.13 final taxonomy freeze + low-egress 250D compact research validation PASS');

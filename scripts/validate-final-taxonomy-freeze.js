@@ -7,10 +7,10 @@ const status=require('node:fs').readFileSync(require.resolve('../api/sync-status
 const app=require('node:fs').readFileSync(require.resolve('../app.js'),'utf8');
 
 assert.equal(freeze.STATS.taxonomyCount,191);
-assert.equal(freeze.STATS.companyUniverseCount,1988);
-assert.equal(freeze.STATS.taggedCompanyCount,1982);
-assert.equal(freeze.STATS.membershipEdges,3166);
-assert.equal(freeze.STATS.coreEdges,2263);
+assert.equal(freeze.STATS.companyUniverseCount,1987);
+assert.equal(freeze.STATS.taggedCompanyCount,1981);
+assert.equal(freeze.STATS.membershipEdges,3165);
+assert.equal(freeze.STATS.coreEdges,2262);
 assert.equal(freeze.STATS.relatedEdges,903);
 assert.equal(freeze.STATS.strictNoTagCount,6);
 assert.equal(freeze.listDefinitions().length,191);
@@ -35,4 +35,7 @@ assert(app.includes('downloadTaxonomyDiagnostic'));
 const core=require('node:fs').readFileSync(require.resolve('../lib/fundflow-xy'),'utf8');
 assert(core.includes('m.importance IS DISTINCT FROM EXCLUDED.importance'),'member sync must skip unchanged rows');
 assert(core.includes('m.stock_code = ANY($2::text[])'),'manual taxonomy sync must scope deletes to frozen company universe');
-console.log('PASS validate-final-taxonomy-freeze — 191 tags / 3166 edges / delta-only Neon sync');
+assert.deepEqual(freeze.RETIRED_COMPANY_CODES,['8183']);
+assert.equal(freeze.companyTopicPairs('8183'),null,'8183 delisted company must not remain in active Company_Map');
+assert(core.includes('managedCodes=[...new Set([...frozenCodes,...retiredCodes])]'),'retired codes must be included in cleanup scope');
+console.log('PASS validate-final-taxonomy-freeze — 191 tags / 3165 active edges / retired-code cleanup');
