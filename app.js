@@ -4114,7 +4114,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.6.11";
+const FUND_FLOW_CLIENT_REV="2.6.6.12";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4414,6 +4414,25 @@ document.querySelectorAll(".settings-open").forEach(btn=>btn.addEventListener("c
 }));
 $("closeSettings")?.addEventListener("click",()=>$("settingsModal")?.classList.add("hidden"));
 $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"))$("settingsModal").classList.add("hidden")});
+
+let manualTaxonomySyncLoading=false;
+function downloadTaxonomyDiagnostic(payload){
+  const body=JSON.stringify(payload,null,2),blob=new Blob([body],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a"),stamp=new Date().toISOString().replace(/[:.]/g,"-");
+  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.6.12-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+async function runManualTaxonomySyncExport(){
+  if(manualTaxonomySyncLoading)return;
+  const btn=$("manualTaxonomySyncExport"),status=$("manualTaxonomySyncExportStatus");manualTaxonomySyncLoading=true;
+  if(btn){btn.disabled=true;btn.textContent="同步中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="比對 final Company_Map，只寫差異；完成後下載診斷 JSON…"}
+  try{
+    const res=await fetch("/api/sync-status?action=taxonomy-sync-export-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Taxonomy-Sync":"1"}}),data=await readJson(res,"分類同步＋匯出診斷"),s=data?.summary||{},w=s?.writes||{};
+    if(data?.diagnostic)downloadTaxonomyDiagnostic(data.diagnostic);
+    if(status){status.classList.add(s.snapshotCurrent&&s.diffClean?"is-ok":"is-warn");status.textContent=`分類同步完成｜${s.taxonomyCount??"--"} 類｜${s.membershipEdges??"--"} 關係｜寫入：新增 ${w.insert??0} / 刪除 ${w.delete??0} / 角色更新 ${w.roleUpdate??0}｜${s.snapshotCurrent?`XY ${s.withXY??0}/${s.taxonomyCount??0}`:"接著按「更新 XY / 分類快照」"}`;}
+    fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;fundflowDetailCache.clear();
+  }catch(e){console.warn("分類同步＋匯出診斷失敗",e);if(status){status.classList.add("is-error");status.textContent=`同步失敗：${e?.message||e}`}}
+  finally{manualTaxonomySyncLoading=false;if(btn){btn.disabled=false;btn.textContent="分類同步＋匯出診斷"}}
+}
+$("manualTaxonomySyncExport")?.addEventListener("click",runManualTaxonomySyncExport);
 
 let manualFundflowWarmLoading=false;
 async function runManualFundflowWarm(){
