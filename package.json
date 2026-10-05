@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.6.12",
+  "version": "2.6.6.13",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"
@@ -16,7 +16,7 @@
     "validate:blind-coverage": "node scripts/validate-blind-coverage.js",
     "validate:layout": "node scripts/validate-project-layout.js",
     "validate:storage-cleanup": "node scripts/validate-storage-cleanup.js",
-    "validate:all": "npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:taxonomy-membership-fixes && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-path-classification && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification && npm run validate:taxonomy-final-freeze && npm run validate:v2668",
+    "validate:all": "npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:taxonomy-membership-fixes && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-path-classification && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification && npm run validate:taxonomy-final-freeze && npm run validate:v2668 && npm run validate:v26613",
     "validate:market-topics": "node scripts/validate-market-topics.js",
     "validate:fundflow-browser": "node scripts/validate-fundflow-browser.js",
     "validate:fundflow-ui": "node scripts/validate-fundflow-ui.js",
@@ -37,6 +37,7 @@
     "validate:latest-market-gap": "node scripts/validate-latest-market-gap.js",
     "validate:taxonomy-membership-fixes": "node scripts/validate-taxonomy-membership-fixes.js",
     "validate:v2668": "node scripts/validate-v2668-final-taxonomy-250d.js",
-    "validate:taxonomy-final-freeze": "node scripts/validate-final-taxonomy-freeze.js"
+    "validate:taxonomy-final-freeze": "node scripts/validate-final-taxonomy-freeze.js",
+    "validate:v26613": "node scripts/validate-v26613-retired-company.js"
   }
 }
