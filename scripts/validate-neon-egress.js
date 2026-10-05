@@ -23,10 +23,10 @@ assert(api.includes('stale-while-revalidate=3600'));
 for(const t of ['market_business_xy2_stock_daily','market_business_xy2_topic_daily','market_business_xy2_snapshot','market_business_xy2_member'])assert(core.includes(`CREATE TABLE IF NOT EXISTS ${t}`),`clean table missing: ${t}`);
 assert(core.includes("const FEATURE_VERSION = 'feature-2.0.0-x20raw20-y5-activation02'"));
 assert(core.includes("const PATH_MODEL_VERSION = 'path-3.1.0-point-line-family-p70'"));
-assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-7.0.1-focuspack-path31-taxonomy23'"));
-assert(core.includes("const DAILY_BUILD_VERSION = 'daily-7.1.1-taxonomy23'"));
+assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-7.0.2-focuspack-path31-taxonomy25'"));
+assert(core.includes("const DAILY_BUILD_VERSION = 'daily-7.1.2-taxonomy25'"));
 assert(core.includes("const TOPIC_TAXONOMY_VERSION = `taxonomy-${marketTopicTaxonomy.version}`"));
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.6.10"'));
+assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.6.12"'));
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('));assert(!snap.includes('loadEngineInputs('));

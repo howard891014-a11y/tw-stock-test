@@ -1,5 +1,6 @@
-const assert = require('assert');
-const { buildBusinessBrowserCatalog } = require('../lib/fundflow-xy');
+'use strict';
+const assert=require('node:assert/strict');
+const { buildBusinessBrowserCatalog, buildCompanyMap } = require('../lib/fundflow-xy');
 const { listMarketDefinitions } = require('../lib/market-topic-taxonomy');
 
 const profiles = [
@@ -8,87 +9,25 @@ const profiles = [
   { stock_code:'6182', stock_name:'合晶', market:'上櫃', industry_code:'24', industry:'半導體業' },
   { stock_code:'1101', stock_name:'台泥', market:'上市', industry_code:'01', industry:'水泥工業' },
   { stock_code:'6207', stock_name:'雷科', market:'上櫃', industry_code:'31', industry:'其他電子業' },
+  { stock_code:'8027', stock_name:'鈦昇', market:'上櫃', industry_code:'05', industry:'電機機械' },
   { stock_code:'6781', stock_name:'AES-KY', market:'上市', industry_code:'28', industry:'電子零組件業' },
 ];
+const snapshot={asOf:'2026-09-23',engineVersion:'test',groups:[{tagId:'wafer',name:'矽晶圓',parentName:'晶圓製造與製程',scope:'technology-fine',memberCount:3,validCount:3,flowValidCount:3,xAvailable:true,xyEligible:true,coveragePct:100,reliability:78,x:71.3,y:48.6,quadrant:'potential',status:'potential-rising',statusLabel:'潛伏升溫',trajectory:[{date:'2026-09-22',x:73.9,y:70.8,xAvailable:true},{date:'2026-09-23',x:71.3,y:48.6,xAvailable:true}],leaders:[{code:'3532',name:'台勝科'}]}]};
 
-const snapshot = {
-  asOf:'2026-09-23',
-  engineVersion:'xy-1.0.0',
-  groups:[{
-    tagId:'wafer', name:'矽晶圓', parentName:'晶圓製造與製程', scope:'technology-fine',
-    memberCount:3, validCount:3, flowValidCount:3, xAvailable:true, xyEligible:true, coveragePct:100, reliability:78,
-    x:71.3, y:48.6, quadrant:'potential', status:'potential-rising', statusLabel:'潛伏升溫',
-    dx3:10.1, dy3:-27.1, trajectory:[{date:'2026-09-22',x:73.9,y:70.8,xAvailable:true},{date:'2026-09-23',x:71.3,y:48.6,xAvailable:true}],
-    leaders:[{code:'3532',name:'台勝科'}]
-  }]
-};
+const out=buildBusinessBrowserCatalog(profiles,snapshot);
+assert.equal(out.ok,true);
+assert.equal(out.counts.totalDefinitions,191,'fallback Browser registry must be the final 191, not legacy 213');
+assert.equal(listMarketDefinitions({finalOnly:true}).length,191);
+const wafer=out.items.find(x=>x.tagId==='wafer');assert(wafer);assert.equal(wafer.companyCount,3);assert.equal(wafer.xyEligible,true);
+const cement=out.items.find(x=>x.tagId==='cement');assert(cement);assert.equal(cement.companyCount,1);assert.equal(cement.xyEligible,false);
+assert(!out.items.some(x=>x.tagId==='semiconductor_products_services'),'removed generic semiconductor-service tag must not reappear in Browser');
+const glass=out.items.find(x=>x.tagId==='glass_substrate');assert(glass);assert(glass.companyCodes.includes('8027'));assert(!glass.companyCodes.includes('6207'));
+const companyMap=buildCompanyMap(profiles);assert.equal(companyMap.byTopic.get('glass_substrate').companyCount,glass.companyCount);assert.equal(companyMap.stats.totalCompanies,profiles.length);
+assert(out.items.find(x=>x.tagId==='bbu').companyNames.includes('AES-KY'));
+assert(!out.items.some(x=>x.tagId==='wet_process_equipment'));
 
-const out = buildBusinessBrowserCatalog(profiles, snapshot);
-assert.equal(out.ok, true);
-assert.equal(out.counts.totalDefinitions, listMarketDefinitions().length, '應列出完整市場題材定義');
-assert.equal(out.asOf, '2026-09-23');
-
-const wafer = out.items.find(x=>x.tagId==='wafer');
-assert(wafer, '應包含矽晶圓');
-assert.equal(wafer.companyCount, 3, '矽晶圓應映射 3 家 fixture 公司');
-assert.equal(wafer.xyEligible, true, '矽晶圓應有可用 XY');
-assert.equal(wafer.scope, 'technology-fine');
-assert.equal(wafer.quadrant, 'potential');
-
-const cement = out.items.find(x=>x.tagId==='cement');
-assert(cement, '應包含傳產粗分類水泥');
-assert.equal(cement.scope, 'traditional-coarse');
-assert.equal(cement.companyCount, 1);
-assert.equal(cement.xyEligible, false);
-assert(/資料不足/.test(cement.noXYReason) && /1 家/.test(cement.noXYReason), '單一公司應標記為資料不足');
-
-const baseline = out.items.find(x=>x.tagId==='semiconductor_products_services');
-assert(baseline, '科技公司應有非 other 的最低科技業務標籤');
-assert.equal(baseline.scope, 'technology-fine');
-assert.equal(out.counts.technologyFallbackDefinitions, 0, '不應再有可投票科技 fallback');
-
-assert(out.counts.technologyFineDefinitions > 0);
-assert(out.counts.traditionalDefinitions > 0);
-assert.equal(out.counts.otherDefinitions, 0);
-
-const glass = out.items.find(x=>x.tagId==='glass_substrate');
-assert(glass, '應包含玻璃基板');
-assert(glass.companyNames.includes('雷科'), '玻璃基板 browser search index 應包含完整公司名：雷科');
-assert(glass.companyCodes.includes('6207'), '玻璃基板 browser search index 應包含公司代碼：6207');
-
-
-const bbu = out.items.find(x=>x.tagId==='bbu');
-assert(bbu, '應包含 BBU 市場題材');
-assert(bbu.companyNames.includes('AES-KY'), 'BBU 應由市場題材公司 seed 納入 AES-KY');
-
-const semEq = out.items.find(x=>x.tagId==='semiconductor_equipment');
-assert(semEq, '應包含合併後半導體設備市場題材');
-assert(!out.items.some(x=>x.tagId==='wet_process_equipment'), '細製程設備不應再獨立跑 XY/browser 主題');
-
-assert(out.counts.withXY >= 1);
-
-const consumerProfiles = [
-  { stock_code:'2353', stock_name:'宏碁', market:'上市', industry_code:'25', industry:'電腦及週邊設備業' },
-  { stock_code:'2357', stock_name:'華碩', market:'上市', industry_code:'25', industry:'電腦及週邊設備業' },
-  { stock_code:'2317', stock_name:'鴻海', market:'上市', industry_code:'31', industry:'其他電子業' },
-  { stock_code:'2324', stock_name:'仁寶', market:'上市', industry_code:'25', industry:'電腦及週邊設備業' },
-  { stock_code:'4938', stock_name:'和碩', market:'上市', industry_code:'31', industry:'其他電子業' },
-  { stock_code:'2498', stock_name:'宏達電', market:'上市', industry_code:'27', industry:'通信網路業' },
-  { stock_code:'2489', stock_name:'瑞軒', market:'上市', industry_code:'26', industry:'光電業' },
-];
-const consumerCatalog=buildBusinessBrowserCatalog(consumerProfiles,{groups:[],engineVersion:'xy-7.0.0-x20-y5-activation-causal-path'});
-const representedConsumer=consumerCatalog.items.filter(x=>x.scope==='electronics-product'&&x.companyCount>0);
-for(const id of ['ai_pc','consumer_notebook','consumer_peripherals','consumer_brand_device']){
-  const item=representedConsumer.find(x=>x.tagId===id);
-  assert(item,`${id} should be represented in a freshly rebuilt consumer-electronics browser snapshot`);
-}
-assert(representedConsumer.length>=4,'fresh consumer-electronics browser snapshot should keep broad co-moving endpoint buckets without re-fragmenting device subtypes');
-
-console.log(`Fundflow business browser validation PASS — ${out.counts.totalDefinitions} definitions, ${out.counts.technologyFineDefinitions} tech-fine, ${representedConsumer.length} represented consumer-product buckets`);
-
-// Regression: prepared production snapshots own the frozen taxonomy universe.
-// Legacy/static definitions must not leak back into Browser as zero-member topics.
-const frozenSnapshot={...snapshot,topicTaxonomyVersion:'taxonomy-2.0.0'};
+const frozenSnapshot={...snapshot,topicTaxonomyVersion:'taxonomy-2.3.0-final191'};
 const frozenCatalog=buildBusinessBrowserCatalog(profiles,frozenSnapshot);
-assert.equal(frozenCatalog.counts.totalDefinitions,frozenSnapshot.groups.length,'prepared Browser must match prepared overview taxonomy universe exactly');
-assert.deepEqual(frozenCatalog.items.map(x=>x.tagId),frozenSnapshot.groups.map(x=>x.tagId),'Browser must not resurrect legacy/static definitions outside prepared overview');
+assert.equal(frozenCatalog.counts.totalDefinitions,frozenSnapshot.groups.length);
+assert.deepEqual(frozenCatalog.items.map(x=>x.tagId),frozenSnapshot.groups.map(x=>x.tagId));
+console.log('Fundflow business browser validation PASS — final 191 registry + Company_Map consistency');

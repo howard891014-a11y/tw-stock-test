@@ -1,0 +1,38 @@
+'use strict';
+const assert=require('node:assert/strict');
+const freeze=require('../lib/final-taxonomy-freeze');
+const tax=require('../lib/market-topic-taxonomy');
+const xy=require('../lib/fundflow-xy');
+const status=require('node:fs').readFileSync(require.resolve('../api/sync-status'),'utf8');
+const app=require('node:fs').readFileSync(require.resolve('../app.js'),'utf8');
+
+assert.equal(freeze.STATS.taxonomyCount,191);
+assert.equal(freeze.STATS.companyUniverseCount,1988);
+assert.equal(freeze.STATS.taggedCompanyCount,1982);
+assert.equal(freeze.STATS.membershipEdges,3166);
+assert.equal(freeze.STATS.coreEdges,2263);
+assert.equal(freeze.STATS.relatedEdges,903);
+assert.equal(freeze.STATS.strictNoTagCount,6);
+assert.equal(freeze.listDefinitions().length,191);
+assert.equal(new Set(freeze.listDefinitions().map(x=>x.name)).size,191,'duplicate XY names');
+for(const d of freeze.listDefinitions())assert(d.companyCount>0,`zero-member final tag ${d.id}`);
+
+const silergy=freeze.companyTopicLinks('6415');
+assert(silergy.some(x=>x.id==='pmic'&&x.importance==='core'),'6415 PMIC must be core');
+const copos=Object.entries(freeze.COMPANY_TOPICS).filter(([,pairs])=>pairs.some(([id])=>id==='copos'));
+assert.equal(copos.length,19,'CoPoS final supply-chain count must be 19 after large-tag refinement');
+assert(copos.every(([,pairs])=>pairs.find(([id])=>id==='copos')[1]==='related'),'CoPoS must be related supply-chain exposure');
+for(const code of ['1516','3054','4564','6538','8932','9950'])assert.deepEqual(freeze.companyTopicPairs(code),[],`${code} must remain strict no-tag`);
+for(const retired of ['lead_material_recycling','nand','semiconductor_products_services','pi_film','smart_meter_energy_management','holographic_optical_material','thin_client','special_metal','electronic_components_manufacturing'])assert(!freeze.definitionById(retired),`${retired} must not be in final 191`);
+for(const added of ['shipbuilding','optical_storage','display_panel','compound_semiconductor','cof_substrate','environmental_recycling','hand_tools','fastener','beauty_care','protection_component'])assert(freeze.definitionById(added),`${added} final tag missing`);
+assert.equal(tax.version,'2.3.0-final191');
+assert.equal(xy.ENGINE_VERSION,'xy-8.4.2-clean-feature2-path31-taxonomy25');
+assert.equal(xy.SNAPSHOT_SCHEMA_VERSION,'snapshot-7.0.2-focuspack-path31-taxonomy25');
+assert(status.includes("action==='taxonomy-sync-export-manual'"));
+assert(status.includes('syncFinalTaxonomyAndBuildDiagnostic'));
+assert(app.includes('manualTaxonomySyncExport'));
+assert(app.includes('downloadTaxonomyDiagnostic'));
+const core=require('node:fs').readFileSync(require.resolve('../lib/fundflow-xy'),'utf8');
+assert(core.includes('m.importance IS DISTINCT FROM EXCLUDED.importance'),'member sync must skip unchanged rows');
+assert(core.includes('m.stock_code = ANY($2::text[])'),'manual taxonomy sync must scope deletes to frozen company universe');
+console.log('PASS validate-final-taxonomy-freeze — 191 tags / 3166 edges / delta-only Neon sync');

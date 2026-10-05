@@ -1,35 +1,24 @@
-const assert=require('assert');
-const {resolveCompanyBusinessTags}=require('../lib/company-business-tags');
-const {marketTopicLinks}=require('../lib/market-topic-taxonomy');
+'use strict';
+const assert=require('node:assert/strict');
+const tax=require('../lib/market-topic-taxonomy');
+const freeze=tax.finalTaxonomyFreeze;
 
-function topics(code,name){
-  const r=resolveCompanyBusinessTags({stock_code:code,stock_name:name,name,market:'上市',industry_code:'24',industry:'半導體業',auto_business_tags:[]});
-  return new Set(marketTopicLinks(r.tags||[],r.name||name,r.symbol||code).map(x=>x.id));
-}
-function expect(code,name,required){
-  const got=topics(code,name);
-  for(const t of required)assert(got.has(t),`${code} ${name} missing required market topic ${t}; got=${[...got].join(',')}`);
-}
+function links(code){return freeze.companyTopicLinks(code)||[];}
+function has(code,id,role=null){const x=links(code).find(t=>t.id===id);return Boolean(x&&(!role||x.importance===role));}
+function members(id){return Object.entries(freeze.COMPANY_TOPICS).filter(([,pairs])=>pairs.some(([tag])=>tag===id)).map(([code])=>code);}
 
-// User-facing priority themes: these are build-breaking checks, not documentation-only lists.
-for(const [code,name] of [
-  ['1802','台玻'],['3481','群創'],['8064','東捷'],['6207','雷科'],['8027','鈦昇'],['7828','創新服務'],
-  ['3037','欣興'],['4958','臻鼎-KY'],['3673','TPK-KY'],['3149','正達'],['4768','晶呈科技'],['1595','川寶'],
-  ['6664','群翊'],['3580','友威科'],['3055','蔚華科'],['8046','南電'],['3189','景碩'],['6405','悅城'],
-  ['2409','友達'],['1815','富喬'],['3583','辛耘'],['3131','弘塑'],['2467','志聖'],['3563','牧德'],['3711','日月光投控']
-]) expect(code,name,['glass_substrate']);
-
-for(const [code,name] of [
-  ['3481','群創'],['3535','晶彩科'],['3455','由田'],['3583','辛耘'],['3131','弘塑'],['8027','鈦昇'],
-  ['6664','群翊'],['8064','東捷'],['5443','均豪'],['2467','志聖'],['6187','萬潤']
-]) expect(code,name,['foplp']);
-
-expect('6187','萬潤',['cowos','copos','cpo_silicon_photonics']);
-expect('2467','志聖',['cowos','copos']);
-expect('7769','鴻勁',['semiconductor_test_equipment_market','cpo_silicon_photonics']);
-expect('4919','新唐',['mcu']);
-expect('2454','聯發科',['asic']);
-expect('3017','奇鋐',['thermal']);
-expect('8064','東捷',['glass_substrate','foplp']);
-
-console.log('Priority topic membership validation PASS');
+assert.equal(members('glass_substrate').length,15,'final glass substrate supply chain count');
+assert(has('3037','glass_substrate','related'));
+assert(has('4958','glass_substrate','related'));
+assert(!has('8046','glass_substrate'),'南電 is not in final glass-substrate line');
+assert.equal(members('foplp').length,17,'final FOPLP count');
+assert.equal(members('copos').length,19,'final CoPoS count');
+assert(has('6187','copos','related'));
+assert(has('2467','copos','related'));
+assert(has('2330','copos','related'));
+assert(has('6415','pmic','core'));
+assert(has('6415','led_driver_ic','related'));
+assert(has('7769','cpo_silicon_photonics'));
+assert(has('3017','thermal'));
+for(const code of ['1516','3054','4564','6538','8932','9950'])assert.equal(links(code).length,0,`${code} strict no-tag`);
+console.log('Priority final Company_Map membership validation PASS');
