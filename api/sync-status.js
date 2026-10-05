@@ -4,7 +4,7 @@ const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDi
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
 const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth, institutionalCoverageByDate } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
-const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readFundflowValidationAudit } = require('../lib/fundflow-xy');
+const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readFundflowValidationAudit, syncFinalTaxonomyAndBuildDiagnostic } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = require('../lib/storage-policy');
 
@@ -714,6 +714,15 @@ module.exports=async function handler(req,res){
       const marketDay=await yahooTradingDayProbe();
       if(marketDay.ok&&!marketDay.isTradingDay)return res.status(200).json({ok:true,skipped:true,reason:'holiday-no-market-update',marketDay});
     }
+    if(action==='taxonomy-sync-export-manual'){
+      if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用分類同步按鈕'});}
+      if(String(req.headers?.['x-stockzone-taxonomy-sync']||'')!=='1')return res.status(403).json({ok:false,error:'缺少分類同步確認標記'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'僅允許同站設定頁觸發'});
+      const result=await syncFinalTaxonomyAndBuildDiagnostic({sql:getSql()});
+      res.setHeader('Cache-Control','no-store, max-age=0');
+      return res.status(200).json(result);
+    }
     if(action==='fundflow-gap-repair-manual'){
       // v2.6.6.2: give the targeted latest-date repair its own serverless budget. The browser then starts
       // the DB-only XY warm as a second request, eliminating the observed combined-request 504.
@@ -834,7 +843,7 @@ module.exports=async function handler(req,res){
         const flowDataHealth=await readFlowDataHealth(getSql());
         return res.status(200).json({ok:true,source:'market_history_backfill',mode:rebuild?'rebuild':'incremental',targetTradingDays:target,backfill,marketHealth,flowDataHealth});
       }
-      else return res.status(400).json({ok:false,error:'action 僅支援 fundflow-gap-repair-manual / fundflow-warm-manual / fundflow-clean-rebuild-manual / institutional-backfill-manual / storage-deep-audit-manual / storage-maintenance-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
+      else return res.status(400).json({ok:false,error:'action 僅支援 taxonomy-sync-export-manual / fundflow-gap-repair-manual / fundflow-warm-manual / fundflow-clean-rebuild-manual / institutional-backfill-manual / storage-deep-audit-manual / storage-maintenance-manual / price / company-profiles / business-enrich / twse / tpex / institutional / institutional-backfill / credit / credit-backfill / market-backfill / market-rebuild'});
 
       if(schedule && ['price','twse','tpex'].includes(action)){
         // v2.6.5.59: keep three cron slots, but bound raw history to the storage policy.
