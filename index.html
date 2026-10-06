@@ -2678,6 +2678,20 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 24h22'/%3E%3Cpath d='M7 21h4v-4h4v-4h4V9h6'/%3E%3Cpath d='m21 6 4 3-4 3'/%3E%3Ccircle cx='9' cy='21' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='13' cy='17' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='17' cy='13' r='1.6' fill='black' stroke='none'/%3E%3Ccircle cx='21' cy='9' r='1.6' fill='black' stroke='none'/%3E%3C/g%3E%3C/svg%3E")!important;
 }
 </style>
+<style id="stockzone-v26615-market-dynamic">
+.market-dynamic-page{display:none!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}.market-dynamic-page.active-view{display:block!important}.market-dynamic-page>.card{margin-bottom:14px}
+.market-dynamic-master-card,.market-dynamic-history-card{padding:22px 24px!important}
+.market-dynamic-intro{margin:10px 0 16px;color:#73849a;font-size:13px;line-height:1.65}
+.market-dynamic-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.market-dynamic-topic-card{min-height:126px;padding:18px;border:1px solid #e1e8f1;border-radius:18px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 7px 22px rgba(28,54,89,.05);display:flex;flex-direction:column;justify-content:center}
+.market-dynamic-topic-card .market-dynamic-kicker{font-size:11px;font-weight:900;letter-spacing:.08em;color:#8292a8}
+.market-dynamic-topic-card strong{display:block;margin:8px 0 5px;font-size:26px;line-height:1.1;color:#17243a}
+.market-dynamic-topic-card small{color:#71839a;font-weight:700;line-height:1.45}
+.market-dynamic-topic-card.is-up strong,.market-dynamic-table .is-up{color:#df4a4a}.market-dynamic-topic-card.is-down strong,.market-dynamic-table .is-down{color:#24a36a}
+.market-dynamic-title-icon{font-style:normal;font-weight:900;font-size:18px;line-height:1}
+.market-dynamic-table-wrap{overflow:auto}.market-dynamic-table{width:100%;border-collapse:collapse;font-size:12px}.market-dynamic-table th,.market-dynamic-table td{padding:10px 9px;border-bottom:1px solid #edf1f6;text-align:right;white-space:nowrap}.market-dynamic-table th:first-child,.market-dynamic-table td:first-child{text-align:left}.market-dynamic-table th{color:#8191a6;font-weight:900}.market-dynamic-table td{color:#3c4b5f;font-weight:700}
+@media(max-width:900px){.market-dynamic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.market-dynamic-master-card,.market-dynamic-history-card{padding:16px!important}.market-dynamic-grid{grid-template-columns:1fr}.market-dynamic-topic-card{min-height:108px}}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2695,6 +2709,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       </div>
       <div class="side-group smart-group">
         <div class="side-title side-title-link" data-view="screening">✦ <span>智慧選股</span></div>
+        <button data-view="market-dynamic">大盤動態</button>
         <button data-view="fundflow">資金流向</button>
         <button data-view="featured">近期精選</button>
         <button data-view="simulation">模擬交易</button>
@@ -2705,7 +2720,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.6.14</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.6.15</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2745,7 +2760,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-view="news" type="button">新聞</button>
       </nav>
       <nav class="section-tabs analysis-tabs mode-tabs" id="screeningTabs" aria-label="智慧選股導覽">
-        <button class="active" data-view="fundflow" type="button">資金流向</button><button data-view="featured" type="button">近期精選</button><button data-view="simulation" type="button">模擬交易</button>
+        <button class="active" data-view="market-dynamic" type="button">大盤動態</button><button data-view="fundflow" type="button">資金流向</button><button data-view="featured" type="button">近期精選</button><button data-view="simulation" type="button">模擬交易</button>
       </nav>
       <nav class="section-tabs analysis-tabs mode-tabs" id="managementTabs" aria-label="股票管理導覽">
         <button class="active" data-manage-page="holdings" type="button">持股清單</button><button data-manage-page="watchlist" type="button">觀察清單</button>
@@ -3083,6 +3098,24 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       <small class="expected-foot" id="expectedFoot">持股會改用均價計算報酬與預估損益；觀察股維持現價基準。</small>
     </article>
     <article class="card detail-panel simple-detail" data-view-panel="screening"><div class="card-title">智慧選股 <span class="badge">待接功能</span></div><div class="hero-value"><span>全市場自動篩選</span><strong>✦</strong><small>之後加入低點／剛站回／接近買點篩選</small></div></article>
+    <article class="detail-panel market-dynamic-page" data-view-panel="market-dynamic">
+      <section class="card market-dynamic-master-card">
+        <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon market-dynamic-title-icon" aria-hidden="true">⌁</i><span>大盤動態</span></span><span class="badge" id="marketDynamicDateBadge">--</span></div>
+        <div class="market-dynamic-intro">整合加權指數、市場廣度、法人動向與風險結構，觀察全市場目前所處的位置。</div>
+        <div class="market-dynamic-grid">
+          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">TAIEX</span><strong id="marketTaiex">--</strong><small id="marketTaiexChange">等待資料</small></article>
+          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">趨勢</span><strong id="marketTrend">--</strong><small id="marketTrendDetail">5D / 20D</small></article>
+          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">上漲 / 下跌</small></article>
+          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></article>
+          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></article>
+          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></article>
+        </div>
+      </section>
+      <section class="card market-dynamic-history-card">
+        <div class="card-title">近 20 日市場軌跡 <span class="badge">Compact</span></div>
+        <div class="market-dynamic-table-wrap"><table class="market-dynamic-table"><thead><tr><th>日期</th><th>加權</th><th>漲跌</th><th>廣度</th><th>外資</th></tr></thead><tbody id="marketDynamicHistory"><tr><td colspan="5">等待資料</td></tr></tbody></table></div>
+      </section>
+    </article>
     <article class="detail-panel fundflow-page" data-view-panel="fundflow">
       <section class="card fundflow-master-card fundflow-master-card-v2631">
         <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-fundflow" aria-hidden="true"></i><span>資金流向</span></span><span class="badge" id="fundflowTagBadge">--</span></div>
@@ -3514,7 +3547,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.6.14"></script>
+  <script src="./app.js?v=2.6.6.15"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5836,4 +5869,4 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 <!-- v2.6.6.1 — latest TPEx gap repair fallback hardening + actionable manual error surface. -->
 
 <!-- v2.6.6.2 — split manual latest-gap repair from XY warm to avoid one-request 60s timeout; targeted activity refresh and stale Path-audit recovery. -->
-<!-- v2.6.6.14 — Company_Map single source of truth + taxonomy25 final taxonomy freeze; Clean XY / Path 3.1 formulas unchanged. -->
+<!-- v2.6.6.15 — Market Dynamic compact daily layer + Smart Screening market tab; Clean XY / Path 3.1 formulas unchanged. -->

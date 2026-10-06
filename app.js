@@ -4312,14 +4312,58 @@ $("fundflowBrowserMore")?.addEventListener("click",()=>{fundflowBrowserLimit+=36
 document.querySelectorAll("[data-fundflow-company-sort]").forEach(btn=>btn.addEventListener("click",()=>{const mode=btn.dataset.fundflowCompanySort==="y"?"y":"x";if(mode===fundflowCompanySort)return;fundflowCompanySort=mode;renderFundflowCompanyList()}));
 $("fundflowDetailClose")?.addEventListener("click",fundflowClearSelection);
 
+
+let marketDynamicData=null,marketDynamicLoading=false,marketDynamicFetchedAt=0;
+function marketNum(v){if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null}
+function marketFmtPct(v){const n=marketNum(v);return n===null?"--":`${n>=0?"+":""}${n.toFixed(2)}%`}
+function marketFmtIndex(v){const n=marketNum(v);return n===null?"--":n.toLocaleString("zh-TW",{maximumFractionDigits:2})}
+function marketFmtMoney(v){const n=marketNum(v);return n===null?"--":`${n>=0?"+":""}${(n/1e8).toFixed(1)}億`}
+function marketTone(el,v){if(!el)return;el.classList.remove("is-up","is-down");const n=marketNum(v);if(n!==null&&n>0)el.classList.add("is-up");else if(n!==null&&n<0)el.classList.add("is-down")}
+function renderMarketDynamic(){
+  const d=marketDynamicData?.latest;if(!d)return;
+  const set=(id,t)=>{const e=$(id);if(e)e.textContent=t};
+  set("marketDynamicDateBadge",d.date||"--");
+  set("marketTaiex",marketFmtIndex(d.taiexClose));
+  set("marketTaiexChange",`${marketFmtPct(d.changePct)}｜成交 ${marketNum(d.tradeValue)===null?"--":(marketNum(d.tradeValue)/1e8).toFixed(0)+" 億"}`);
+  set("marketTrend",marketFmtPct(d.ret20));
+  set("marketTrendDetail",`5D ${marketFmtPct(d.ret5)}｜20MA ${marketFmtPct(d.ma20Gap)}｜60MA ${marketFmtPct(d.ma60Gap)}`);
+  marketTone($("marketTrend")?.closest(".market-dynamic-topic-card"),d.ret20);
+  set("marketBreadth",marketNum(d.advanceRatio)===null?"--":marketNum(d.advanceRatio).toFixed(1)+"%");
+  set("marketBreadthDetail",`上 ${d.up||0}｜下 ${d.down||0}｜5D ${marketNum(d.breadth5)===null?"--":marketNum(d.breadth5).toFixed(1)+"%"}`);
+  set("marketForeign",marketFmtMoney(d.foreignNet));
+  set("marketInstitutionDetail",`投信 ${marketFmtMoney(d.trustNet)}｜自營 ${marketFmtMoney(d.dealerNet)}`);
+  marketTone($("marketForeign")?.closest(".market-dynamic-topic-card"),d.foreignNet);
+  set("marketRisk",marketFmtPct(d.drawdown20));
+  set("marketRiskDetail",`20D 波動 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}｜20D 回撤`);
+  set("marketCoverage",marketNum(d.coverage)===null?"--":marketNum(d.coverage).toFixed(1)+"%");
+  set("marketCoverageDetail",`${marketDynamicData?.meta?.returnedDays||0}D 顯示｜資料保留 ${marketDynamicData?.meta?.retentionDays||500}D`);
+  const body=$("marketDynamicHistory");
+  if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${escapeHtml(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.foreignNet)>0?"is-up":marketNum(r.foreignNet)<0?"is-down":""}">${marketFmtMoney(r.foreignNet)}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
+}
+async function loadMarketDynamic(force=false){
+  if(marketDynamicLoading)return;
+  if(!force&&marketDynamicData&&Date.now()-marketDynamicFetchedAt<120000){renderMarketDynamic();return}
+  marketDynamicLoading=true;
+  try{
+    const res=await fetch(`/api/market-dynamic?days=60${force?"&refresh=1":""}`,{cache:force?"no-store":"default"});
+    marketDynamicData=await readJson(res,"大盤動態");
+    marketDynamicFetchedAt=Date.now();
+    renderMarketDynamic();
+  }catch(e){
+    console.warn("大盤動態讀取失敗",e);
+    const b=$("marketCoverageDetail");if(b)b.textContent=`讀取失敗：${e?.message||e}`;
+  }finally{marketDynamicLoading=false}
+}
+
 function setView(view){
-  const screeningViews=new Set(["screening","fundflow","featured","simulation"]),management=view==="management";
+  const screeningViews=new Set(["screening","market-dynamic","fundflow","featured","simulation"]),management=view==="management";
   writeSessionJson(UI_SESSION_KEY,{view});
   const mode=screeningViews.has(view)?"screening":management?"management":"analysis";
   document.body.classList.remove("mode-analysis","mode-screening","mode-management");
   document.body.classList.add(`mode-${mode}`);
   const modeEyebrow=$("modeEyebrow"); if(modeEyebrow) modeEyebrow.textContent=mode==="screening"?"智慧選股":mode==="management"?"股票管理":"個股分析";
-  if(view==="screening")view="fundflow";
+  if(view==="screening")view="market-dynamic";
+  if(view==="market-dynamic"){loadMarketDynamic(false);}
   if(view==="fundflow"){loadFundflowXy(false).finally(()=>loadFundflowBrowser(false));}
   document.body.classList.toggle("view-overview",view==="overview");
   document.querySelectorAll("[data-view-panel]").forEach(p=>p.classList.toggle("active-view",p.dataset.viewPanel===view));
@@ -4428,7 +4472,7 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
 let manualTaxonomySyncLoading=false;
 function downloadTaxonomyDiagnostic(payload){
   const body=JSON.stringify(payload,null,2),blob=new Blob([body],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a"),stamp=new Date().toISOString().replace(/[:.]/g,"-");
-  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.6.14-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.6.15-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 async function runManualTaxonomySyncExport(){
   if(manualTaxonomySyncLoading)return;
