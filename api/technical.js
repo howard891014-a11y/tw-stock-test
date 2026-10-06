@@ -18,18 +18,19 @@ function marketSymbols(code,market){
   return [`${code}.TW`,`${code}.TWO`];
 }
 async function fetchJson(url){const r=await fetch(url,{headers:HEADERS,redirect:'follow'});if(!r.ok)throw new Error(`Yahoo HTTP ${r.status}`);return r.json()}
+function yahooTradeDate(ts,meta={}){
+  const n=Number(ts),offset=Number(meta?.gmtoffset);if(!Number.isFinite(n))return '';
+  return new Date((n+(Number.isFinite(offset)?offset:0))*1000).toISOString().slice(0,10);
+}
 async function chart(symbol){
-  let last;
-  for(const host of ['query1.finance.yahoo.com','query2.finance.yahoo.com']){
-    try{
-      const u=`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d&events=history&includeAdjustedClose=true`;
-      const j=await fetchJson(u);
-      const r=j?.chart?.result?.[0];
-      if(r)return r;
-      last=new Error(j?.chart?.error?.description||'Yahoo 無歷史資料');
-    }catch(e){last=e}
-  }
-  throw last||new Error('Yahoo 歷史資料取得失敗');
+  const now=Math.floor(Date.now()/1000),period2=now+2*86400,period1=now-Math.round(370*86400);
+  const attempts=await Promise.allSettled(['query1.finance.yahoo.com','query2.finance.yahoo.com'].map(async host=>{
+    const u=`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&period1=${period1}&period2=${period2}&events=history&includeAdjustedClose=true`;
+    const j=await fetchJson(u),r=j?.chart?.result?.[0];if(!r?.timestamp?.length)throw new Error(j?.chart?.error?.description||'Yahoo 無歷史資料');return r;
+  }));
+  const good=attempts.filter(x=>x.status==='fulfilled').map(x=>x.value);
+  if(good.length)return good.sort((a,b)=>Number(b.timestamp?.at?.(-1)||0)-Number(a.timestamp?.at?.(-1)||0))[0];
+  const failed=attempts.find(x=>x.status==='rejected');throw failed?.reason||new Error('Yahoo 歷史資料取得失敗');
 }
 async function fetchChart(symbol,period1,period2){
   const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&period1=${period1}&period2=${period2}&includePrePost=false&events=div%2Csplits`;
@@ -41,7 +42,7 @@ async function fetchChart(symbol,period1,period2){
     const close=num(q.close?.[i]);
     if(close===null)continue;
     const ts=Number(x.timestamp[i]);
-    rows.push({timestamp:ts,date:new Date(ts*1000).toISOString().slice(0,10),open:num(q.open?.[i]),high:num(q.high?.[i]),low:num(q.low?.[i]),close,adjClose:num(adj[i]),volume:num(q.volume?.[i])});
+    rows.push({timestamp:ts,date:yahooTradeDate(ts,x.meta||{}),open:num(q.open?.[i]),high:num(q.high?.[i]),low:num(q.low?.[i]),close,adjClose:num(adj[i]),volume:num(q.volume?.[i])});
   }
   return {symbol,rows,meta:x.meta||{}};
 }
@@ -59,7 +60,7 @@ async function handleHistory(req,res){
     const cutoff=now-Math.round(5*365.25*86400);
     const stockRows=stock.rows.filter(x=>Number(x.timestamp)>=cutoff);
     const benchmarkRows=benchmark?.rows?.filter(x=>Number(x.timestamp)>=cutoff)||[];
-    res.setHeader('Cache-Control','public, s-maxage=21600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control',String(req.query?.refresh||'')==='1'?'no-store':'public, s-maxage=21600, stale-while-revalidate=86400');
     return res.status(200).json({ok:true,source:'Yahoo Finance',code,market,symbol:stock.symbol,windowYears:5,updatedAt:new Date().toISOString(),history:stockRows,benchmark:benchmark?{symbol:benchmark.symbol,history:benchmarkRows}:null});
   }catch(e){
     return res.status(502).json({ok:false,error:e?.message||'五年歷史資料取得失敗'});
@@ -127,7 +128,7 @@ async function handleTechnical(req,res){
   const q=req.query?.q,market=req.query?.market||'';
   if(!q)return res.status(400).json({ok:false,error:'缺少股票代碼'});
   const symbol=yahooSymbol(q,market),r=await chart(symbol),ts=r.timestamp||[],z=r.indicators?.quote?.[0]||{};
-  const rows=ts.map((t,i)=>({date:new Date(t*1000).toISOString().slice(0,10),open:num(z.open?.[i]),high:num(z.high?.[i]),low:num(z.low?.[i]),close:num(z.close?.[i]),volume:num(z.volume?.[i])})).filter(x=>[x.open,x.high,x.low,x.close].every(v=>Number.isFinite(v)&&v>0)&&Number.isFinite(x.volume)&&x.volume>=0&&x.high>=x.low&&x.high>=x.open&&x.high>=x.close&&x.low<=x.open&&x.low<=x.close);
+  const rows=ts.map((t,i)=>({date:yahooTradeDate(t,r.meta||{}),open:num(z.open?.[i]),high:num(z.high?.[i]),low:num(z.low?.[i]),close:num(z.close?.[i]),volume:num(z.volume?.[i])})).filter(x=>[x.open,x.high,x.low,x.close].every(v=>Number.isFinite(v)&&v>0)&&Number.isFinite(x.volume)&&x.volume>=0&&x.high>=x.low&&x.high>=x.open&&x.high>=x.close&&x.low<=x.open&&x.low<=x.close);
   if(rows.length<60)throw new Error('Yahoo 歷史資料不足 60 個交易日');
   const c=rows.map(x=>x.close),v=rows.map(x=>x.volume),last=c.at(-1),ma5=sma(c,5),ma10=sma(c,10),ma20=sma(c,20),ma60=sma(c,60);
   const sd20=std(c,20),upper=ma20+2*sd20,lower=ma20-2*sd20,bw=ma20?((upper-lower)/ma20)*100:null;
@@ -149,7 +150,7 @@ async function handleTechnical(req,res){
   const rv=rsi(c,14);let momScore=55,momState='中性',momTone='watch';if(rv>=60&&hist>0){momScore=80;momState='偏多';momTone='good'}else if(rv<40&&hist<0){momScore=25;momState='偏空';momTone='bad'}else if(hist>0){momScore=65;momState='偏多';momTone='good'}else if(hist<0){momScore=40;momState='偏弱';momTone='bad'}const momConclusion=`RSI ${round(rv)}，MACD柱狀體${hist>=0?'為正':'為負'}`;
   const score=Math.round(maScore*.30+bollScore*.25+volScore*.25+momScore*.20);let overallState='整理',overallTone='watch';if(score>=80){overallState='強勢';overallTone='good'}else if(score>=65){overallState='偏多';overallTone='good'}else if(score<35){overallState='弱勢';overallTone='bad'}else if(score<50){overallState='偏空';overallTone='bad'}
   const headline=`${maState==='偏多'||maState==='強勢'?'均線有支撐':'均線仍需確認'}，${volConclusion}，${trendConclusion}`;const summary=`目前技術面${overallState}；${maConclusion}，${bollConclusion}，${volConclusion}。${trendConclusion}，動能${momState}。`;
-  res.setHeader('Cache-Control','s-maxage=300, stale-while-revalidate=600');
+  res.setHeader('Cache-Control',String(req.query?.refresh||'')==='1'?'no-store':'public, s-maxage=300, stale-while-revalidate=600');
   return res.status(200).json({ok:true,source:'Yahoo Finance',symbol,updatedAt:rows.at(-1).date,count:rows.length,latest:rows.at(-1),ma:{ma5:round(ma5),ma10:round(ma10),ma20:round(ma20),ma60:round(ma60),order:maOrder,bias20:round(bias20)},bias:{ma5:round(bias5),ma10:round(bias10),ma20:round(bias20),ma60:round(bias60)},bollinger:{middle:round(ma20),upper:round(upper),lower:round(lower),bandwidth:round(bw),position:bollPos},volume:{current:round(v.at(-1),0),avg5:round(vol5,0),avg20:round(vol20,0),ratio20:round(volRatio)},trend:{high60:round(high60),low60:round(low60),fromHigh60Pct:round(pct(last,high60)),fromLow60Pct:round(pct(last,low60))},momentum:{rsi14:round(rv),macd:round(difLast),signal:round(sigLast),histogram:round(hist)},analysis:{overall:{state:overallState,tone:overallTone,score,headline,summary},ma:{state:maState,tone:maTone,conclusion:maConclusion},bollinger:{state:bollState,tone:bollTone,conclusion:bollConclusion},bias:{state:biasState,tone:biasTone,conclusion:biasConclusion},volume:{state:volState,tone:volTone,conclusion:volConclusion},trend:{state:trendState,tone:trendTone,conclusion:trendConclusion},momentum:{state:momState,tone:momTone,conclusion:momConclusion}},history:rows.slice(-120)});
 }
 

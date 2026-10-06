@@ -4,7 +4,7 @@ const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDi
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
 const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth, institutionalCoverageByDate } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
-const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readFundflowValidationAudit, syncFinalTaxonomyAndBuildDiagnostic } = require('../lib/fundflow-xy');
+const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readResearchCompactHistoryStatus, readFundflowValidationAudit, syncFinalTaxonomyAndBuildDiagnostic } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = require('../lib/storage-policy');
 
@@ -392,7 +392,7 @@ async function readFlowDataHealth(sql){
     activityRaw:STORAGE_POLICY.raw.activity,
     research:STORAGE_POLICY.compact.topicResearch
   };
-  const [institutional,credit,priceHistoryRows,profileRows,syncRows,instCoverageTwse60,instCoverageTpex60,storage,researchCompactHistory]=await Promise.all([
+  const [institutional,credit,priceHistoryRows,profileRows,syncRows,instCoverageTwse60,instCoverageTpex60,storage,compactHistory,researchCompactHistory]=await Promise.all([
     readInstitutionalHistoryHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     readCreditTradingHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     sql.query(`
@@ -427,9 +427,9 @@ async function readFlowDataHealth(sql){
     institutionalCoverageByDate('上市',60).catch(()=>[]),
     institutionalCoverageByDate('上櫃',60).catch(()=>[]),
     readDatabaseSizeAudit(sql).catch(e=>({error:String(e?.message||e),tables:[]})),
-    readCompactFeatureHistoryStatus(sql,{targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5}).catch(e=>({targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)}))
+    readCompactFeatureHistoryStatus(sql,{targetDays:STORAGE_POLICY.xyOperationalDays,horizon:5}).catch(e=>({targetDays:STORAGE_POLICY.xyOperationalDays,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)})),
+    readResearchCompactHistoryStatus(sql,{targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5}).catch(e=>({targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)}))
   ]);
-  const compactHistory={...researchCompactHistory,targetDays:STORAGE_POLICY.xyOperationalDays,historyReady:Number(researchCompactHistory?.compactDays||0)>=STORAGE_POLICY.xyOperationalDays&&Number(researchCompactHistory?.horizonAnchorDays||0)>0};
   const priceHistory={markets:{}};
   for(const row of priceHistoryRows){
     priceHistory.markets[row.market]={
@@ -482,9 +482,10 @@ async function readFlowDataHealth(sql){
   const allMarkets=Object.values(markets);
   const liveReady=allMarkets.length===2&&allMarkets.every(x=>x.liveReady);
   const coreRawReady=allMarkets.length===2&&allMarkets.every(x=>x.coreRawReady);
-  const researchReady250=liveReady&&Boolean(researchCompactHistory?.historyReady);
-  const backtestReady250=researchReady250; // compatibility alias for older UI/clients
-  const researchReady500=false; // compatibility only; 500D raw research was retired in .59
+  const researchDays=Number(researchCompactHistory?.compactDays||0),researchAnchors=Number(researchCompactHistory?.horizonAnchorDays||0);
+  const researchReady250=liveReady&&researchDays>=250&&researchAnchors>0; // compatibility alias for older clients
+  const backtestReady250=researchReady250;
+  const researchReady500=liveReady&&researchDays>=targets.research&&researchAnchors>0;
   if(Number(storage?.totalMb||0)>=STORAGE_POLICY.softTargetMb)warnings.unshift(`Neon DB ${storage.totalMb} MB 已達 ${STORAGE_POLICY.softTargetMb} MB 軟上限；Retention 會優先阻止 raw 繼續膨脹`);
   return{
     liveReady,coreRawReady,researchReady250,backtestReady250,researchReady500,
