@@ -426,11 +426,18 @@ async function loadDisposal(stock){
   resetDisposal("讀取官方注意／處置資料中…");
   try{const code=stock?.code||stock?.symbol||"",price=Number(stock?.last??stock?.price??stock?.regularMarketPrice);const d=await disposal(code,stock?.market||stock?.marketLabel||"",price);renderDisposal(d)}catch(e){console.warn("處置資料更新失敗",e);resetDisposal(`處置資料暫時無法取得：${e.message}`)}
 }
+function technicalExpectedTradeDate(code){
+  const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"").replace(/\.(?:TW|TWO)$/i,"").trim();
+  return curCode===String(code||"").trim()?dayKey(currentStock?.tradeDate):"";
+}
+function technicalPayloadDate(data){return dayKey(data?.latest?.date)||dayKey(data?.updatedAt)||dayKey(data?.history?.at?.(-1)?.date)||"";}
 async function technical(query,market){
-  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`technical:${code}|${String(market||"")}`,phase=taiwanMarketPhase();
-  const cached=await stockzoneIdbGet("marketCache",key),holiday=phase.weekend||marketSessionForToday()?.status==="holiday",ttl=phase.phase==="live"?15*60*1000:6*60*60*1000;
-  if(cached?.data&&(holiday||Date.now()-Number(cached.savedAt||0)<ttl))return cached.data;
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`technical-v26614:${code}|${String(market||"")}`,phase=taiwanMarketPhase();
+  const cached=await stockzoneIdbGet("marketCache",key),holiday=phase.weekend||marketSessionForToday()?.status==="holiday",ttl=phase.phase==="live"?15*60*1000:6*60*60*1000,expectedDate=technicalExpectedTradeDate(code),cachedDate=technicalPayloadDate(cached?.data);
+  const cacheCoversLatest=!expectedDate||Boolean(cachedDate&&cachedDate>=expectedDate);
+  if(cached?.data&&cacheCoversLatest&&(holiday||Date.now()-Number(cached.savedAt||0)<ttl))return cached.data;
   const params=new URLSearchParams({q:code,market:String(market||"")});
+  if(expectedDate&&(!cachedDate||cachedDate<expectedDate)){params.set("refresh","1");params.set("asof",expectedDate);params.set("_",String(Date.now()));}
   const data=await readJson(await fetch(`/api/technical?${params.toString()}`,{cache:"no-store"}),"技術資料");
   void stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});return data;
 }
@@ -443,8 +450,11 @@ async function history5Y(query,market){
     const legacy=readHistory5YCache()[`${code}|${String(market||"")}`];
     if(legacy?.data){cached=legacy;void stockzoneIdbPut("marketCache",key,legacy)}
   }
-  if(cached&&Date.now()-Number(cached.savedAt||0)<HISTORY5Y_CACHE_MS&&Array.isArray(cached.data?.history)&&cached.data?.windowYears===5&&cached.data.history.length>180)return cached.data;
-  const params=new URLSearchParams({q:code,market:String(market||"")}),data=await readJson(await fetch(`/api/technical?mode=history&${params.toString()}`,{cache:"default"}),"歷史資料");
+  const expectedDate=technicalExpectedTradeDate(code),historyDate=dayKey(cached?.data?.history?.at?.(-1)?.date);
+  const cacheCoversLatest=!expectedDate||Boolean(historyDate&&historyDate>=expectedDate);
+  if(cached&&cacheCoversLatest&&Date.now()-Number(cached.savedAt||0)<HISTORY5Y_CACHE_MS&&Array.isArray(cached.data?.history)&&cached.data?.windowYears===5&&cached.data.history.length>180)return cached.data;
+  const params=new URLSearchParams({q:code,market:String(market||"")});if(expectedDate&&(!historyDate||historyDate<expectedDate)){params.set("refresh","1");params.set("asof",expectedDate);params.set("_",String(Date.now()));}
+  const data=await readJson(await fetch(`/api/technical?mode=history&${params.toString()}`,{cache:"no-store"}),"歷史資料");
   await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});
   return data;
 }
@@ -4114,7 +4124,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.6.13";
+const FUND_FLOW_CLIENT_REV="2.6.6.14";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4328,9 +4338,9 @@ function renderNeonStorageAudit(storage){
   const status=$("neonStorageStatus"),details=$("neonStorageDetails");if(!status||!details)return;
   status.classList.remove("is-ok","is-error","is-warn");
   if(!storage||storage.error){status.classList.add("is-warn");status.textContent=storage?.error?`Storage audit 讀取失敗：${storage.error}`:"Storage audit 尚無資料";details.hidden=true;return;}
-  const total=Number(storage.totalMb||0),budget=Number(storage.referenceBudgetMb||512),pct=Number(storage.referenceUsagePct||0),tables=Array.isArray(storage.tables)?storage.tables:[],plan=storage.retentionPlan||{},egress=plan.dailyEgressTarget||{},soft=Number(plan.softTargetMb||storage.softTargetMb||400);
+  const total=Number(storage.totalMb||0),budget=Number(storage.referenceBudgetMb||1024),pct=Number(storage.referenceUsagePct||0),tables=Array.isArray(storage.tables)?storage.tables:[],plan=storage.retentionPlan||{},egress=plan.dailyEgressTarget||{},soft=Number(plan.softTargetMb||storage.softTargetMb||800);
   status.classList.add(total>=soft?"is-warn":"is-ok");status.textContent=`DB ${fundflowFmt(total,2)} MB｜目標 < ${soft} MB｜Free 參考 ${budget} MB 的 ${fundflowFmt(pct,1)}%｜Retention ${plan.pruneEnabled?"已啟用":"未啟用"}`;
-  const planLines=["",`Storage policy: ${plan.policyVersion||"--"}`,`Soft target: < ${soft} MB｜warning ${Number(plan.warningMb||390)} MB｜hard guard ${Number(plan.hardGuardMb||440)} MB`,`Research target: ${Number(plan.researchTargetDays||250)}D compact｜個股長價：Yahoo ${Number(plan.browserPriceHistoryYears||5)}Y / Browser IndexedDB`,`Daily egress target: ideal ≤${Number(egress.idealMb||50)} MB / max ≤${Number(egress.maxMb||100)} MB`,...Object.entries(plan.tables||{}).map(([k,v])=>`${k}: ${v}`)];
+  const planLines=["",`Storage policy: ${plan.policyVersion||"--"}`,`Soft target: < ${soft} MB｜warning ${Number(plan.warningMb||780)} MB｜hard guard ${Number(plan.hardGuardMb||880)} MB`,`Research target: ${Number(plan.researchTargetDays||500)}D compact｜個股長價：Yahoo ${Number(plan.browserPriceHistoryYears||5)}Y / Browser IndexedDB`,`Daily egress target: ideal ≤${Number(egress.idealMb||50)} MB / max ≤${Number(egress.maxMb||100)} MB`,...Object.entries(plan.tables||{}).map(([k,v])=>`${k}: ${v}`)];
   details.textContent=[`Database: ${storage.databaseName||"--"}`,`Total: ${fundflowFmt(total,2)} MB`,"",...tables.map(x=>`${x.name}: data ${fundflowFmt(x.dataMb,2)} MB | index ${fundflowFmt(x.indexMb,2)} MB | total ${fundflowFmt(x.totalMb,2)} MB`),...planLines].join("\n");details.hidden=false;
 }
 function renderCompactHistoryStatus(history){
@@ -4347,8 +4357,8 @@ function renderHistoryProgress(data){
   const layer=(key)=>{const days=names.map(m=>Number(markets?.[m]?.[key]?.tradingDays||0)),min=days.length?Math.min(...days):0,target=targetMap[key]||120,pct=Math.max(0,Math.min(100,min/target*100));return{days,min,target,pct}};
   const paint=(key,prefix)=>{const x=layer(key),bar=$(prefix+"Bar"),value=$(prefix+"Value"),detail=$(prefix+"Detail");if(bar)bar.style.width=`${x.pct.toFixed(1)}%`;if(value)value.textContent=`${x.min} / ${x.target}D`;if(detail)detail.textContent=`上市 ${x.days[0]}D｜上櫃 ${x.days[1]}D`;};
   paint("price","historyPrice");paint("institutional","historyInstitutional");paint("credit","historyCredit");
-  const research=data?.researchCompactHistory||{},researchDays=Number(research.compactDays||0),researchTarget=Number(research.targetDays||targets.research||250);
-  const ready=[[$("historyLiveReady"),Boolean(data?.liveReady),"20D Live"],[$("historyBacktestReady"),Boolean(data?.coreRawReady),"近期 Raw"],[$("historyResearchReady"),Boolean(data?.researchReady250),`${researchTarget}D Research`]];ready.forEach(([el,ok,label])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${label} ${ok?"✓":""}`.trim()});
+  const research=data?.researchCompactHistory||{},researchDays=Number(research.compactDays||0),researchTarget=Number(research.targetDays||targets.research||500);
+  const ready=[[$("historyLiveReady"),Boolean(data?.liveReady),"20D Live"],[$("historyBacktestReady"),Boolean(data?.coreRawReady),"近期 Raw"],[$("historyResearchReady"),Boolean(data?.researchReady500??data?.researchReady250),`${researchTarget}D Research`]];ready.forEach(([el,ok,label])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${label} ${ok?"✓":""}`.trim()});
   const updated=$("historyProgressUpdated");if(updated){const d=data?.generatedAt?new Date(data.generatedAt):null;updated.textContent=d&&!Number.isNaN(d.getTime())?`更新 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`:"已更新";}
   const repair=$("manualInstitutionalRepairStatus"),inst60=names.map(m=>Number(markets?.[m]?.institutional?.completeDays60||0)),target60=Number(data?.institutionalCoverageTargetDays||60),instReady=inst60.length===2&&inst60.every(x=>x>=target60);if(repair&&!manualInstitutionalRepairLoading){repair.classList.remove("is-ok","is-error","is-warn");repair.classList.add(instReady?"is-ok":"is-warn");repair.textContent=instReady?`DB 法人覆蓋已完整（上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}）`:`DB 法人覆蓋：上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}`;}
   renderCompactHistoryStatus(data?.fundflowCompactHistory);renderNeonStorageAudit(data?.storage);
@@ -4418,7 +4428,7 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
 let manualTaxonomySyncLoading=false;
 function downloadTaxonomyDiagnostic(payload){
   const body=JSON.stringify(payload,null,2),blob=new Blob([body],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a"),stamp=new Date().toISOString().replace(/[:.]/g,"-");
-  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.6.13-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.6.14-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 async function runManualTaxonomySyncExport(){
   if(manualTaxonomySyncLoading)return;
