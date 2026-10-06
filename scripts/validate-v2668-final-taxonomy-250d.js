@@ -3,8 +3,8 @@ const assert=require('node:assert/strict');
 const tax=require('../lib/market-topic-taxonomy');
 const {STORAGE_POLICY}=require('../lib/storage-policy');
 assert.equal(tax.version,'2.3.0-final191');
-assert.equal(STORAGE_POLICY.compact.topicResearch,250);
-assert.equal(STORAGE_POLICY.compact.wResearch,250);
+assert.equal(STORAGE_POLICY.compact.topicResearch,500);
+assert.equal(STORAGE_POLICY.compact.wResearch,500);
 assert.equal(STORAGE_POLICY.raw.price,120);
 assert.equal(STORAGE_POLICY.raw.institutional,120);
 for(const [a,b] of Object.entries({
@@ -14,5 +14,5 @@ for(const [a,b] of Object.entries({
 for(const id of ['ceramic_substrate','ssd','cable_assembly','image_sensor_module','keypad_mechanical_component','motor_driver_ic','security_service'])assert.equal(tax.FINAL_TOPIC_ALIASES[id],undefined,`${id} must stay semantically distinct`);
 assert.equal(tax.FINAL_TOPIC_ALIASES.biomedical_health,'medical_device');
 const fs=require('node:fs');const xy=fs.readFileSync(require.resolve('../lib/fundflow-xy'),'utf8');
-assert(xy.includes('market_business_xy2_research_daily'));assert(xy.includes('FEATURE_HISTORY_SOURCE_DAYS = 250'));assert(xy.includes('persistCompactResearchRows'));
-console.log('v2.6.6.13 final taxonomy freeze + low-egress 250D compact research validation PASS');
+assert(xy.includes('market_business_xy2_research_daily'));assert(xy.includes('RESEARCH_HISTORY_RETENTION_DAYS = STORAGE_POLICY.compact.topicResearch'));assert(xy.includes('persistCompactResearchRows'));
+console.log('v2.6.6.14 final taxonomy freeze + low-egress 500D compact research validation PASS');

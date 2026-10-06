@@ -31,7 +31,7 @@ const app=fs.readFileSync('app.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 for(const token of [
   'readFundflowValidationAudit','readTopicInstitutionalCoverageAudit','walkForwardPathAudit',
-  'benchmarkSignLockPass','benchmarkSnapshotMatchPass','pathTop1AtLeast60','readyToFinalize','businessUniverseBaseline=145','taxonomyBaseline=192','rebuildTopicTaxonomyHistory','noStockFeatureRewrite:true'
+  'benchmarkSignLockPass','benchmarkSnapshotMatchPass','pathTop1AtLeast60','readyToFinalize','businessUniverseBaseline=145','taxonomyBaseline=191','rebuildTopicTaxonomyHistory','noStockFeatureRewrite:true'
 ])assert(core.includes(token),`evidence gate missing: ${token}`);
 for(const token of ["view==='fundflow-audit'","action==='institutional-backfill-manual'","action==='fundflow-clean-rebuild-manual'",'x-stockzone-manual-institutional','x-stockzone-manual-history','clientRevisionMatch'])assert(status.includes(token),`audit/backfill endpoint missing: ${token}`);
 for(const token of ['manualInstitutionalRepair','manualFundflowHistory','runFundflowValidation','Path 5D Top1','補齊法人 60D','Clean compact','Neon Storage Audit'])assert(app.includes(token)||html.includes(token),`settings evidence UI missing: ${token}`);

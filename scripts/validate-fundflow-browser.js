@@ -28,6 +28,8 @@ assert(!out.items.some(x=>x.tagId==='wet_process_equipment'));
 
 const frozenSnapshot={...snapshot,topicTaxonomyVersion:'taxonomy-2.3.0-final191'};
 const frozenCatalog=buildBusinessBrowserCatalog(profiles,frozenSnapshot);
-assert.equal(frozenCatalog.counts.totalDefinitions,frozenSnapshot.groups.length);
-assert.deepEqual(frozenCatalog.items.map(x=>x.tagId),frozenSnapshot.groups.map(x=>x.tagId));
+assert.equal(frozenCatalog.counts.totalDefinitions,191,'snapshot groups must never shrink the frozen 191-category registry');
+assert.equal(frozenCatalog.items.length,191);
+assert.equal(frozenCatalog.items.find(x=>x.tagId==='wafer').xyEligible,true);
+assert(frozenCatalog.items.some(x=>x.tagId!=='wafer'&&x.xyEligible===false),'categories absent from snapshot must remain visible as no-XY rows');
 console.log('Fundflow business browser validation PASS — final 191 registry + Company_Map consistency');

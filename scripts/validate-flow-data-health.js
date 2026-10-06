@@ -13,7 +13,7 @@ for(const token of [
   'readyForAX',
   'liveReady',
   'coreRawReady',
-  'researchReady250',
+  'researchReady500',
   'researchCompactHistory',
   'price:{...price',
   'expectedTradeDate',
@@ -34,4 +34,4 @@ for(const [name,src] of [['institutional',institutionalLib],['credit',creditLib]
   assert(src.includes('tradingDays'),`${name} health must expose tradingDays`);
   assert(src.includes('maxDate'),`${name} health must expose maxDate`);
 }
-console.log('Flow data health validation PASS — live freshness + bounded raw readiness + 250D compact research + storage observability');
+console.log('Flow data health validation PASS — live freshness + bounded raw readiness + 500D compact research + storage observability');

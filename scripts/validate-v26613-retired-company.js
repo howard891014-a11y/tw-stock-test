@@ -12,5 +12,6 @@ assert.equal(freeze.STATS.coreEdges,2262);
 assert.equal(freeze.STATS.relatedEdges,903);
 assert(core.includes('managedCodes=[...new Set([...frozenCodes,...retiredCodes])]'));
 assert(core.includes('[JSON.stringify(desired),managedCodes]'));
-assert(core.includes('companyMapFreezeVersion:marketTopicTaxonomy.finalTaxonomyFreeze.VERSION'));
+assert(core.includes("const COMPANY_MAP_VERSION = String(marketTopicTaxonomy.finalTaxonomyFreeze?.VERSION||'')"));
+assert(core.includes('companyMapFreezeVersion:COMPANY_MAP_VERSION'));
 console.log('PASS v2.6.6.13 retired-company cleanup — 8183 removed from active map and included in Neon cleanup scope');

@@ -11,8 +11,8 @@ assert.equal(STORAGE_POLICY.raw.price,120);
 assert.equal(STORAGE_POLICY.raw.institutional,120);
 assert.equal(STORAGE_POLICY.raw.credit,90);
 assert.equal(STORAGE_POLICY.raw.activity,80);
-assert.equal(STORAGE_POLICY.compact.topicResearch,250);
-for(const token of ['liveReady','coreRawReady','researchReady250','researchCompactHistory','STORAGE_POLICY.raw.price','STORAGE_POLICY.raw.institutional','STORAGE_POLICY.raw.credit']){
+assert.equal(STORAGE_POLICY.compact.topicResearch,500);
+for(const token of ['liveReady','coreRawReady','researchReady500','researchCompactHistory','STORAGE_POLICY.raw.price','STORAGE_POLICY.raw.institutional','STORAGE_POLICY.raw.credit']){
   assert(sync.includes(token),`history/storage token missing: ${token}`);
 }
 assert(sync.includes('warmCurrentEngineFromStoredDb({sql:getSql(),force:false})'),'22:00 cron must persist daily compact research history');
@@ -30,4 +30,4 @@ for(const [name,src] of [['institutional',inst],['credit',credit]]){
 assert(credit.includes('partial credit day: margin='),'credit history must not mark margin/SBL partial days complete');
 assert(sync.includes('concurrency:3'),'institutional backfill concurrency missing');
 assert(sync.includes('concurrency:2'),'credit backfill concurrency missing');
-console.log('History foundation validation PASS — 20D live + bounded 120/120/90D raw + 250D compact research');
+console.log('History foundation validation PASS — 20D live + bounded 120/120/90D raw + 500D compact research');

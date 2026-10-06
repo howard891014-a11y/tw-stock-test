@@ -27,7 +27,7 @@ for(const retired of ['lead_material_recycling','nand','semiconductor_products_s
 for(const added of ['shipbuilding','optical_storage','display_panel','compound_semiconductor','cof_substrate','environmental_recycling','hand_tools','fastener','beauty_care','protection_component'])assert(freeze.definitionById(added),`${added} final tag missing`);
 assert.equal(tax.version,'2.3.0-final191');
 assert.equal(xy.ENGINE_VERSION,'xy-8.4.2-clean-feature2-path31-taxonomy25');
-assert.equal(xy.SNAPSHOT_SCHEMA_VERSION,'snapshot-7.0.2-focuspack-path31-taxonomy25');
+assert.equal(xy.SNAPSHOT_SCHEMA_VERSION,'snapshot-7.0.3-focuspack-path31-taxonomy25-browser191');
 assert(status.includes("action==='taxonomy-sync-export-manual'"));
 assert(status.includes('syncFinalTaxonomyAndBuildDiagnostic'));
 assert(app.includes('manualTaxonomySyncExport'));
