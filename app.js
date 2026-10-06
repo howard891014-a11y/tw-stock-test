@@ -4313,12 +4313,35 @@ document.querySelectorAll("[data-fundflow-company-sort]").forEach(btn=>btn.addEv
 $("fundflowDetailClose")?.addEventListener("click",fundflowClearSelection);
 
 
-let marketDynamicData=null,marketDynamicLoading=false,marketDynamicFetchedAt=0;
+let marketDynamicData=null,marketDynamicLoading=false,marketDynamicFetchedAt=0,marketDistributionMode="listed";
 function marketNum(v){if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null}
 function marketFmtPct(v){const n=marketNum(v);return n===null?"--":`${n>=0?"+":""}${n.toFixed(2)}%`}
 function marketFmtIndex(v){const n=marketNum(v);return n===null?"--":n.toLocaleString("zh-TW",{maximumFractionDigits:2})}
 function marketFmtMoney(v){const n=marketNum(v);return n===null?"--":`${n>=0?"+":""}${(n/1e8).toFixed(1)}億`}
 function marketTone(el,v){if(!el)return;el.classList.remove("is-up","is-down");const n=marketNum(v);if(n!==null&&n>0)el.classList.add("is-up");else if(n!==null&&n<0)el.classList.add("is-down")}
+function renderMarketDistribution(){
+  const dist=marketDynamicData?.distribution;
+  const chart=$("marketDistributionChart"),summary=$("marketDistributionSummary");
+  if(!chart||!summary)return;
+  const src=dist?.[marketDistributionMode];
+  if(!dist||!src){chart.innerHTML="";summary.textContent="等待資料";return}
+  const bins=Array.isArray(src.bins)?src.bins:[],labels=dist.labels||[];
+  const max=Math.max(1,...bins.map(v=>Number(v)||0));
+  const neg=bins.slice(0,5).reduce((a,b)=>a+(Number(b)||0),0);
+  const flat=Number(bins[5])||0;
+  const pos=bins.slice(6).reduce((a,b)=>a+(Number(b)||0),0);
+  summary.textContent=(src.market||"")+"｜跌 "+neg+"｜平 "+flat+"｜漲 "+pos+"｜共 "+(Number(src.total)||0)+" 家";
+  chart.innerHTML=bins.map((v,i)=>{
+    const n=Number(v)||0,cls=i<5?"neg":i>5?"pos":"flat",h=Math.max(2,Math.round(n/max*100));
+    return '<div class="market-dist-bin '+cls+'"><div class="market-dist-count">'+n+'</div><div class="market-dist-bar-wrap"><div class="market-dist-bar" style="height:'+h+'%"></div></div><div class="market-dist-label">'+(labels[i]||"")+'</div></div>';
+  }).join("");
+  document.querySelectorAll("[data-market-dist]").forEach(btn=>btn.classList.toggle("active",btn.dataset.marketDist===marketDistributionMode));
+}
+document.querySelectorAll("[data-market-dist]").forEach(btn=>btn.addEventListener("click",()=>{
+  marketDistributionMode=btn.dataset.marketDist==="otc"?"otc":"listed";
+  renderMarketDistribution();
+}));
+
 function renderMarketDynamic(){
   const d=marketDynamicData?.latest;if(!d)return;
   const set=(id,t)=>{const e=$(id);if(e)e.textContent=t};
@@ -4337,8 +4360,9 @@ function renderMarketDynamic(){
   set("marketRiskDetail",`20D 波動 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}｜20D 回撤`);
   set("marketCoverage",marketNum(d.coverage)===null?"--":marketNum(d.coverage).toFixed(1)+"%");
   set("marketCoverageDetail",`${marketDynamicData?.meta?.returnedDays||0}D 顯示｜資料保留 ${marketDynamicData?.meta?.retentionDays||500}D`);
+  renderMarketDistribution();
   const body=$("marketDynamicHistory");
-  if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${escapeHtml(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.foreignNet)>0?"is-up":marketNum(r.foreignNet)<0?"is-down":""}">${marketFmtMoney(r.foreignNet)}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
+  if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.foreignNet)>0?"is-up":marketNum(r.foreignNet)<0?"is-down":""}">${marketFmtMoney(r.foreignNet)}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
 }
 async function loadMarketDynamic(force=false){
   if(marketDynamicLoading)return;
@@ -4472,7 +4496,7 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
 let manualTaxonomySyncLoading=false;
 function downloadTaxonomyDiagnostic(payload){
   const body=JSON.stringify(payload,null,2),blob=new Blob([body],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a"),stamp=new Date().toISOString().replace(/[:.]/g,"-");
-  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.6.15-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.6.16-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 async function runManualTaxonomySyncExport(){
   if(manualTaxonomySyncLoading)return;

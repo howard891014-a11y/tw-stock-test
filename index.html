@@ -2692,6 +2692,13 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 .market-dynamic-table-wrap{overflow:auto}.market-dynamic-table{width:100%;border-collapse:collapse;font-size:12px}.market-dynamic-table th,.market-dynamic-table td{padding:10px 9px;border-bottom:1px solid #edf1f6;text-align:right;white-space:nowrap}.market-dynamic-table th:first-child,.market-dynamic-table td:first-child{text-align:left}.market-dynamic-table th{color:#8191a6;font-weight:900}.market-dynamic-table td{color:#3c4b5f;font-weight:700}
 @media(max-width:900px){.market-dynamic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.market-dynamic-master-card,.market-dynamic-history-card{padding:16px!important}.market-dynamic-grid{grid-template-columns:1fr}.market-dynamic-topic-card{min-height:108px}}
 </style>
+<style id="stockzone-v26616-market-dynamic-polish">
+#marketDynamicDateBadge,#fundflowTagBadge{color:#718096!important;background:#f8fafc!important;border:1px solid #e2e8f0!important;box-shadow:none!important;font-weight:700!important}
+.market-dynamic-title-icon{-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 25h24'/%3E%3Cpath d='M6 21l6-7 5 4 9-11'/%3E%3Ccircle cx='6' cy='21' r='2'/%3E%3Ccircle cx='12' cy='14' r='2'/%3E%3Ccircle cx='17' cy='18' r='2'/%3E%3Ccircle cx='26' cy='7' r='2'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 25h24'/%3E%3Cpath d='M6 21l6-7 5 4 9-11'/%3E%3Ccircle cx='6' cy='21' r='2'/%3E%3Ccircle cx='12' cy='14' r='2'/%3E%3Ccircle cx='17' cy='18' r='2'/%3E%3Ccircle cx='26' cy='7' r='2'/%3E%3C/g%3E%3C/svg%3E")!important}
+.market-distribution-title-icon{-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round'%3E%3Cpath d='M4 27h24'/%3E%3Cpath d='M7 24V17M12 24V11M17 24V7M22 24V14M27 24V19'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round'%3E%3Cpath d='M4 27h24'/%3E%3Cpath d='M7 24V17M12 24V11M17 24V7M22 24V14M27 24V19'/%3E%3C/g%3E%3C/svg%3E")!important}
+.market-distribution-card{padding:20px 22px!important}.market-distribution-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.market-distribution-tabs{display:inline-flex;gap:6px;padding:4px;background:#f5f7fa;border:1px solid #e5eaf0;border-radius:12px}.market-distribution-tabs button{border:0;background:transparent;color:#7a899d;font-weight:800;padding:7px 14px;border-radius:9px}.market-distribution-tabs button.active{background:#fff;color:#1f6fd6;box-shadow:0 1px 5px rgba(31,78,121,.10)}.market-distribution-summary{font-size:12px;color:#718096;font-weight:800;margin:4px 0 12px}.market-distribution-chart{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:7px;align-items:end;min-height:190px;padding:12px 4px 0}.market-dist-bin{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0;height:170px}.market-dist-count{font-size:11px;font-weight:800;color:#4a5a70;margin-bottom:6px}.market-dist-bar-wrap{height:112px;width:100%;display:flex;align-items:flex-end;justify-content:center}.market-dist-bar{width:min(26px,78%);min-height:2px;border-radius:6px 6px 3px 3px;background:#a9b3c0}.market-dist-bin.neg .market-dist-bar{background:#35b76f}.market-dist-bin.pos .market-dist-bar{background:#ed5a5a}.market-dist-label{font-size:9px;line-height:1.2;color:#7b899b;margin-top:7px;text-align:center;white-space:nowrap}
+@media(max-width:600px){.market-distribution-card{padding:16px!important}.market-distribution-chart{gap:3px;min-height:165px;padding-left:0;padding-right:0}.market-dist-bin{height:148px}.market-dist-bar-wrap{height:94px}.market-dist-count{font-size:9px}.market-dist-label{font-size:8px;transform:rotate(-30deg);transform-origin:top center;margin-top:9px}.market-distribution-tabs button{padding:6px 11px}}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2720,7 +2727,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.6.15</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.6.16</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3100,8 +3107,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     <article class="card detail-panel simple-detail" data-view-panel="screening"><div class="card-title">智慧選股 <span class="badge">待接功能</span></div><div class="hero-value"><span>全市場自動篩選</span><strong>✦</strong><small>之後加入低點／剛站回／接近買點篩選</small></div></article>
     <article class="detail-panel market-dynamic-page" data-view-panel="market-dynamic">
       <section class="card market-dynamic-master-card">
-        <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon market-dynamic-title-icon" aria-hidden="true">⌁</i><span>大盤動態</span></span><span class="badge" id="marketDynamicDateBadge">--</span></div>
-        <div class="market-dynamic-intro">整合加權指數、市場廣度、法人動向與風險結構，觀察全市場目前所處的位置。</div>
+        <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon market-dynamic-title-icon" aria-hidden="true"></i><span>大盤動態</span></span><span class="badge" id="marketDynamicDateBadge">--</span></div>
         <div class="market-dynamic-grid">
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">TAIEX</span><strong id="marketTaiex">--</strong><small id="marketTaiexChange">等待資料</small></article>
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">趨勢</span><strong id="marketTrend">--</strong><small id="marketTrendDetail">5D / 20D</small></article>
@@ -3110,6 +3116,14 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></article>
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></article>
         </div>
+      </section>
+      <section class="card market-distribution-card">
+        <div class="market-distribution-head">
+          <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon market-distribution-title-icon" aria-hidden="true"></i><span>漲跌分佈</span></span></div>
+          <div class="market-distribution-tabs"><button class="active" type="button" data-market-dist="listed">上市</button><button type="button" data-market-dist="otc">上櫃</button></div>
+        </div>
+        <div class="market-distribution-summary" id="marketDistributionSummary">等待資料</div>
+        <div class="market-distribution-chart" id="marketDistributionChart"></div>
       </section>
       <section class="card market-dynamic-history-card">
         <div class="card-title">近 20 日市場軌跡 <span class="badge">Compact</span></div>
@@ -3547,7 +3561,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.6.15"></script>
+  <script src="./app.js?v=2.6.6.16"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5869,4 +5883,4 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 <!-- v2.6.6.1 — latest TPEx gap repair fallback hardening + actionable manual error surface. -->
 
 <!-- v2.6.6.2 — split manual latest-gap repair from XY warm to avoid one-request 60s timeout; targeted activity refresh and stale Path-audit recovery. -->
-<!-- v2.6.6.15 — Market Dynamic compact daily layer + Smart Screening market tab; Clean XY / Path 3.1 formulas unchanged. -->
+<!-- v2.6.6.16 — Market Dynamic compact daily layer + Smart Screening market tab; Clean XY / Path 3.1 formulas unchanged. -->
