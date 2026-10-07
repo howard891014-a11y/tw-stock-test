@@ -4145,7 +4145,7 @@ async function loadFundflowDw4(){
   try{const res=await fetch(`/api/dw4?horizons=5,10,15,20&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'dW4');}
   catch(e){console.warn('dW4 讀取失敗',e);return null;}
 }
-const FUND_FLOW_CLIENT_REV="2.6.6.23";
+const FUND_FLOW_CLIENT_REV="2.6.6.24";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4238,7 +4238,7 @@ function renderFundflowChart(){
   if(!fundflowXyData){if(loading){loading.classList.remove("hidden");loading.textContent="等待 XY 資料"}return}if(loading)loading.classList.add("hidden");
   const W=760,H=510,L=60,R=24,T=28,B=58,pw=W-L-R,ph=H-T-B;
   const allGroups=fundflowEligibleGroups().sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),selected=allGroups.find(g=>g.tagId===fundflowSelectedTagId)||null,groups=selected?[selected]:allGroups;
-  const selectedProjection=selected?.projection||null,anim=selected?fundflowFocusAnimationState():{history:1,future:1,hold:true};
+  const selectedProjection=selected?fundflowForecastProjection(selected,fundflowDw4Data,fundflowTrajectoryDays):null,anim=selected?fundflowFocusAnimationState():{history:1,future:1,hold:true};
   const zoomX=[],zoomY=[],rawY=[];for(const g of groups){zoomX.push(Number(g.x)||0);zoomY.push(Number(g.y)||0);rawY.push(Number(g.y)||0);for(const p of g.trajectory||[]){if(p.xAvailable===false||!Number.isFinite(Number(p.x)))continue;zoomX.push(Number(p.x)||0);zoomY.push(Number(p.y)||0);rawY.push(Number(p.y)||0)}}
   if(selectedProjection)for(const sc of fundflowProjectionScenarios(selectedProjection))for(const p of sc.points||[]){zoomX.push(Number(p.lowX)||Number(p.x)||0,Number(p.highX)||Number(p.x)||0);zoomY.push(Number(p.lowY)||Number(p.y)||0,Number(p.highY)||Number(p.y)||0);rawY.push(Number(p.lowY)||Number(p.y)||0,Number(p.highY)||Number(p.y)||0)}
   const rawYBound=fundflowNiceBound(rawY,2),zoomYBase=fundflowZoomBound(zoomY,{floor:2.5,cap:30,step:1,q:.94,pad:1.18}),zoomXFloor=selected?8:groups.length<=6?8:groups.length<=20?15:25,zoomXStep=selected?2:groups.length<=6?2:groups.length<=20?5:10,xBound=fundflowAxisMode==="raw"?100:fundflowZoomBound(zoomX,{floor:zoomXFloor,cap:100,step:zoomXStep,q:.94,pad:1.12}),yBound=fundflowAxisMode==="raw"?rawYBound:zoomYBase;
