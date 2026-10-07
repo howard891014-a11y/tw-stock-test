@@ -4126,27 +4126,16 @@ function renderFundflowBrowser(){
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
 let fundflowDw4Data=null;
-function fundflowForecastProjection(group,dw4,horizon=fundflowTrajectoryDays){
+function fundflowForecastProjection(group,dw4){
   if(!group||!dw4?.ok)return null;
-  const block=dw4?.horizonResults?.[String(horizon)]||dw4?.horizonResults?.[horizon];
-  const prediction=(block?.predictions||[]).find(p=>String(p.tagId)===String(group.tagId));
-  if(!prediction)return null;
-  const dx=Number(prediction.predDx),dy=Number(prediction.predDy),x=Number(group.x),y=Number(group.y);
-  if(![dx,dy,x,y].every(Number.isFinite))return null;
-  return {model:'forecast',predictionDate:prediction.predictionDate||dw4.predictionDate||'',direction:prediction.direction||'',scenarios:[{id:'forecast',direction:prediction.direction||'',points:[{horizon,x:x+dx,y:y+dy,dx,dy}]}]};
+  const x=Number(group.x),y=Number(group.y);if(![x,y].every(Number.isFinite))return null;
+  const points=[];
+  for(const horizon of [5,10,15,20]){const block=dw4?.horizonResults?.[String(horizon)]||dw4?.horizonResults?.[horizon],prediction=(block?.predictions||[]).find(p=>String(p.tagId)===String(group.tagId));if(!prediction)continue;const dx=Number(prediction.predDx),dy=Number(prediction.predDy),ux=Math.abs(Number(prediction.uncertaintyX)),uy=Math.abs(Number(prediction.uncertaintyY));if(![dx,dy].every(Number.isFinite))continue;const px=x+dx,py=y+dy;points.push({horizon,x:px,y:py,dx,dy,confidence:Number(prediction.confidence),confidenceN:Number(prediction.confidenceN)||0,lowX:px-(Number.isFinite(ux)?ux:0),highX:px+(Number.isFinite(ux)?ux:0),lowY:py-(Number.isFinite(uy)?uy:0),highY:py+(Number.isFinite(uy)?uy:0),direction:prediction.direction||''});}
+  if(!points.length)return null;return {model:'forecast',predictionDate:dw4.predictionDate||'',direction:points[0]?.direction||'',scenarios:[{id:'forecast',direction:points[0]?.direction||'',points}]};
 }
-function fundflowApplyDw4(data,dw4){
-  fundflowDw4Data=dw4?.ok?dw4:null;
-  for(const g of data?.groups||[]){g.legacyProjection=g.projection||null;g.projection=fundflowForecastProjection(g,dw4,fundflowTrajectoryDays);}
-  data.forecast={ok:Boolean(dw4?.ok),predictionDate:dw4?.predictionDate||'',horizon:fundflowTrajectoryDays};
-  return data;
-}
-async function loadFundflowDw4(horizon=fundflowTrajectoryDays){
-  const h=[5,10,15,20].includes(Number(horizon))?Number(horizon):5;
-  try{const res=await fetch(`/api/dw4?horizon=${h}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,`未來 ${h}D 預測`);}
-  catch(e){console.warn('dW4 讀取失敗',e);return null;}
-}
-const FUND_FLOW_CLIENT_REV="2.6.6.26";
+function fundflowApplyDw4(data,dw4){fundflowDw4Data=dw4?.ok?dw4:null;for(const g of data?.groups||[]){g.legacyProjection=g.projection||null;g.projection=fundflowForecastProjection(g,dw4);}data.forecast={ok:Boolean(dw4?.ok),predictionDate:dw4?.predictionDate||'',horizons:[5,10,15,20]};return data;}
+async function loadFundflowDw4(){try{const res=await fetch(`/api/dw4?horizons=5,10,15,20&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
+const FUND_FLOW_CLIENT_REV="2.6.6.27";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4239,7 +4228,7 @@ function renderFundflowChart(){
   if(!fundflowXyData){if(loading){loading.classList.remove("hidden");loading.textContent="等待 XY 資料"}return}if(loading)loading.classList.add("hidden");
   const W=760,H=510,L=60,R=24,T=28,B=58,pw=W-L-R,ph=H-T-B;
   const allGroups=fundflowEligibleGroups().sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),selected=allGroups.find(g=>g.tagId===fundflowSelectedTagId)||null,groups=selected?[selected]:allGroups;
-  const selectedProjection=selected?fundflowForecastProjection(selected,fundflowDw4Data,fundflowTrajectoryDays):null,anim=selected?fundflowFocusAnimationState():{history:1,future:1,hold:true};
+  const selectedProjection=selected?fundflowForecastProjection(selected,fundflowDw4Data):null,anim=selected?fundflowFocusAnimationState():{history:1,future:1,hold:true};
   const zoomX=[],zoomY=[],rawY=[];for(const g of groups){zoomX.push(Number(g.x)||0);zoomY.push(Number(g.y)||0);rawY.push(Number(g.y)||0);for(const p of g.trajectory||[]){if(p.xAvailable===false||!Number.isFinite(Number(p.x)))continue;zoomX.push(Number(p.x)||0);zoomY.push(Number(p.y)||0);rawY.push(Number(p.y)||0)}}
   if(selectedProjection)for(const sc of fundflowProjectionScenarios(selectedProjection))for(const p of sc.points||[]){zoomX.push(Number(p.lowX)||Number(p.x)||0,Number(p.highX)||Number(p.x)||0);zoomY.push(Number(p.lowY)||Number(p.y)||0,Number(p.highY)||Number(p.y)||0);rawY.push(Number(p.lowY)||Number(p.y)||0,Number(p.highY)||Number(p.y)||0)}
   const rawYBound=fundflowNiceBound(rawY,2),zoomYBase=fundflowZoomBound(zoomY,{floor:2.5,cap:30,step:1,q:.94,pad:1.18}),zoomXFloor=selected?8:groups.length<=6?8:groups.length<=20?15:25,zoomXStep=selected?2:groups.length<=6?2:groups.length<=20?5:10,xBound=fundflowAxisMode==="raw"?100:fundflowZoomBound(zoomX,{floor:zoomXFloor,cap:100,step:zoomXStep,q:.94,pad:1.12}),yBound=fundflowAxisMode==="raw"?rawYBound:zoomYBase;
@@ -4258,8 +4247,8 @@ function renderFundflowChart(){
     if(rawPts.length){const first=rawPts[0];if(anim.history<.025)svg.append(fundflowSvg("circle",{cx:sx(first.x),cy:sy(first.y),r:7,fill:color,class:"fundflow-focus-origin","aria-hidden":"true"}))}
     if(selectedProjection&&anim.future>0){
       const start={x:selected.x,y:selected.y},scenarios=fundflowProjectionScenarios(selectedProjection);
-      scenarios.slice(0,2).forEach((scenario,scenarioIndex)=>{const src=(scenario?.points||[]).slice(0,3),conePath=fundflowFutureConePath(start,src,sx,sy,anim.future),centerPath=fundflowFutureCenterPath(start,src,sx,sy,anim.future),klass=scenarioIndex===0?'is-primary':'is-secondary';if(conePath)svg.append(fundflowSvg("path",{d:conePath,class:`fundflow-future-cone ${klass}`,fill:scenarioIndex===0?color:"none",stroke:color,"aria-hidden":"true"}));if(centerPath)svg.append(fundflowSvg("path",{d:centerPath,class:`fundflow-future-path ${klass}`,stroke:color,"aria-hidden":"true"}));
-        src.forEach((p,i)=>{const h=Number(p.horizon)||[3,5,10][i]||3,threshold=Math.max(0,Math.min(1,h/10));if(anim.future+1e-6<threshold)return;const r=fundflowConeRadiusPx(p,sx,sy);svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:scenarioIndex===0?3.5:3,class:`fundflow-future-point ${klass}`,fill:scenarioIndex===0?color:"#fff",stroke:color,"aria-hidden":"true"}));svg.append(fundflowSvg("text",{x:sx(p.x)+Math.min(46,r)+4,y:sy(p.y)-4,class:`fundflow-future-label ${klass}`},`${h}D ${fundflowSignedPct(Number(p.dy))}`))});
+      scenarios.slice(0,2).forEach((scenario,scenarioIndex)=>{const src=(scenario?.points||[]).slice(0,4),conePath=fundflowFutureConePath(start,src,sx,sy,anim.future),centerPath=fundflowFutureCenterPath(start,src,sx,sy,anim.future),klass=scenarioIndex===0?'is-primary':'is-secondary';if(conePath)svg.append(fundflowSvg("path",{d:conePath,class:`fundflow-future-cone ${klass}`,fill:scenarioIndex===0?color:"none",stroke:color,"aria-hidden":"true"}));if(centerPath)svg.append(fundflowSvg("path",{d:centerPath,class:`fundflow-future-path ${klass}`,stroke:color,"aria-hidden":"true"}));
+        src.forEach((p,i)=>{const h=Number(p.horizon)||[5,10,15,20][i]||5,threshold=Math.max(0,Math.min(1,h/20));if(anim.future+1e-6<threshold)return;const r=fundflowConeRadiusPx(p,sx,sy);svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:scenarioIndex===0?3.5:3,class:`fundflow-future-point ${klass}`,fill:scenarioIndex===0?color:"#fff",stroke:color,"aria-hidden":"true"}));svg.append(fundflowSvg("text",{x:sx(p.x)+Math.min(46,r)+4,y:sy(p.y)-4,class:`fundflow-future-label ${klass}`},`${h}D ${Number.isFinite(Number(p.confidence))?Number(p.confidence).toFixed(1)+'%':'--'}`))});
       });
     }
     const latest=rawPts.at(-1)||selected;if(anim.history>=1)svg.append(fundflowSvg("circle",{cx:sx(latest.x),cy:sy(latest.y),r:7.1,class:"fundflow-point-current",fill:color,...common}));
@@ -4271,7 +4260,7 @@ function renderFundflowChart(){
 }
 function fundflowListHtml(groups){
   if(!groups.length)return "<p>目前沒有符合條件的業務。</p>";
-  return groups.slice(0,6).map(g=>{const leaders=(g.leaders||[]).slice(0,3).map(x=>x.name||x.code).filter(Boolean).join("、"),sel=g.tagId===fundflowSelectedTagId?" is-selected":"",proj=g.projection||{},path=fundflowPathState(g),fp=fundflowProjectionScenarios(proj)?.[0]?.points?.[0];return `<button type="button" class="fundflow-radar-item${sel}" data-fundflow-tag="${escNews(g.tagId)}"><b>${escNews(g.name||g.tagId)}</b><em>${proj?.direction?escNews(proj.direction):"--"}</em><small>${escNews(path.label)}｜${escNews(path.route)}｜X ${fundflowSignedX(g.x)} / Y ${fundflowSignedPct(g.y)}｜發動 ${fundflowFmt(g.activationRate,0)}% / E ${fundflowFmt(g.overheating,0)}${fp?`｜${fundflowTrajectoryDays}D ${fundflowSignedPct(fp.dy)}`:`｜${fundflowTrajectoryDays}D 尚無預測`}${leaders?`｜${escNews(leaders)}`:""}</small></button>`}).join("");
+  return groups.slice(0,6).map(g=>{const leaders=(g.leaders||[]).slice(0,3).map(x=>x.name||x.code).filter(Boolean).join("、"),sel=g.tagId===fundflowSelectedTagId?" is-selected":"",proj=g.projection||{},path=fundflowPathState(g),fp=fundflowProjectionScenarios(proj)?.[0]?.points?.[0];return `<button type="button" class="fundflow-radar-item${sel}" data-fundflow-tag="${escNews(g.tagId)}"><b>${escNews(g.name||g.tagId)}</b><em>${proj?.direction?escNews(proj.direction):"--"}</em><small>${escNews(path.label)}｜${escNews(path.route)}｜X ${fundflowSignedX(g.x)} / Y ${fundflowSignedPct(g.y)}｜發動 ${fundflowFmt(g.activationRate,0)}% / E ${fundflowFmt(g.overheating,0)}${fp?`｜${Number(fp.horizon)||5}D ${Number.isFinite(Number(fp.confidence))?Number(fp.confidence).toFixed(1)+'%':'--'}`:`｜${fundflowTrajectoryDays}D 尚無預測`}${leaders?`｜${escNews(leaders)}`:""}</small></button>`}).join("");
 }
 function renderFundflowXy(){
   const data=fundflowXyData;if(!data)return renderFundflowChart();const asOfText=data.asOf?String(data.asOf).replaceAll("-","/"):"--";setText("fundflowAsOf","");const badge=$("fundflowTagBadge");if(badge){badge.textContent=asOfText;badge.dataset.locked="1";}setText("fundflowEngineBadge",String(data.engineVersion||"XY v6.1").replace("xy-","XY "));
