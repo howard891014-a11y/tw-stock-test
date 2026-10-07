@@ -4055,7 +4055,8 @@ function fundflowPathState(g){
   // Path 3.1 never manufactures a >50% A. Direction-unclear is structural only:
   // (1) two non-trivial families point materially different ways, or (2) micro-paths are genuinely diffuse.
   const familyDiffuse=Boolean(projection?.diffuse);
-  if(opp.opposed||familyDiffuse)return {key:"direction-unclear",label:"方向不明",...meta};
+  // diffuse remains a confidence/chaos diagnostic, not a direction veto. Only a meaningful A/B opposition is direction-unclear.
+  if(opp.opposed)return {key:"direction-unclear",label:"方向不明",...meta};
 
   const capitalUp=dx3>=2||(Number.isFinite(aDx)&&aDx>=2),capitalFastUp=dx3>=4||(Number.isFinite(aDx)&&aDx>=4),capitalDown=dx3<=-4||(Number.isFinite(aDx)&&aDx<=-4),priceUp=dy3>=.8||(Number.isFinite(aDy)&&aDy>=.8),priceDown=dy3<=-1||(Number.isFinite(aDy)&&aDy<=-1)||(y<0&&x>=0);
   const capitalHolding=dx3>-4&&(!Number.isFinite(aDx)||aDx>-4),futureUpperRight=Number.isFinite(futureX)&&Number.isFinite(futureY)&&futureX>=0&&futureY>=0;
@@ -4124,7 +4125,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.6.14";
+const FUND_FLOW_CLIENT_REV="2.6.6.19";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4230,9 +4231,9 @@ function renderFundflowChart(){
   svg.append(fundflowSvg("text",{x:L+12,y:T+21,class:"fundflow-quadrant-label"},"法人賣・價格漲"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+21,class:"fundflow-quadrant-label","text-anchor":"end"},"法人買・價格漲"));svg.append(fundflowSvg("text",{x:L+12,y:T+ph-12,class:"fundflow-quadrant-label"},"法人賣・價格跌"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+ph-12,class:"fundflow-quadrant-label","text-anchor":"end"},"法人買・價格跌"));
   if(selected){
     const color=fundflowColor(selected.quadrant),rawPts=(selected.trajectory||[]).filter(p=>p.xAvailable!==false&&Number.isFinite(Number(p.x))).slice(-fundflowTrajectoryDays),pts=fundflowPartialPolyline(rawPts,anim.history),common={"data-fundflow-tag":selected.tagId,tabindex:"0",role:"button","aria-label":`${selected.name} XY 軌跡`};
-    if(pts.length>1){const coords=pts.map(p=>`${sx(p.x)},${sy(p.y)}`).join(" ");svg.append(fundflowSvg("polyline",{points:coords,class:"fundflow-typhoon-trail is-focus",stroke:color,opacity:.92,...common}))}
+    if(pts.length>1){const coords=pts.map(p=>`${sx(p.x)},${sy(p.y)}`).join(" ");svg.append(fundflowSvg("polyline",{points:coords,class:"fundflow-typhoon-trail is-focus",stroke:color,opacity:.38,...common}))}
     const visibleOriginal=Math.max(1,Math.min(rawPts.length,Math.floor(Math.max(0,Math.min(1,anim.history))*(Math.max(1,rawPts.length-1)))+1));
-    rawPts.slice(0,visibleOriginal).forEach((p,i)=>svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:i===visibleOriginal-1?4.6:3.5,fill:color,opacity:.82,class:"fundflow-point-old is-focus",...common})));
+    rawPts.slice(0,visibleOriginal).forEach((p,i)=>svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:i===visibleOriginal-1?4.6:3.5,fill:color,opacity:.46,class:"fundflow-point-old is-focus",...common})));
     if(rawPts.length){const first=rawPts[0];if(anim.history<.025)svg.append(fundflowSvg("circle",{cx:sx(first.x),cy:sy(first.y),r:7,fill:color,class:"fundflow-focus-origin","aria-hidden":"true"}))}
     if(selectedProjection&&anim.future>0){
       const start={x:selected.x,y:selected.y},scenarios=fundflowProjectionScenarios(selectedProjection);
