@@ -4125,7 +4125,7 @@ function renderFundflowBrowser(){
   if(more){more.classList.toggle("hidden",shown.length>=filtered.length);more.textContent=`顯示更多（${shown.length}/${filtered.length}）`}
   document.querySelectorAll("[data-fundflow-browser-scope]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowBrowserScope===fundflowBrowserScope));
 }
-const FUND_FLOW_CLIENT_REV="2.6.6.19";
+const FUND_FLOW_CLIENT_REV="2.6.6.20";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4577,7 +4577,21 @@ function renderFundflowValidation(data){
 async function runFundflowValidation(){
   if(fundflowValidationLoading)return;fundflowValidationLoading=true;
   const btn=$("runFundflowValidation"),status=$("fundflowValidationStatus");if(btn){btn.disabled=true;btn.textContent="驗證中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="讀取已保存的 causal Path audit 與 compact benchmark；不掃 raw stock×day…"}
-  try{const res=await fetch(`/api/sync-status?view=fundflow-audit&target=60&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:"no-store"}),data=await readJson(res,"XY / Path 驗證");renderFundflowValidation(data);saveFundflowValidation(data)}
+  try{
+    // Validation is also the self-repair entrypoint for a missing/stale Path audit.
+    // This is DB-only: it never refetches market raw history. A prior serverless timeout is resumable.
+    let warm=null,lastGatewayStatus=0;
+    for(let step=0;step<3;step++){
+      const warmRes=await fetch("/api/sync-status?action=fundflow-warm-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Warm":"1"}});
+      if([502,504].includes(Number(warmRes.status))){lastGatewayStatus=Number(warmRes.status);if(status){status.classList.add("is-warn");status.textContent=`Path audit 重建逾時（HTTP ${warmRes.status}），正在續跑已保存階段…`;}await new Promise(r=>setTimeout(r,500));continue;}
+      warm=await readJson(warmRes,"Path audit 重建");
+      if(!warm?.followupRequired)break;
+      if(status){status.classList.add("is-warn");status.textContent="compact / taxonomy 已就緒，正在續建 prepared snapshot / Path audit…";}
+      await new Promise(r=>setTimeout(r,250));
+    }
+    if(!warm&&lastGatewayStatus)throw new Error(`Path audit 重建持續逾時（HTTP ${lastGatewayStatus}），可再次按驗證續跑`);
+    const res=await fetch(`/api/sync-status?view=fundflow-audit&target=60&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:"no-store"}),data=await readJson(res,"XY / Path 驗證");renderFundflowValidation(data);saveFundflowValidation(data)
+  }
   catch(e){console.warn("XY / Path 驗證失敗",e);if(status){status.classList.add("is-error");status.textContent=`驗證失敗：${e?.message||e}`}}
   finally{fundflowValidationLoading=false;if(btn){btn.disabled=false;btn.textContent="執行 XY / Path 驗證"}}
 }
