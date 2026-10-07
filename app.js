@@ -4146,7 +4146,7 @@ async function loadFundflowDw4(horizon=fundflowTrajectoryDays){
   try{const res=await fetch(`/api/dw4?horizon=${h}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,`未來 ${h}D 預測`);}
   catch(e){console.warn('dW4 讀取失敗',e);return null;}
 }
-const FUND_FLOW_CLIENT_REV="2.6.6.25";
+const FUND_FLOW_CLIENT_REV="2.6.6.26";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
