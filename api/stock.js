@@ -1,4 +1,4 @@
-// StockZone v2.6.6.18
+// StockZone v2.6.6.19
 // Consolidated stock-detail API router. Keeps low-frequency stock routes out of
 // Vercel's top-level /api function budget without changing their handlers.
 const handlers = {
