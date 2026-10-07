@@ -39,8 +39,8 @@ assert.notEqual(weakSecondary.key,'direction-unclear','tiny reverse route must n
 const sub50ButCoherent={x:-2,y:2,dx3:3,dy3:1,projection:{mode:'path-family-cone-p70-point-line-area',diffuse:false,pathGap:18,scenarios:[sc('A',42,3,1,1,3),sc('B',20,2,.6,0,2.6)]}};
 assert.notEqual(key(sub50ButCoherent),'direction-unclear','A below 50% must remain literal and may still publish a direction when the structure is coherent');
 const diffuseFamily={x:-2,y:2,dx3:1,dy3:.2,projection:{mode:'path-family-cone-p70-point-line-area',diffuse:true,pathGap:2,scenarios:[sc('A',23,1,.2,-1,2.2)]}};
-assert.equal(key(diffuseFamily),'direction-unclear','genuinely dispersed micro-paths must remain direction-unclear');
+assert.notEqual(key(diffuseFamily),'direction-unclear','diffuse micro-paths are a confidence diagnostic and must not veto a usable primary direction');
 const sameDirectionFamilies={x:-2,y:2,dx3:3,dy3:1,projection:{mode:'path-family-cone-p70-point-line-area',diffuse:false,pathGap:15,scenarios:[sc('A',50,4,2,2,4),sc('B',35,3,1.7,1,3.7)]}};
 assert.notEqual(key(sameDirectionFamilies),'direction-unclear','two meaningful families moving in similar directions are not direction-unclear');
 
-console.log('Fundflow route classification v2.6.6.8 PASS — 8 states + structural conflict/diffusion unknown gate; no artificial A-family floor');
+console.log('Fundflow route classification v2.6.6.19 PASS — direction-unclear requires meaningful A/B opposition; diffuse remains confidence-only');
