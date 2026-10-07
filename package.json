@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.6.16",
+  "version": "2.6.6.17",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"
@@ -39,6 +39,7 @@
     "validate:v2668": "node scripts/validate-v2668-final-taxonomy-250d.js",
     "validate:taxonomy-final-freeze": "node scripts/validate-final-taxonomy-freeze.js",
     "validate:v26613": "node scripts/validate-v26613-retired-company.js",
-    "validate:v26614": "node scripts/validate-v26614.js"
+    "validate:v26614": "node scripts/validate-v26614.js",
+    "validate:dw4": "node scripts/validate-dw4.js"
   }
 }
