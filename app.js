@@ -393,7 +393,7 @@ async function repairTpexDisposalInBrowser(d,query,market){
 }
 async function disposal(query,market,price){
   const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??""),v:"2.5.4.14"});
-  const d=await readJson(await fetch(`/api/disposal?${params.toString()}`,{cache:"no-store"}),"處置資料");
+  const d=await readJson(await fetch(`/api/stock?action=disposal&${params.toString()}`,{cache:"no-store"}),"處置資料");
   return await repairTpexDisposalInBrowser(d,query,market);
 }
 function disposalToneClass(state){return state==="處置中"?"disposal-state-danger":state==="注意股票"||state==="注意股"?"disposal-state-watch":""}
@@ -545,7 +545,7 @@ async function fundamentals(query,market){
   const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
   let data=null;
   try{
-    data=await readJson(await fetch(`/api/fundamentals?${params.toString()}`,{cache:"no-store"}),"長期基本面");
+    data=await readJson(await fetch(`/api/stock?action=fundamentals&${params.toString()}`,{cache:"no-store"}),"長期基本面");
     if(fundamentalPayloadNeedsSupplement(data)){
       try{
         const supplement=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"長期基本面補充");
@@ -2794,7 +2794,7 @@ async function loadTechnical(data){
 }
 async function valuation(query,market,price){
   const params=new URLSearchParams({q:String(query||""),market:String(market||""),price:String(price??"")});
-  return await readJson(await fetch(`/api/valuation?${params.toString()}`,{cache:"no-store"}),"估值");
+  return await readJson(await fetch(`/api/stock?action=valuation&${params.toString()}`,{cache:"no-store"}),"估值");
 }
 function valuationNum(n){
   if(n===null||n===undefined||n==="")return null;
@@ -3202,7 +3202,7 @@ async function institutional(query,market="",force=false){
   const phase=taiwanMarketPhase(),holiday=phase.weekend||marketSessionForToday()?.status==="holiday";
   if(!force&&hit?.data&&(holiday||Date.now()-Number(hit.savedAt||0)<INSTITUTIONAL_CACHE_MS))return hit.data;
   const params=new URLSearchParams({q:code,market:String(market||"")});
-  const data=await readJson(await fetch(`/api/institutional?${params.toString()}`,{cache:"no-store"}),"法人動向");
+  const data=await readJson(await fetch(`/api/stock?action=institutional&${params.toString()}`,{cache:"no-store"}),"法人動向");
   await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});return data;
 }
 async function loadInstitutional(stock,force=false){
@@ -3605,7 +3605,7 @@ async function fetchTargetPayload(code,name){
   const cached=readTargetCache()[String(code)]?.rows||[];
   const recent=cached.length?"&recent=3":"";
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),28000);
-  try{const res=await fetch(`/api/targets?code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}${recent}`,{cache:"default",signal:controller.signal});return await readJson(res,"目標價")}finally{clearTimeout(timer)}
+  try{const res=await fetch(`/api/stock?action=targets&code=${encodeURIComponent(code||"")}&name=${encodeURIComponent(name||"")}${recent}`,{cache:"default",signal:controller.signal});return await readJson(res,"目標價")}finally{clearTimeout(timer)}
 }
 async function loadTargetPlay(code,name){
   const expected=String(code||"");
@@ -4185,8 +4185,15 @@ function fundflowConeRadiusPx(p,sx,sy){
 function fundflowCatmullPoint(a,b,c,d,t){const t2=t*t,t3=t2*t;return {x:.5*((2*b.x)+(-a.x+c.x)*t+(2*a.x-5*b.x+4*c.x-d.x)*t2+(-a.x+3*b.x-3*c.x+d.x)*t3),y:.5*((2*b.y)+(-a.y+c.y)*t+(2*a.y-5*b.y+4*c.y-d.y)*t2+(-a.y+3*b.y-3*c.y+d.y)*t3)};}
 function fundflowFutureCurveSamples(start,points,sx,sy,progress=1){
   const src=(points||[]).filter(Boolean),raw=[{x:Number(start?.x)||0,y:Number(start?.y)||0,r:0,h:0},...src.map(p=>({x:Number(p.x)||0,y:Number(p.y)||0,r:fundflowConeRadiusPx(p,sx,sy),h:Number(p.horizon)||10}))];if(raw.length<2)return [];
-  const nodes=raw.map(p=>({x:sx(p.x),y:sy(p.y),r:p.r,h:p.h})),p=Math.max(0,Math.min(1,Number(progress)||0)),maxU=(nodes.length-1)*p,count=Math.max(2,Math.ceil(64*p));const out=[];
-  for(let j=0;j<=count;j++){const u=maxU*(j/count),i=Math.min(nodes.length-2,Math.floor(u)),t=Math.max(0,Math.min(1,u-i)),a=nodes[Math.max(0,i-1)],b=nodes[i],c=nodes[i+1],d=nodes[Math.min(nodes.length-1,i+2)],pt=fundflowCatmullPoint(a,b,c,d,t),r=b.r+(c.r-b.r)*t;out.push({x:pt.x,y:pt.y,r:Math.max(0,r)});}return out;
+  // Future Path must represent the actual 0/3/5/10D nodes. Catmull-Rom can overshoot
+  // sparse nodes and manufacture loops/尖角 that do not exist in the forecast, so use
+  // bounded piecewise interpolation. Horizon spacing also makes 3D→5D shorter than 5D→10D.
+  const nodes=raw.map(p=>({x:sx(p.x),y:sy(p.y),r:p.r,h:p.h})),p=Math.max(0,Math.min(1,Number(progress)||0)),lastH=Math.max(1,nodes.at(-1)?.h||10),limit=lastH*p,out=[];
+  for(let i=0;i<nodes.length-1;i++){
+    const a=nodes[i],b=nodes[i+1];if(limit<a.h)break;const segEnd=Math.min(limit,b.h),span=Math.max(.001,b.h-a.h),frac=Math.max(0,Math.min(1,(segEnd-a.h)/span)),steps=Math.max(2,Math.ceil(12*frac));
+    for(let j=(out.length?1:0);j<=steps;j++){const t=frac*(j/steps);out.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,r:Math.max(0,a.r+(b.r-a.r)*t)});}if(limit<b.h)break;
+  }
+  return out;
 }
 function fundflowScreenPath(samples,{close=false}={}){const a=(samples||[]).filter(Boolean);if(!a.length)return '';let d=`M ${a[0].x.toFixed(2)} ${a[0].y.toFixed(2)}`;for(let i=1;i<a.length;i++)d+=` L ${a[i].x.toFixed(2)} ${a[i].y.toFixed(2)}`;return close?`${d} Z`:d;}
 function fundflowFutureConePath(start,points,sx,sy,progress=1){
@@ -4249,7 +4256,7 @@ function renderFundflowXy(){
   const groups=fundflowEligibleGroups({path:false}),early=groups.filter(g=>["institutional-layout","main-rise-confirmation"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),confirm=groups.filter(g=>fundflowPathState(g).key==="strong-continuation").sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),risk=groups.filter(g=>["early-reaction","pullback","weakening","direction-unclear","cold"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a));
   setText("fundflowPotentialCount",early.length);setText("fundflowMainlineCount",confirm.length);setText("fundflowRightCount",risk.length);setText("fundflowDaysCount",data.trajectoryDays||0);
   const a=$("fundflowPotentialList"),b=$("fundflowMainlineList"),c=$("fundflowRightList");if(a)a.innerHTML=fundflowListHtml(early);if(b)b.innerHTML=fundflowListHtml(confirm);if(c)c.innerHTML=fundflowListHtml(risk);
-  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v7"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY v8：X＝20D 法人中期資金位置，20D 真實正負決定左右；5D／1D法人只描述短期速度／加速度。Y＝近5日真實價格報酬。路線分類改用「目前 XY 位置＋近3日 ΔX/ΔY＋Future Path A 5D」；Path 3.1 不設 A 50% 人工門檻：A 就是真實最大家族機率。只有 A/B 都不可忽視且方向夾角明顯（約100°以上），或微路徑本身高度分散無法形成主家族，才判「方向不明」。價格發動率仍採等權投票：當日漲幅 > +0.2% 計1票。Future Path 3.1 採點→線→家族→機率→面；所有微路徑機率合計100%，同族直接加總，P70只決定預測面積。B只有形成不可忽視替代家族時才顯示。資料完整度只控制預測門檻與錐形寬度。相似歷史 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
+  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v7"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY v8：X＝20D 法人中期資金位置，20D 真實正負決定左右；5D／1D法人只描述短期速度／加速度。Y＝近5日真實價格報酬。路線分類改用「目前 XY 位置＋近3日 ΔX/ΔY＋Future Path A 5D」；Path 3.1 不設 A 50% 人工門檻：A 就是真實最大家族機率。只有 A/B 都不可忽視且方向夾角明顯（約100°以上），或微路徑極度分散且無法形成可用主家族，才判「方向不明」。價格發動率仍採等權投票：當日漲幅 > +0.2% 計1票。Future Path 3.1 採點→線→家族→機率→面；所有微路徑機率合計100%，同族直接加總，P70只決定預測面積。B只有形成不可忽視替代家族時才顯示。資料完整度只控制預測門檻與錐形寬度。相似歷史 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
   document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>{const active=fundflowScopes.has(btn.dataset.fundflowScope);btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",active?"true":"false")});document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));document.querySelectorAll("[data-fundflow-axis-mode]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowAxisMode===fundflowAxisMode));renderFundflowPhaseControls();renderFundflowChart();
 }
 function fundflowFactorHtml(factors,axis,priorFactors={},group={},priorPoint={}){
