@@ -531,3 +531,6 @@ body.view-overview .overview-only{display:block}
 
 /* v2.6.5.63 storage deep-audit + low-risk cleanup controls */
 .settings-storage-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.settings-storage-actions button{width:100%}@media(max-width:520px){.settings-storage-actions{grid-template-columns:1fr}}
+
+/* v2.6.6.22 — history is observed/solid; forecast is intentionally pale. */
+.fundflow-typhoon-trail.is-focus{stroke-opacity:.94!important}.fundflow-point-old.is-focus{opacity:.86!important}.fundflow-future-path{fill:none;stroke-opacity:.34!important;stroke-width:2.2;stroke-dasharray:6 5;pointer-events:none;vector-effect:non-scaling-stroke}.fundflow-future-point{opacity:.52!important}.fundflow-future-label{opacity:.68!important}
