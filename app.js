@@ -4133,14 +4133,19 @@ function fundflowForecastProjection(group,dw4){
   for(const horizon of [5,10,15,20]){const block=dw4?.horizonResults?.[String(horizon)]||dw4?.horizonResults?.[horizon],prediction=(block?.predictions||[]).find(p=>String(p.tagId)===String(group.tagId));if(!prediction)continue;const dx=Number(prediction.predDx),dy=Number(prediction.predDy),ux=Math.abs(Number(prediction.uncertaintyX)),uy=Math.abs(Number(prediction.uncertaintyY));if(![dx,dy].every(Number.isFinite))continue;const px=x+dx,band=prediction.provisionalYBand||null;
     // dW4 Plus Y center and interval are returned in raw percentage Y units.
     // The same Y values drive the plotted path, the detail and the shaded interval.
-    const centerY=Number(band?.centerY),lowerY=Number(band?.lowerY),upperY=Number(band?.upperY);
-    const py=Number.isFinite(centerY)?centerY:y+dy,plotDy=py-y;
-    points.push({horizon,x:px,y:py,dx,dy:plotDy,confidence:Number(prediction.confidence),confidenceN:Number(prediction.confidenceN)||0,lowX:px-(Number.isFinite(ux)?ux:0),highX:px+(Number.isFinite(ux)?ux:0),lowY:Number.isFinite(lowerY)?lowerY:py-(Number.isFinite(uy)?uy:0),highY:Number.isFinite(upperY)?upperY:py+(Number.isFinite(uy)?uy:0),direction:prediction.direction||''});}
+    // The provisional mean-reversion center is horizon-independent. Never replace
+    // the independently trained 5/10/15/20D ridge forecasts with that same level.
+    const py=y+dy;
+    const logY=v=>100*Math.log1p(v/100),rawY=v=>100*Math.expm1(v/100);
+    const half=band&&Number.isFinite(Number(band.halfWidthLog))?Math.abs(Number(band.halfWidthLog)):null;
+    const lower=half!==null&&py>-100?rawY(logY(py)-half):py-(Number.isFinite(uy)?uy:0);
+    const upper=half!==null&&py>-100?rawY(logY(py)+half):py+(Number.isFinite(uy)?uy:0);
+    points.push({horizon,x:px,y:py,dx,dy,confidence:Number(prediction.confidence),confidenceN:Number(prediction.confidenceN)||0,lowX:px-(Number.isFinite(ux)?ux:0),highX:px+(Number.isFinite(ux)?ux:0),lowY:lower,highY:upper,direction:prediction.direction||''});}
   if(!points.length)return null;return {model:'forecast',predictionDate:dw4.predictionDate||'',direction:points[0]?.direction||'',scenarios:[{id:'forecast',direction:points[0]?.direction||'',points}]};
 }
 function fundflowApplyDw4(data,dw4){fundflowDw4Data=dw4?.ok?dw4:null;for(const g of data?.groups||[]){g.legacyProjection=g.projection||null;g.projection=fundflowForecastProjection(g,dw4);}data.forecast={ok:Boolean(dw4?.ok),predictionDate:dw4?.predictionDate||'',horizons:[5,10,15,20]};return data;}
 async function loadFundflowDw4(){try{const res=await fetch(`/api/dw4?horizons=5,10,15,20&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.6.30";
+const FUND_FLOW_CLIENT_REV="2.6.6.31";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4263,11 +4268,13 @@ function renderFundflowChart(){
         // Shaded Y band uses the exact same sy() transform as center nodes and history.
         const shown=src.filter(p=>anim.future+1e-6>=Number(p.horizon)/20);
         if(scenarioIndex===0&&shown.length){
-          const bandNodes=[{x:start.x,lowY:start.y,highY:start.y},...shown];
-          const top=bandNodes.map(p=>({x:sx(p.x),y:sy(p.highY)}));
-          const bottom=bandNodes.slice().reverse().map(p=>({x:sx(p.x),y:sy(p.lowY)}));
-          const d=fundflowScreenPath([...top,...bottom],{close:true});
-          if(d)svg.append(fundflowSvg('path',{d,class:'fundflow-future-cone is-primary',fill:color,stroke:color,'aria-hidden':'true'}));
+          // Independent horizon X predictions need not be monotonic: a single
+          // joined polygon can fold over itself. Draw each vertical band locally.
+          for(const p of shown){
+            const cx=sx(p.x),top=sy(p.highY),bottom=sy(p.lowY);
+            if(![cx,top,bottom].every(Number.isFinite))continue;
+            svg.append(fundflowSvg('rect',{x:cx-6,y:Math.min(top,bottom),width:12,height:Math.max(1,Math.abs(bottom-top)),class:'fundflow-future-cone is-primary',fill:color,stroke:'none','aria-hidden':'true'}));
+          }
         }
         const centerPath=fundflowFutureCenterPath(start,src,sx,sy,anim.future);
         if(centerPath)svg.append(fundflowSvg('path',{d:centerPath,class:`fundflow-future-path ${klass}`,stroke:color,'aria-hidden':'true'}));
@@ -4341,7 +4348,7 @@ function renderFundflowDetail(){
   setText("fundflowDetailProjectionNote",pa&&p5a?`預測日 ${proj.predictionDate||fundflowDw4Data?.predictionDate||"--"}｜${fundflowTrajectoryDays}D ΔX ${fundflowSigned(p5a.dx,2)} / ΔY ${fundflowSignedPct(p5a.dy)}｜目標座標 X ${fundflowFmt(p5a.x)} / Y ${fundflowFmt(p5a.y)}｜方向 ${pa.direction||"--"}`:`目前此業務沒有可用的 ${fundflowTrajectoryDays}D 預測。`);
 
   const bandCandidate=(fundflowDw4Data?.horizonResults?.[String(fundflowTrajectoryDays)]?.predictions||[]).find(p=>String(p.tagId)===String(d.tagId))?.provisionalYBand;
-  if(bandCandidate){const node=$("fundflowDetailProjectionNote");if(node)node.textContent+=`｜dW4 Plus 暫定 Y Center ${fundflowFmt(bandCandidate.centerY,2)} / Band ${fundflowFmt(bandCandidate.lowerY,2)}～${fundflowFmt(bandCandidate.upperY,2)}（±1.25×10D波動；尚未樣本外驗證；不改既有預測路徑）`;}
+  if(bandCandidate){const node=$("fundflowDetailProjectionNote");if(node)node.textContent+=`｜dW4 Plus 暫定 Y Center ${fundflowFmt(bandCandidate.centerY,2)} / Band ${fundflowFmt(bandCandidate.lowerY,2)}～${fundflowFmt(bandCandidate.upperY,2)}（±1.25×10D波動；研究基準中心，圖上各天期仍依獨立dW4預測ΔY；尚未樣本外驗證）`;}
   const traj=d.trajectory||[],p3=traj[Math.max(0,traj.length-4)]||traj[0]||{},xf=$("fundflowXFactors"),yf=$("fundflowYFactors");if(xf)xf.innerHTML=fundflowFactorHtml(d.latest?.factors?.x,"x",p3?.factors?.x||{},d.latest||{},p3);if(yf)yf.innerHTML=fundflowFactorHtml(d.latest?.factors?.y,"y",p3?.factors?.y||{},d.latest||{},p3);
   const hist=$("fundflowDetailHistory");if(hist)hist.innerHTML=(d.trajectory||[]).map((p,i,arr)=>{const q=fundflowPointQuadrant(p.x,p.y);return `<div class="fundflow-history-item${i===arr.length-1?" latest":""}"><b>${escNews(String(p.date||"").slice(5).replace("-","/"))}</b><strong>X ${fundflowSignedX(p.x)}<br>Y ${fundflowSignedPct(p.y)}</strong><small>${escNews(fundflowQuadrantShort(q))} ${escNews(fundflowQuadrantMeaning(q))}｜發動 ${fundflowFmt(p.activationRate,0)}% / E ${fundflowFmt(p.overheating,0)}</small></div>`}).join("");
   renderFundflowCompanyList(d);
