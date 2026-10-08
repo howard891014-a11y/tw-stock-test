@@ -1042,6 +1042,7 @@ body{padding-bottom:68px}
   #overviewDecisionCard .overview-final-line span::before{width:28px!important;height:28px!important;flex-basis:28px!important;background-size:16px 16px!important}
 }
 
+ .stockzone-w3-on strong{color:#198754!important}.stockzone-w3-off strong{color:#c75b5b!important}
 </style>
 
 <style id="stockzone-v2509-page-modes">
@@ -3114,6 +3115,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">上漲 / 下跌</small></article>
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></article>
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></article>
+          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">大盤環境</span><strong id="marketW3Regime">待模型資料</strong><small id="marketW3Detail">W3 正式狀態尚未接入</small></article>
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></article>
         </div>
       </section>
@@ -3146,19 +3148,9 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
                 <button type="button" data-fundflow-scope="traditional" aria-pressed="false">傳產</button>
               </div>
             </div>
-            <div class="fundflow-control-row fundflow-phase-row" role="group" aria-label="未來路徑篩選">
-              <span class="fundflow-row-label fundflow-phase-caption">路徑</span>
-              <div class="fundflow-control-items">
-                <button class="active" type="button" data-fundflow-path="all">全部 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="cold">冷區 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="direction-unclear">方向不明 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="early-reaction">提前反應 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="institutional-layout">法人佈局 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="strong-continuation">強勢延續 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="main-rise-confirmation">主升確認 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="weakening">轉弱 <em data-fundflow-path-count>--</em></button>
-                <button type="button" data-fundflow-path="pullback">回檔 <em data-fundflow-path-count>--</em></button>
-              </div>
+            <div class="fundflow-control-row fundflow-phase-row" role="group" aria-label="九狀態篩選">
+              <span class="fundflow-row-label fundflow-phase-caption">九狀態</span>
+              <div class="fundflow-control-items"><button class="active" type="button" data-fundflow-path="all">全部 <em data-fundflow-path-count>--</em></button><button type="button" data-fundflow-path="sleep">😴 還在睡 <em data-fundflow-path-count>--</em></button><button type="button" data-fundflow-path="rebound">😈 富貴險中求 <em data-fundflow-path-count>--</em></button><button type="button" data-fundflow-path="potential">😎 可能有料 <em data-fundflow-path-count>--</em></button><button type="button" data-fundflow-path="ready">🚅 準備發車 <em data-fundflow-path-count>--</em></button><button type="button" data-fundflow-path="wait">🤚 先別急 <em data-fundflow-path-count>--</em></button><button type="button" data-fundflow-path="pullback">📉 可能回檔 <em data-fundflow-path-count>--</em></button><button type="button" data-fundflow-path="sneak">🫥 小心偷跑 <em data-fundflow-path-count>--</em></button><button type="button" data-fundflow-path="avoid">🫣 眼瞎才買 <em data-fundflow-path-count>--</em></button><button type="button" data-fundflow-path="gamble">☠️ 這是賭博不是投資 <em data-fundflow-path-count>--</em></button></div>
             </div>
             <div class="fundflow-control-row fundflow-days-row" role="group" aria-label="XY 軌跡日數">
               <span class="fundflow-row-label">軌跡</span>
