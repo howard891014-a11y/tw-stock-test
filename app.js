@@ -4130,12 +4130,17 @@ function fundflowForecastProjection(group,dw4){
   if(!group||!dw4?.ok)return null;
   const x=Number(group.x),y=Number(group.y);if(![x,y].every(Number.isFinite))return null;
   const points=[];
-  for(const horizon of [5,10,15,20]){const block=dw4?.horizonResults?.[String(horizon)]||dw4?.horizonResults?.[horizon],prediction=(block?.predictions||[]).find(p=>String(p.tagId)===String(group.tagId));if(!prediction)continue;const dx=Number(prediction.predDx),dy=Number(prediction.predDy),ux=Math.abs(Number(prediction.uncertaintyX)),uy=Math.abs(Number(prediction.uncertaintyY));if(![dx,dy].every(Number.isFinite))continue;const px=x+dx,py=y+dy;points.push({horizon,x:px,y:py,dx,dy,confidence:Number(prediction.confidence),confidenceN:Number(prediction.confidenceN)||0,lowX:px-(Number.isFinite(ux)?ux:0),highX:px+(Number.isFinite(ux)?ux:0),lowY:py-(Number.isFinite(uy)?uy:0),highY:py+(Number.isFinite(uy)?uy:0),direction:prediction.direction||''});}
+  for(const horizon of [5,10,15,20]){const block=dw4?.horizonResults?.[String(horizon)]||dw4?.horizonResults?.[horizon],prediction=(block?.predictions||[]).find(p=>String(p.tagId)===String(group.tagId));if(!prediction)continue;const dx=Number(prediction.predDx),dy=Number(prediction.predDy),ux=Math.abs(Number(prediction.uncertaintyX)),uy=Math.abs(Number(prediction.uncertaintyY));if(![dx,dy].every(Number.isFinite))continue;const px=x+dx,band=prediction.provisionalYBand||null;
+    // dW4 Plus Y center and interval are returned in raw percentage Y units.
+    // The same Y values drive the plotted path, the detail and the shaded interval.
+    const centerY=Number(band?.centerY),lowerY=Number(band?.lowerY),upperY=Number(band?.upperY);
+    const py=Number.isFinite(centerY)?centerY:y+dy,plotDy=py-y;
+    points.push({horizon,x:px,y:py,dx,dy:plotDy,confidence:Number(prediction.confidence),confidenceN:Number(prediction.confidenceN)||0,lowX:px-(Number.isFinite(ux)?ux:0),highX:px+(Number.isFinite(ux)?ux:0),lowY:Number.isFinite(lowerY)?lowerY:py-(Number.isFinite(uy)?uy:0),highY:Number.isFinite(upperY)?upperY:py+(Number.isFinite(uy)?uy:0),direction:prediction.direction||''});}
   if(!points.length)return null;return {model:'forecast',predictionDate:dw4.predictionDate||'',direction:points[0]?.direction||'',scenarios:[{id:'forecast',direction:points[0]?.direction||'',points}]};
 }
 function fundflowApplyDw4(data,dw4){fundflowDw4Data=dw4?.ok?dw4:null;for(const g of data?.groups||[]){g.legacyProjection=g.projection||null;g.projection=fundflowForecastProjection(g,dw4);}data.forecast={ok:Boolean(dw4?.ok),predictionDate:dw4?.predictionDate||'',horizons:[5,10,15,20]};return data;}
 async function loadFundflowDw4(){try{const res=await fetch(`/api/dw4?horizons=5,10,15,20&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.6.29";
+const FUND_FLOW_CLIENT_REV="2.6.6.30";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4219,6 +4224,8 @@ function fundflowNiceBound(values,floor=1){
 }
 function fundflowQuantile(values,q=.95){const a=(values||[]).map(v=>Math.abs(Number(v))).filter(Number.isFinite).sort((a,b)=>a-b);if(!a.length)return 0;if(a.length===1)return a[0];const p=Math.max(0,Math.min(1,q))*(a.length-1),lo=Math.floor(p),hi=Math.ceil(p),t=p-lo;return a[lo]*(1-t)+a[hi]*t}
 function fundflowZoomBound(values,{floor=1,cap=Infinity,step=1,q=.95,pad=1.16}={}){const a=(values||[]).map(v=>Math.abs(Number(v))).filter(Number.isFinite),base=a.length<12?Math.max(0,...a):fundflowQuantile(a,q),wanted=Math.max(floor,Math.min(cap,base*pad)),unit=Math.max(.0001,Number(step)||1);return Math.max(floor,Math.min(cap,Math.ceil(wanted/unit)*unit))}
+function fundflowLogY(v){const n=Number(v);return Number.isFinite(n)&&n>-100?100*Math.log1p(n/100):NaN;}
+function fundflowRawY(v){return 100*Math.expm1(Number(v)/100);}
 function fundflowAxisTick(v,{percent=false}={}){const n=Number(v)||0,abs=Math.abs(n),d=abs>=10?0:abs>=1?1:2;return `${n>0?'+':''}${n.toFixed(d)}${percent?'%':''}`;}
 function fundflowSignedPct(v,d=2){const n=Number(v);if(!Number.isFinite(n))return '--';return `${n>0?'+':''}${n.toFixed(d)}%`;}
 function fundflowSignedX(v,d=0){const n=Number(v);if(!Number.isFinite(n))return '--';return `${n>0?'+':''}${n.toFixed(d)}`;}
@@ -4229,15 +4236,19 @@ function renderFundflowChart(){
   const W=760,H=510,L=60,R=24,T=28,B=58,pw=W-L-R,ph=H-T-B;
   const allGroups=fundflowEligibleGroups().sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),selected=allGroups.find(g=>g.tagId===fundflowSelectedTagId)||null,groups=selected?[selected]:allGroups;
   const selectedProjection=selected?fundflowForecastProjection(selected,fundflowDw4Data):null,anim=selected?fundflowFocusAnimationState():{history:1,future:1,hold:true};
-  const zoomX=[],zoomY=[],rawY=[];for(const g of groups){zoomX.push(Number(g.x)||0);zoomY.push(Number(g.y)||0);rawY.push(Number(g.y)||0);for(const p of g.trajectory||[]){if(p.xAvailable===false||!Number.isFinite(Number(p.x)))continue;zoomX.push(Number(p.x)||0);zoomY.push(Number(p.y)||0);rawY.push(Number(p.y)||0)}}
-  if(selectedProjection)for(const sc of fundflowProjectionScenarios(selectedProjection))for(const p of sc.points||[]){zoomX.push(Number(p.x)||0);zoomY.push(Number(p.y)||0);rawY.push(Number(p.y)||0)}
+  const zoomX=[],zoomY=[],rawY=[];
+  const addY=v=>{const ly=fundflowLogY(v);if(Number.isFinite(ly)){zoomY.push(ly);rawY.push(ly)}};
+  for(const g of groups){zoomX.push(Number(g.x)||0);addY(g.y);for(const p of g.trajectory||[]){if(p.xAvailable===false||!Number.isFinite(Number(p.x)))continue;zoomX.push(Number(p.x)||0);addY(p.y)}}
+  if(selectedProjection)for(const sc of fundflowProjectionScenarios(selectedProjection))for(const p of sc.points||[]){zoomX.push(Number(p.x)||0);addY(p.y);addY(p.lowY);addY(p.highY)}
   const rawYBound=fundflowNiceBound(rawY,2),zoomYBase=fundflowZoomBound(zoomY,{floor:2.5,cap:30,step:1,q:.94,pad:1.18}),zoomXFloor=selected?8:groups.length<=6?8:groups.length<=20?15:25,zoomXStep=selected?2:groups.length<=6?2:groups.length<=20?5:10,xBound=fundflowAxisMode==="raw"?100:fundflowZoomBound(zoomX,{floor:zoomXFloor,cap:100,step:zoomXStep,q:.94,pad:1.12}),yBound=fundflowAxisMode==="raw"?rawYBound:zoomYBase;
-  const sx=x=>L+((Math.max(-xBound,Math.min(xBound,Number(x)||0))+xBound)/(2*xBound))*pw,sy=y=>T+((yBound-Math.max(-yBound,Math.min(yBound,Number(y)||0)))/(2*yBound))*ph;
+  const sx=x=>L+((Math.max(-xBound,Math.min(xBound,Number(x)||0))+xBound)/(2*xBound))*pw;
+  const syLog=ly=>T+((yBound-Math.max(-yBound,Math.min(yBound,Number(ly)||0)))/(2*yBound))*ph;
+  const sy=y=>syLog(fundflowLogY(y));
   [{x:L,y:T,w:pw/2,h:ph/2,fill:"#f5f3fb"},{x:L+pw/2,y:T,w:pw/2,h:ph/2,fill:"#f0faf5"},{x:L,y:T+ph/2,w:pw/2,h:ph/2,fill:"#f6f8fb"},{x:L+pw/2,y:T+ph/2,w:pw/2,h:ph/2,fill:"#fff8eb"}].forEach(q=>svg.append(fundflowSvg("rect",{x:q.x,y:q.y,width:q.w,height:q.h,fill:q.fill})));
   const xTicks=[-xBound,-xBound/2,0,xBound/2,xBound],yTicks=[-yBound,-yBound/2,0,yBound/2,yBound];
   xTicks.forEach(v=>{svg.append(fundflowSvg("line",{x1:sx(v),y1:T,x2:sx(v),y2:T+ph,class:v===0?"fundflow-midline":"fundflow-gridline"}));svg.append(fundflowSvg("text",{x:sx(v),y:H-31,class:"fundflow-axis-label","text-anchor":"middle"},fundflowAxisTick(v)))});
-  yTicks.forEach(v=>{svg.append(fundflowSvg("line",{x1:L,y1:sy(v),x2:L+pw,y2:sy(v),class:v===0?"fundflow-midline":"fundflow-gridline"}));svg.append(fundflowSvg("text",{x:L-10,y:sy(v)+4,class:"fundflow-axis-label","text-anchor":"end"},fundflowAxisTick(v,{percent:true})))});
-  svg.append(fundflowSvg("text",{x:L+pw/2,y:H-8,class:"fundflow-axis-label","text-anchor":"middle"},`法人 robust 資金強度 X${fundflowAxisMode==="zoom"?"（Zoom）":"（Raw -100～+100）"} →`));svg.append(fundflowSvg("text",{x:15,y:T+ph/2,class:"fundflow-axis-label",transform:`rotate(-90 15 ${T+ph/2})`,"text-anchor":"middle"},`近5日題材價格漲跌幅 Y${fundflowAxisMode==="zoom"?"（Zoom）":"（Raw）"} (%) →`));
+  yTicks.forEach(v=>{svg.append(fundflowSvg("line",{x1:L,y1:sy(v),x2:L+pw,y2:sy(v),class:v===0?"fundflow-midline":"fundflow-gridline"}));svg.append(fundflowSvg("text",{x:L-10,y:syLog(v)+4,class:"fundflow-axis-label","text-anchor":"end"},fundflowAxisTick(fundflowRawY(v),{percent:true})))});
+  svg.append(fundflowSvg("text",{x:L+pw/2,y:H-8,class:"fundflow-axis-label","text-anchor":"middle"},`法人 robust 資金強度 X${fundflowAxisMode==="zoom"?"（Zoom）":"（Raw -100～+100）"} →`));svg.append(fundflowSvg("text",{x:15,y:T+ph/2,class:"fundflow-axis-label",transform:`rotate(-90 15 ${T+ph/2})`,"text-anchor":"middle"},`近5日題材價格漲跌幅 Log-Y${fundflowAxisMode==="zoom"?"（Zoom）":"（Raw）"}（刻度為%） →`));
   svg.append(fundflowSvg("text",{x:L+12,y:T+21,class:"fundflow-quadrant-label"},"法人賣・價格漲"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+21,class:"fundflow-quadrant-label","text-anchor":"end"},"法人買・價格漲"));svg.append(fundflowSvg("text",{x:L+12,y:T+ph-12,class:"fundflow-quadrant-label"},"法人賣・價格跌"));svg.append(fundflowSvg("text",{x:L+pw-12,y:T+ph-12,class:"fundflow-quadrant-label","text-anchor":"end"},"法人買・價格跌"));
   if(selected){
     const color=fundflowColor(selected.quadrant),rawPts=(selected.trajectory||[]).filter(p=>p.xAvailable!==false&&Number.isFinite(Number(p.x))).slice(-fundflowTrajectoryDays),pts=fundflowPartialPolyline(rawPts,anim.history),common={"data-fundflow-tag":selected.tagId,tabindex:"0",role:"button","aria-label":`${selected.name} XY 軌跡`};
@@ -4247,8 +4258,33 @@ function renderFundflowChart(){
     if(rawPts.length){const first=rawPts[0];if(anim.history<.025)svg.append(fundflowSvg("circle",{cx:sx(first.x),cy:sy(first.y),r:7,fill:color,class:"fundflow-focus-origin","aria-hidden":"true"}))}
     if(selectedProjection&&anim.future>0){
       const start={x:selected.x,y:selected.y},scenarios=fundflowProjectionScenarios(selectedProjection);
-      scenarios.slice(0,2).forEach((scenario,scenarioIndex)=>{const src=(scenario?.points||[]).slice(0,4),centerPath=fundflowFutureCenterPath(start,src,sx,sy,anim.future),klass=scenarioIndex===0?'is-primary':'is-secondary';if(centerPath)svg.append(fundflowSvg("path",{d:centerPath,class:`fundflow-future-path ${klass}`,stroke:color,"aria-hidden":"true"}));
-        src.forEach((p,i)=>{const h=Number(p.horizon)||[5,10,15,20][i]||5,threshold=Math.max(0,Math.min(1,h/20));if(anim.future+1e-6<threshold)return;svg.append(fundflowSvg("circle",{cx:sx(p.x),cy:sy(p.y),r:scenarioIndex===0?3.5:3,class:`fundflow-future-point ${klass}`,fill:scenarioIndex===0?color:"#fff",stroke:color,"aria-hidden":"true"}));svg.append(fundflowSvg("text",{x:sx(p.x)+8,y:sy(p.y)-4,class:`fundflow-future-label ${klass}`},`${h}D ${Number.isFinite(Number(p.confidence))?Number(p.confidence).toFixed(1)+'%':'--'}`))});
+      scenarios.slice(0,2).forEach((scenario,scenarioIndex)=>{
+        const src=(scenario?.points||[]).slice().sort((a,b)=>Number(a.horizon)-Number(b.horizon)),klass=scenarioIndex===0?'is-primary':'is-secondary';
+        // Shaded Y band uses the exact same sy() transform as center nodes and history.
+        const shown=src.filter(p=>anim.future+1e-6>=Number(p.horizon)/20);
+        if(scenarioIndex===0&&shown.length){
+          const bandNodes=[{x:start.x,lowY:start.y,highY:start.y},...shown];
+          const top=bandNodes.map(p=>({x:sx(p.x),y:sy(p.highY)}));
+          const bottom=bandNodes.slice().reverse().map(p=>({x:sx(p.x),y:sy(p.lowY)}));
+          const d=fundflowScreenPath([...top,...bottom],{close:true});
+          if(d)svg.append(fundflowSvg('path',{d,class:'fundflow-future-cone is-primary',fill:color,stroke:color,'aria-hidden':'true'}));
+        }
+        const centerPath=fundflowFutureCenterPath(start,src,sx,sy,anim.future);
+        if(centerPath)svg.append(fundflowSvg('path',{d:centerPath,class:`fundflow-future-path ${klass}`,stroke:color,'aria-hidden':'true'}));
+        // Put labels into distinct lanes, with a short leader to the actual node.
+        const labels=[];
+        src.forEach((p,i)=>{
+          const h=Number(p.horizon)||[5,10,15,20][i]||5;
+          if(anim.future+1e-6<h/20)return;
+          const px=sx(p.x),py=sy(p.y);
+          svg.append(fundflowSvg('circle',{cx:px,cy:py,r:scenarioIndex===0?3.5:3,class:`fundflow-future-point ${klass}`,fill:scenarioIndex===0?color:'#fff',stroke:color,'aria-hidden':'true'}));
+          if(scenarioIndex!==0)return;
+          let tx=Math.max(L+30,Math.min(L+pw-95,px+12)),ty=py-14;
+          for(let tries=0;tries<8&&labels.some(a=>Math.abs(a.x-tx)<83&&Math.abs(a.y-ty)<19);tries++)ty=py-14+(tries%2?1:-1)*Math.ceil(tries/2)*22;
+          ty=Math.max(T+12,Math.min(T+ph-8,ty));labels.push({x:tx,y:ty});
+          svg.append(fundflowSvg('line',{x1:px,y1:py,x2:tx-2,y2:ty-4,stroke:color,'stroke-opacity':'.45','stroke-width':'.8','aria-hidden':'true'}));
+          svg.append(fundflowSvg('text',{x:tx,y:ty,class:`fundflow-future-label ${klass}`},`${h}D ${Number.isFinite(Number(p.confidence))?Number(p.confidence).toFixed(1)+'%':'--'}`));
+        });
       });
     }
     const latest=rawPts.at(-1)||selected;if(anim.history>=1)svg.append(fundflowSvg("circle",{cx:sx(latest.x),cy:sy(latest.y),r:7.1,class:"fundflow-point-current",fill:color,...common}));
