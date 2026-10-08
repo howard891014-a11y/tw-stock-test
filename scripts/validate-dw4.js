@@ -3,3 +3,5 @@ assert.equal(d.DW4_VERSION,'dw4-final-oos-2026-10-07');assert.equal(d.X_ALPHA,10
 assert.equal(d.direction(150,0),'向右');assert.equal(d.direction(150,.9),'右上');assert.equal(d.direction(0,.9),'向上');assert.equal(d.direction(-150,0),'向左');assert.equal(d.regime('2026-06-26'),1);assert.equal(d.regime('2026-06-29'),-1);assert.equal(d.regime('2026-07-31'),1);
 const rows=[];for(let i=0;i<40;i++)rows.push({x:i,target:2*i+3});const m=d.ridgeFit(rows,['x'],'target',0);assert(m);assert(Math.abs(d.predict(m,{x:10})-23)<1e-6);
 console.log('dW4 Final validation passed');
+
+const flat=Array.from({length:10},()=>({y_score:10}));const band=d.provisionalYBand(flat);assert(band);assert(Math.abs(band.centerY-10)<1e-9);assert(band.lowerY<10&&band.upperY>10);assert.equal(band.multiplier,1.25);assert.equal(d.provisionalYBand(flat.slice(0,9)),null);console.log('dW4 Plus provisional band validation passed');
