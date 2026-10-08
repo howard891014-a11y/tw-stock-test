@@ -34,7 +34,7 @@ const core=fs.readFileSync('lib/fundflow-xy.js','utf8'),app=fs.readFileSync('app
 for(const token of ['buildHistoricalPathErrorCalibration','nearestPathCandidates','buildPathFamilies','pathFamilyCompatible','pathTrajectoryDistance','pathFamilyAdaptiveRadius','PATH_CONE_COVERAGE=0.70','causal-nearest-path-error-p70','path-family-cone-p70-point-line-area','institutional:0.50, activation:0.30, history:0.20','PATH_MIN_COMPLETENESS_PCT'])assert(core.includes(token),`Path 3.1 token missing: ${token}`);
 for(const token of ['fundflowProjectionScenarios','fundflow-future-path','fundflow-future-point','fundflow-future-cone','fundflowFutureConePath','fundflowStartFocusAnimation','fundflowPathState','fundflowFutureCenterPath'])assert(app.includes(token)||html.includes(token)||css.includes(token),`Path 3.1 forecast UI token missing: ${token}`);
 assert(app.includes('scenarios.slice(0,1).forEach'),'new dW4 Plus UI must not render legacy secondary A/B path');
-assert(app.includes('const envelope=fundflowFutureConePath'),'XY envelope must be rendered');
+assert(app.includes('fundflowAppendUnionEnvelope(svg,start,src,sx,sy,anim.future,color)'),'XY ellipse union envelope must be rendered');
 assert(app.includes('const centerPath=fundflowFutureCenterPath'),'independent horizon center path must be rendered');
 assert(!core.includes('.62*histProb+.24*trendSim'),'retired history-dominant direction formula remains');
 const signalBlock=core.slice(core.indexOf('function currentSignalState'),core.indexOf('function directionEvidenceScores'));
