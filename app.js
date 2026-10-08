@@ -4145,7 +4145,7 @@ function fundflowForecastProjection(group,dw4){
 }
 function fundflowApplyDw4(data,dw4){fundflowDw4Data=dw4?.ok?dw4:null;for(const g of data?.groups||[]){g.legacyProjection=g.projection||null;g.projection=fundflowForecastProjection(g,dw4);}data.forecast={ok:Boolean(dw4?.ok),predictionDate:dw4?.predictionDate||'',horizons:[5,10,15,20]};return data;}
 async function loadFundflowDw4(){try{const res=await fetch(`/api/dw4?horizons=5,10,15,20&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.6.33";
+const FUND_FLOW_CLIENT_REV="2.6.6.34";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4217,35 +4217,40 @@ function fundflowFutureCurveSamples(start,points,sx,sy,progress=1){
   return out;
 }
 function fundflowScreenPath(samples,{close=false}={}){const a=(samples||[]).filter(Boolean);if(!a.length)return '';let d=`M ${a[0].x.toFixed(2)} ${a[0].y.toFixed(2)}`;for(let i=1;i<a.length;i++)d+=` L ${a[i].x.toFixed(2)} ${a[i].y.toFixed(2)}`;return close?`${d} Z`:d;}
+// Return independent X/Y ellipses sampled along the predicted centers. The SVG
+// clipPath performs a true visual UNION; no offset polygon can self-intersect.
 function fundflowFutureConePath(start,points,sx,sy,progress=1){
-  const src=(points||[]).filter(Boolean).sort((a,b)=>Number(a.horizon)-Number(b.horizon));
-  if(!src.length)return '';
+  const src=(points||[]).filter(Boolean).slice().sort((a,b)=>Number(a.horizon)-Number(b.horizon));
+  if(!src.length)return [];
   const endH=20*Math.max(0,Math.min(1,Number(progress)||0));
-  const nodes=[{h:0,x:Number(start.x),y:Number(start.y),rx:0,ry:0},...src.map(p=>({h:Number(p.horizon),x:Number(p.x),y:Number(p.y),rx:Math.abs(sx(p.highX)-sx(p.lowX))/2,ry:Math.abs(sy(p.highY)-sy(p.lowY))/2}))];
-  const sampled=[];
+  const nodes=[{h:0,x:sx(start.x),y:sy(start.y),rx:0,ry:0},...src.map(p=>({h:Number(p.horizon),x:sx(p.x),y:sy(p.y),rx:Math.abs(sx(p.highX)-sx(p.lowX))/2,ry:Math.abs(sy(p.highY)-sy(p.lowY))/2}))];
+  const samples=[];
   for(let i=1;i<nodes.length;i++){
     const a=nodes[i-1],b=nodes[i];if(endH<=a.h)break;
-    const fraction=Math.min(1,(endH-a.h)/Math.max(.001,b.h-a.h));
-    const steps=Math.max(2,Math.ceil(12*fraction));
-    for(let j=sampled.length?1:0;j<=steps;j++){
+    const fraction=Math.max(0,Math.min(1,(endH-a.h)/Math.max(.001,b.h-a.h)));
+    const distance=Math.hypot(b.x-a.x,b.y-a.y)*fraction;
+    const minRadius=Math.max(1,Math.min(a.rx||b.rx||1,a.ry||b.ry||1,b.rx||1,b.ry||1));
+    const steps=Math.max(12,Math.min(180,Math.ceil(distance/Math.max(1.5,minRadius*.32))));
+    for(let j=samples.length?1:0;j<=steps;j++){
       const t=fraction*j/steps;
-      sampled.push({x:sx(a.x+(b.x-a.x)*t),y:sy(a.y+(b.y-a.y)*t),rx:a.rx+(b.rx-a.rx)*t,ry:a.ry+(b.ry-a.ry)*t});
+      samples.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,rx:Math.max(.15,a.rx+(b.rx-a.rx)*t),ry:Math.max(.15,a.ry+(b.ry-a.ry)*t)});
     }
     if(fraction<1)break;
   }
-  if(sampled.length<2)return '';
-  // Continuous envelope of independent axis-aligned X/Y ellipses along the
-  // piecewise-linear center trajectory; do not draw individual ellipses.
-  const up=[],down=[];
-  for(let i=0;i<sampled.length;i++){
-    const p=sampled[i],prev=sampled[Math.max(0,i-1)],next=sampled[Math.min(sampled.length-1,i+1)];
-    const dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1;
-    const nx=-dy/len,ny=dx/len,den=Math.hypot(p.rx*nx,p.ry*ny)||1;
-    const ox=p.rx*p.rx*nx/den,oy=p.ry*p.ry*ny/den;
-    up.push({x:p.x+ox,y:p.y+oy});down.push({x:p.x-ox,y:p.y-oy});
-  }
-  return fundflowScreenPath([...up,...down.reverse()],{close:true});
+  return samples;
 }
+function fundflowAppendUnionEnvelope(svg,start,points,sx,sy,progress,color){
+  const samples=fundflowFutureConePath(start,points,sx,sy,progress);
+  if(samples.length<2)return;
+  // A clipPath unions overlapping ellipses without opacity accumulation,
+  // self-crossing contours, disconnected triangles or miter spikes.
+  const clipId=`fundflow-envelope-${++fundflowEnvelopeClipSequence}`;
+  const defs=fundflowSvg('defs',{}),clip=fundflowSvg('clipPath',{id:clipId,clipPathUnits:'userSpaceOnUse'});
+  for(const p of samples)clip.append(fundflowSvg('ellipse',{cx:p.x,cy:p.y,rx:p.rx,ry:p.ry}));
+  defs.append(clip);svg.append(defs);
+  svg.append(fundflowSvg('rect',{x:0,y:0,width:760,height:510,fill:color,class:'fundflow-future-cone is-primary','clip-path':`url(#${clipId})`,'aria-hidden':'true'}));
+}
+let fundflowEnvelopeClipSequence=0;
 function fundflowFutureCenterPath(start,points,sx,sy,progress=1){return fundflowScreenPath(fundflowFutureCurveSamples(start,points,sx,sy,progress));}
 function fundflowNiceBound(values,floor=1){
   const maxAbs=Math.max(floor,...(values||[]).map(v=>Math.abs(Number(v)||0)))*1.12;if(!Number.isFinite(maxAbs)||maxAbs<=0)return floor;
@@ -4291,8 +4296,7 @@ function renderFundflowChart(){
         const src=(scenario?.points||[]).slice().sort((a,b)=>Number(a.horizon)-Number(b.horizon)),klass=scenarioIndex===0?'is-primary':'is-secondary';
         // A single continuous XY envelope; individual ellipses and guides are hidden.
         if(scenarioIndex===0){
-          const envelope=fundflowFutureConePath(start,src,sx,sy,anim.future);
-          if(envelope)svg.append(fundflowSvg('path',{d:envelope,class:'fundflow-future-cone is-primary',fill:color,stroke:'none','aria-hidden':'true'}));
+          fundflowAppendUnionEnvelope(svg,start,src,sx,sy,anim.future,color);
         }
         const centerPath=fundflowFutureCenterPath(start,src,sx,sy,anim.future);
         if(centerPath)svg.append(fundflowSvg('path',{d:centerPath,class:`fundflow-future-path ${klass}`,stroke:color,'aria-hidden':'true'}));
