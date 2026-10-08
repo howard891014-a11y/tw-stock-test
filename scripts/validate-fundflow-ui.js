@@ -11,7 +11,9 @@ for(const token of ['消費性電子','data-fundflow-axis-mode="zoom"','data-fun
 for(const token of ['fundflowPathState','fundflowPathAngle','fundflowFutureOpposed','fundflowAxisMode','fundflowZoomBound','fundflow-typhoon-trail','fundflow-future-cone','fundflowStartFocusAnimation','fundflowFocusAnimationState','fundflowPartialPolyline']) if(!app.includes(token)&&!css.includes(token)&&!html.includes(token))errors.push(`missing Path 3.1 XY UI token ${token}`);
 for(const old of ['data-fundflow-phase="germination"','data-fundflow-phase="potential"','data-fundflow-phase="mainline"','冷區／方向未明','過熱／冷卻 <em data-fundflow-phase-count']) if(html.includes(old))errors.push(`old phase UI still visible: ${old}`);
 for(const old of ['data-fundflow-path="capital-leading"','data-fundflow-path="price-leading"','data-fundflow-path="resonance-up"','data-fundflow-path="strong-hold"','data-fundflow-path="capital-retreat"','data-fundflow-path="chaos"']) if(html.includes(old))errors.push(`old route control still visible: ${old}`);
-if(!html.includes('點開：原點→歷史→A/B 颱風路徑循環動畫'))errors.push('focus animation legend text missing');
+if(!html.includes('淡色區：XY 外包絡帶'))errors.push('dW4 Plus XY envelope legend missing');
+if(html.includes('Future Path A 5D 一起判讀'))errors.push('retired A/B forecast default note remains');
+if(!app.includes('scenarios.slice(0,1).forEach'))errors.push('legacy secondary A/B route must not render');
 for(const token of ['XY v8','法人 20D robust 資金位置','20D正負鎖左右','價格發動率','等權投票','> +0.2%','資料完整度','讀取共用 XY snapshot'])if(!app.includes(token)&&!html.includes(token))errors.push(`missing v7 semantics token ${token}`);
 if(app.includes('loadFundflowCoverage'))errors.push('retired fundflow coverage/sync-status loader still present');
 if(html.includes('虛線：模型傾向'))errors.push('old projected legend text still visible');
