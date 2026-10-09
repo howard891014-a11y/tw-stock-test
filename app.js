@@ -4433,7 +4433,7 @@ function renderMarketDynamic(){
   set("marketDynamicDateBadge",d.date||"--");
   const w3=stockzoneW3Regime(),w3Label={on:"多頭環境",normal:"多空震盪",off:"風險升溫"};
   set("marketW3Regime",w3Label[w3]||"待模型資料");
-  set("marketW3Detail",w3?"W3 市場環境｜非買賣指令":"W3 正式狀態尚未接入｜不以行情猜測");
+  set("marketW3Detail",w3?"W3 正式公式｜依當日資料計算":"W3 原始資料尚未更新至當日｜不沿用舊訊號");
   const w3Card=$("marketW3Regime")?.closest(".market-dynamic-topic-card");
   if(w3Card){w3Card.classList.toggle("stockzone-w3-on",w3==="on");w3Card.classList.toggle("stockzone-w3-off",w3==="off");}
   set("marketTaiex",marketFmtIndex(d.taiexClose));
