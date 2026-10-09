@@ -7,6 +7,7 @@ const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readResearchCompactHistoryStatus, readFundflowValidationAudit, syncFinalTaxonomyAndBuildDiagnostic } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = require('../lib/storage-policy');
+const {backfillResearch500D}=require('../lib/research-500d-backfill');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -747,6 +748,14 @@ module.exports=async function handler(req,res){
       return res.status(warm.ok?200:503).json({...warm,manual:true});
     }
 
+    if(action==='research-500d-backfill-manual'){
+      if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
+      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
+      const result=await backfillResearch500D({sql:getSql(),batchDays:8});
+      return res.status(200).json(result);
+    }
     if(action==='fundflow-clean-rebuild-manual'){
       // One-time clean XY v2 rebuild from existing raw/reference history. It writes isolated XY2 tables first,
       // verifies clean snapshots/history, then deletes only legacy XY/Path derived rows. Raw histories are never touched.
