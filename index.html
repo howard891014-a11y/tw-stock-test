@@ -2702,6 +2702,10 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 </style>
 <style id="sz-2673-css">
 .sz-settings-fold{border:1px solid #e3e8ee;border-radius:16px;margin:14px 0;background:#fff;overflow:hidden}.sz-settings-fold>summary{cursor:pointer;padding:18px 16px;font-size:16px;font-weight:700;color:#243349;list-style:none;display:flex;align-items:center;justify-content:space-between}.sz-settings-fold>summary::-webkit-details-marker{display:none}.sz-settings-fold>summary:after{content:'⌄';font-size:22px;color:#8493a6}.sz-settings-fold[open]>summary:after{content:'⌃'}.sz-fold-body{padding:0 14px 16px}.sz-fold-body .settings-manual-update{margin:12px 0}.sz-w3-health{margin-top:8px;font-weight:700;font-size:13px;color:#66788a}.sz-w3-health.is-updated{color:#178359}.sz-w3-health.is-error{color:#bc4646}.sz-w3-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.sz-w3-facts>div{min-width:0}.sz-w3-facts span{display:block;font-size:11px;color:#8290a1;margin-bottom:4px}.sz-w3-facts strong{font-size:12px;color:#253449;overflow-wrap:anywhere}.sz-w3-table-wrap{overflow-x:auto;max-height:360px}.sz-w3-table{width:100%;font-size:12px;border-collapse:collapse}.sz-w3-table th,.sz-w3-table td{padding:8px 5px;text-align:left;border-bottom:1px solid #e9edf2;white-space:nowrap}.sz-w3-record-meta{font-size:12px;color:#64748b;margin-bottom:12px}#szW3Download{margin-top:12px}
+</style><style id="stockzone-v2674-market-layout">
+.market-dynamic-page .market-dynamic-master-card{padding:24px 28px!important}.market-dynamic-page .market-dynamic-grid{display:flex!important;flex-direction:column;gap:26px}.market-dynamic-page .md-main-row{display:grid;grid-template-columns:2fr 1fr 1fr}.market-dynamic-page .md-secondary-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.market-dynamic-page .md-stat{min-width:0;padding:8px 20px;border:0;background:none;box-shadow:none;display:flex;flex-direction:column;justify-content:flex-start}.market-dynamic-page .md-main-row>*+*,.market-dynamic-page .md-secondary-row>*+*{border-left:1px solid #e4e9ef}.market-dynamic-page .md-main-row>*:first-child,.market-dynamic-page .md-secondary-row>*:first-child{padding-left:8px}.market-dynamic-page .market-dynamic-kicker{font-size:14px;letter-spacing:0;font-weight:750;color:#71819a}.market-dynamic-page .md-stat strong{font-size:clamp(21px,2.5vw,31px);line-height:1.25;margin:9px 0 7px;color:#12223e}.market-dynamic-page .md-lead strong{font-size:clamp(32px,4vw,54px);white-space:nowrap}.market-dynamic-page .md-stat small{font-size:13px;line-height:1.7;color:#71819a}.market-dynamic-page .md-stat.is-up strong{color:#e14949}.market-dynamic-page .md-stat.is-down strong{color:#18a66a}.market-dynamic-page .md-w3-value{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.market-dynamic-page .md-w3-value strong{color:#18a66a}.market-dynamic-page .md-w3-value .sz-w3-health{font-size:11px;margin:0;padding:4px 9px;border-radius:9px;background:#e9f8ef}.market-dynamic-page .market-dynamic-history-card .card-title{font-size:19px;font-weight:800}
+@media(max-width:800px){.market-dynamic-page .md-main-row{grid-template-columns:1.5fr 1fr}.market-dynamic-page .md-lead{grid-row:span 2}.market-dynamic-page .md-main-row>*:last-child{border-top:1px solid #e4e9ef}.market-dynamic-page .md-secondary-row{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:18px}.market-dynamic-page .md-secondary-row>*:nth-child(3){border-left:0}}
+@media(max-width:520px){.market-dynamic-page .market-dynamic-master-card{padding:18px!important}.market-dynamic-page .md-main-row{grid-template-columns:1fr 1fr}.market-dynamic-page .md-lead{grid-column:1/-1;grid-row:auto;border-bottom:1px solid #e4e9ef;padding-bottom:16px}.market-dynamic-page .md-main-row>*:nth-child(2){border-left:0}.market-dynamic-page .md-main-row>*:last-child{border-top:0}.market-dynamic-page .md-stat{padding:8px 10px}.market-dynamic-page .md-secondary-row{gap:14px 0}.market-dynamic-page .md-secondary-row>*:nth-child(3),.market-dynamic-page .md-secondary-row>*:nth-child(4){border-top:1px solid #e4e9ef;padding-top:15px}.market-dynamic-page .md-lead strong{font-size:40px}.market-dynamic-page .md-stat strong{font-size:23px}.market-dynamic-page .market-dynamic-kicker{font-size:12px}.market-dynamic-page .md-stat small{font-size:11px}}
 </style></head>
 <body>
 <div class="app-shell">
@@ -3112,14 +3116,23 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       <section class="card market-dynamic-master-card">
         <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon market-dynamic-title-icon" aria-hidden="true"></i><span>大盤動態</span></span><span class="badge" id="marketDynamicDateBadge">--</span></div>
         <div class="market-dynamic-grid">
-          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">TAIEX</span><strong id="marketTaiex">--</strong><small id="marketTaiexChange">等待資料</small></article>
-          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">趨勢</span><strong id="marketTrend">--</strong><small id="marketTrendDetail">5D / 20D</small></article>
-          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">上漲 / 下跌</small></article>
-          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></article>
-          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></article>
-          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">大盤環境</span><strong id="marketW3Regime">待模型資料</strong><div class="sz-w3-health" id="marketW3Health">等待更新</div><div class="sz-w3-facts"><div><span>資料交易日</span><strong id="marketW3TradeDate">--</strong></div><div><span>模型計算時間</span><strong id="marketW3Calculated">--</strong></div><div><span>上次狀態切換</span><strong id="marketW3SwitchDate">--</strong></div><div><span>連續維持</span><strong id="marketW3HeldDays">--</strong></div></div></article>
-          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></article>
+          <div class="md-main-row">
+            <div class="md-stat md-lead"><span class="market-dynamic-kicker">TAIEX 加權指數</span><strong id="marketTaiex">--</strong><small id="marketTaiexChange">等待資料</small></div>
+            <div class="md-stat"><span class="market-dynamic-kicker">大盤漲跌趨勢</span><strong id="marketTrend">--</strong><small id="marketTrendDetail">5D / 20D</small></div>
+            <div class="md-stat"><span class="market-dynamic-kicker">市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">上漲 / 下跌</small></div>
+          </div>
+          <div class="md-secondary-row">
+            <div class="md-stat"><span class="market-dynamic-kicker">外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></div>
+            <div class="md-stat"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></div>
+            <div class="md-stat"><span class="market-dynamic-kicker">大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong><span class="sz-w3-health" id="marketW3Health">等待更新</span></div><small>資料交易日 <span id="marketW3TradeDate">--</span></small><small>上次狀態切換 <span id="marketW3SwitchDate">--</span></small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
+            <div class="md-stat"><span class="market-dynamic-kicker">資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></div>
+          </div>
         </div>
+      </section>
+
+      <section class="card market-dynamic-history-card">
+        <div class="card-title">近 20 日市場軌跡 <span class="badge">Compact</span></div>
+        <div class="market-dynamic-table-wrap"><table class="market-dynamic-table"><thead><tr><th>日期</th><th>加權</th><th>漲跌</th><th>廣度</th><th>外資</th></tr></thead><tbody id="marketDynamicHistory"><tr><td colspan="5">等待資料</td></tr></tbody></table></div>
       </section>
       <section class="card market-distribution-card">
         <div class="market-distribution-head">
@@ -3128,10 +3141,6 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         </div>
         <div class="market-distribution-summary" id="marketDistributionSummary">等待資料</div>
         <div class="market-distribution-chart" id="marketDistributionChart"></div>
-      </section>
-      <section class="card market-dynamic-history-card">
-        <div class="card-title">近 20 日市場軌跡 <span class="badge">Compact</span></div>
-        <div class="market-dynamic-table-wrap"><table class="market-dynamic-table"><thead><tr><th>日期</th><th>加權</th><th>漲跌</th><th>廣度</th><th>外資</th></tr></thead><tbody id="marketDynamicHistory"><tr><td colspan="5">等待資料</td></tr></tbody></table></div>
       </section>
     </article>
     <article class="detail-panel fundflow-page" data-view-panel="fundflow">
@@ -3485,7 +3494,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   <div class="settings-ready-grid"><span id="historyLiveReady">20D Live</span><span id="historyBacktestReady">近期 Raw</span><span id="historyResearchReady">500D Research</span></div>
   <small class="settings-history-note" id="historyProgressNote">Raw 採 bounded retention；500D 研究使用窄欄位 numeric compact history，長期個股股價沿用 Yahoo 5Y Browser cache。</small>
 </section>
-<details class="sz-settings-fold" id="szW3Records"><summary>W3 運算紀錄</summary><div class="sz-fold-body"><div id="szW3RecordMeta" class="sz-w3-record-meta">尚未載入運算紀錄</div><div class="sz-w3-table-wrap"><table class="sz-w3-table"><thead><tr><th>交易日</th><th>大盤環境</th><th>運算時間</th><th>結果</th></tr></thead><tbody id="szW3RecordRows"></tbody></table></div><button type="button" id="szW3Download">下載 W3 CSV</button></div></details>
+<details class="sz-settings-fold" id="szW3Records"><summary>W3 運算紀錄</summary><div class="sz-fold-body"><div id="szW3RecordMeta" class="sz-w3-record-meta">尚未載入運算紀錄</div><div id="szW3Storage" class="sz-w3-record-meta">Neon 容量：讀取中｜警戒 10 MB｜管理目標 20 MB</div><div class="sz-w3-table-wrap"><table class="sz-w3-table"><thead><tr><th>交易日</th><th>大盤環境</th><th>運算時間</th><th>結果</th></tr></thead><tbody id="szW3RecordRows"></tbody></table></div><button type="button" id="szW3Download">下載 W3 CSV</button></div></details>
 <details class="sz-settings-fold" id="szDeveloperMode"><summary>開發者模式</summary><div class="sz-fold-body"><section class="settings-manual-update settings-validation" aria-label="資金流資料修復與驗證">
   <div class="settings-manual-update-head"><span>資金流資料修復 / 驗證</span><small>開發驗收</small></div>
   <div class="settings-manual-update-box">

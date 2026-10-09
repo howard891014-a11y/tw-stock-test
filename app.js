@@ -4440,6 +4440,7 @@ function renderW3Verification(){
  const put=(id,v)=>{const e=$(id);if(e)e.textContent=v||'--'};
  put('marketW3TradeDate',dataDate);put('marketW3Calculated',szDateTaiwan(computed));
  put('marketW3SwitchDate',w.lastSwitchDate||'尚無切換紀錄');put('marketW3HeldDays',Number.isFinite(Number(w.heldTradingDays))?`${w.heldTradingDays} 個交易日`:'--');
+ const storage=$('szW3Storage');if(storage){const bytes=Number(w.storageBytes);storage.textContent=Number.isFinite(bytes)?`Neon W3：${(bytes/1048576).toFixed(3)} MB / 20 MB｜警戒 10 MB｜每日結果長期保留`:'Neon W3 容量尚未取得｜警戒 10 MB｜管理目標 20 MB';storage.style.color=bytes>=10*1048576?'#b45309':''}
  const meta=$('szW3RecordMeta');if(meta)meta.textContent=`W3 正式版｜${records.length} 筆｜最新資料 ${dataDate||'--'}｜${status}`;
  const rows=$('szW3RecordRows');if(rows){rows.replaceChildren();for(const r of [...records].reverse().slice(0,500)){
  const tr=document.createElement('tr');for(const v of [r.date,szW3Label(r.regime),szDateTaiwan(r.computedAt),r.status==='computed'?'已運算':'待驗證']){const td=document.createElement('td');td.textContent=v||'--';tr.appendChild(td)}rows.appendChild(tr)
@@ -4453,18 +4454,18 @@ function renderMarketDynamic(){
   const w3=stockzoneW3Regime(),w3Label={on:"多頭環境",normal:"多空震盪",off:"風險升溫"};
   set("marketW3Regime",w3Label[w3]||"待模型資料");
   renderW3Verification();
-  const w3Card=$("marketW3Regime")?.closest(".market-dynamic-topic-card");
+  const w3Card=$("marketW3Regime")?.closest(".md-stat");
   if(w3Card){w3Card.classList.toggle("stockzone-w3-on",w3==="on");w3Card.classList.toggle("stockzone-w3-off",w3==="off");}
   set("marketTaiex",marketFmtIndex(d.taiexClose));
   set("marketTaiexChange",`${marketFmtPct(d.changePct)}｜成交 ${marketNum(d.tradeValue)===null?"--":(marketNum(d.tradeValue)/1e8).toFixed(0)+" 億"}`);
   set("marketTrend",marketFmtPct(d.ret20));
   set("marketTrendDetail",`5D ${marketFmtPct(d.ret5)}｜20MA ${marketFmtPct(d.ma20Gap)}｜60MA ${marketFmtPct(d.ma60Gap)}`);
-  marketTone($("marketTrend")?.closest(".market-dynamic-topic-card"),d.ret20);
+  marketTone($("marketTrend")?.closest(".md-stat"),d.ret20);
   set("marketBreadth",marketNum(d.advanceRatio)===null?"--":marketNum(d.advanceRatio).toFixed(1)+"%");
   set("marketBreadthDetail",`上 ${d.up||0}｜下 ${d.down||0}｜5D ${marketNum(d.breadth5)===null?"--":marketNum(d.breadth5).toFixed(1)+"%"}`);
   set("marketForeign",marketFmtMoney(d.foreignNet));
   set("marketInstitutionDetail",`投信 ${marketFmtMoney(d.trustNet)}｜自營 ${marketFmtMoney(d.dealerNet)}`);
-  marketTone($("marketForeign")?.closest(".market-dynamic-topic-card"),d.foreignNet);
+  marketTone($("marketForeign")?.closest(".md-stat"),d.foreignNet);
   set("marketRisk",marketFmtPct(d.drawdown20));
   set("marketRiskDetail",`20D 波動 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}｜20D 回撤`);
   set("marketCoverage",marketNum(d.coverage)===null?"--":marketNum(d.coverage).toFixed(1)+"%");
