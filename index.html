@@ -2700,7 +2700,9 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 .market-distribution-card{padding:20px 22px!important}.market-distribution-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.market-distribution-tabs{display:inline-flex;gap:6px;padding:4px;background:#f5f7fa;border:1px solid #e5eaf0;border-radius:12px}.market-distribution-tabs button{border:0;background:transparent;color:#7a899d;font-weight:800;padding:7px 14px;border-radius:9px}.market-distribution-tabs button.active{background:#fff;color:#1f6fd6;box-shadow:0 1px 5px rgba(31,78,121,.10)}.market-distribution-summary{font-size:12px;color:#718096;font-weight:800;margin:4px 0 12px}.market-distribution-chart{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:7px;align-items:end;min-height:190px;padding:12px 4px 0}.market-dist-bin{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0;height:170px}.market-dist-count{font-size:11px;font-weight:800;color:#4a5a70;margin-bottom:6px}.market-dist-bar-wrap{height:112px;width:100%;display:flex;align-items:flex-end;justify-content:center}.market-dist-bar{width:min(26px,78%);min-height:2px;border-radius:6px 6px 3px 3px;background:#a9b3c0}.market-dist-bin.neg .market-dist-bar{background:#35b76f}.market-dist-bin.pos .market-dist-bar{background:#ed5a5a}.market-dist-label{font-size:9px;line-height:1.2;color:#7b899b;margin-top:7px;text-align:center;white-space:nowrap}
 @media(max-width:600px){.market-distribution-card{padding:16px!important}.market-distribution-chart{gap:3px;min-height:165px;padding-left:0;padding-right:0}.market-dist-bin{height:148px}.market-dist-bar-wrap{height:94px}.market-dist-count{font-size:9px}.market-dist-label{font-size:8px;transform:rotate(-30deg);transform-origin:top center;margin-top:9px}.market-distribution-tabs button{padding:6px 11px}}
 </style>
-</head>
+<style id="sz-2673-css">
+.sz-settings-fold{border:1px solid #e3e8ee;border-radius:16px;margin:14px 0;background:#fff;overflow:hidden}.sz-settings-fold>summary{cursor:pointer;padding:18px 16px;font-size:16px;font-weight:700;color:#243349;list-style:none;display:flex;align-items:center;justify-content:space-between}.sz-settings-fold>summary::-webkit-details-marker{display:none}.sz-settings-fold>summary:after{content:'⌄';font-size:22px;color:#8493a6}.sz-settings-fold[open]>summary:after{content:'⌃'}.sz-fold-body{padding:0 14px 16px}.sz-fold-body .settings-manual-update{margin:12px 0}.sz-w3-health{margin-top:8px;font-weight:700;font-size:13px;color:#66788a}.sz-w3-health.is-updated{color:#178359}.sz-w3-health.is-error{color:#bc4646}.sz-w3-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.sz-w3-facts>div{min-width:0}.sz-w3-facts span{display:block;font-size:11px;color:#8290a1;margin-bottom:4px}.sz-w3-facts strong{font-size:12px;color:#253449;overflow-wrap:anywhere}.sz-w3-table-wrap{overflow-x:auto;max-height:360px}.sz-w3-table{width:100%;font-size:12px;border-collapse:collapse}.sz-w3-table th,.sz-w3-table td{padding:8px 5px;text-align:left;border-bottom:1px solid #e9edf2;white-space:nowrap}.sz-w3-record-meta{font-size:12px;color:#64748b;margin-bottom:12px}#szW3Download{margin-top:12px}
+</style></head>
 <body>
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
@@ -3115,7 +3117,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">上漲 / 下跌</small></article>
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></article>
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></article>
-          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">大盤環境</span><strong id="marketW3Regime">待模型資料</strong><small id="marketW3Detail">W3 尚缺正式即時計算公式</small></article>
+          <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">大盤環境</span><strong id="marketW3Regime">待模型資料</strong><div class="sz-w3-health" id="marketW3Health">等待更新</div><div class="sz-w3-facts"><div><span>資料交易日</span><strong id="marketW3TradeDate">--</strong></div><div><span>模型計算時間</span><strong id="marketW3Calculated">--</strong></div><div><span>上次狀態切換</span><strong id="marketW3SwitchDate">--</strong></div><div><span>連續維持</span><strong id="marketW3HeldDays">--</strong></div></div></article>
           <article class="market-dynamic-topic-card"><span class="market-dynamic-kicker">資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></article>
         </div>
       </section>
@@ -3474,8 +3476,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <div class="overlay" id="overlay"></div>
 <div class="modal-backdrop hidden" id="settingsModal"><div class="modal-card settings-card">
 <div class="modal-head"><strong>設定</strong><button id="closeSettings" type="button">×</button></div>
-<div class="settings-row"><span>市場資料</span><strong>盤中官方 MIS／盤後 DB-first</strong></div>
-<div class="settings-row"><span>基本面來源</span><strong id="fundamentalSource">基本面來源待補</strong></div>
+<details class="sz-settings-fold" id="szDataSources"><summary>資料來源</summary><div class="sz-fold-body"><div class="settings-row"><span>市場資料</span><strong>盤中 TWSE／TPEx 官方 MIS<br>盤後 Neon DB-first</strong></div><div class="settings-row"><span>基本面來源</span><strong>TWSE／TPEx 官方 OpenAPI<br>MOPS 備援</strong></div></div></details>
 <section class="settings-history" aria-label="歷史資料進度">
   <div class="settings-history-head"><span>歷史資料進度</span><small id="historyProgressUpdated">讀取中</small></div>
   <div class="settings-history-row"><span>股價</span><div class="settings-progress-track"><i id="historyPriceBar"></i></div><strong id="historyPriceValue">-- / 120D</strong><small id="historyPriceDetail">上市 --｜上櫃 --</small></div>
@@ -3484,7 +3485,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   <div class="settings-ready-grid"><span id="historyLiveReady">20D Live</span><span id="historyBacktestReady">近期 Raw</span><span id="historyResearchReady">500D Research</span></div>
   <small class="settings-history-note" id="historyProgressNote">Raw 採 bounded retention；500D 研究使用窄欄位 numeric compact history，長期個股股價沿用 Yahoo 5Y Browser cache。</small>
 </section>
-<section class="settings-manual-update settings-validation" aria-label="資金流資料修復與驗證">
+<details class="sz-settings-fold" id="szW3Records"><summary>W3 運算紀錄</summary><div class="sz-fold-body"><div id="szW3RecordMeta" class="sz-w3-record-meta">尚未載入運算紀錄</div><div class="sz-w3-table-wrap"><table class="sz-w3-table"><thead><tr><th>交易日</th><th>大盤環境</th><th>運算時間</th><th>結果</th></tr></thead><tbody id="szW3RecordRows"></tbody></table></div><button type="button" id="szW3Download">下載 W3 CSV</button></div></details>
+<details class="sz-settings-fold" id="szDeveloperMode"><summary>開發者模式</summary><div class="sz-fold-body"><section class="settings-manual-update settings-validation" aria-label="資金流資料修復與驗證">
   <div class="settings-manual-update-head"><span>資金流資料修復 / 驗證</span><small>開發驗收</small></div>
   <div class="settings-manual-update-box">
     <p>Clean XY v2 已固定後不再因 Path 改版重建 raw XY。`.36` 只需要用既有 compact history 更新 Path / prepared snapshot；驗證直接讀已保存 Path audit 與 compact benchmark，不再掃全市場 raw stock×day。</p>
@@ -3512,9 +3514,9 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   </div>
 </section>
 <section class="settings-manual-update settings-validation" aria-label="Neon 儲存空間稽核">
-  <div class="settings-manual-update-head"><span>Neon Storage Audit</span><small>400MB 目標｜安全 retention</small></div>
+  <div class="settings-manual-update-head"><span>Neon Storage Audit</span><small>1GB 上限｜安全 retention</small></div>
   <div class="settings-manual-update-box">
-    <p>.59 採固定安全窗：股價 120D、法人 120D、信用 90D、Activity 80D；stock compact 45D，重要 topic research compact 最多 250D。個股長期價格維持 Yahoo 5Y／Browser IndexedDB，不重複塞 Neon。</p>
+    <p>.59 採固定安全窗：股價 120D、法人 120D、信用 90D、Activity 80D；stock compact 45D，重要 topic research compact 最多 500D。個股長期價格維持 Yahoo 5Y／Browser IndexedDB，不重複塞 Neon。</p>
     <div class="settings-storage-actions"><button id="manualStorageDeepAudit" type="button">執行深度檢查</button><button id="manualStorageMaintenance" type="button">執行安全整理</button><button id="manualStorageLegacyCleanup" type="button">執行低風險清理</button></div>
     <small class="settings-manual-update-status" id="manualStorageDeepAuditStatus">尚未執行深度檢查；此操作只讀，不刪資料。</small>
     <pre class="settings-validation-details" id="neonStorageDeepDetails" hidden></pre>
@@ -3524,6 +3526,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
     <pre class="settings-validation-details" id="neonStorageDetails" hidden></pre>
   </div>
 </section>
+</div></details>
 </div></div>
 <div class="modal-backdrop hidden" id="targetEditModal"><div class="modal-card">
 <div class="modal-head"><strong>修改目標價資料</strong><button id="closeTargetEdit" type="button">×</button></div>
