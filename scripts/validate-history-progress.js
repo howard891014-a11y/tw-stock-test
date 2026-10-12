@@ -7,7 +7,9 @@ for(const id of ['historyProgressUpdated','historyPriceBar','historyPriceValue',
 }
 assert(html.includes('settings-history'),'history progress must live inside Settings');
 assert(!html.includes('overview-history-progress'),'history progress must not be added to main layout');
-assert(app.includes('/api/sync-status?view=flow-data-health'),'settings progress must read unified health endpoint');
+assert(app.includes("getJsonWithin('history-raw-progress')"),'raw history must use lightweight independent endpoint');
+assert(app.includes("getJsonWithin('research-500d-progress')"),'500D progress must use independent endpoint');
+assert(app.includes('Promise.allSettled([rawPromise,researchPromise])'),'one progress failure must not cancel the other');
 assert(app.includes('loadHistoryProgress(false)'),'opening Settings must load progress');
 assert(app.includes('targetMap={price:Number(targets.priceRaw||120),institutional:Number(targets.institutionalRaw||120),credit:Number(targets.creditRaw||90)}'),'progress bars must use per-layer bounded raw targets');
 assert(html.includes('500D Research'),'settings must show 500D compact research target');
