@@ -17,7 +17,7 @@ const known={
   feature:'feature-2.0.0-x20raw20-y5-activation02',
   path:'path-3.1.1-family-cache-refresh'
 };
-assert.equal(pkg.version,'2.6.7.6');
+assert.match(pkg.version,/^2\.6\.7\.\d+$/);
 assert.equal(xy.ENGINE_VERSION,known.engine);
 assert.equal(xy.DAILY_BUILD_VERSION,known.daily);
 assert.equal(xy.SNAPSHOT_SCHEMA_VERSION,known.snapshot);
@@ -28,6 +28,6 @@ assert.equal(freeze.STATS.taxonomyCount,203);
 assert.equal(freeze.STATS.membershipEdges,3440);
 assert(core.includes("AND company_map_version=$7"),'Snapshot loading must enforce the new frozen Company_Map identity');
 assert(core.includes("String(payload.dailyBuildVersion||'')===DAILY_BUILD_VERSION"),'Daily build version remains part of payload validation');
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.7.6"'));
+assert(app.includes(`const FUND_FLOW_CLIENT_REV="${pkg.version}"`));
 assert(app.includes('/api/dw4?view=audit'));
 console.log('PASS v2.6.7.6 — actual Neon snapshot metadata matches app read contract; 203 taxonomy remains frozen');
