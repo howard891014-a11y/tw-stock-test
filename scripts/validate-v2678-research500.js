@@ -1,0 +1,28 @@
+const assert=require('assert');
+const fs=require('fs');
+const path=require('path');
+const html=fs.readFileSync('index.html','utf8'),app=fs.readFileSync('app.js','utf8');
+const api=fs.readFileSync('api/sync-status.js','utf8');
+const backfill=fs.readFileSync('lib/research-500d-backfill.js','utf8');
+for(const id of ['historyResearchBar','historyResearchValue','historyResearchDetail','manualResearch500Backfill','manualResearch500Status'])assert(html.includes(`id="${id}"`),id);
+assert(app.includes('research500Progress')&&app.includes('runManualResearch500Backfill'));
+assert(api.includes('readResearch500DProgress(sql)')&&api.includes('research-500d-backfill-manual'));
+assert(backfill.includes('priorRaw20ByStock')===false || backfill.includes('enrichFlowFeatures'));
+assert(backfill.includes('WARMUP=45')&&backfill.includes('MAX_BATCH=3'));
+assert(backfill.includes('WHERE p.trade_date BETWEEN $1::date AND $2::date'));
+assert(backfill.includes('ON CONFLICT (trade_date,tag_id)'));
+assert(!backfill.includes('INSERT INTO market_daily_history')&&!backfill.includes('INSERT INTO market_business_xy2_stock_daily'));
+// The deployment installs Neon at build time; source-only change-only test uses a no-network stub.
+const Module=require('module');const origLoad=Module._load;
+Module._load=function(id,parent,isMain){if(id==='@neondatabase/serverless')return {neon:()=>{throw Error('No DB in unit tests')}};return origLoad.call(this,id,parent,isMain)};
+const b=require('../lib/research-500d-backfill');Module._load=origLoad;
+const source=['2026-06-16','2026-06-17','2026-06-18','2026-06-19'];
+assert.strictEqual(b.selectOlderBatch(source,{minDate:'2026-06-19'},{batchDays:3}).dates.length,0);
+const enough=Array.from({length:62},(_,i)=>new Date(Date.UTC(2026,5,16+i)).toISOString().slice(0,10));
+let plan=b.selectOlderBatch(enough,{minDate:enough[59]},{batchDays:9});
+assert.strictEqual(plan.dates.length,3);assert(plan.dates.every(x=>x<enough[59]));
+(async()=>{let touched=0;const mock={query:async(sql)=>{if(sql.includes('WITH member_tags'))return [{tag_count:203,current_days:60,x_usable_days:60,all_version_days:64,oldest:'2026-07-15',newest:'2026-10-08'}];if(sql.includes('WITH p AS'))return [{d:'2026-06-16'},{d:'2026-06-17'}];touched++;throw Error('unexpected write');}};
+const result=await b.backfillResearch500D({sql:mock,batchDays:3});
+assert(result.skipped&&result.noWrites&&touched===0);
+console.log('v2.6.7.8 research 500D: safety, version-qualified progress, incremental selection, no-write fallbacks PASS');
+})().catch(e=>{console.error(e);process.exit(1)});
