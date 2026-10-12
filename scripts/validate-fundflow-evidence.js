@@ -31,16 +31,17 @@ const app=fs.readFileSync('app.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 for(const token of [
   'readFundflowValidationAudit','readTopicInstitutionalCoverageAudit','walkForwardPathAudit',
-  'benchmarkSignLockPass','benchmarkSnapshotMatchPass','pathTop1AtLeast60','readyToFinalize','businessUniverseBaseline=145','taxonomyBaseline=191','rebuildTopicTaxonomyHistory','noStockFeatureRewrite:true'
+  'benchmarkSignLockPass','benchmarkSnapshotMatchPass','cleanCutover};releaseGate.readyToFinalize','readyToFinalize','businessUniverseBaseline=145','taxonomyBaseline=191','rebuildTopicTaxonomyHistory','noStockFeatureRewrite:true'
 ])assert(core.includes(token),`evidence gate missing: ${token}`);
 for(const token of ["view==='fundflow-audit'","action==='institutional-backfill-manual'","action==='fundflow-clean-rebuild-manual'",'x-stockzone-manual-institutional','x-stockzone-manual-history','clientRevisionMatch'])assert(status.includes(token),`audit/backfill endpoint missing: ${token}`);
-for(const token of ['manualInstitutionalRepair','manualFundflowHistory','runFundflowValidation','Path 5D Top1','補齊法人 60D','Clean compact','Neon Storage Audit'])assert(app.includes(token)||html.includes(token),`settings evidence UI missing: ${token}`);
+for(const token of ['manualInstitutionalRepair','manualFundflowHistory','runFundflowValidation','dW4 5/10/15/20D','補齊法人 60D','Clean compact','Neon Storage Audit'])assert(app.includes(token)||html.includes(token),`settings evidence UI missing: ${token}`);
 assert(core.includes('sign(x)===sign(rawX)'),'benchmark must explicitly verify topic X/raw-X sign lock');
 assert(core.includes('instFlow20Pct:roundNullable(item.inst_flow_ratio_20,3)'),'company detail must expose raw X20 flow');
 assert(core.includes('ACTIVATION_THRESHOLD_PCT = 0.2'),'price activation threshold must be explicit');
 assert(core.includes('readCompactFeatureHistoryStatus'),'compact feature history status missing');
 assert(core.includes('compactHistoryReady'),'release gate must expose compact history readiness');
-assert(core.includes('pathMeasured:path.predictions>=30'),'Path release gate must require measured samples');
+assert(!core.includes('pathMeasured:path.predictions>=30'),'legacy Path sample gate must not block XY acceptance');
+assert(!core.includes('pathTop1AtLeast60:Boolean(path.target60Reached)'),'legacy Path 60% gate must not block XY acceptance');
 assert(app.includes('fundflow-audit&target=60'),'Settings audit must request 60D history');
 assert(app.includes('if(v===null||v===undefined||v==="")return "--"'),'fundflow formatter must render missing values as --');
 console.log(`Fundflow evidence validation PASS — causal walk-forward=${audit.top1HitPct}% top1 / ${audit.top2HitPct}% top2 on deterministic fixture + runtime release gate present`);
