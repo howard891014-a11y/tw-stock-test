@@ -2378,6 +2378,10 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 #settingsModal .settings-ready-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px}
 #settingsModal .settings-ready-grid span{padding:7px 5px;border:1px solid #e4eaf1;border-radius:10px;background:#f7f9fc;color:#8b99aa;font-size:9px;font-weight:900;text-align:center}
 #settingsModal .settings-ready-grid span.is-ready{border-color:#bcdccb;background:#f0faf5;color:#398260}
+#settingsModal .settings-research-backfill-actions{margin:8px 0 0;display:flex;flex-direction:column;gap:5px}
+#settingsModal .settings-research-backfill-actions button{border:1px solid #d7e4f5;background:#f3f7fd;border-radius:12px;color:#345f95;font-size:12px;font-weight:750;padding:10px}
+#settingsModal .settings-research-backfill-actions button:disabled{opacity:.65}
+#settingsModal .settings-research-backfill-actions small{font-size:10px;color:#71849b;line-height:1.6}
 #settingsModal .settings-history-note{display:block;margin:8px 2px 0;color:#97a5b5;font-size:9px;line-height:1.45}
 #settingsModal .settings-manual-update{margin-top:14px;padding-top:14px;border-top:1px solid #edf2f7}
 #settingsModal .settings-manual-update-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 8px;color:#20344d;font-size:13px;font-weight:900}
@@ -2734,7 +2738,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.7.7</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.7.8</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3491,6 +3495,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   <div class="settings-history-row"><span>股價</span><div class="settings-progress-track"><i id="historyPriceBar"></i></div><strong id="historyPriceValue">-- / 120D</strong><small id="historyPriceDetail">上市 --｜上櫃 --</small></div>
   <div class="settings-history-row"><span>法人</span><div class="settings-progress-track"><i id="historyInstitutionalBar"></i></div><strong id="historyInstitutionalValue">-- / 120D</strong><small id="historyInstitutionalDetail">上市 --｜上櫃 --</small></div>
   <div class="settings-history-row"><span>信用</span><div class="settings-progress-track"><i id="historyCreditBar"></i></div><strong id="historyCreditValue">-- / 90D</strong><small id="historyCreditDetail">上市 --｜上櫃 --</small></div>
+  <div class="settings-history-row" id="research500ProgressRow"><span>研究 500D</span><div class="settings-progress-track"><i id="historyResearchBar"></i></div><strong id="historyResearchValue">-- / 500D</strong><small id="historyResearchDetail">讀取目前 203 產業版本的累積天數…</small></div>
+  <div class="settings-research-backfill-actions"><button type="button" id="manualResearch500Backfill">向前補齊研究歷史（每次最多 3D）</button><small id="manualResearch500Status" aria-live="polite">僅使用可靠的既有股價／法人資料；來源不足時不寫入。</small></div>
   <div class="settings-ready-grid"><span id="historyLiveReady">20D Live</span><span id="historyBacktestReady">近期 Raw</span><span id="historyResearchReady">500D Research</span></div>
   <small class="settings-history-note" id="historyProgressNote">Raw 採 bounded retention；500D 研究使用窄欄位 numeric compact history，長期個股股價沿用 Yahoo 5Y Browser cache。</small>
 </section>
@@ -3565,7 +3571,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.7.7"></script>
+  <script src="./app.js?v=2.6.7.8"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
