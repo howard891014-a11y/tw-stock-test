@@ -7,7 +7,7 @@ const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readResearchCompactHistoryStatus, readFundflowValidationAudit, syncFinalTaxonomyAndBuildDiagnostic } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = require('../lib/storage-policy');
-const {backfillResearch500D}=require('../lib/research-500d-backfill');
+const {backfillResearch500D,readResearch500DProgress}=require('../lib/research-500d-backfill');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -393,7 +393,7 @@ async function readFlowDataHealth(sql){
     activityRaw:STORAGE_POLICY.raw.activity,
     research:STORAGE_POLICY.compact.topicResearch
   };
-  const [institutional,credit,priceHistoryRows,profileRows,syncRows,instCoverageTwse60,instCoverageTpex60,storage,compactHistory,researchCompactHistory]=await Promise.all([
+  const [institutional,credit,priceHistoryRows,profileRows,syncRows,instCoverageTwse60,instCoverageTpex60,storage,compactHistory,researchCompactHistory,research500Progress]=await Promise.all([
     readInstitutionalHistoryHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     readCreditTradingHealth().catch(e=>({totalRows:0,markets:{},error:String(e?.message||e)})),
     sql.query(`
@@ -429,7 +429,8 @@ async function readFlowDataHealth(sql){
     institutionalCoverageByDate('上櫃',60).catch(()=>[]),
     readDatabaseSizeAudit(sql).catch(e=>({error:String(e?.message||e),tables:[]})),
     readCompactFeatureHistoryStatus(sql,{targetDays:STORAGE_POLICY.xyOperationalDays,horizon:5}).catch(e=>({targetDays:STORAGE_POLICY.xyOperationalDays,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)})),
-    readResearchCompactHistoryStatus(sql,{targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5}).catch(e=>({targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)}))
+    readResearchCompactHistoryStatus(sql,{targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5}).catch(e=>({targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)})),
+    readResearch500DProgress(sql).catch(e=>({targetDays:STORAGE_POLICY.compact.topicResearch,currentDays:0,error:String(e?.message||e)}))
   ]);
   const priceHistory={markets:{}};
   for(const row of priceHistoryRows){
@@ -486,13 +487,13 @@ async function readFlowDataHealth(sql){
   const researchDays=Number(researchCompactHistory?.compactDays||0),researchAnchors=Number(researchCompactHistory?.horizonAnchorDays||0);
   const researchReady250=liveReady&&researchDays>=250&&researchAnchors>0; // compatibility alias for older clients
   const backtestReady250=researchReady250;
-  const researchReady500=liveReady&&researchDays>=targets.research&&researchAnchors>0;
+  const researchReady500=liveReady&&Number(research500Progress?.currentDays||0)>=targets.research&&researchAnchors>0;
   if(Number(storage?.totalMb||0)>=STORAGE_POLICY.softTargetMb)warnings.unshift(`Neon DB ${storage.totalMb} MB 已達 ${STORAGE_POLICY.softTargetMb} MB 軟上限；Retention 會優先阻止 raw 繼續膨脹`);
   return{
     liveReady,coreRawReady,researchReady250,backtestReady250,researchReady500,
     readyForAX:liveReady,
     targetHistoryDays:targets.live,institutionalCoverageTargetDays:60,
-    targets,markets,storage,fundflowCompactHistory:compactHistory,researchCompactHistory,warnings:warnings.slice(0,12),
+    targets,markets,storage,fundflowCompactHistory:compactHistory,researchCompactHistory,research500Progress,warnings:warnings.slice(0,12),
     generatedAt:new Date().toISOString()
   };
 }
@@ -753,8 +754,8 @@ module.exports=async function handler(req,res){
       if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
       const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
       if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
-      const result=await backfillResearch500D({sql:getSql(),batchDays:8});
-      return res.status(200).json(result);
+      const result=await backfillResearch500D({sql:getSql(),batchDays:3});
+      return res.status(result.ok?200:422).json(result);
     }
     if(action==='fundflow-clean-rebuild-manual'){
       // One-time clean XY v2 rebuild from existing raw/reference history. It writes isolated XY2 tables first,
