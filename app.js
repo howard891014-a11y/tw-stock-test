@@ -4140,7 +4140,7 @@ function fundflowForecastProjection(group,dw4){
 }
 function fundflowApplyDw4(data,dw4){fundflowDw4Data=dw4?.ok?dw4:null;for(const g of data?.groups||[]){g.legacyProjection=g.projection||null;g.projection=fundflowForecastProjection(g,dw4);}data.forecast={ok:Boolean(dw4?.ok),predictionDate:dw4?.predictionDate||'',horizons:[5,10,15,20]};return data;}
 async function loadFundflowDw4(){try{const res=await fetch(`/api/dw4?horizons=5,10,15,20&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.8";
+const FUND_FLOW_CLIENT_REV="2.6.7.9";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4535,24 +4535,60 @@ function renderHistoryProgress(data){
   const layer=(key)=>{const days=names.map(m=>Number(markets?.[m]?.[key]?.tradingDays||0)),min=days.length?Math.min(...days):0,target=targetMap[key]||120,pct=Math.max(0,Math.min(100,min/target*100));return{days,min,target,pct}};
   const paint=(key,prefix)=>{const x=layer(key),bar=$(prefix+"Bar"),value=$(prefix+"Value"),detail=$(prefix+"Detail");if(bar)bar.style.width=`${x.pct.toFixed(1)}%`;if(value)value.textContent=`${x.min} / ${x.target}D`;if(detail)detail.textContent=`上市 ${x.days[0]}D｜上櫃 ${x.days[1]}D`;};
   paint("price","historyPrice");paint("institutional","historyInstitutional");paint("credit","historyCredit");
-  const research=data?.research500Progress||{},researchDays=Number(research.currentDays||0),researchTarget=Number(research.targetDays||targets.research||500);
+  const research=data?.research500Progress||null,researchDays=Number(research?.currentDays||0),researchTarget=Number(research?.targetDays||targets.research||500);
   const researchPct=researchTarget>0?Math.min(100,Math.max(0,100*researchDays/researchTarget)):0;
   const bar=$("historyResearchBar"),rv=$("historyResearchValue"),rd=$("historyResearchDetail");
-  if(bar)bar.style.width=`${researchPct.toFixed(1)}%`;
-  if(rv)rv.textContent=research?.error?"資料讀取失敗":`${researchDays} / ${researchTarget}D`;
-  if(rd)rd.textContent=research?.error?`進度查詢失敗：${research.error}`:`新版 ${research.categoryCount||203} 類｜X 有效 ${research.xUsableDays||0}D｜${research.minDate||"尚未建立"} ～ ${research.maxDate||"--"}｜舊版 ${research.allVersionDays||0}D（不直接計入）`;
+  if(research&&bar)bar.style.width=`${researchPct.toFixed(1)}%`;
+  if(research&&rv)rv.textContent=research?.error?"資料讀取失敗":`${researchDays} / ${researchTarget}D`;
+  if(research&&rd)rd.textContent=research?.error?`進度查詢失敗：${research.error}`:`新版 ${research.categoryCount||203} 類｜X 有效 ${research.xUsableDays||0}D｜${research.minDate||"尚未建立"} ～ ${research.maxDate||"--"}｜舊版 ${research.allVersionDays||0}D（不直接計入）`;
   const researchButton=$("manualResearch500Backfill");if(researchButton&&!manualResearch500Busy)researchButton.disabled=Boolean(research?.error)||researchDays>=researchTarget;
-  const ready=[[$("historyLiveReady"),Boolean(data?.liveReady),"20D Live"],[$("historyBacktestReady"),Boolean(data?.coreRawReady),"近期 Raw"],[$("historyResearchReady"),Boolean(data?.researchReady500??data?.researchReady250),`${researchTarget}D Research`]];ready.forEach(([el,ok,label])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${label} ${ok?"✓":""}`.trim()});
+  const completeRaw=["price","institutional","credit"].every(k=>["上市","上櫃"].every(m=>Number(markets?.[m]?.[k]?.tradingDays||0)>=Number(targetMap[k])));
+  const ready=[[$("historyLiveReady"),["price","institutional"].every(k=>["上市","上櫃"].every(m=>Number(markets?.[m]?.[k]?.tradingDays||0)>=20)),"20D Live"],[$("historyBacktestReady"),completeRaw,"近期 Raw"]];ready.forEach(([el,ok,label])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${label} ${ok?"✓":""}`.trim()});
   const updated=$("historyProgressUpdated");if(updated){const d=data?.generatedAt?new Date(data.generatedAt):null;updated.textContent=d&&!Number.isNaN(d.getTime())?`更新 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`:"已更新";}
-  const repair=$("manualInstitutionalRepairStatus"),inst60=names.map(m=>Number(markets?.[m]?.institutional?.completeDays60||0)),target60=Number(data?.institutionalCoverageTargetDays||60),instReady=inst60.length===2&&inst60.every(x=>x>=target60);if(repair&&!manualInstitutionalRepairLoading){repair.classList.remove("is-ok","is-error","is-warn");repair.classList.add(instReady?"is-ok":"is-warn");repair.textContent=instReady?`DB 法人覆蓋已完整（上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}）`:`DB 法人覆蓋：上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}`;}
-  renderCompactHistoryStatus(data?.fundflowCompactHistory);renderNeonStorageAudit(data?.storage);
-  const note=$("historyProgressNote"),warning=(data?.warnings||[])[0];if(note)note.textContent=warning?`注意：${warning}`:`Raw：股價 ${targetMap.price}D／法人 ${targetMap.institutional}D／信用 ${targetMap.credit}D；研究 compact ${researchDays}/${researchTarget}D。長期個股股價繼續使用 Yahoo 5Y Browser cache。`;
+  const repair=data?.institutionalCoverageTargetDays?$("manualInstitutionalRepairStatus"):null,inst60=names.map(m=>Number(markets?.[m]?.institutional?.completeDays60||0)),target60=Number(data?.institutionalCoverageTargetDays||60),instReady=inst60.length===2&&inst60.every(x=>x>=target60);if(repair&&!manualInstitutionalRepairLoading){repair.classList.remove("is-ok","is-error","is-warn");repair.classList.add(instReady?"is-ok":"is-warn");repair.textContent=instReady?`DB 法人覆蓋已完整（上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}）`:`DB 法人覆蓋：上市 ${inst60[0]}/${target60}｜上櫃 ${inst60[1]}/${target60}`;}
+  if(data?.fundflowCompactHistory)renderCompactHistoryStatus(data.fundflowCompactHistory);
+  if(data?.storage)renderNeonStorageAudit(data.storage);
+  const note=$("historyProgressNote"),warning=(data?.warnings||[])[0];if(note)note.textContent=warning?`注意：${warning}`:`Raw：股價 ${targetMap.price}D／法人 ${targetMap.institutional}D／信用 ${targetMap.credit}D；500D 研究獨立讀取。長期個股股價繼續使用 Yahoo 5Y Browser cache。`;
 }
 
 async function loadHistoryProgress(force=false){
-  if(historyProgressLoading)return;if(!force&&historyProgressFetchedAt&&Date.now()-historyProgressFetchedAt<60*1000)return;historyProgressLoading=true;
+  if(historyProgressLoading)return;
+  if(!force&&historyProgressFetchedAt&&Date.now()-historyProgressFetchedAt<60*1000)return;
+  historyProgressLoading=true;
   const updated=$("historyProgressUpdated");if(updated)updated.textContent="讀取中";
-  try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const res=await fetch("/api/sync-status?view=flow-data-health",{cache:"no-store",signal:controller.signal});const payload=await readJson(res,"歷史資料進度");renderHistoryProgress(payload?.flowDataHealth||payload);historyProgressFetchedAt=Date.now()}finally{clearTimeout(timer)}}catch(e){console.warn("歷史資料進度讀取失敗",e);if(updated)updated.textContent="讀取失敗"}finally{historyProgressLoading=false}
+  async function getJsonWithin(view){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),16000);
+    try{const res=await fetch(`/api/sync-status?view=${view}`,{cache:"no-store",signal:controller.signal});return await readJson(res,view)}
+    finally{clearTimeout(timer)}
+  }
+  try{
+    const rawPromise=getJsonWithin('history-raw-progress').then(data=>{if(data?.ok)renderHistoryProgress(data);return data});
+    const researchPromise=getJsonWithin('research-500d-progress').then(data=>{
+      if(data?.ok){
+        const x=data.research500Progress||{},count=Number(x.currentDays||0),target=Number(x.targetDays||500);
+        const bar=$("historyResearchBar"),rv=$("historyResearchValue"),rd=$("historyResearchDetail"),btn=$("manualResearch500Backfill");
+        if(bar)bar.style.width=`${Math.min(100,Math.max(0,100*count/target)).toFixed(1)}%`;
+        if(rv)rv.textContent=`${count} / ${target}D`;
+        if(rd)rd.textContent=`新版 ${x.categoryCount||203} 類｜X 有效 ${x.xUsableDays||0}D｜${x.minDate||'尚未建立'} ～ ${x.maxDate||'--'}｜舊版 ${x.allVersionDays||0}D（不直接計入）`;
+        if(btn&&!manualResearch500Busy)btn.disabled=count>=target;
+        const ready=$("historyResearchReady");if(ready){ready.classList.toggle('is-ready',count>=target);ready.textContent=`${target}D Research ${count>=target?'✓':''}`.trim()}
+      }
+      return data;
+    });
+    const results=await Promise.allSettled([rawPromise,researchPromise]);
+    const raw=results[0],research=results[1];
+    if(raw.status==='fulfilled'&&raw.value?.ok){/* rendered as soon as raw resolves */}
+    else{console.warn('Raw 歷史進度失敗',raw.reason||raw.value?.error);if(updated)updated.textContent='原始歷史讀取失敗'}
+    if(research.status==='fulfilled'&&research.value?.ok){/* rendered as soon as research resolves */}else{
+      const rv=$("historyResearchValue"),rd=$("historyResearchDetail"),btn=$("manualResearch500Backfill");
+      if(rv)rv.textContent='讀取失敗';
+      if(rd)rd.textContent='500D 研究進度暫時無法讀取；原始股價／法人／信用不受影響';
+      if(btn)btn.disabled=true;
+      console.warn('500D 研究進度失敗',research.reason||research.value?.error);
+    }
+    if(raw.status==='fulfilled'&&raw.value?.ok&&research.status!=='fulfilled'&&updated)updated.textContent='研究進度讀取失敗';
+    historyProgressFetchedAt=Date.now();
+  }finally{historyProgressLoading=false}
 }
 let manualResearch500Busy=false;
 async function runManualResearch500Backfill(){
@@ -4570,7 +4606,7 @@ async function runManualResearch500Backfill(){
       `本批向前新增 ${result.processedDates||0} 日、${result.insertedOrReplacedRows||0} 筆；新版研究進度 ${result.after?.currentDays||0}/500D`;
     historyProgressFetchedAt=0;await loadHistoryProgress(true);
   }catch(e){if(status)status.textContent=`未修改資料：${e?.message||e}`;}
-  finally{manualResearch500Busy=false;if(btn){btn.disabled=Number($("historyResearchValue")?.textContent?.split("/")?.[0])>=500;btn.textContent="向前補齊研究歷史（每次最多 3D）";}}
+  finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="向前補齊研究歷史（每次最多 3D）";}}
 }
 $("manualResearch500Backfill")?.addEventListener("click",runManualResearch500Backfill);
 function renderNeonStorageDeepAudit(data){
@@ -4632,7 +4668,7 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
 let manualTaxonomySyncLoading=false;
 function downloadTaxonomyDiagnostic(payload){
   const body=JSON.stringify(payload,null,2),blob=new Blob([body],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a"),stamp=new Date().toISOString().replace(/[:.]/g,"-");
-  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.7.8-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.7.9-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 async function runManualTaxonomySyncExport(){
   if(manualTaxonomySyncLoading)return;
