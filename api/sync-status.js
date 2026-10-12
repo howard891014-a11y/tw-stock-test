@@ -7,7 +7,9 @@ const { summarizeProfiles } = require('../lib/company-business-tags');
 const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readResearchCompactHistoryStatus, readFundflowValidationAudit, syncFinalTaxonomyAndBuildDiagnostic } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = require('../lib/storage-policy');
-const {backfillResearch500D,readResearch500DProgress}=require('../lib/research-500d-backfill');
+// Load the optional research module only inside research-specific actions.
+// A missing/unavailable research backfill file must NEVER break raw history status or other APIs.
+const loadResearch500D=()=>require('../lib/research-500d-backfill');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -430,7 +432,7 @@ async function readFlowDataHealth(sql){
     readDatabaseSizeAudit(sql).catch(e=>({error:String(e?.message||e),tables:[]})),
     readCompactFeatureHistoryStatus(sql,{targetDays:STORAGE_POLICY.xyOperationalDays,horizon:5}).catch(e=>({targetDays:STORAGE_POLICY.xyOperationalDays,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)})),
     readResearchCompactHistoryStatus(sql,{targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5}).catch(e=>({targetDays:STORAGE_POLICY.compact.topicResearch,horizon:5,compactDays:0,xUsableDays:0,horizonAnchorDays:0,compactRows:0,historyReady:false,error:String(e?.message||e)})),
-    readResearch500DProgress(sql).catch(e=>({targetDays:STORAGE_POLICY.compact.topicResearch,currentDays:0,error:String(e?.message||e)}))
+    Promise.resolve().then(()=>loadResearch500D().readResearch500DProgress(sql)).catch(e=>({targetDays:STORAGE_POLICY.compact.topicResearch,currentDays:0,error:String(e?.message||e)}))
   ]);
   const priceHistory={markets:{}};
   for(const row of priceHistoryRows){
@@ -709,6 +711,29 @@ module.exports=async function handler(req,res){
       res.setHeader('Access-Control-Allow-Origin','*');
       return await officialCloseResponse(req,res);
     }
+    // v2.6.7.9: two independent read-only, lightweight progress endpoints.
+    // Do not enter statusResponse(), which performs schema checks and a full DB audit.
+    const progressView=String(req.query?.view||'').trim();
+    if(progressView==='history-raw-progress'){
+      if(String(req.method||'GET').toUpperCase()!=='GET')return res.status(405).json({ok:false,error:'GET only'});
+      const sql=getSql();
+      const results=await Promise.all([
+        sql.query("SELECT market,COUNT(DISTINCT trade_date)::int AS days FROM market_daily_history WHERE market IN ('上市','上櫃') GROUP BY market"),
+        sql.query("SELECT market,COUNT(DISTINCT trade_date)::int AS days FROM institutional_trading_daily WHERE market IN ('上市','上櫃') GROUP BY market"),
+        sql.query("SELECT market,COUNT(DISTINCT trade_date)::int AS days FROM credit_trading_daily WHERE market IN ('上市','上櫃') GROUP BY market")
+      ]);
+      const markets={'上市':{},'上櫃':{}};
+      for(const [i,layer] of ['price','institutional','credit'].entries())
+        for(const row of results[i])if(markets[row.market])markets[row.market][layer]={tradingDays:Number(row.days||0)};
+      return res.status(200).json({ok:true,view:progressView,
+        targets:{priceRaw:STORAGE_POLICY.raw.price,institutionalRaw:STORAGE_POLICY.raw.institutional,creditRaw:STORAGE_POLICY.raw.credit,research:STORAGE_POLICY.compact.topicResearch},
+        markets,generatedAt:new Date().toISOString()});
+    }
+    if(progressView==='research-500d-progress'){
+      if(String(req.method||'GET').toUpperCase()!=='GET')return res.status(405).json({ok:false,error:'GET only'});
+      const progress=await loadResearch500D().readResearch500DProgress(getSql());
+      return res.status(200).json({ok:true,view:progressView,research500Progress:progress,generatedAt:new Date().toISOString()});
+    }
     const schedule=String(req.headers?.['x-vercel-cron-schedule']||'').trim();
     const action=requestedAction(req);
 
@@ -754,7 +779,7 @@ module.exports=async function handler(req,res){
       if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
       const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
       if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
-      const result=await backfillResearch500D({sql:getSql(),batchDays:3});
+      const result=await loadResearch500D().backfillResearch500D({sql:getSql(),batchDays:3});
       return res.status(result.ok?200:422).json(result);
     }
     if(action==='fundflow-clean-rebuild-manual'){
