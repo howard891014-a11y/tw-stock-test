@@ -4140,7 +4140,7 @@ function fundflowForecastProjection(group,dw4){
 }
 function fundflowApplyDw4(data,dw4){fundflowDw4Data=dw4?.ok?dw4:null;for(const g of data?.groups||[]){g.legacyProjection=g.projection||null;g.projection=fundflowForecastProjection(g,dw4);}data.forecast={ok:Boolean(dw4?.ok),predictionDate:dw4?.predictionDate||'',horizons:[5,10,15,20]};return data;}
 async function loadFundflowDw4(){try{const res=await fetch(`/api/dw4?horizons=5,10,15,20&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.6.34";
+const FUND_FLOW_CLIENT_REV="2.6.7.5";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4607,7 +4607,7 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
 let manualTaxonomySyncLoading=false;
 function downloadTaxonomyDiagnostic(payload){
   const body=JSON.stringify(payload,null,2),blob=new Blob([body],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a"),stamp=new Date().toISOString().replace(/[:.]/g,"-");
-  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.6.17-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.7.5-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 async function runManualTaxonomySyncExport(){
   if(manualTaxonomySyncLoading)return;
@@ -4660,43 +4660,58 @@ function saveFundflowValidation(data){try{localStorage.setItem(FUND_FLOW_VALIDAT
 function clearFundflowValidation(){try{localStorage.removeItem(FUND_FLOW_VALIDATION_STORAGE_KEY)}catch{}const status=$("fundflowValidationStatus"),details=$("fundflowValidationDetails");if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="資料已更新，請重新驗證"}if(details)details.hidden=true;}
 function restoreFundflowValidation(){try{const raw=localStorage.getItem(FUND_FLOW_VALIDATION_STORAGE_KEY);if(!raw)return false;const parsed=JSON.parse(raw);if(!parsed?.data)return false;renderFundflowValidation(parsed.data);const status=$("fundflowValidationStatus");if(status&&parsed.savedAt){const d=new Date(parsed.savedAt);status.textContent+=`｜上次 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`}return true}catch{return false}}
 function renderFundflowValidation(data){
-  const status=$("fundflowValidationStatus"),details=$("fundflowValidationDetails"),r=data?.regression||{},p=data?.path||{},g=data?.releaseGate||{},inst=data?.institutional?.markets||{},hist=data?.compactHistory||{},bench=(data?.benchmarks||[]).filter(x=>x.available),missing=(data?.topicCoverage?.missingCompanies||[]).slice(0,12);
-  const benchPass=bench.filter(x=>x.signLockPass&&x.yFinite).length,top1=p?.top1HitPct,top2=p?.top2HitPct,q=p?.targetQuadrantHitPct,n=Number(p?.predictions||0),anchors=Number(p?.anchorDates||hist?.horizonAnchorDays||0);
-  const pathText=n?`Path 5D Top1 ${top1??"--"}% / Top2 ${top2??"--"}% (n=${n})`:`Path 尚無樣本（compact ${hist?.compactDays??0}D / X20 ${hist?.xUsableDays??0}D / anchors ${anchors}D）`;
-  const parts=[`業務 ${r.businessUniverse??"--"}`,`可畫 ${r.withXY??"--"} (${r.xyCoveragePct??"--"}%)`,`Benchmark ${benchPass}/${bench.length||0}`,pathText];
-  if(status){status.classList.remove("is-ok","is-error","is-warn");status.classList.add(g.readyToFinalize?"is-ok":"is-warn");status.textContent=(g.readyToFinalize?"驗證全過：":"尚未達完成門檻：")+parts.join("｜");}
+  const status=$("fundflowValidationStatus"),details=$("fundflowValidationDetails");
+  const r=data?.regression||{},gate=data?.releaseGate||{},h=data?.compactHistory||{};
+  const inst=data?.institutional?.markets||{},bench=(data?.benchmarks||[]).filter(x=>x.available);
+  const dw4=data?.dw4Audit||null,xyOK=Boolean(gate.readyToFinalize),dw4OK=Boolean(dw4?.ok),both=xyOK&&dw4OK;
+  const coverage=dw4?.horizonResults?.[5]?.coveragePct;
+  const parts=[`分類 ${r.taxonomyDefinitions??"--"}`,`XY ${r.withXY??"--"} (${r.xyCoveragePct??"--"}%)`,
+    `dW4 5/10/15/20D ${dw4?dw4OK?"OK":"需檢查":"未取得"}`,
+    `模型覆蓋 ${Number.isFinite(Number(coverage))?coverage+"%":"--"}`,`資料 ${data?.latestDate||"--"}`];
+  if(status){status.classList.remove("is-ok","is-error","is-warn");status.classList.add(both?"is-ok":"is-warn");
+    status.textContent=(both?"XY／dW4 驗證通過：":"XY／dW4 部分尚未通過：")+parts.join("｜");}
   if(details){
-    const marketLine=m=>`${m} 法人完整日 ${inst?.[m]?.completeDays??0}/${data?.institutional?.targetDays??60}`;
-    const histLine=`Clean compact ${hist?.compactDays??0}/${hist?.targetDays??60}D｜X20 usable ${hist?.xUsableDays??0}D｜5D anchors ${hist?.horizonAnchorDays??0}D｜Path usable dates ${p?.usableDates??0}D｜實際 anchor dates ${p?.anchorDates??0}D｜舊衍生 ${hist?.legacyDerivedRows??0} rows`;
-    const noSampleReason=n?"":Number(hist?.compactDays||0)<Number(hist?.targetDays||60)?"Path n=0 原因：compact history 尚未補滿。":Number(hist?.xUsableDays||0)<=5?"Path n=0 原因：X20 可用歷史不足。":Number(hist?.horizonAnchorDays||0)<=0?"Path n=0 原因：沒有可對應 5D future label 的 anchor。":"Path n=0：compact 歷史存在，但沒有形成可預測題材樣本，請查看 benchmark / coverage。";
-    const benchLines=bench.flatMap(x=>{const head=`${x.name}: rawX ${fundflowSigned(x.rawX,3)}% → X ${fundflowSigned(x.x,1)} / Y ${fundflowSigned(x.y,2)}% / sign ${x.signLockPass?"PASS":"FAIL"} / snapshot ${x.snapshotMatch?"MATCH":"CHECK"}`;const comps=(x.companies||[]).slice(0,4).map(c=>`  ↳ ${c.code} ${c.name||""}: raw20 ${fundflowSigned(c.rawFlow20,3)}% / stockX ${fundflowSigned(c.stockX,1)} / w ${fundflowFmt(c.weight,2)} / ΔX ${fundflowSigned(c.impactX,2)}`);return [head,...comps]});
-    const missingLines=missing.map(x=>`${x.market} ${x.code} ${x.name||""}: ${x.instDays}/${x.expectedDays}D（缺 ${x.missingDays}D）`);
-    const gateLines=Object.entries(g).filter(([k])=>k!=="readyToFinalize").map(([k,v])=>`${v?"✓":"✗"} ${k}`);
-    details.textContent=[marketLine("上市"),marketLine("上櫃"),histLine,...(noSampleReason?[noSampleReason]:[]),"",...benchLines,"",`Walk-forward 5D：Top1 ${top1??"--"}%｜Top2 ${top2??"--"}%｜目標象限 ${q??"--"}%｜樣本 ${n}`,`>=60% 顯示信心樣本：${p.confidence60?.n??0}，實際 Top1 ${p.confidence60?.top1HitPct??"--"}%`,"",...gateLines,...(missingLines.length?["","法人歷史不足公司（前12）：",...missingLines]:[])].join("\n");
+    const mark=v=>v?"✓":"✗";
+    const benchLines=bench.flatMap(x=>{const head=`${x.name}: rawX ${fundflowSigned(x.rawX,3)}% → X ${fundflowSigned(x.x,1)} / Y ${fundflowSigned(x.y,2)}% / sign ${x.signLockPass?"PASS":"FAIL"} / snapshot ${x.snapshotMatch?"MATCH":"CHECK"}`;
+      const comps=(x.companies||[]).slice(0,3).map(c=>`  ↳ ${c.code} ${c.name||""}: raw20 ${fundflowSigned(c.rawFlow20,3)}% / stockX ${fundflowSigned(c.stockX,1)} / w ${fundflowFmt(c.weight,2)}`);return [head,...comps]});
+    const gateLines=Object.entries(gate).filter(([k])=>k!=="readyToFinalize").map(([k,v])=>`${mark(v)} ${k}`);
+    const hLines=[5,10,15,20].map(days=>{const v=dw4?.horizonResults?.[days]||{};
+      return `${mark(v.ready)} ${days}D：有效 ${v.validEligible??0}/${v.eligibleCount??dw4?.eligibleTags??"--"}（${v.coveragePct??"--"}%）｜訓練 X ${v.trainingX??0} / Y ${v.trainingY??0}｜無效 ${v.invalid??0}｜重複 ${v.duplicates??0}｜舊標籤 ${v.unmatchedHistoryTags??0}｜歷史方向命中 ${v.historicalDirectionHitPct??"--"}%（n=${v.historicalFoldN??0}）${v.error?"｜"+v.error:""}`;});
+    details.textContent=[
+      `XY／分類資料驗證（${data?.latestDate||"--"}）：${xyOK?"PASS":"CHECK"}`,
+      `分類定義 ${r.taxonomyDefinitions??"--"}｜可畫 XY ${r.withXY??"--"}｜尚缺 X ${r.pendingX??"--"}`,
+      `Clean compact ${h.compactDays??0}/${h.targetDays??60}D｜X20 usable ${h.xUsableDays??0}D｜5D anchors ${h.horizonAnchorDays??0}D｜舊衍生 ${h.legacyDerivedRows??0} rows`,
+      `上市法人完整日 ${inst?.["上市"]?.completeDays??0}/${data?.institutional?.targetDays??60}｜上櫃 ${inst?.["上櫃"]?.completeDays??0}/${data?.institutional?.targetDays??60}`,
+      "",...benchLines,"",...gateLines,"",
+      `dW4 模型驗證：${dw4?.modelVersion||"無資料"}｜預測日 ${dw4?.predictionDate||"--"}｜對照 XY ${dw4?.expectedDate||data?.latestDate||"--"}｜日期 ${dw4?.dateAligned?"MATCH":"MISMATCH"}`,
+      ...hLines,"",
+      dw4?.note||"dW4 未取得驗證回應；不能宣稱模型已通過。",
+      data?.dw4Error?`dW4 錯誤：${data.dw4Error}`:"",
+      "不使用舊 Path Top1／Top2 60% 門檻；這是技術驗收，不代表模型預測準確率。"
+    ].filter(Boolean).join("\n");
     details.hidden=false;
   }
-  renderCompactHistoryStatus(hist);renderNeonStorageAudit(data?.storage);
+  renderCompactHistoryStatus(h);renderNeonStorageAudit(data?.storage);
 }
 async function runFundflowValidation(){
   if(fundflowValidationLoading)return;fundflowValidationLoading=true;
-  const btn=$("runFundflowValidation"),status=$("fundflowValidationStatus");if(btn){btn.disabled=true;btn.textContent="驗證中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="讀取已保存的 causal Path audit 與 compact benchmark；不掃 raw stock×day…"}
+  const btn=$("runFundflowValidation"),status=$("fundflowValidationStatus");
+  if(btn){btn.disabled=true;btn.textContent="驗證中…";}
+  if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="唯讀核對 203 分類／XY 與正式 dW4 四個期限；不重建 Path、不寫預測資料…";}
   try{
-    // Validation is also the self-repair entrypoint for a missing/stale Path audit.
-    // This is DB-only: it never refetches market raw history. A prior serverless timeout is resumable.
-    let warm=null,lastGatewayStatus=0;
-    for(let step=0;step<3;step++){
-      const warmRes=await fetch("/api/sync-status?action=fundflow-warm-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Warm":"1"}});
-      if([502,504].includes(Number(warmRes.status))){lastGatewayStatus=Number(warmRes.status);if(status){status.classList.add("is-warn");status.textContent=`Path audit 重建逾時（HTTP ${warmRes.status}），正在續跑已保存階段…`;}await new Promise(r=>setTimeout(r,500));continue;}
-      warm=await readJson(warmRes,"Path audit 重建");
-      if(!warm?.followupRequired)break;
-      if(status){status.classList.add("is-warn");status.textContent="compact / taxonomy 已就緒，正在續建 prepared snapshot / Path audit…";}
-      await new Promise(r=>setTimeout(r,250));
-    }
-    if(!warm&&lastGatewayStatus)throw new Error(`Path audit 重建持續逾時（HTTP ${lastGatewayStatus}），可再次按驗證續跑`);
-    const res=await fetch(`/api/sync-status?view=fundflow-audit&target=60&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:"no-store"}),data=await readJson(res,"XY / Path 驗證");renderFundflowValidation(data);saveFundflowValidation(data)
-  }
-  catch(e){console.warn("XY / Path 驗證失敗",e);if(status){status.classList.add("is-error");status.textContent=`驗證失敗：${e?.message||e}`}}
-  finally{fundflowValidationLoading=false;if(btn){btn.disabled=false;btn.textContent="執行 XY / Path 驗證"}}
+    const [xyRes,dw4Res]=await Promise.allSettled([
+      fetch(`/api/sync-status?view=fundflow-audit&target=60&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:"no-store"}),
+      fetch(`/api/dw4?view=audit&_=${Date.now()}`,{cache:"no-store"})
+    ]);
+    if(xyRes.status!=="fulfilled")throw xyRes.reason;
+    const data=await readJson(xyRes.value,"XY／分類驗證");
+    if(dw4Res.status==="fulfilled"){
+      try{data.dw4Audit=await readJson(dw4Res.value,"dW4 驗證");}
+      catch(e){data.dw4Error=String(e?.message||e);}
+    }else data.dw4Error=String(dw4Res.reason?.message||dw4Res.reason||"無法取得 dW4 驗證");
+    renderFundflowValidation(data);saveFundflowValidation(data);
+  }catch(e){console.warn("XY／dW4 驗證失敗",e);if(status){status.classList.add("is-error");status.textContent=`驗證失敗：${e?.message||e}`;}}
+  finally{fundflowValidationLoading=false;if(btn){btn.disabled=false;btn.textContent="執行 XY／dW4 驗證";}}
 }
 async function runManualInstitutionalRepair(){
   if(manualInstitutionalRepairLoading)return;manualInstitutionalRepairLoading=true;
