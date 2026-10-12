@@ -4140,7 +4140,7 @@ function fundflowForecastProjection(group,dw4){
 }
 function fundflowApplyDw4(data,dw4){fundflowDw4Data=dw4?.ok?dw4:null;for(const g of data?.groups||[]){g.legacyProjection=g.projection||null;g.projection=fundflowForecastProjection(g,dw4);}data.forecast={ok:Boolean(dw4?.ok),predictionDate:dw4?.predictionDate||'',horizons:[5,10,15,20]};return data;}
 async function loadFundflowDw4(){try{const res=await fetch(`/api/dw4?horizons=5,10,15,20&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.5";
+const FUND_FLOW_CLIENT_REV="2.6.7.6";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4607,7 +4607,7 @@ $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"
 let manualTaxonomySyncLoading=false;
 function downloadTaxonomyDiagnostic(payload){
   const body=JSON.stringify(payload,null,2),blob=new Blob([body],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a"),stamp=new Date().toISOString().replace(/[:.]/g,"-");
-  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.7.5-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  a.href=url;a.download=`stockzone-taxonomy-diagnostic-v2.6.7.6-${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 async function runManualTaxonomySyncExport(){
   if(manualTaxonomySyncLoading)return;
