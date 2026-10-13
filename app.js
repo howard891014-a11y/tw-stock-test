@@ -4176,7 +4176,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.11";
+const FUND_FLOW_CLIENT_REV="2.6.7.12";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4650,6 +4650,46 @@ async function runManualResearch500Backfill(){
   finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="向前補齊研究歷史（每次最多 3D）";}}
 }
 $("manualResearch500Backfill")?.addEventListener("click",runManualResearch500Backfill);
+let manualResearchXGapBusy=false;
+async function runManualResearchXGapRepair(){
+  if(manualResearchXGapBusy)return;
+  manualResearchXGapBusy=true;
+  const button=$("manualResearchXGapRepair"),status=$("manualResearchXGapStatus");
+  if(button){button.disabled=true;button.textContent="正在修復中段 X…";}
+  let repairedTotal=0,batches=0;
+  try{
+    const getState=async()=>{
+      const r=await fetch(`/api/sync-status?view=research-x-gap-progress&_=${Date.now()}`,{cache:'no-store'});
+      return (await readJson(r,'研究 X 缺口狀態')).researchXGapStatus;
+    };
+    let state=await getState();
+    if(!state?.gapDays){if(status)status.textContent='檢查完成：研究 X 沒有整段缺口，未修改資料。';return;}
+    if(status)status.textContent=`發現 ${state.gapDays} 個交易日缺口（${state.firstGap}～${state.lastGap}），開始分批修復…`;
+    for(let i=0;i<16&&state.gapDays>0;i++){
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),58000);
+      let data;
+      try{
+        const response=await fetch(`/api/sync-status?action=research-x-gap-repair-manual&_=${Date.now()}`,{
+          method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','X-StockZone-Manual-History':'1'},signal:controller.signal});
+        data=await readJson(response,'研究 X 中段缺口修復');
+      }finally{clearTimeout(timer);}
+      if(!data?.ok||data?.skipped){throw new Error(`${data?.reason||'本批未完成'}${data?.day?'｜'+data.day:''}${data?.audit?.medianAbsXDelta!==undefined?'｜重算 X 差距 '+data.audit.medianAbsXDelta.toFixed(2):''}`);}
+      repairedTotal+=Number(data.updatedRows||0);batches++;
+      const remaining=Number(data.after?.gapDays??state.gapDays);
+      if(status)status.textContent=`第 ${batches} 批完成（${(data.batch||[]).join('、')}），累計補 ${repairedTotal} 筆；尚有 ${remaining} 個交易日缺口…`;
+      if(remaining>=state.gapDays||!data.updatedRows)throw new Error('本批缺口未減少，已停止以防重複運算');
+      state={...state,gapDays:remaining};
+    }
+    const finalState=await getState();
+    if(status)status.textContent=finalState.gapDays===0
+      ?`中段 X 修復完成：${batches} 批、${repairedTotal} 筆；整段缺口 0 日。租車服務上市前的缺日不造資料。`
+      :`已修復 ${batches} 批、${repairedTotal} 筆，尚有 ${finalState.gapDays} 日；可以再按一次續修。`;
+    historyProgressFetchedAt=0;await loadHistoryProgress(true);
+  }catch(e){if(status)status.textContent=`已完成 ${batches} 批、${repairedTotal} 筆；修復已停止：${e?.message||e}。可檢查後續修。`;}
+  finally{manualResearchXGapBusy=false;if(button){button.disabled=false;button.textContent='一鍵修復研究 X 中段缺口（自動分批）';}}
+}
+$("manualResearchXGapRepair")?.addEventListener('click',runManualResearchXGapRepair);
+
 function renderNeonStorageDeepAudit(data){
   const status=$("manualStorageDeepAuditStatus"),details=$("neonStorageDeepDetails");if(!status||!details)return;
   status.classList.remove("is-ok","is-error","is-warn");
