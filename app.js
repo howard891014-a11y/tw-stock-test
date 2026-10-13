@@ -4128,6 +4128,12 @@ let fundflowDw4Data=null;
 function fundflowPriceDiagnostic(tagId){
   const d=fundflowDw4Data?.pricePaths?.[String(tagId||'')];return d?.valid?d:null;
 }
+function fundflowDirectionProbabilityLabel(p,brief=false){
+  const v=p?.directionProbability;
+  if(v===null||v===undefined||!Number.isFinite(Number(v)))return brief?'機率待校準':'方向機率：資料不足';
+  const dir=Number(p?.priceReturnPct)<0?'看跌':'看漲';
+  return `${dir} ${Math.round(Number(v))}%${brief?'*':'（研究試算，尚未充分驗證）'}`;
+}
 function fundflowForecastProjection(group,dw4){
   if(!group||!dw4?.ok)return null;
   const x=Number(group.x),y=group.priceY===null||group.priceY===undefined?NaN:Number(group.priceY);
@@ -4147,6 +4153,7 @@ function fundflowForecastProjection(group,dw4){
     const ordinary=100*Math.expm1(logReturn/100);
     points.push({horizon,x:px,y:py,dx,dy:py-y,predLogReturn:logReturn,priceReturnPct:ordinary,
       confidence:prediction.confidence??null,confidenceN:Number(prediction.confidenceN)||0,
+      upProbability:prediction.upProbability??null,directionProbability:prediction.directionProbability??null,confidenceStatus:prediction.confidenceStatus||'insufficient',confidenceDates:Number(prediction.confidenceDates)||0,
       lowX:px-xHalf,highX:px+xHalf,lowY:fundflowRawY(centerLog-yHalf),highY:fundflowRawY(centerLog+yHalf),
       direction:prediction.direction||'',uncertaintyNote:'樣本外 MAE 示意範圍，非機率區間'});
   }
@@ -4169,7 +4176,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.10";
+const FUND_FLOW_CLIENT_REV="2.6.7.11";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4334,10 +4341,13 @@ function renderFundflowChart(){
           svg.append(fundflowSvg('circle',{cx:px,cy:py,r:scenarioIndex===0?3.5:3,class:`fundflow-future-point ${klass}`,fill:scenarioIndex===0?color:'#fff',stroke:color,'aria-hidden':'true'}));
           if(scenarioIndex!==0)return;
           let tx=Math.max(L+30,Math.min(L+pw-95,px+12)),ty=py-14;
-          for(let tries=0;tries<8&&labels.some(a=>Math.abs(a.x-tx)<83&&Math.abs(a.y-ty)<19);tries++)ty=py-14+(tries%2?1:-1)*Math.ceil(tries/2)*22;
-          ty=Math.max(T+12,Math.min(T+ph-8,ty));labels.push({x:tx,y:ty});
+          for(let tries=0;tries<10&&labels.some(a=>Math.abs(a.x-tx)<105&&Math.abs(a.y-ty)<32);tries++)ty=py-20+(tries%2?1:-1)*Math.ceil(tries/2)*33;
+          ty=Math.max(T+12,Math.min(T+ph-24,ty));labels.push({x:tx,y:ty});
           svg.append(fundflowSvg('line',{x1:px,y1:py,x2:tx-2,y2:ty-4,stroke:color,'stroke-opacity':'.45','stroke-width':'.8','aria-hidden':'true'}));
-          svg.append(fundflowSvg('text',{x:tx,y:ty,class:`fundflow-future-label ${klass}`},`${h}D ${fundflowSignedPct(p.priceReturnPct)}`));
+          const label=fundflowSvg('text',{x:tx,y:ty,class:`fundflow-future-label ${klass}`});
+          label.append(fundflowSvg('tspan',{x:tx,dy:0},`${h}D ${fundflowSignedPct(p.priceReturnPct)}`));
+          label.append(fundflowSvg('tspan',{x:tx,dy:12,class:'fundflow-probability-caption'},fundflowDirectionProbabilityLabel(p,true)));
+          svg.append(label);
         });
       });
     }
@@ -4357,7 +4367,7 @@ function renderFundflowXy(){
   const groups=fundflowEligibleGroups({path:false}),early=groups.filter(g=>["potential","ready"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),confirm=groups.filter(g=>fundflowPathState(g).key==="rebound").sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),risk=groups.filter(g=>["pullback","sneak","avoid","gamble","wait","sleep"].includes(fundflowPathState(g).key)).sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a));
   setText("fundflowPotentialCount",early.length);setText("fundflowMainlineCount",confirm.length);setText("fundflowRightCount",risk.length);setText("fundflowDaysCount",data.trajectoryDays||0);
   const a=$("fundflowPotentialList"),b=$("fundflowMainlineList"),c=$("fundflowRightList");if(a)a.innerHTML=fundflowListHtml(early);if(b)b.innerHTML=fundflowListHtml(confirm);if(c)c.innerHTML=fundflowListHtml(risk);
-  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v7"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY 價格路徑候選版：X＝20D 法人中期資金位置，Y＝每日題材價格報酬 log 累積（共同20D基準）；往上＝實際漲，往下＝實際跌。九狀態沿用原金融分支，Y5 用於近期強弱、dy3Turn 用於兩段3D轉折。5D／10D／15D／20D預測是從今日起累積報酬；區間僅是歷史 MAE 示意，非信賴區間。價格發動率仍採等權投票：當日漲幅 > +0.2% 計1票。相似歷史 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
+  const note=$("fundflowMethodNote");if(note){const cal=data.calibration||{},pending=data.enginePending?`｜新引擎 ${data.targetEngineVersion||"XY v7"} 等待手動更新 snapshot，暫顯示 ${data.staleEngineVersion||"上一版"}`:"";note.textContent=`XY 價格路徑候選版：X＝20D 法人中期資金位置，Y＝每日題材價格報酬 log 累積（共同20D基準）；往上＝實際漲，往下＝實際跌。九狀態沿用原金融分支，Y5 用於近期強弱、dy3Turn 用於兩段3D轉折。5D／10D／15D／20D預測是從今日起累積報酬；節點第二行為方向機率研究試算（*），非實盤勝率或已驗證信心；樣本不足顯示待校準。區間僅是歷史 MAE 示意，非信賴區間。價格發動率仍採等權投票：當日漲幅 > +0.2% 計1票。相似歷史 ${Number(cal.historyDays||0)} 個交易日${cal.warmup?"（暖機期）":""}${pending}。`}
   document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>{const active=fundflowScopes.has(btn.dataset.fundflowScope);btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",active?"true":"false")});document.querySelectorAll("[data-fundflow-days]").forEach(btn=>btn.classList.toggle("active",Number(btn.dataset.fundflowDays)===fundflowTrajectoryDays));document.querySelectorAll("[data-fundflow-axis-mode]").forEach(btn=>btn.classList.toggle("active",btn.dataset.fundflowAxisMode===fundflowAxisMode));renderFundflowPhaseControls();renderFundflowChart();
 }
 function fundflowFactorHtml(factors,axis,priorFactors={},group={},priorPoint={}){
@@ -4396,11 +4406,11 @@ function renderFundflowDetail(){
   setText("fundflowDetailX",fundflowSignedX(d.latest?.x));setText("fundflowDetailY",fundflowSignedPct(d.latest?.priceY));setText("fundflowDetailMove",`發動 ${fundflowFmt(d.latest?.activationRate,0)}% / E ${fundflowFmt(d.latest?.overheating,0)}`);setText("fundflowDetailStatus",`${path.label}｜${path.route}｜raw X20 ${fundflowSignedPct(d.latest?.rawX)}｜法人5D ${fundflowSigned(d.latest?.flow5Pct,2)}｜3日 ΔX ${fundflowSigned(d.latest?.dx3)} / 3日轉折 ${fundflowSigned(d.latest?.dy3Turn)}｜R5 ${fundflowSignedPct(d.latest?.y)}`);
   const proj=d.projection||{},paths=fundflowProjectionScenarios(proj),pa=paths[0],p5a=(pa?.points||[]).find(p=>Number(p.horizon)===fundflowTrajectoryDays)||pa?.points?.[0]||null;
   setText("fundflowDetailProjection",pa&&p5a?`${fundflowTrajectoryDays}D ${fundflowSignedPct(p5a.priceReturnPct)}`:`${fundflowTrajectoryDays}D 尚無預測`);
-  setText("fundflowDetailProjectionNote",pa&&p5a?`預測日 ${proj.predictionDate||fundflowDw4Data?.predictionDate||"--"}｜${fundflowTrajectoryDays}D 法人 X 位移 ${fundflowSigned(p5a.dx,2)}｜預測累積報酬 ${fundflowSignedPct(p5a.priceReturnPct)}｜預測價格路徑 Y ${fundflowSignedPct(p5a.y)}｜轉折 dy3 ${fundflowSigned(d.latest?.dy3Turn,2)}｜預測準確率待樣本外驗證`:`目前此業務沒有可用的 ${fundflowTrajectoryDays}D 預測。`);
+  setText("fundflowDetailProjectionNote",pa&&p5a?`預測日 ${proj.predictionDate||fundflowDw4Data?.predictionDate||"--"}｜${fundflowTrajectoryDays}D 法人 X 位移 ${fundflowSigned(p5a.dx,2)}｜預測累積報酬 ${fundflowSignedPct(p5a.priceReturnPct)}｜預測價格路徑 Y ${fundflowSignedPct(p5a.y)}｜轉折 dy3 ${fundflowSigned(d.latest?.dy3Turn,2)}｜${fundflowDirectionProbabilityLabel(p5a)}（按預測期限估計，非實盤勝率）`:`目前此業務沒有可用的 ${fundflowTrajectoryDays}D 預測。`);
 
   const returnCard=$("fundflowPriceReturnCard");
   if(returnCard){const arr=[5,10,15,20].map(h=>({h,p:(pa?.points||[]).find(p=>p.horizon===h)}));
-    returnCard.innerHTML=arr.map(({h,p})=>`<div class="fundflow-return-item"><small>${h}D</small><strong class="${p?.priceReturnPct>0?'positive':p?.priceReturnPct<0?'negative':''}">${p?fundflowSignedPct(p.priceReturnPct):'--'}</strong></div>`).join('');}
+    returnCard.innerHTML=arr.map(({h,p})=>`<div class="fundflow-return-item"><small>${h}D</small><strong class="${p?.priceReturnPct>0?'positive':p?.priceReturnPct<0?'negative':''}">${p?fundflowSignedPct(p.priceReturnPct):'--'}</strong><span class="fundflow-return-prob">${fundflowDirectionProbabilityLabel(p,true)}</span></div>`).join('');}
   const traj=d.trajectory||[],p3=traj[Math.max(0,traj.length-4)]||traj[0]||{},xf=$("fundflowXFactors"),yf=$("fundflowYFactors");if(xf)xf.innerHTML=fundflowFactorHtml(d.latest?.factors?.x,"x",p3?.factors?.x||{},d.latest||{},p3);if(yf)yf.innerHTML=fundflowFactorHtml(d.latest?.factors?.y,"y",p3?.factors?.y||{},d.latest||{},p3);
   const hist=$("fundflowDetailHistory");if(hist)hist.innerHTML=(d.trajectory||[]).map((p,i,arr)=>{const q=fundflowPointQuadrant(p.x,p.priceY);return `<div class="fundflow-history-item${i===arr.length-1?" latest":""}"><b>${escNews(String(p.date||"").slice(5).replace("-","/"))}</b><strong>X ${fundflowSignedX(p.x)}<br>Y ${fundflowSignedPct(p.priceY)}</strong><small>${escNews(fundflowQuadrantShort(q))} ${escNews(fundflowQuadrantMeaning(q))}｜發動 ${fundflowFmt(p.activationRate,0)}% / E ${fundflowFmt(p.overheating,0)}</small></div>`}).join("");
   renderFundflowCompanyList(d);

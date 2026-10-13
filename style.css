@@ -534,3 +534,5 @@ body.view-overview .overview-only{display:block}
 
 /* v2.6.6.22 — history is observed/solid; forecast is intentionally pale. */
 .fundflow-typhoon-trail.is-focus{stroke-opacity:.94!important}.fundflow-point-old.is-focus{opacity:.86!important}.fundflow-future-path{fill:none;stroke-opacity:.34!important;stroke-width:2.2;stroke-dasharray:6 5;pointer-events:none;vector-effect:non-scaling-stroke}.fundflow-future-point{opacity:.52!important}.fundflow-future-label{opacity:.68!important}
+
+.fundflow-probability-caption{font-size:9px;font-weight:650;fill:#6c7d90;stroke:#fff;stroke-width:2px;opacity:.95}
