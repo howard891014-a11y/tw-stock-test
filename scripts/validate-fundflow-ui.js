@@ -14,7 +14,7 @@ for(const old of ['data-fundflow-path="capital-leading"','data-fundflow-path="pr
 if(!html.includes('淡色區：XY 外包絡帶'))errors.push('dW4 Plus XY envelope legend missing');
 if(html.includes('Future Path A 5D 一起判讀'))errors.push('retired A/B forecast default note remains');
 if(!app.includes('scenarios.slice(0,1).forEach'))errors.push('legacy secondary A/B route must not render');
-for(const token of ['XY v8','法人 20D robust 資金位置','20D正負鎖左右','價格發動率','等權投票','> +0.2%','資料完整度','讀取共用 XY snapshot'])if(!app.includes(token)&&!html.includes(token))errors.push(`missing v7 semantics token ${token}`);
+for(const token of ['XY 價格路徑候選版','法人 20D robust 資金位置','20D正負鎖左右','價格發動率','等權投票','> +0.2%','資料完整度','讀取共用 XY snapshot'])if(!app.includes(token)&&!html.includes(token))errors.push(`missing v7 semantics token ${token}`);
 if(app.includes('loadFundflowCoverage'))errors.push('retired fundflow coverage/sync-status loader still present');
 if(html.includes('虛線：模型傾向'))errors.push('old projected legend text still visible');
 if(html.includes('data-fundflow-scope="finance"'))errors.push('finance scope should be merged into traditional');
@@ -25,7 +25,7 @@ for(const token of ['if(fundflowSelectedTagId===id){fundflowClearSelection();ret
 for(const token of ['/api/fundflow?view=detail','fundflowDetailCache','fundflowCompanySort','fundflowSortedCompanies','renderFundflowCompanyList','data-fundflow-company-sort="x"','data-fundflow-company-sort="y"','X 軸貢獻 ↓','Y 軸貢獻 ↓'])if(!app.includes(token)&&!html.includes(token))errors.push(`missing v2.6.6.4 company-contribution token ${token}`);
 if(app.includes('(d.companies||[]).slice(0,12)'))errors.push('company contribution list must not truncate to 12 rows');
 if(!app.includes('依 ${axis.toUpperCase()} 軸貢獻高 → 低'))errors.push('company contribution sort direction text missing');
-if(!css.includes('.fundflow-typhoon-trail.is-focus{stroke-opacity:.92!important'))errors.push('focused historical trail must keep uniform opacity');
+if(!css.includes('.fundflow-typhoon-trail.is-focus{stroke-opacity:.94!important'))errors.push('focused historical trail must keep uniform opacity');
 
 for(const token of ['fundflowFutureCurveSamples','fundflowFutureConePath','fundflowFutureCenterPath','stroke-dasharray:5 5','fill:none!important'])if(!app.includes(token)&&!css.includes(token)&&!html.includes(token))errors.push(`missing smooth Path 3.1 forecast rendering token ${token}`);
 if(app.includes('familyProbabilityWeak'))errors.push('artificial A>=50% direction gate must be removed');
@@ -33,7 +33,8 @@ if(errors.length){console.error('Fundflow UI validation FAILED');for(const e of 
 assert(app.includes('function fundflowBusinessUniverse()'),'full business-universe helper missing');
 assert(app.includes('業務 ${universe.length}｜可畫 XY ${base.length}｜待法人 X ${pendingX}'),'UI must expose business universe vs true XY coverage');
 assert(app.includes('key==="all"?String(universe.length):String(counts[key]??0)'),'All-path control must show the full business-universe count instead of only XY-eligible businesses');
-console.log(`Fundflow UI v2.6.6.8 validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
+for(const token of ['fundflowPriceReturnCard','fundflow-price-return-grid','共同基準價格 XY 路徑','未來累積報酬'])if(!html.includes(token)&&!css.includes(token)&&!app.includes(token))errors.push(`price UI token missing: ${token}`);
+console.log(`Fundflow price-path UI validation PASS — ${ids.length} unique DOM ids, consumer-electronics label + Path State + Raw/Zoom + typhoon animation present`);
 
 assert(html.includes('max-height:calc(100dvh'),'settings modal must have a viewport-bounded scroll height');
 assert(html.includes('overflow-y:auto!important'),'settings modal must scroll on mobile');

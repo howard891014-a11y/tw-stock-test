@@ -37,7 +37,7 @@ assert.equal(t.ymdToIso('20260924'),'2026-09-24');
 assert.equal(t.rocToIso('115/09/24'),'2026-09-24');
 assert.equal(t.cleanCode('6187.TW'),'6187');
 
-const api=fs.readFileSync('api/institutional.js','utf8');
+const api=fs.readFileSync('lib/api-routes/institutional.js','utf8');
 const sync=fs.readFileSync('api/sync-status.js','utf8');
 for(const token of ['readInstitutionalForStock','institutionalHistoryIsFresh','upsertInstitutionalRows','storage: freshness.persisted']){
   assert(api.includes(token),`missing API DB-first token: ${token}`);

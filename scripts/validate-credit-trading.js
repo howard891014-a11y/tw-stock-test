@@ -76,7 +76,7 @@ assert.throws(()=>credit.parseTpexMargin({...tpexMargin,reportDate:'115\/09\/23'
 console.log('credit-trading validation PASS');
 
 const fs = require('fs');
-const institutionalRoute = fs.readFileSync(require('path').join(__dirname,'..','api','institutional.js'),'utf8');
+const institutionalRoute = fs.readFileSync(require('path').join(__dirname,'..','lib','api-routes','institutional.js'),'utf8');
 const syncRoute = fs.readFileSync(require('path').join(__dirname,'..','api','sync-status.js'),'utf8');
 assert(institutionalRoute.includes('ensureCreditTradingForStock(code, payload.market)'), 'institutional route must self-bootstrap credit data on an empty DB');
 assert(syncRoute.includes('creditBackfill=await runCreditTradingBackfill'), 'cron must advance persisted credit history automatically');

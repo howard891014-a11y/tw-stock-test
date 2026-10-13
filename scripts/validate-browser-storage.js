@@ -1,7 +1,7 @@
 const fs=require('fs');
 const assert=require('assert');
 const app=fs.readFileSync('app.js','utf8');
-const targets=fs.readFileSync('api/targets.js','utf8');
+const targets=fs.readFileSync('lib/api-routes/targets.js','utf8');
 const sync=fs.readFileSync('api/sync-status.js','utf8');
 
 for(const token of ['indexedDB.open(STOCKZONE_IDB_NAME','"marketCache"','"fundflowCache"','"quoteCache"','"simulation"'])assert(app.includes(token),`IndexedDB storage missing ${token}`);
