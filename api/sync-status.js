@@ -10,6 +10,7 @@ const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = requ
 // Load the optional research module only inside research-specific actions.
 // A missing/unavailable research backfill file must NEVER break raw history status or other APIs.
 const loadResearch500D=()=>require('../lib/research-500d-backfill');
+const loadOfficialResearch500D=()=>require('../lib/research-500d-official');
 const loadResearchXGapRepair=()=>require('../lib/research-x-gap-repair');
 
 
@@ -97,6 +98,7 @@ let manualFundflowWarmPromise=null;
 let manualFundflowGapPromise=null;
 let manualFundflowHistoryPromise=null;
 let manualInstitutionalBackfillPromise=null;
+let manualResearch500OfficialPromise=null;
 
 function requestedAction(req) {
   const schedule = String(req.headers?.['x-vercel-cron-schedule'] || '').trim();
@@ -793,7 +795,8 @@ module.exports=async function handler(req,res){
       if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
       const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
       if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
-      const result=await loadResearch500D().backfillResearch500D({sql:getSql(),batchDays:3});
+      if(!manualResearch500OfficialPromise)manualResearch500OfficialPromise=loadOfficialResearch500D().backfillResearch500DOfficial({sql:getSql(),batchDays:3}).finally(()=>{manualResearch500OfficialPromise=null});
+      const result=await manualResearch500OfficialPromise;
       return res.status(result.ok?200:422).json(result);
     }
     if(action==='fundflow-clean-rebuild-manual'){
