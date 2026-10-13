@@ -4176,7 +4176,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.12";
+const FUND_FLOW_CLIENT_REV="2.6.7.13";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4636,18 +4636,20 @@ async function runManualResearch500Backfill(){
   if(manualResearch500Busy)return;manualResearch500Busy=true;
   const btn=$("manualResearch500Backfill"),status=$("manualResearch500Status");
   if(btn){btn.disabled=true;btn.textContent="檢查／補齊中…";}
-  if(status)status.textContent="檢查完整股價／法人來源、20D 因果預熱與目前203分類…";
+  if(status)status.textContent="手動抓取 TWSE／TPEx 舊日期，累積 45D 暖機，驗證後才寫入研究資料…";
   try{
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),55000);let result;
     try{
       const response=await fetch(`/api/sync-status?action=research-500d-backfill-manual&_=${Date.now()}`,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-History":"1"},signal:controller.signal});
-      result=await readJson(response,"500D 研究歷史補齊");
+      const body=await response.text();
+      try{result=JSON.parse(body)}catch{throw new Error(`官方補算回應異常（HTTP ${response.status}）`)}
+      if(!result || typeof result!=="object")throw new Error("官方補算回應格式不正確");
     }finally{clearTimeout(timer);}
-    if(status)status.textContent=!result.ok?`未修改資料：${result.reason||"品質檢查未通過"}${result.day?`（${result.day}）`:""}`:result.skipped?`本次未寫入：${result.reason||"無可用舊日期"}｜可用法人＋股價日期 ${result.source?.days??"--"} 日`:
-      `本批向前新增 ${result.processedDates||0} 日、${result.insertedOrReplacedRows||0} 筆；新版研究進度 ${result.after?.currentDays||0}/500D`;
+    if(status)status.textContent=!result.ok?`研究未寫入：${result.reason||"品質檢查未通過"}${result.failedDate?`（${result.failedDate}）`:""}；本次暫存 ${result.stored??result.officialStagedRows??0} 筆`:result.skipped?`本次暫存 ${result.officialStagedRows??0} 筆，研究未新增：${result.reason||"等待足夠暖機資料"}｜暫存有效日期 ${result.stageSourceDays??"--"} 日`:
+      `本批官方抓取 ${result.officialFetchedDays||0} 日，新增研究 ${result.processedDates||0} 日、${result.insertedOrReplacedRows||0} 筆；研究 ${result.after?.currentDays||0}/500D`;
     historyProgressFetchedAt=0;await loadHistoryProgress(true);
-  }catch(e){if(status)status.textContent=`未修改資料：${e?.message||e}`;}
-  finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="向前補齊研究歷史（每次最多 3D）";}}
+  }catch(e){if(status)status.textContent=`本批未確認完成：${e?.message||e}；可再按一次續補，已暫存資料不會重複寫入。`;}
+  finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="手動補齊 500D（每次最多 3 個官方日期）";}}
 }
 $("manualResearch500Backfill")?.addEventListener("click",runManualResearch500Backfill);
 let manualResearchXGapBusy=false;
