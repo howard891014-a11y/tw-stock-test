@@ -2710,6 +2710,19 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 .market-dynamic-page .market-dynamic-master-card{padding:24px 28px!important}.market-dynamic-page .market-dynamic-grid{display:flex!important;flex-direction:column;gap:26px}.market-dynamic-page .md-main-row{display:grid;grid-template-columns:2fr 1fr 1fr}.market-dynamic-page .md-secondary-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.market-dynamic-page .md-stat{min-width:0;padding:8px 20px;border:0;background:none;box-shadow:none;display:flex;flex-direction:column;justify-content:flex-start}.market-dynamic-page .md-main-row>*+*,.market-dynamic-page .md-secondary-row>*+*{border-left:1px solid #e4e9ef}.market-dynamic-page .md-main-row>*:first-child,.market-dynamic-page .md-secondary-row>*:first-child{padding-left:8px}.market-dynamic-page .market-dynamic-kicker{font-size:14px;letter-spacing:0;font-weight:750;color:#71819a}.market-dynamic-page .md-stat strong{font-size:clamp(21px,2.5vw,31px);line-height:1.25;margin:9px 0 7px;color:#12223e}.market-dynamic-page .md-lead strong{font-size:clamp(32px,4vw,54px);white-space:nowrap}.market-dynamic-page .md-stat small{font-size:13px;line-height:1.7;color:#71819a}.market-dynamic-page .md-stat.is-up strong{color:#e14949}.market-dynamic-page .md-stat.is-down strong{color:#18a66a}.market-dynamic-page .md-w3-value{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.market-dynamic-page .md-w3-value strong{color:#18a66a}.market-dynamic-page .md-w3-value .sz-w3-health{font-size:11px;margin:0;padding:4px 9px;border-radius:9px;background:#e9f8ef}.market-dynamic-page .market-dynamic-history-card .card-title{font-size:19px;font-weight:800}
 @media(max-width:800px){.market-dynamic-page .md-main-row{grid-template-columns:1.5fr 1fr}.market-dynamic-page .md-lead{grid-row:span 2}.market-dynamic-page .md-main-row>*:last-child{border-top:1px solid #e4e9ef}.market-dynamic-page .md-secondary-row{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:18px}.market-dynamic-page .md-secondary-row>*:nth-child(3){border-left:0}}
 @media(max-width:520px){.market-dynamic-page .market-dynamic-master-card{padding:18px!important}.market-dynamic-page .md-main-row{grid-template-columns:1fr 1fr}.market-dynamic-page .md-lead{grid-column:1/-1;grid-row:auto;border-bottom:1px solid #e4e9ef;padding-bottom:16px}.market-dynamic-page .md-main-row>*:nth-child(2){border-left:0}.market-dynamic-page .md-main-row>*:last-child{border-top:0}.market-dynamic-page .md-stat{padding:8px 10px}.market-dynamic-page .md-secondary-row{gap:14px 0}.market-dynamic-page .md-secondary-row>*:nth-child(3),.market-dynamic-page .md-secondary-row>*:nth-child(4){border-top:1px solid #e4e9ef;padding-top:15px}.market-dynamic-page .md-lead strong{font-size:40px}.market-dynamic-page .md-stat strong{font-size:23px}.market-dynamic-page .market-dynamic-kicker{font-size:12px}.market-dynamic-page .md-stat small{font-size:11px}}
+</style>
+<style id="stockzone-price-path-candidate">
+/* Candidate price-path / accumulated return display, zero additional data calls. */
+.fundflow-price-returns{padding:12px 14px;border:1px solid #e1e8f1;border-radius:14px;background:#fcfdff;margin:10px 0}
+.fundflow-return-title{font-size:12px;font-weight:800;color:#283951;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between}
+.fundflow-return-title small{font-size:10px;font-weight:500;color:#8494a7}
+.fundflow-price-return-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.fundflow-return-item{text-align:center;padding:9px 4px;background:#f4f7fb;border-radius:10px;min-width:0}
+.fundflow-return-item small{display:block;color:#8695a8;font-size:11px;margin-bottom:3px}
+.fundflow-return-item strong{display:block;font-size:14px;color:#627489;font-variant-numeric:tabular-nums}
+.fundflow-return-item strong.positive{color:#128668}.fundflow-return-item strong.negative{color:#c55757}
+@media(max-width:420px){.fundflow-price-return-grid{gap:4px}.fundflow-return-item strong{font-size:12px}}
+
 </style></head>
 <body>
 <div class="app-shell">
@@ -2738,7 +2751,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.7.9</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.7.10</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3182,7 +3195,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <svg id="fundflowXySvg" viewBox="0 0 760 510" role="img" aria-label="業務資金輪動與階段模型轉態 XY 圖"></svg>
             <div class="fundflow-chart-loading" id="fundflowChartLoading">讀取 XY 資金輪動…</div>
           </div>
-          <div class="fundflow-model-legend"><span><i class="actual"></i>實線：已發生</span><span><i class="fan"></i>淡線：dW4 Plus 未來中心路徑｜淡色區：XY 外包絡帶</span></div>
+          <div class="fundflow-model-legend"><span><i class="actual"></i>實線：歷史實際價格路徑</span><span><i class="fan"></i>淡線：候選 dW4 未來價格路徑｜淡色區：XY 外包絡帶</span></div>
         </div>
       </section>
 
@@ -3216,15 +3229,16 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <div id="fundflowDetailBody">
           <div class="fundflow-detail-kpis">
             <div><span>最新 X</span><strong id="fundflowDetailX">--</strong><small>相對自身歷史法人強度</small></div>
-            <div><span>最新 Y</span><strong id="fundflowDetailY">--</strong><small>價格強度</small></div>
+            <div><span>價格 Y（20D 基準）</span><strong id="fundflowDetailY">--</strong><small>每日 log 累積路徑</small></div>
             <div><span>C / E</span><strong id="fundflowDetailMove">--</strong><small id="fundflowDetailStatus">--</small></div>
           </div>
-          <div class="fundflow-projection-summary"><span>Top-2 未來路徑</span><strong id="fundflowDetailProjection">--</strong><small id="fundflowDetailProjectionNote">只畫信心最高的 A / B 兩條路徑；3 / 5 / 10 日圓圈會隨不確定性放大。</small></div>
+          <div class="fundflow-projection-summary"><span>未來價格預測</span><strong id="fundflowDetailProjection">--</strong><small id="fundflowDetailProjectionNote">未來累積報酬為模型估計；顯示尚未經實盤驗證。</small></div>
+          <div class="fundflow-price-returns"><div class="fundflow-return-title">未來累積報酬 <small>相對今天｜研究候選・未經實盤驗證</small></div><div id="fundflowPriceReturnCard" class="fundflow-price-return-grid"></div></div>
           <div class="fundflow-detail-grid">
             <div class="fundflow-detail-panel"><h4>X 法人買賣超比例</h4><div id="fundflowXFactors" class="fundflow-factor-list"></div></div>
-            <div class="fundflow-detail-panel"><h4>Y 價格強度拆解</h4><div id="fundflowYFactors" class="fundflow-factor-list"></div></div>
+            <div class="fundflow-detail-panel"><h4>近期價格 R5 / 轉折拆解</h4><div id="fundflowYFactors" class="fundflow-factor-list"></div></div>
           </div>
-          <div class="fundflow-detail-panel fundflow-history-panel"><h4>每日 XY 象限軌跡</h4><div id="fundflowDetailHistory" class="fundflow-history-list"></div></div>
+          <div class="fundflow-detail-panel fundflow-history-panel"><h4>共同基準價格 XY 路徑</h4><div id="fundflowDetailHistory" class="fundflow-history-list"></div></div>
           <div class="fundflow-detail-panel"><div class="fundflow-company-head"><div><h4>公司貢獻</h4><small id="fundflowCompanyMeta">全部成員｜正值推高該軸，負值拖低該軸</small></div><div class="fundflow-company-sort" role="group" aria-label="公司貢獻排序"><button type="button" class="active" data-fundflow-company-sort="x">X 軸貢獻 ↓</button><button type="button" data-fundflow-company-sort="y">Y 軸貢獻 ↓</button></div></div><div id="fundflowCompanyList" class="fundflow-company-list"></div></div>
           <small class="fundflow-detail-note" id="fundflowDetailNote"></small>
         </div>
@@ -3571,7 +3585,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.7.9"></script>
+  <script src="./app.js?v=2.6.7.10"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
