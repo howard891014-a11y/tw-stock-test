@@ -10,6 +10,7 @@ const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = requ
 // Load the optional research module only inside research-specific actions.
 // A missing/unavailable research backfill file must NEVER break raw history status or other APIs.
 const loadResearch500D=()=>require('../lib/research-500d-backfill');
+const loadResearchXGapRepair=()=>require('../lib/research-x-gap-repair');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -729,6 +730,11 @@ module.exports=async function handler(req,res){
         targets:{priceRaw:STORAGE_POLICY.raw.price,institutionalRaw:STORAGE_POLICY.raw.institutional,creditRaw:STORAGE_POLICY.raw.credit,research:STORAGE_POLICY.compact.topicResearch},
         markets,generatedAt:new Date().toISOString()});
     }
+    if(progressView==='research-x-gap-progress'){
+      if(String(req.method||'GET').toUpperCase()!=='GET')return res.status(405).json({ok:false,error:'GET only'});
+      const status=await loadResearchXGapRepair().readResearchXGapStatus(getSql());
+      return res.status(200).json({ok:true,view:progressView,researchXGapStatus:status,generatedAt:new Date().toISOString()});
+    }
     if(progressView==='research-500d-progress'){
       if(String(req.method||'GET').toUpperCase()!=='GET')return res.status(405).json({ok:false,error:'GET only'});
       const progress=await loadResearch500D().readResearch500DProgress(getSql());
@@ -774,6 +780,14 @@ module.exports=async function handler(req,res){
       return res.status(warm.ok?200:503).json({...warm,manual:true});
     }
 
+    if(action==='research-x-gap-repair-manual'){
+      if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
+      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
+      const result=await loadResearchXGapRepair().repairResearchXGaps({sql:getSql(),batchDays:3});
+      return res.status(result.ok?200:422).json(result);
+    }
     if(action==='research-500d-backfill-manual'){
       if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
       if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
