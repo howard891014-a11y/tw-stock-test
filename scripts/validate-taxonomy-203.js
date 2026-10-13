@@ -58,5 +58,6 @@ assert.equal(road.companyCount,3);assert.equal(road.xyEligible,true);
 const fs=require('node:fs');const source=fs.readFileSync(require.resolve('../lib/fundflow-xy'),'utf8');
 assert(source.includes('m.importance IS DISTINCT FROM EXCLUDED.importance'));
 assert(source.includes('m.stock_code = ANY($2::text[])'));
-assert(source.includes('Number(g.memberCount||0)>=3&&Number(g.validCount||0)>=3'));
+assert(source.includes('validCount>=2&&trajectoryLength>=2'),'Browser must require at least 2 valid stocks + 2 trajectory points');
+assert(source.includes('businessEligible=g=>g.validCount>=2&&g.trajectory.length>=2'),'overview minimum membership and history must match Browser');
 console.log(`PASS StockZone203 offline release: 203 categories / 3440 edges / 190 potentially XY-enabled / 13 unplottable / retired 6806 excluded`);

@@ -31,7 +31,17 @@ const staticallyCoveredFineTags=new Set(Object.keys(seeds.groups));
 for(const code of ['24','25','26','27','28','29','30','31','36']){ const info=industries.resolveIndustry({code}); if(info.fallbackTag)staticallyCoveredFineTags.add(info.fallbackTag); }
 for(const company of db.companies) for(const link of company.tags) staticallyCoveredFineTags.add(link.id);
 const orphanFineTags=tags.listVoteEligible().filter(tag=>tag.resolution==='fine'&&!staticallyCoveredFineTags.has(tag.id));
-if(orphanFineTags.length) errors.push(`fine business definitions without any company anchor: ${orphanFineTags.map(x=>`${x.id}/${x.name}`).join(', ')}`);
+// HDD is reserved for future company discoveries, but none of the audited current companies
+// is a hard-disk manufacturer. A dormant definition is not an active Company_Map assignment.
+// Keep rejecting any NEW unanchored fine tag so this remains a real taxonomy regression gate.
+const knownDormantFineTags=new Set(['hard_disk_drive']);
+for(const item of orphanFineTags){
+  if(!knownDormantFineTags.has(item.id))errors.push(`fine business definition without company anchor: ${item.id}/${item.name}`);
+}
+for(const id of knownDormantFineTags){
+  if(!orphanFineTags.some(x=>x.id===id))errors.push(`dormant fine tag changed unexpectedly: ${id}; review company evidence and this exception`);
+  if(db.companies.some(x=>x.tags.some(t=>t.id===id)))errors.push(`dormant fine tag assigned to current company without classification review: ${id}`);
+}
 
 for (const [groupId,names] of Object.entries(seeds.groups)) {
   const item=tags.getTag(groupId);

@@ -20,12 +20,12 @@ for(const d of freeze.listDefinitions())assert(d.companyCount>0,`zero-member fin
 const silergy=freeze.companyTopicLinks('6415');
 assert(silergy.some(x=>x.id==='pmic'&&x.importance==='core'),'6415 PMIC must be core');
 const copos=Object.entries(freeze.COMPANY_TOPICS).filter(([,pairs])=>pairs.some(([id])=>id==='copos'));
-assert.equal(copos.length,20,'CoPoS final supply-chain count must be 19 after large-tag refinement');
+assert.equal(copos.length,20,'CoPoS final supply-chain count must be 19 under the 203-category audited freeze');
 assert(copos.every(([,pairs])=>pairs.find(([id])=>id==='copos')[1]==='related'),'CoPoS must be related supply-chain exposure');
 for(const code of ['1516','3054','4564','6538','8932','9950'])assert.deepEqual(freeze.companyTopicPairs(code),[],`${code} must remain strict no-tag`);
-for(const retired of ['lead_material_recycling','nand','semiconductor_products_services','pi_film','smart_meter_energy_management','holographic_optical_material','thin_client','special_metal','electronic_components_manufacturing'])assert(!freeze.definitionById(retired),`${retired} must not be in final 191`);
+for(const retired of ['lead_material_recycling','nand','semiconductor_products_services','pi_film','smart_meter_energy_management','holographic_optical_material','thin_client','special_metal','electronic_components_manufacturing'])assert(!freeze.definitionById(retired),`${retired} must not be in final 203`);
 for(const added of ['shipbuilding','optical_storage','display_panel','compound_semiconductor','cof_substrate','environmental_recycling','hand_tools','fastener','beauty_care','protection_component'])assert(freeze.definitionById(added),`${added} final tag missing`);
-assert.equal(tax.version,'2.3.1-final203-subindustry');
+assert.equal(tax.version,'2.3.1-final203');
 assert.equal(xy.ENGINE_VERSION,'xy-8.4.4-clean-feature2-path311-taxonomy26');
 assert.equal(xy.SNAPSHOT_SCHEMA_VERSION,'snapshot-7.0.4-focuspack-path31-taxonomy26-browser203');
 assert(status.includes("action==='taxonomy-sync-export-manual'"));

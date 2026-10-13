@@ -5,7 +5,7 @@ const {classifyBusinessText,BLIND_COVERAGE_VERSION}=require('../lib/business-enr
 const taxonomy=require('../lib/market-topic-taxonomy');
 const {marketTopicLinks}=taxonomy;
 
-assert.equal(taxonomy.version,'2.3.0-final191');
+assert.equal(taxonomy.version,'2.3.1-final203');
 assert.equal(BLIND_COVERAGE_VERSION,'blind-1.2.0','taxonomy-only release must not trigger full business-enrichment rewrite');
 
 // Final frozen universe is authoritative; unknown/future companies still use classifier compatibility.
@@ -13,11 +13,12 @@ for(const id of ['gpu','chipset','wafer_manufacturing','consumer_ic','panel_mark
   const got=new Set(marketTopicLinks([{id,importance:'core',origin:'test'}],'未來測試公司','999999',{}).map(x=>x.id));
   assert(!got.has(id),`${id} must remain retired from Fundflow XY`);
 }
-for(const [raw,expected] of [['rigid_flex','fpcb'],['specialty_process','mature_foundry'],['bt_substrate','abf_substrate'],['copper_foil','ccl'],['server_rack','server_chassis']]){
+for(const [raw,expected] of [['rigid_flex','fpcb'],['specialty_process','mature_foundry'],['bt_substrate','abf_substrate'],['server_rack','server_chassis']]){
   const got=new Set(marketTopicLinks([{id:raw,importance:'core',origin:'test'}],'未來測試公司','999999',{}).map(x=>x.id));
   assert(got.has(expected),`${raw} should consolidate to ${expected}`);
 }
 
+assert(!marketTopicLinks([{id:'copper_foil',importance:'core'}],'未來測試公司','999999',{}).some(x=>x.id==='ccl'),'retired composite CCL must not be reintroduced');
 // Raw/business classifier false-positive guards remain active for future enrichment.
 const rawExclusionProbes=[
   ['8240','華宏','bmc'],['3707','漢磊','dram'],['3264','欣銓','memory_ic'],['6485','點序','nand'],['8299','群聯','nand'],

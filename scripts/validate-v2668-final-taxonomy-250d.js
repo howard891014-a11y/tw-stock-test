@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const tax=require('../lib/market-topic-taxonomy');
 const {STORAGE_POLICY}=require('../lib/storage-policy');
-assert.equal(tax.version,'2.3.0-final191');
+assert.equal(tax.version,'2.3.1-final203');
 assert.equal(STORAGE_POLICY.compact.topicResearch,500);
 assert.equal(STORAGE_POLICY.compact.wResearch,500);
 assert.equal(STORAGE_POLICY.raw.price,120);

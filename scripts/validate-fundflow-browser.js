@@ -16,20 +16,20 @@ const snapshot={asOf:'2026-09-23',engineVersion:'test',groups:[{tagId:'wafer',na
 
 const out=buildBusinessBrowserCatalog(profiles,snapshot);
 assert.equal(out.ok,true);
-assert.equal(out.counts.totalDefinitions,191,'fallback Browser registry must be the final 191, not legacy 213');
-assert.equal(listMarketDefinitions({finalOnly:true}).length,191);
+assert.equal(out.counts.totalDefinitions,203,'fallback Browser registry must be the final 203, not legacy 213');
+assert.equal(listMarketDefinitions({finalOnly:true}).length,203);
 const wafer=out.items.find(x=>x.tagId==='wafer');assert(wafer);assert.equal(wafer.companyCount,3);assert.equal(wafer.xyEligible,true);
 const cement=out.items.find(x=>x.tagId==='cement');assert(cement);assert.equal(cement.companyCount,1);assert.equal(cement.xyEligible,false);
 assert(!out.items.some(x=>x.tagId==='semiconductor_products_services'),'removed generic semiconductor-service tag must not reappear in Browser');
-const glass=out.items.find(x=>x.tagId==='glass_substrate');assert(glass);assert(glass.companyCodes.includes('8027'));assert(!glass.companyCodes.includes('6207'));
+const glass=out.items.find(x=>x.tagId==='glass_substrate');assert(glass);assert(glass.companyCodes.includes('8027'));assert(glass.companyCodes.includes('6207'),'6207 雷科是已審定玻璃基板核心成員');
 const companyMap=buildCompanyMap(profiles);assert.equal(companyMap.byTopic.get('glass_substrate').companyCount,glass.companyCount);assert.equal(companyMap.stats.totalCompanies,profiles.length);
-assert(out.items.find(x=>x.tagId==='bbu').companyNames.includes('AES-KY'));
+assert(out.items.find(x=>x.tagId==='bbu_backup_battery').companyNames.includes('AES-KY'));
 assert(!out.items.some(x=>x.tagId==='wet_process_equipment'));
 
 const frozenSnapshot={...snapshot,topicTaxonomyVersion:'taxonomy-2.3.0-final191'};
 const frozenCatalog=buildBusinessBrowserCatalog(profiles,frozenSnapshot);
-assert.equal(frozenCatalog.counts.totalDefinitions,191,'snapshot groups must never shrink the frozen 191-category registry');
-assert.equal(frozenCatalog.items.length,191);
+assert.equal(frozenCatalog.counts.totalDefinitions,203,'snapshot groups must never shrink the frozen 203-category registry');
+assert.equal(frozenCatalog.items.length,203);
 assert.equal(frozenCatalog.items.find(x=>x.tagId==='wafer').xyEligible,true);
 assert(frozenCatalog.items.some(x=>x.tagId!=='wafer'&&x.xyEligible===false),'categories absent from snapshot must remain visible as no-XY rows');
-console.log('Fundflow business browser validation PASS — final 191 registry + Company_Map consistency');
+console.log('Fundflow business browser validation PASS — final 203 registry + Company_Map consistency');

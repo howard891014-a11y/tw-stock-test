@@ -100,8 +100,11 @@ function topicFixture(tagId,market='上市'){
   const profiles=[{stock_code:'7769',stock_name:'鴻勁',market:'上市',industry_code:'24',industry:'半導體業',auto_business_tags:[]}];
   const rows=[];for(const trade_date of ['2026-09-23','2026-09-24'])rows.push({trade_date,stock_code:'7769',stock_name:'鴻勁',market:'上市',...flowFields(100),change_pct:1,value_ratio_20:1.2,value_trend_5_15:1.1,positive_days_5:3,return_3_pct:2,return_5_pct:3,return_20_pct:4});
   const result=computeBusinessFlow(profiles,rows,{maxDates:2});
-  assert(result.groups.some(x=>x.tagId==='cpo_silicon_photonics'),'鴻勁 CPO final mapping missing');
-  assert(result.groups.some(x=>x.tagId==='semiconductor_test_equipment_market'),'鴻勁 semiconductor-test mapping missing');
+  // The independently audited final203 map places handler maker 7769 in test EQUIPMENT, not CPO.
+  assert(result.groups.some(x=>x.tagId==='semiconductor_test_equipment'),'鴻勁 semiconductor test EQUIPMENT final mapping missing');
+  assert(result.groups.some(x=>x.tagId==='semiconductor_equipment'),'鴻勁 semiconductor equipment final mapping missing');
+  assert(!result.groups.some(x=>x.tagId==='cpo_silicon_photonics'),'鴻勁 must not be misclassified as CPO');
+  assert(!result.groups.some(x=>x.tagId==='semiconductor_test_equipment_market'),'retired generic test-equipment tag must not appear');
 }
 console.log('Fundflow detail v3 validation PASS',{tag:detail.name,days:detail.trajectoryDays,companies:detail.companies.length,phase:detail.latest.phaseLabel});
 

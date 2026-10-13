@@ -22,11 +22,12 @@ assert(!status.includes("view==='fundflow-detail'"),'sync-status API must not ex
 assert(api.includes('stale-while-revalidate=3600'));
 for(const t of ['market_business_xy2_stock_daily','market_business_xy2_topic_daily','market_business_xy2_snapshot','market_business_xy2_member'])assert(core.includes(`CREATE TABLE IF NOT EXISTS ${t}`),`clean table missing: ${t}`);
 assert(core.includes("const FEATURE_VERSION = 'feature-2.0.0-x20raw20-y5-activation02'"));
-assert(core.includes("const PATH_MODEL_VERSION = 'path-3.1.0-point-line-family-p70'"));
-assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-7.0.3-focuspack-path31-taxonomy25-browser191'"));
-assert(core.includes("const DAILY_BUILD_VERSION = 'daily-7.1.2-taxonomy25'"));
+assert(core.includes("const PATH_MODEL_VERSION = 'path-3.1.1-family-cache-refresh'"));
+assert(core.includes("const SNAPSHOT_SCHEMA_VERSION = 'snapshot-7.0.4-focuspack-path31-taxonomy26-browser203'"));
+assert(core.includes("const DAILY_BUILD_VERSION = 'daily-7.1.3-taxonomy26'"));
 assert(core.includes("const TOPIC_TAXONOMY_VERSION = `taxonomy-${marketTopicTaxonomy.version}`"));
-assert(app.includes('const FUND_FLOW_CLIENT_REV="2.6.6.14"'));
+const release=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+assert(app.includes(`const FUND_FLOW_CLIENT_REV="${release}"`));
 
 const snap=core.slice(core.indexOf('async function getFundflowSnapshot'),core.indexOf('async function getFundflowBusinessBrowser'));
 assert(!snap.includes('refreshBusinessFlowDaily('));assert(!snap.includes('loadEngineInputs('));
@@ -54,7 +55,7 @@ for(const safe of ['market_daily_history','market_activity_daily','institutional
 assert(cleanup.includes("safeScope:'legacy-derived-xy-only'"));
 for(const legacy of ['market_business_xy_daily','market_business_xy_snapshot','market_business_xy_member'])assert(core.includes(legacy),`legacy cleanup target missing ${legacy}`);
 const audit=core.slice(core.indexOf('async function readFundflowValidationAudit'),core.indexOf('module.exports='));
-assert(audit.includes('readPathAuditSnapshot(sql)'),'validation must use persisted Path audit');assert(audit.includes('buildCompactBenchmarkEvidence'),'validation benchmark must be compact-only');for(const raw of ['market_activity_daily','institutional_trading_daily','credit_trading_daily','market_daily_history'])assert(!audit.includes(raw),`validation must not scan raw table ${raw}`);
+assert(!audit.includes('readPathAuditSnapshot(sql)'),'lightweight validation must NOT load legacy Path audit');assert(audit.includes('noLegacyPathAudit:true'),'validation response must explicitly label no Path audit');assert(audit.includes('buildCompactBenchmarkEvidence'),'validation benchmark must be compact-only');for(const raw of ['market_activity_daily','institutional_trading_daily','credit_trading_daily','market_daily_history'])assert(!audit.includes(raw),`validation must not scan raw table ${raw}`);
 const stateFn=core.slice(core.indexOf('async function readCurrentPreparedState'),core.indexOf('async function warmCurrentEngineFromStoredDb'));assert(!stateFn.includes('payload'),'state probe must not transfer prepared JSON payloads');
 
 assert(!sync.includes('refreshBusinessFlowDaily'));assert(sync.includes("reason:'manual XY snapshot mode during development'"));
