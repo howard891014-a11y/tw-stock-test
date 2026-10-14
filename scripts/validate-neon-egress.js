@@ -61,7 +61,7 @@ const stateFn=core.slice(core.indexOf('async function readCurrentPreparedState')
 assert(!sync.includes('refreshBusinessFlowDaily'));assert(sync.includes("reason:'manual XY snapshot mode during development'"));
 assert(core.includes('async function warmCurrentEngineFromStoredDb'));assert(core.includes("followupStage:'prepared-snapshot-path-audit'"));assert(app.includes('for(let step=0;step<3;step++)'));assert(app.includes('platformHint=status>=500'));assert(status.includes("action==='fundflow-warm-manual'"));assert(status.includes("action==='fundflow-clean-rebuild-manual'"));assert(status.includes('x-stockzone-manual-history'));assert(app.includes('X-StockZone-Manual-History'));
 assert(!(vercel.crons||[]).some(x=>x.schedule==='0 10 * * *'));
-assert(enrich.includes('DELETE FROM market_business_xy2_topic_daily')&&enrich.includes('DELETE FROM market_business_xy2_snapshot')&&enrich.includes('DELETE FROM market_business_xy2_member'));
+for(const table of ['market_business_xy2_topic_daily','market_business_xy2_snapshot','market_business_xy2_member'])assert(!enrich.includes('DELETE FROM '+table),'legacy Blind Coverage MUST NOT clear '+table);
 assert(!enrich.includes('DELETE FROM market_business_xy_daily'));
 assert(db.includes('pg_database_size(current_database())'));assert(db.includes('pg_total_relation_size(rel)'));assert(db.includes('pruneEnabled:true'));assert(db.includes('softTargetMb:STORAGE_POLICY.softTargetMb'));assert(db.includes('idealMb:50,maxMb:100'));
 assert(db.includes('compact-operational-${STORAGE_POLICY.compact.topicOperational}d'));assert(db.includes('compact-numeric-research-${STORAGE_POLICY.compact.topicResearch}d'));assert(db.includes("market_business_xy_daily:'legacy-derived-drop-after-verified-clean-cutover'"));
