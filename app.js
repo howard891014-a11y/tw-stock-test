@@ -4176,7 +4176,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.13";
+const FUND_FLOW_CLIENT_REV="2.6.7.14";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4652,6 +4652,41 @@ async function runManualResearch500Backfill(){
   finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="手動補齊 500D（每次最多 3 個官方日期）";}}
 }
 $("manualResearch500Backfill")?.addEventListener("click",runManualResearch500Backfill);
+let manualResearchPriceRepairBusy=false;
+async function runManualResearchPriceRepair(){
+ if(manualResearchPriceRepairBusy)return;
+ manualResearchPriceRepairBusy=true;
+ const button=$("manualResearchPriceRepair"),status=$("manualResearchPriceRepairStatus");
+ if(button){button.disabled=true;button.textContent="正在校正舊研究 Y…";}
+ let repaired=0,priceDays=0,batches=0;
+ try{
+  // Automatic, bounded batches on the CLIENT. Every serverless invocation
+  // handles at most 3 official dates or 6 research trading dates.
+  for(let i=0;i<32;i++){
+   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),58000);
+   let data;
+   try{
+    const response=await fetch(`/api/sync-status?action=research-price-label-repair-manual&_=${Date.now()}`,{
+     method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','X-StockZone-Manual-History':'1'},signal:controller.signal});
+    data=await readJson(response,'歷史價格路徑校正');
+   }finally{clearTimeout(timer);}
+   if(!data?.ok)throw Error(data?.reason||'校正批次失敗');
+   batches++;repaired+=Number(data.updatedRows||0);priceDays+=(data.dates||[]).length;
+   const left=Number(data.after?.remainingDays??0);
+   if(status)status.textContent=data.phase==='fetch-official-price'
+    ?`官方歷史股價準備中：本批 ${data.dates?.length||0} 日；尚待 ${data.remainingOfficialWeekdays||0} 個候選平日…`
+    :`報酬／Y 校正中：第 ${batches} 批，累計更新 ${repaired} 筆，剩 ${left} 個研究日…`;
+   if(data.complete||data.after?.complete){
+    if(status)status.textContent=`修復完成：共 ${batches} 批、更新 ${repaired} 筆；原值已備份，X 與研究天數未變。`;
+    return;
+   }
+  }
+  if(status)status.textContent=`已處理 ${batches} 批、更新 ${repaired} 筆。可再按一次從斷點續修。`;
+ }catch(e){if(status)status.textContent=`修復暫停（已完成 ${batches} 批、更新 ${repaired} 筆）：${e?.message||e}。原值已有備份；請檢查原因再續修。`;}
+ finally{manualResearchPriceRepairBusy=false;if(button){button.disabled=false;button.textContent='一鍵校正舊研究報酬／Y（自動分批）';}}
+}
+$("manualResearchPriceRepair")?.addEventListener('click',runManualResearchPriceRepair);
+
 let manualResearchXGapBusy=false;
 async function runManualResearchXGapRepair(){
   if(manualResearchXGapBusy)return;
