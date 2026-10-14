@@ -4176,7 +4176,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.14";
+const FUND_FLOW_CLIENT_REV="2.6.7.15";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4504,16 +4504,16 @@ function renderMarketDynamic(){
   marketTone($("marketTrend")?.closest(".md-stat"),d.ret20);
   set("marketBreadth",marketNum(d.advanceRatio)===null?"--":marketNum(d.advanceRatio).toFixed(1)+"%");
   set("marketBreadthDetail",`上 ${d.up||0}｜下 ${d.down||0}｜5D ${marketNum(d.breadth5)===null?"--":marketNum(d.breadth5).toFixed(1)+"%"}`);
-  set("marketForeign",marketFmtMoney(d.foreignNet));
-  set("marketInstitutionDetail",`投信 ${marketFmtMoney(d.trustNet)}｜自營 ${marketFmtMoney(d.dealerNet)}`);
-  marketTone($("marketForeign")?.closest(".md-stat"),d.foreignNet);
+  set("marketForeign",d.institutionalComplete?"約"+marketFmtMoney(d.foreignValue):"待更新");
+  set("marketInstitutionDetail",d.institutionalComplete?`收盤價估算｜投信 ${marketFmtMoney(d.trustValue)}｜自營 ${marketFmtMoney(d.dealerValue)}`:"上市／上櫃法人或股價資料尚未齊全");
+  marketTone($("marketForeign")?.closest(".md-stat"),d.institutionalComplete?d.foreignValue:null);
   set("marketRisk",marketFmtPct(d.drawdown20));
   set("marketRiskDetail",`20D 波動 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}｜20D 回撤`);
   set("marketCoverage",marketNum(d.coverage)===null?"--":marketNum(d.coverage).toFixed(1)+"%");
   set("marketCoverageDetail",`${marketDynamicData?.meta?.returnedDays||0}D 顯示｜資料保留 ${marketDynamicData?.meta?.retentionDays||500}D`);
   renderMarketDistribution();
   const body=$("marketDynamicHistory");
-  if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.foreignNet)>0?"is-up":marketNum(r.foreignNet)<0?"is-down":""}">${marketFmtMoney(r.foreignNet)}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
+  if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.foreignValue)>0?"is-up":marketNum(r.foreignValue)<0?"is-down":""}">${r.institutionalComplete?"約"+marketFmtMoney(r.foreignValue):"待更新"}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
 }
 async function loadMarketDynamic(force=false){
   if(marketDynamicLoading)return;
@@ -4581,8 +4581,9 @@ function renderHistoryProgress(data){
   const bar=$("historyResearchBar"),rv=$("historyResearchValue"),rd=$("historyResearchDetail");
   if(research&&bar)bar.style.width=`${researchPct.toFixed(1)}%`;
   if(research&&rv)rv.textContent=research?.error?"資料讀取失敗":`${researchDays} / ${researchTarget}D`;
-  if(research&&rd)rd.textContent=research?.error?`進度查詢失敗：${research.error}`:`新版 ${research.categoryCount||203} 類｜X 有效 ${research.xUsableDays||0}D｜${research.minDate||"尚未建立"} ～ ${research.maxDate||"--"}｜舊版 ${research.allVersionDays||0}D（不直接計入）`;
-  const researchButton=$("manualResearch500Backfill");if(researchButton&&!manualResearch500Busy)researchButton.disabled=Boolean(research?.error)||researchDays>=researchTarget;
+  if(research)research500TaxonomyReady=Boolean(research.taxonomyReady);
+  if(research&&rd)rd.textContent=research?.error?`進度查詢失敗：${research.error}`:!research500TaxonomyReady?`研究 ${researchDays}D 仍在，203 產業成員表需恢復；請先按「安全恢復 203 產業／XY」`:`新版 ${research.categoryCount||203} 類｜X 有效 ${research.xUsableDays||0}D｜${research.minDate||"尚未建立"} ～ ${research.maxDate||"--"}｜舊版 ${research.allVersionDays||0}D（不直接計入）`;
+  const researchButton=$("manualResearch500Backfill");if(researchButton&&!manualResearch500Busy)researchButton.disabled=Boolean(research?.error)||!research500TaxonomyReady||researchDays>=researchTarget;
   const completeRaw=["price","institutional","credit"].every(k=>["上市","上櫃"].every(m=>Number(markets?.[m]?.[k]?.tradingDays||0)>=Number(targetMap[k])));
   const ready=[[$("historyLiveReady"),["price","institutional"].every(k=>["上市","上櫃"].every(m=>Number(markets?.[m]?.[k]?.tradingDays||0)>=20)),"20D Live"],[$("historyBacktestReady"),completeRaw,"近期 Raw"]];ready.forEach(([el,ok,label])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${label} ${ok?"✓":""}`.trim()});
   const updated=$("historyProgressUpdated");if(updated){const d=data?.generatedAt?new Date(data.generatedAt):null;updated.textContent=d&&!Number.isNaN(d.getTime())?`更新 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`:"已更新";}
@@ -4610,8 +4611,9 @@ async function loadHistoryProgress(force=false){
         const bar=$("historyResearchBar"),rv=$("historyResearchValue"),rd=$("historyResearchDetail"),btn=$("manualResearch500Backfill");
         if(bar)bar.style.width=`${Math.min(100,Math.max(0,100*count/target)).toFixed(1)}%`;
         if(rv)rv.textContent=`${count} / ${target}D`;
-        if(rd)rd.textContent=`新版 ${x.categoryCount||203} 類｜X 有效 ${x.xUsableDays||0}D｜${x.minDate||'尚未建立'} ～ ${x.maxDate||'--'}｜舊版 ${x.allVersionDays||0}D（不直接計入）`;
-        if(btn&&!manualResearch500Busy)btn.disabled=count>=target;
+        research500TaxonomyReady=Boolean(x.taxonomyReady);
+        if(rd)rd.textContent=research500TaxonomyReady?`新版 ${x.categoryCount||203} 類｜X 有效 ${x.xUsableDays||0}D｜${x.minDate||'尚未建立'} ～ ${x.maxDate||'--'}｜舊版 ${x.allVersionDays||0}D（不直接計入）`:`研究 ${count}D 仍在，請先按「安全恢復 203 產業／XY」再補 500D`;
+        if(btn&&!manualResearch500Busy)btn.disabled=!research500TaxonomyReady||count>=target;
         const ready=$("historyResearchReady");if(ready){ready.classList.toggle('is-ready',count>=target);ready.textContent=`${target}D Research ${count>=target?'✓':''}`.trim()}
       }
       return data;
@@ -4631,6 +4633,7 @@ async function loadHistoryProgress(force=false){
     historyProgressFetchedAt=Date.now();
   }finally{historyProgressLoading=false}
 }
+let research500TaxonomyReady=false;
 let manualResearch500Busy=false;
 async function runManualResearch500Backfill(){
   if(manualResearch500Busy)return;manualResearch500Busy=true;
@@ -4649,7 +4652,7 @@ async function runManualResearch500Backfill(){
       `本批官方抓取 ${result.officialFetchedDays||0} 日，新增研究 ${result.processedDates||0} 日、${result.insertedOrReplacedRows||0} 筆；研究 ${result.after?.currentDays||0}/500D`;
     historyProgressFetchedAt=0;await loadHistoryProgress(true);
   }catch(e){if(status)status.textContent=`本批未確認完成：${e?.message||e}；可再按一次續補，已暫存資料不會重複寫入。`;}
-  finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="手動補齊 500D（每次最多 3 個官方日期）";}}
+  finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!research500TaxonomyReady||!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="手動補齊 500D（每次最多 3 個官方日期）";}}
 }
 $("manualResearch500Backfill")?.addEventListener("click",runManualResearch500Backfill);
 let manualResearchPriceRepairBusy=false;
@@ -4782,6 +4785,50 @@ document.querySelectorAll(".settings-open").forEach(btn=>btn.addEventListener("c
 }));
 $("closeSettings")?.addEventListener("click",()=>$("settingsModal")?.classList.add("hidden"));
 $("settingsModal")?.addEventListener("click",e=>{if(e.target===$("settingsModal"))$("settingsModal").classList.add("hidden")});
+
+// v2.6.7.15: explicit, resumable XY recovery from the frozen 203 taxonomy.
+// It never deletes existing research500, price labels, institutional or stock data.
+let manualXYRecoveryBusy=false;
+async function runManualXYRecovery(){
+  if(manualXYRecoveryBusy)return;
+  manualXYRecoveryBusy=true;
+  const btn=$("manualXYRecovery"),status=$("manualXYRecoveryStatus");
+  if(btn){btn.disabled=true;btn.textContent="安全恢復中…";}
+  const call=async stage=>{
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),58000);
+    try{
+      const res=await fetch(`/api/sync-status?action=xy-safe-restore-manual&stage=${stage}&_=${Date.now()}`,{
+        method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Safe-Restore":"1"},signal:controller.signal});
+      return await readJson(res,"203 產業安全恢復");
+    }finally{clearTimeout(timer);}
+  };
+  try{
+    if(status)status.textContent="正在校驗 203 產業定案、回寫缺失成員…";
+    let m=await call("membership");if(!m?.ok||!m?.done)throw new Error(m?.reason||"203 成員恢復未完成");
+    if(status)status.textContent="203 產業成員恢復成功，正在分批恢復 XY 歷史（不動 500D）…";
+    let completed=false,processed=0;
+    for(let batch=0;batch<15;batch++){
+      const r=await call("topics");if(!r?.ok)throw new Error(r?.reason||"XY 歷史未完成");
+      processed+=Number(r.processedDates||0);
+      if(status)status.textContent=`恢復 XY 歷史中：本次 ${processed} 個交易日，尚餘 ${r.remainingDates??"?"} 日…`;
+      if(r.done){completed=true;break;}
+      if(!r.processedDates)throw new Error("沒有新增 XY 歷史日，停止以防空轉");
+    }
+    if(!completed)throw new Error("XY 歷史未完成；按一次按鈕可續跑，不需重來");
+    if(status)status.textContent="XY 歷史恢復完成，正在恢復快照與 Path audit…";
+    let saved=false;
+    for(let i=0;i<3;i++){
+      const r=await call("snapshots");if(!r?.ok)throw new Error(r?.reason||"XY 快照尚未完成");
+      if(r.done){saved=true;break;}
+    }
+    if(!saved)throw new Error("快照仍在續修階段，按一次按鈕即可繼續");
+    if(status)status.textContent="完成：203 產業與 XY 快照已恢復；500D 研究歷史未重算，請確認進度仍為原先天數。";
+    historyProgressFetchedAt=0;fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;
+    await loadHistoryProgress(true);
+  }catch(e){if(status)status.textContent=`恢復已暫停：${e?.message||e}。已完成階段保留；稍後可重新按鈕續跑，不要按 Clean XY。`;}
+  finally{manualXYRecoveryBusy=false;if(btn){btn.disabled=false;btn.textContent="安全恢復 203 產業／XY（不重算 500D）";}}
+}
+$("manualXYRecovery")?.addEventListener("click",runManualXYRecovery);
 
 let manualTaxonomySyncLoading=false;
 function downloadTaxonomyDiagnostic(payload){

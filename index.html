@@ -2751,7 +2751,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.7.14</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.7.15</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3511,6 +3511,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
   <div class="settings-history-row"><span>信用</span><div class="settings-progress-track"><i id="historyCreditBar"></i></div><strong id="historyCreditValue">-- / 90D</strong><small id="historyCreditDetail">上市 --｜上櫃 --</small></div>
   <div class="settings-history-row" id="research500ProgressRow"><span>研究 500D</span><div class="settings-progress-track"><i id="historyResearchBar"></i></div><strong id="historyResearchValue">-- / 500D</strong><small id="historyResearchDetail">讀取目前 203 產業版本的累積天數…</small></div>
   <div class="settings-research-backfill-actions"><button type="button" id="manualResearch500Backfill" disabled>手動補齊 500D（每次最多 3 個官方日期）</button><small id="manualResearch500Status" aria-live="polite">手動從 TWSE＋TPEx 補舊日期；只暫存必要欄位，不改日常 120D／90D。</small></div>
+  <div class="settings-research-backfill-actions"><button type="button" id="manualXYRecovery">安全恢復 203 產業／XY（不重算 500D）</button><small id="manualXYRecoveryStatus" aria-live="polite">適用於分類成員或 XY 被意外清空；從定案 203 類恢復，分批建立衍生資料，不碰既有 500D／X／Y。</small></div>
   <div class="settings-research-backfill-actions"><button type="button" id="manualResearchPriceRepair">一鍵校正舊研究報酬／Y（自動分批）</button><small id="manualResearchPriceRepairStatus" aria-live="polite">僅處理截至 2026/10/13 已存在的研究歷史；先備份，官方價格不足會停止。不動 X、正式 XY 與 500D 天數。</small></div>
   <div class="settings-research-backfill-actions"><button type="button" id="manualResearchXGapRepair">一鍵修復研究 X 中段缺口（自動分批）</button><small id="manualResearchXGapStatus" aria-live="polite">只補 X／法人 1D／5D 缺值；保留原有 Y、X 與 500D 計數。</small></div>
   <div class="settings-ready-grid"><span id="historyLiveReady">20D Live</span><span id="historyBacktestReady">近期 Raw</span><span id="historyResearchReady">500D Research</span></div>
@@ -3587,7 +3588,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./app.js?v=2.6.7.14"></script>
+  <script src="./app.js?v=2.6.7.15"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
