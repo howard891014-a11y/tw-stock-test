@@ -12,6 +12,7 @@ const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = requ
 const loadResearch500D=()=>require('../lib/research-500d-backfill');
 const loadOfficialResearch500D=()=>require('../lib/research-500d-official');
 const loadResearchXGapRepair=()=>require('../lib/research-x-gap-repair');
+const loadResearchPriceRepair=()=>require('../lib/research-500d-price-repair');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -788,6 +789,14 @@ module.exports=async function handler(req,res){
       const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
       if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
       const result=await loadResearchXGapRepair().repairResearchXGaps({sql:getSql(),batchDays:3});
+      return res.status(result.ok?200:422).json(result);
+    }
+    if(action==='research-price-label-repair-manual'){
+      if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
+      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
+      const result=await loadResearchPriceRepair().repairNext({sql:getSql()});
       return res.status(result.ok?200:422).json(result);
     }
     if(action==='research-500d-backfill-manual'){
