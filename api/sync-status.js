@@ -4,7 +4,7 @@ const { runPriceSync, runCompanyProfileSync, ensureCompanyProfileSync, runTwseDi
 const { runCreditTradingSync, runCreditTradingBackfill, readCreditTradingHealth } = require('../lib/credit-trading');
 const { runInstitutionalSync, runInstitutionalBackfill, readInstitutionalHistoryHealth, institutionalCoverageByDate } = require('../lib/institutional-history');
 const { summarizeProfiles } = require('../lib/company-business-tags');
-const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readResearchCompactHistoryStatus, readFundflowValidationAudit, syncFinalTaxonomyAndBuildDiagnostic } = require('../lib/fundflow-xy');
+const { getFundflowSnapshot, getFundflowBusinessBrowser, warmCurrentEngineFromStoredDb, safeRestorePreparedFromStored, rebuildTopicTaxonomyHistory, backfillCompactFeatureHistory, readCompactFeatureHistoryStatus, readResearchCompactHistoryStatus, readFundflowValidationAudit, syncFinalTaxonomyAndBuildDiagnostic } = require('../lib/fundflow-xy');
 const { runBusinessEnrichment, readBlindCoverageAudit, readBlindCoverageExport, readPendingBusinessEnrichment, readUnclassifiedProfiles, BLIND_COVERAGE_VERSION } = require('../lib/business-enrichment');
 const { STORAGE_POLICY, runStorageMaintenance, runVerifiedLegacyCleanup } = require('../lib/storage-policy');
 // Load the optional research module only inside research-specific actions.
@@ -751,6 +751,29 @@ module.exports=async function handler(req,res){
       const marketDay=await yahooTradingDayProbe();
       if(marketDay.ok&&!marketDay.isTradingDay)return res.status(200).json({ok:true,skipped:true,reason:'holiday-no-market-update',marketDay});
     }
+    if(action==='xy-safe-restore-manual'){
+      // Explicit user-requested repair. No raw history, research500 or stock history
+      // is deleted. Each stage persists independently and is resumable.
+      if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
+      if(String(req.headers?.['x-stockzone-safe-restore']||'')!=='1')return res.status(403).json({ok:false,error:'missing safe restore confirmation'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
+      const stage=String(req.query?.stage||'').trim();const sql=getSql();
+      if(stage==='membership'){
+        const result=await syncFinalTaxonomyAndBuildDiagnostic({sql});
+        return res.status(result.ok?200:422).json({ok:Boolean(result.ok),stage,summary:result.summary,done:true,readOnly:false});
+      }
+      if(stage==='topics'){
+        const result=await rebuildTopicTaxonomyHistory({sql,targetDays:60,maxDates:5,preserveResearch:true});
+        const partialSuccess=Boolean(result.ok||Number(result.processedDates)>0);
+        return res.status(partialSuccess?200:422).json({ok:partialSuccess,stage,done:Boolean(result.after?.ready),processedDates:result.processedDates||0,remainingDates:result.remainingDates||0,mode:result.mode||null,reason:result.reason||null});
+      }
+      if(stage==='snapshots'){
+        const result=await safeRestorePreparedFromStored({sql});
+        return res.status(result.ok?200:422).json({ok:Boolean(result.ok),stage,done:Boolean(result.after?.ready),mode:result.mode||null,reason:result.reason||null});
+      }
+      return res.status(400).json({ok:false,error:'stage 必須是 membership/topics/snapshots'});
+    }
     if(action==='taxonomy-sync-export-manual'){
       if(String(req.method||'GET').toUpperCase()!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false,error:'請從設定頁使用分類同步按鈕'});}
       if(String(req.headers?.['x-stockzone-taxonomy-sync']||'')!=='1')return res.status(403).json({ok:false,error:'缺少分類同步確認標記'});
@@ -941,13 +964,10 @@ module.exports=async function handler(req,res){
           result.body.marketBootstrap={ok:true,skipped:true,reason:`${STORAGE_POLICY.raw.price}D price raw target assigned to 15:00 cron`};
         }
 
-        // Blind Coverage is a separate paused/legacy concern. Preserve the old
-        // auto-run only when the 15:00 price job has no deep-history work left,
-        // so research backfill cannot be starved by an unrelated scanner.
-        if(action==='price'&&result.body.marketBootstrap?.ok&&Number(result.body.marketBootstrap.newDays||0)===0&&Number(result.body.marketBootstrap.recentCommonTradingDays||0)>=80){
-          try{result.body.blindCoverage=await runBusinessEnrichment({limit:70,maxRunMs:12000,concurrency:8})}
-          catch(e){result.body.blindCoverage={ok:false,error:String(e?.message||e)}}
-        }else result.body.blindCoverage={ok:true,skipped:true,reason:'raw history catch-up has priority'};
+        // v2.6.7.15: MOPS Blind Coverage is only an explicit/manual diagnostic.
+        // Never run it during daily cron; never let an auto-tag scan invalidate
+        // 203 audited subindustry member/topic/snapshot data.
+        result.body.blindCoverage={ok:true,skipped:true,reason:'frozen-taxonomy-protected-manual-only'};
 
         if(action==='tpex'){
           try{result.body.latestMarketGapRepair=await runLatestMarketGapRepair({sql:getSql()})}
