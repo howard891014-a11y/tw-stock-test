@@ -38,6 +38,29 @@ const normalized=b.normalizeOfficialDay('2026-04-17',[{rows:twse},{rows:tpex}],[
 assert(normalized.ok,JSON.stringify(normalized));assert.strictEqual(normalized.rows.length,420);
 assert(!b.normalizeOfficialDay('2026-04-17',[{rows:twse.slice(0,12)},{rows:tpex}],[inst(twse),inst(tpex)],allowed).ok);
 assert(!b.normalizeOfficialDay('2026-04-17',[{rows:twse},{rows:tpex}],[inst(twse).map(x=>({...x,date:'2026-04-16'})),inst(tpex)],allowed).ok);
+
+// Missing ONE day's institution observation must not remove an otherwise
+// valid stock PRICE from the official buffer. Otherwise the next valid stock
+// row erroneously measures 2-day movement as a 1-day return.
+const missingFlow=inst(twse).filter(x=>x.code!==twse[0].stock_code);
+const priceOnly=b.normalizeOfficialDay('2026-04-17',[{rows:twse},{rows:tpex}],[missingFlow,inst(tpex)],allowed);
+assert(priceOnly.ok&&priceOnly.rows.length===420);
+const retained=priceOnly.rows.find(x=>x.market==='上市'&&x.stock_code===twse[0].stock_code);
+assert.strictEqual(retained.close_price,20);assert.strictEqual(retained.total_net,null);
+// A stock gap on a MARKET trading day makes 1D / 3D / 5D returns invalid.
+const sparse=[
+ {trade_date:'2026-04-13',stock_code:'2000',market:'上市',close_price:100,trade_value:10000,total_net:10},
+ {trade_date:'2026-04-14',stock_code:'2000',market:'上市',close_price:109,trade_value:10000,total_net:10},
+ {trade_date:'2026-04-15',stock_code:'2001',market:'上市',close_price:20,trade_value:10000,total_net:10},
+ {trade_date:'2026-04-16',stock_code:'2000',market:'上市',close_price:119,trade_value:10000,total_net:10},
+ {trade_date:'2026-04-16',stock_code:'2001',market:'上市',close_price:20,trade_value:10000,total_net:10},
+];
+const sparseRows=b.deriveStockFeatures(sparse),gapStock=sparseRows.find(x=>x.stock_code==='2000'&&x.trade_date==='2026-04-16');
+assert.strictEqual(gapStock.change_pct,null,'one missing MARKET session cannot become a 1D return');
+assert(Math.abs(gapStock.return_3_pct-19)<1e-10&&gapStock.return_5_pct===null);
+assert(b.OFFICIAL_CAUSAL_FEATURE_SQL.includes('market_research500_official_calendar'));
+for(const h of [1,3,5,20])assert(b.OFFICIAL_CAUSAL_FEATURE_SQL.includes(`p${h}.trade_date=c.prior_date_${h}`),`no exact market-session join for ${h}D`);
+
 // Compare the unchanged stock-level scorer against compact SQL-like output
 // over a multi-stock, missing-days, changing-flow deterministic fixture.
 // The database does rolling windows and median/MAD; JavaScript still applies
