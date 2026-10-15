@@ -964,7 +964,7 @@ module.exports=async function handler(req,res){
           result.body.marketBootstrap={ok:true,skipped:true,reason:`${STORAGE_POLICY.raw.price}D price raw target assigned to 15:00 cron`};
         }
 
-        // v2.6.7.15: MOPS Blind Coverage is only an explicit/manual diagnostic.
+        // v2.6.7.16: MOPS Blind Coverage is only an explicit/manual diagnostic.
         // Never run it during daily cron; never let an auto-tag scan invalidate
         // 203 audited subindustry member/topic/snapshot data.
         result.body.blindCoverage={ok:true,skipped:true,reason:'frozen-taxonomy-protected-manual-only'};
