@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.7.17",
+  "version": "2.6.7.18",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"
@@ -16,7 +16,7 @@
     "validate:blind-coverage": "node scripts/validate-blind-coverage.js",
     "validate:layout": "node scripts/validate-project-layout.js",
     "validate:storage-cleanup": "node scripts/validate-storage-cleanup.js",
-    "validate:all": "npm run validate:v26717 && npm run validate:v26716 && npm run validate:v26715 && npm run validate:research500-price-repair && npm run validate:research500-official && npm run validate:research-x-gap && npm run validate:price-path && npm run validate:dw4-probability && npm run validate:dw4 && npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:taxonomy-membership-fixes && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-path-classification && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification && npm run validate:taxonomy-final-freeze && npm run validate:taxonomy-203 && npm run validate:v2668 && npm run validate:v26613 && npm run validate:v26614 && npm run validate:v2675 && npm run validate:v2676 && npm run validate:v2677 && npm run validate:v2678 && npm run validate:v2679",
+    "validate:all": "npm run validate:v26718 && npm run validate:v26717 && npm run validate:v26716 && npm run validate:v26715 && npm run validate:research500-price-repair && npm run validate:research500-official && npm run validate:research-x-gap && npm run validate:price-path && npm run validate:dw4-probability && npm run validate:dw4 && npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:taxonomy-membership-fixes && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-path-classification && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification && npm run validate:taxonomy-final-freeze && npm run validate:taxonomy-203 && npm run validate:v2668 && npm run validate:v26613 && npm run validate:v26614 && npm run validate:v2675 && npm run validate:v2676 && npm run validate:v2677 && npm run validate:v2678 && npm run validate:v2679",
     "validate:market-topics": "node scripts/validate-market-topics.js",
     "validate:fundflow-browser": "node scripts/validate-fundflow-browser.js",
     "validate:fundflow-ui": "node scripts/validate-fundflow-ui.js",
@@ -54,6 +54,7 @@
     "validate:research500-price-repair": "node scripts/validate-research500-price-repair.js",
     "validate:v26715": "node scripts/validate-v26715-safety.js",
     "validate:v26716": "node scripts/validate-v26716-shock-day.js",
-    "validate:v26717": "node scripts/validate-v26717-corporate-action.js"
+    "validate:v26717": "node scripts/validate-v26717-corporate-action.js",
+    "validate:v26718": "node scripts/validate-v26718-action-source-resume.js"
   }
 }

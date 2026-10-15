@@ -4176,7 +4176,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.17";
+const FUND_FLOW_CLIENT_REV="2.6.7.18";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4662,7 +4662,17 @@ async function actionRequest(action,timeout=58000){
  try{const response=await fetch(`/api/sync-status?action=${action}&_=${Date.now()}`,{
    method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','X-StockZone-Manual-History':'1',
    ...(action==='research-company-action-apply-manual'?{'X-StockZone-Action-Apply':'1'}:{})},signal:c.signal});
-   const data=await readJson(response,'公司行動歷史修復');if(!data?.ok)throw Error(data?.errors?.join('；')||data?.reason||'官方事件驗證失敗');return data;
+   // readJson() used to discard the actual server's detailed 422 source
+   // errors. Preserve the official source name and affected month on failure.
+   let data;try{data=await response.json()}catch{throw Error(`公司行動回應格式錯誤（HTTP ${response.status}）`)}
+   if(!response.ok||!data?.ok){
+     const month=data?.month?`${data.month}：`:'';
+     const details=Array.isArray(data?.errors)?data.errors.filter(Boolean).join('；'):'';
+     const recovered=Number(data?.completedSources||0),required=Number(data?.requiredSources||0);
+     const saved=required?`（已安全保存 ${recovered}/${required} 個官方來源）`:'';
+     throw Error(`${month}${String(details||data?.reason||data?.error||`查詢失敗 HTTP ${response.status}`).slice(0,750)}${saved}`);
+   }
+   return data;
  }finally{clearTimeout(timer)}
 }
 async function runActionScan(){
