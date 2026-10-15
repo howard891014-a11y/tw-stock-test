@@ -4176,7 +4176,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.16";
+const FUND_FLOW_CLIENT_REV="2.6.7.17";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4655,6 +4655,54 @@ async function runManualResearch500Backfill(){
   finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!research500TaxonomyReady||!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="手動補齊 500D（每次最多 3 個官方日期）";}}
 }
 $("manualResearch500Backfill")?.addEventListener("click",runManualResearch500Backfill);
+
+let actionRepairBusy=false;
+async function actionRequest(action,timeout=58000){
+ const c=new AbortController(),timer=setTimeout(()=>c.abort(),timeout);
+ try{const response=await fetch(`/api/sync-status?action=${action}&_=${Date.now()}`,{
+   method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','X-StockZone-Manual-History':'1',
+   ...(action==='research-company-action-apply-manual'?{'X-StockZone-Action-Apply':'1'}:{})},signal:c.signal});
+   const data=await readJson(response,'公司行動歷史修復');if(!data?.ok)throw Error(data?.errors?.join('；')||data?.reason||'官方事件驗證失敗');return data;
+ }finally{clearTimeout(timer)}
+}
+async function runActionScan(){
+ if(actionRepairBusy)return;actionRepairBusy=true;
+ const button=$('manualActionScan'),status=$('manualActionScanStatus');if(button)button.disabled=true;
+ try{
+  for(let i=0;i<24;i++){
+   const r=await actionRequest('research-company-action-scan-manual');const s=r.status||{};
+   if(status)status.textContent=`已查 ${s.completedMonths||0}/${s.months||21} 月（${r.month||''}），${r.scopeActions||0} 筆涉及現行產業；${s.nextMonth||'已完成'}${r.reviewNeeded?`，本批 ${r.reviewNeeded} 筆待人工審核`:''}`;
+   if(s.scanComplete||r.complete){if(status)status.textContent=`官方事件掃描完成：${s.completedMonths}/${s.months} 月；請先按預覽，非一般權息事件仍需審核。`;break;}
+  }
+ }catch(e){if(status)status.textContent=`掃描暫停：${e?.message||e}。已完成月份會保留；官方來源未全部通過前不會改 Y。`;}
+ finally{actionRepairBusy=false;if(button)button.disabled=false;}
+}
+async function runActionPreview(){
+ if(actionRepairBusy)return;actionRepairBusy=true;
+ const button=$('manualActionPreview'),status=$('manualActionPreviewStatus');if(button)button.disabled=true;
+ try{const r=await actionRequest('research-company-action-preview-manual');
+  if(status)status.textContent=r.complete?'全部受影響日期已完成校正':`日期 ${r.date}：可校正 ${r.readyCount} 類，單日差 ${r.changed1} 類，5D 差 ${r.changed5} 類，Y 最大變化 ${Number(r.maxAbsYCorrection||0).toFixed(3)}；尚未寫入。`;
+ }catch(e){if(status)status.textContent=`預覽停止：${e?.message||e}。未修改 Y。`;}
+ finally{actionRepairBusy=false;if(button)button.disabled=false;}
+}
+async function runActionApply(){
+ if(actionRepairBusy)return;actionRepairBusy=true;
+ const button=$('manualActionApply'),status=$('manualActionApplyStatus');if(button)button.disabled=true;
+ let batches=0,updated=0;
+ try{for(let i=0;i<25;i++){
+  const r=await actionRequest('research-company-action-apply-manual');batches++;updated+=Number(r.updatedRows||0);
+  const remain=r.status?.remainingDates,review=r.status?.blockedDays||0;
+  if(status)status.textContent=r.complete?`校正完成：${batches} 批、更新 ${updated} 筆，原值已備份`:
+   r.phase==='waiting-review'&&r.status?.actionableDays===0?`可自動校正部分已跑完；${review} 個交易日待核對分割／減資／增資細節，沒有強行改寫。`:
+   `處理 ${r.date||'-'}，更新 ${updated} 筆；待處理 ${remain??'-'} 日（其中人工審核 ${review} 日），X／500D 不變。`;
+  if(r.complete||remain===0||r.status?.actionableDays===0)break;
+ }if(batches===25&&status)status.textContent=`已安全校正 ${batches} 批、更新 ${updated} 筆，按同一按鈕接續。`;
+ }catch(e){if(status)status.textContent=`修復暫停：${e?.message||e}；累計完成 ${batches} 日、更新 ${updated} 筆。事件需複核或原報酬無法重現時不會繼續寫入。`;}
+ finally{actionRepairBusy=false;if(button)button.disabled=false;}
+}
+$('manualActionScan')?.addEventListener('click',runActionScan);
+$('manualActionPreview')?.addEventListener('click',runActionPreview);
+$('manualActionApply')?.addEventListener('click',runActionApply);
 let manualResearchPriceRepairBusy=false;
 async function runManualResearchPriceRepair(){
  if(manualResearchPriceRepairBusy)return;
