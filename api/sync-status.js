@@ -13,6 +13,7 @@ const loadResearch500D=()=>require('../lib/research-500d-backfill');
 const loadOfficialResearch500D=()=>require('../lib/research-500d-official');
 const loadResearchXGapRepair=()=>require('../lib/research-x-gap-repair');
 const loadResearchPriceRepair=()=>require('../lib/research-500d-price-repair');
+const loadResearchActions=()=>require('../lib/research-corporate-actions');
 
 
 // v2.5.7.0 — 原 api/official-close.js 合併到這支 API，避免多占一個 Vercel Function。
@@ -738,6 +739,10 @@ module.exports=async function handler(req,res){
       const status=await loadResearchXGapRepair().readResearchXGapStatus(getSql());
       return res.status(200).json({ok:true,view:progressView,researchXGapStatus:status,generatedAt:new Date().toISOString()});
     }
+    if(progressView==='research-company-action-progress'){
+      if(String(req.method||'GET').toUpperCase()!=='GET')return res.status(405).json({ok:false,error:'GET only'});
+      return res.status(200).json({ok:true,view:progressView,progress:await loadResearchActions().statusWithDates(getSql())});
+    }
     if(progressView==='research-500d-progress'){
       if(String(req.method||'GET').toUpperCase()!=='GET')return res.status(405).json({ok:false,error:'GET only'});
       const progress=await loadResearch500D().readResearch500DProgress(getSql());
@@ -806,6 +811,18 @@ module.exports=async function handler(req,res){
       return res.status(warm.ok?200:503).json({...warm,manual:true});
     }
 
+    if(action==='research-company-action-scan-manual'||action==='research-company-action-preview-manual'||action==='research-company-action-apply-manual'){
+      if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
+      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
+      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
+      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
+      if(action==='research-company-action-apply-manual'&&String(req.headers?.['x-stockzone-action-apply']||'')!=='1')
+        return res.status(403).json({ok:false,error:'explicit label correction confirmation required'});
+      const mod=loadResearchActions(),sql=getSql();
+      const result=action==='research-company-action-scan-manual'?await mod.scanNextMonth({sql}):
+        await mod.processNextDate({sql,apply:action==='research-company-action-apply-manual'});
+      return res.status(result.ok?200:422).json(result);
+    }
     if(action==='research-x-gap-repair-manual'){
       if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
       if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
