@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.7.18",
+  "version": "2.6.7.19",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"
@@ -55,6 +55,7 @@
     "validate:v26715": "node scripts/validate-v26715-safety.js",
     "validate:v26716": "node scripts/validate-v26716-shock-day.js",
     "validate:v26717": "node scripts/validate-v26717-corporate-action.js",
-    "validate:v26718": "node scripts/validate-v26718-action-source-resume.js"
+    "validate:v26718": "node scripts/validate-v26718-action-source-resume.js",
+    "validate:w3-d111": "node scripts/validate-w3-d111.js && node scripts/validate-w3-d111-official.js"
   }
 }
