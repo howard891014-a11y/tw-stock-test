@@ -4176,7 +4176,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.7.19";
+const FUND_FLOW_CLIENT_REV="2.6.8.0";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4541,7 +4541,7 @@ function setView(view){
   const modeEyebrow=$("modeEyebrow"); if(modeEyebrow) modeEyebrow.textContent=mode==="screening"?"智慧選股":mode==="management"?"股票管理":"個股分析";
   if(view==="screening")view="market-dynamic";
   if(view==="market-dynamic"){loadMarketDynamic(false);}
-  if(view==="fundflow"){loadFundflowXy(false).finally(()=>loadFundflowBrowser(false));}
+  if(view==="fundflow"){window.StockZoneCapital?.load(false);}
   document.body.classList.toggle("view-overview",view==="overview");
   document.querySelectorAll("[data-view-panel]").forEach(p=>p.classList.toggle("active-view",p.dataset.viewPanel===view));
   document.querySelectorAll(".section-tabs [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
@@ -4934,7 +4934,7 @@ async function runManualFundflowWarm(){
     const gapNote=gap?.repaired?`先補齊 ${gap.market||"市場"} ${gap.targetDate||"最新交易日"}｜`:"";
     if(status){status.classList.remove("is-warn","is-error");status.classList.add("is-ok");status.textContent=data?.skipped?`${gapNote}已是最新，cheap no-op｜${data.featureVersion||"feature"}｜資料 ${asOf}`:`${gapNote}更新完成｜${mode}｜資料 ${asOf}`;}
     fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;fundflowDetailCache.clear();
-    try{await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)}catch(e){console.warn("手動更新後重新讀取資金流快照失敗",e)}
+    try{await window.StockZoneCapital?.refresh()}catch(e){console.warn("更新後資金頁重讀失敗",e)}
     historyProgressFetchedAt=0;await loadHistoryProgress(true);
   }catch(e){console.warn("手動更新 XY / 分類快照失敗",e);if(status){status.classList.remove("is-warn");status.classList.add("is-error");status.textContent=`更新失敗：${e?.message||e}`}}
   finally{manualFundflowWarmLoading=false;if(btn){btn.disabled=false;btn.textContent="更新 XY / 分類快照"}}
@@ -5024,7 +5024,7 @@ async function runManualFundflowHistory(){
     const res=await fetch(`/api/sync-status?action=fundflow-clean-rebuild-manual&target=60&_=${Date.now()}`,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-History":"1"}}),data=await readJson(res,"乾淨 XY 重建"),h=data?.after||data?.before||{};
     if(status){const legacy=Number(h?.legacyDerivedRows||0),cut=data?.legacyCleanup?.ok?"｜舊 XY/Path 衍生已安全清除":"";status.classList.add(h?.historyReady&&legacy===0?"is-ok":"is-warn");status.textContent=data?.skipped?`Clean XY v2 已就緒，cheap no-op：${h.compactDays??0}/60D｜X20 ${h.xUsableDays??0}D｜5D anchors ${h.horizonAnchorDays??0}D｜舊衍生 ${legacy} rows`:`Clean XY v2 重建完成：${h.compactDays??0}/60D｜X20 ${h.xUsableDays??0}D｜5D anchors ${h.horizonAnchorDays??0}D｜stock ${data?.stockRows??0} / topic ${data?.topicRows??0}${cut}`;}
     clearFundflowValidation();fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;fundflowDetailCache.clear();historyProgressFetchedAt=0;
-    try{await loadFundflowXy(true,true);await loadFundflowBrowser(true,true)}catch(e){console.warn("Clean XY v2 重建後重新讀取 snapshot 失敗",e)}
+    try{await window.StockZoneCapital?.refresh()}catch(e){console.warn("資金頁重讀失敗",e)}
     await loadHistoryProgress(true);
   }catch(e){console.warn("Clean XY v2 重建失敗",e);if(status){status.classList.add("is-error");status.textContent=`重建失敗：${e?.message||e}`}}
   finally{manualFundflowHistoryLoading=false;if(btn){btn.disabled=false;btn.textContent="重建乾淨 XY"}}
