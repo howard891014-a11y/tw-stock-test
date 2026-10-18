@@ -17,7 +17,7 @@ const known={
   feature:'feature-2.0.0-x20raw20-y5-activation02',
   path:'path-3.1.1-family-cache-refresh'
 };
-assert.match(pkg.version,/^2\.6\.7\.\d+$/);
+assert.match(pkg.version,/^2\.6\.(?:7\.\d+|8\.\d+)$/);
 assert.equal(xy.ENGINE_VERSION,known.engine);
 assert.equal(xy.DAILY_BUILD_VERSION,known.daily);
 assert.equal(xy.SNAPSHOT_SCHEMA_VERSION,known.snapshot);
