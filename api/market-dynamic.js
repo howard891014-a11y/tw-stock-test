@@ -1,13 +1,13 @@
-const { getMarketDynamic } = require('../lib/market-dynamic');
-function flag(v){return ['1','true','yes'].includes(String(v||'').toLowerCase())}
+const { getMarketDynamicCached } = require('../lib/market-dynamic');
 module.exports=async function handler(req,res){
   try{
-    const force=flag(req.query?.refresh);
-    const data=await getMarketDynamic({days:req.query?.days,force});
-    res.setHeader('Cache-Control',force?'no-store':'public, s-maxage=300, stale-while-revalidate=1800');
+    if(req.method&&req.method!=='GET')return res.status(405).json({ok:false,error:'GET only'});
+    // Regular page views never trigger repeat raw data synchronization/W3 audits.
+    const data=await getMarketDynamicCached({days:req.query?.days});
+    res.setHeader('Cache-Control','no-store'); // Do not retain yesterday's model behind CDN TTL.
     return res.status(200).json(data);
   }catch(e){
-    console.error('market-dynamic api failed',e);
+    console.error('market-dynamic snapshot read failed',e);
     res.setHeader('Cache-Control','no-store');
     return res.status(500).json({ok:false,error:String(e?.message||e)});
   }

@@ -4,7 +4,7 @@ const HEADERS={"User-Agent":"Mozilla/5.0","Accept":"application/json,text/plain,
 const FALLBACK_NAMES={"2330":"台積電","2454":"聯發科","3017":"奇鋐","6187":"萬潤","7769":"鴻勁","2467":"志聖","4919":"新唐","8064":"東捷"};
 const FALLBACK_CODES=Object.fromEntries(Object.entries(FALLBACK_NAMES).map(([code,name])=>[name,code]));
 let stockCache=null,stockCacheAt=0;
-function toNumber(v){const n=Number(v);return Number.isFinite(n)?n:null}
+function toNumber(v){if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
 function cleanName(v){return String(v||"").trim().replace(/\s+/g," ")}
 function shortName(v){
   return cleanName(v)
@@ -264,12 +264,18 @@ async function fetchYahoo(symbol,official){
       if(barLast!==null&&(last===null||lastTime===null||barTime>=lastTime)){last=barLast;lastTime=barTime}
       if(last===null||last<=0){lastError=new Error("Yahoo price missing or invalid");continue}
       const tradeDate=taipeiDateFromEpoch(lastTime);
-      // v2.6.5.61: Yahoo meta.previousClose can briefly point at an intraday/opening reference
-      // during the first minutes. Derive the prior session close from the actual 1-minute bars first.
-      const barPreviousClose=derivePreviousCloseFromBars(timestamps,closes,tradeDate);
-      const previousClose=barPreviousClose??toNumber(meta.regularMarketPreviousClose??meta.chartPreviousClose??meta.previousClose);
-      const change=previousClose!==null?last-previousClose:null,changePct=previousClose&&change!==null?(change/previousClose)*100:null;
-      return{source:"Yahoo Finance",realtime:true,officialClose:false,symbol,code,name:shortName(FALLBACK_NAMES[code]||official?.name||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString(),tradeDate};
+      // v2.6.8.3: Never infer the prior close from 1-minute bars or rebase Yahoo on MIS.
+      // Prefer Yahoo's raw change/percent if the endpoint actually provides them.
+      // Yahoo Chart commonly omits those fields; fall back to same-response
+      // Yahoo chartPreviousClose and label the values as derived, not native.
+      const previousClose=toNumber(meta.chartPreviousClose??meta.regularMarketPreviousClose??meta.previousClose);
+      const chartIsNewer=barTime!==null&&toNumber(meta.regularMarketTime)!==null&&barTime>Number(meta.regularMarketTime);
+      const rawChange=!chartIsNewer?toNumber(meta.regularMarketChange):null;
+      const rawPct=!chartIsNewer?toNumber(meta.regularMarketChangePercent):null;
+      const change=rawChange??(previousClose!==null&&previousClose>0?last-previousClose:null);
+      const changePct=rawPct??(previousClose!==null&&previousClose>0&&change!==null?(change/previousClose)*100:null);
+      const changeSource=rawChange!==null&&rawPct!==null?"Yahoo 原始漲跌":changePct!==null?"Yahoo 同源基準計算":"資料不足";
+      return{source:"Yahoo Finance",changeSource,realtime:true,officialClose:false,symbol,code,name:shortName(FALLBACK_NAMES[code]||official?.name||meta.shortName||meta.longName||code),market:official?.market||(symbol.endsWith(".TWO")?"上櫃":"上市"),last,previousClose,change,changePct,high:toNumber(meta.regularMarketDayHigh),low:toNumber(meta.regularMarketDayLow),open:toNumber(meta.regularMarketOpen),quoteTime:lastTime?new Date(lastTime*1000).toISOString():new Date().toISOString(),tradeDate};
     }catch(e){lastError=e}
   }
   if(lastError)throw lastError;
@@ -306,11 +312,17 @@ async function handler(req,res){
     if(mode==="live"&&clock.minutes<OPEN_DUAL_SOURCE_UNTIL_MINUTES){
       const [yahoo,mis]=await Promise.allSettled([yahooFor(),fetchMisQuote(stock)]);
       const y=yahoo.status==="fulfilled"?yahoo.value:null,m=mis.status==="fulfilled"?mis.value:null;
-      result=newerLiveQuote(y,m);
-      // Price may come from Yahoo, but the official MIS y-field is the authoritative prior close.
-      if(m?.previousClose)result=rebaseQuotePreviousClose(result,m.previousClose);
+      result=isFreshLiveQuote(y)?y:newerLiveQuote(y,m);
+      // Yahoo is primary if fresh; otherwise prefer whichever feed is newer.
+      // Keep price/change/percent from the SAME feed. Never mix Yahoo with MIS y.
     }else{
-      result=await yahooFor();
+      // Yahoo is primary; official MIS is an actual fallback on Yahoo errors,
+      // not only when Yahoo returns an old timestamp.
+      try{result=await yahooFor();}catch(e){
+        if(mode!=="live")throw e;
+        console.warn('[quote] Yahoo live fetch failed; trying MIS',stock.code,e?.message||e);
+        result=await fetchMisQuote(stock);
+      }
       if(mode==="live"&&!isFreshLiveQuote(result)){
         const mis=await fetchMisQuote(stock);
         if(mis)result=newerLiveQuote(result,mis);
