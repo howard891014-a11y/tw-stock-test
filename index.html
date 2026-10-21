@@ -7,6 +7,11 @@
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
+/* v2.6.8.3 compact TPEx disposal details */
+.disposal-extra-detail{margin-top:10px;font-size:12px;line-height:1.6;color:#64748b}
+.disposal-extra-detail summary{cursor:pointer;font-weight:600;color:#475569;user-select:none}
+.disposal-extra-detail p{margin:7px 0 0;white-space:normal;overflow-wrap:anywhere;font-weight:400;color:#64748b}
+
 
 :root{--bg:#07101b;--side:#081421;--card:#0e1b2a;--line:#213248;--text:#f4f7fb;--muted:#8999ad;--blue:#49a2ff;--green:#35d58a;--red:#ff6269;--orange:#ffad32;--purple:#b879ff}
 *{box-sizing:border-box}
@@ -2775,7 +2780,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.2</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.3</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3312,6 +3317,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
       <div class="disposal-technical-comment">
         <small>系統判讀</small>
         <strong id="disposalSummary">搜尋股票後顯示處置風險判讀。</strong>
+        <details id="disposalSummaryDetails" class="disposal-extra-detail" hidden><summary>查看完整資料限制與判讀依據</summary><p id="disposalSummaryFull"></p></details>
       </div>
     </div>
   </article>
@@ -3570,7 +3576,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
   <script src="./capital-flow.js?v=2.6.8.2"></script>
-  <script src="./app.js?v=2.6.8.2"></script>
+  <script src="./app.js?v=2.6.8.3"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4053,7 +4059,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.6.8.2"></script>
+<script defer src="./featured-picks-ui.js?v=2.6.8.3"></script>
 </body>
 </html>
 <style>
