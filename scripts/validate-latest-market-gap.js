@@ -34,9 +34,12 @@ assert(auto.includes('runLatestMarketGapRepair({sql:getSql()})'),'22:00 cron mus
 assert(auto.indexOf('runLatestMarketGapRepair') < auto.indexOf('warmCurrentEngineFromStoredDb'),'22:00 gap repair must precede XY warm');
 assert(app.includes('若只缺一邊就補該日'),'manual UI must explain targeted latest-date repair');
 
-assert.strictEqual((vercel.crons||[]).length,3,'must keep exactly the existing three cron slots');
-assert.deepStrictEqual((vercel.crons||[]).map(x=>x.schedule),['0 7 * * 1-5','0 11 * * 1-5','0 14 * * 1-5']);
-console.log('Latest market gap validation PASS — auto/manual targeted repair + cheap no-op + unchanged 3 cron slots');
+const existingCrons=(vercel.crons||[]).filter(x=>x.path==='/api/sync-status');
+assert.strictEqual(existingCrons.length,3,'existing price/institutional/credit jobs must stay unchanged');
+assert.deepStrictEqual(existingCrons.map(x=>x.schedule),['0 7 * * 1-5','0 11 * * 1-5','0 14 * * 1-5']);
+assert.deepStrictEqual((vercel.crons||[]).filter(x=>x.path==='/api/market-dynamic-refresh').map(x=>x.schedule),['50 14 * * 1-5']);
+assert.deepStrictEqual((vercel.crons||[]).filter(x=>x.path==='/api/market-dynamic-refresh-retry').map(x=>x.schedule),['35 15 * * 1-5']);
+console.log('Latest market gap validation PASS — three existing sync crons unchanged, two isolated W3 snapshot jobs');
 
 assert(syncService.includes("const TPEX_HISTORY_URL = 'https://www.tpex.org.tw/www/zh-tw/afterTrading/otc';"),'TPEx historical primary must use current afterTrading/otc route');
 assert(syncService.includes('date=${encodeURIComponent(roc)}&type=EW&order=0&sort=asc'),'TPEx historical primary must use ROC date and EW scope');
