@@ -47,7 +47,34 @@
     draw(extended,'szFeaturedExtendedList',payload.scene==='OFF'?'OFF防禦中，今天不延伸。':'無符合延伸品質門檻的股票。');
     $('szFeaturedNote').textContent='此區顯示T日研究訊號，不是當下即時股價；延伸只供觀察，不自動下單。模擬交易進出場、OFF隔日開盤清倉及手續費另行驗證。';
   }
-  window.StockZoneFeatured={render,reset};
+  let pending=null;
+  async function load(){
+    if(pending)return pending;
+    const badge=$('szFeaturedBadge');if(badge)badge.textContent='Neon 資料讀取中';
+    pending=(async()=>{
+      try{
+        const response=await fetch('/api/capital-flow?view=featured',{cache:'no-store'});
+        const payload=await response.json();
+        if(!response.ok||!payload.ok)throw Error(payload.error||'Neon 未傳回有效推薦資料');
+        render(payload);
+        if(badge)badge.textContent=payload.scene==='OFF'?'防禦期':'Neon 日線候選';
+        if(payload.sourceQuality?.status==='NEON_RECONSTRUCTION_PARITY_MISMATCH_CONFIRMED'){
+          const note=$('szFeaturedNote');if(note)note.textContent='來源：Neon · W3-D.1.2。已確認Neon產業特徵與歷史研究特徵存在差異，推薦名單僅為Neon資料重建的研究預覽，不能視為歷史原版公式的已驗證推薦；禁止自動買進。';
+        }
+        return payload;
+      }catch(e){
+        reset();
+        if(badge)badge.textContent='資料尚未驗證';
+        const note=$('szFeaturedNote');if(note)note.textContent='Neon/W3 資料暫不可用：'+String(e.message||e)+'；不使用舊資料偽裝當日推薦。';
+        for(const id of ['szFeaturedCoreList','szFeaturedExtendedList']){
+          const host=$(id);if(host)host.replaceChildren(addText('p','sz-featured-empty','資料未同步，暫不提供推薦。'));
+        }
+        return null;
+      }finally{pending=null;}
+    })();
+    return pending;
+  }
+  window.StockZoneFeatured={render,reset,load};
   window.addEventListener('stockzone:featured-daily',e=>render(e.detail));
   reset();
 }());
