@@ -18,12 +18,6 @@
         "sin1"
       ],
       "maxDuration": 60
-    },
-    "api/market-dynamic-refresh-retry.js": {
-      "regions": [
-        "sin1"
-      ],
-      "maxDuration": 60
     }
   },
   "crons": [
@@ -44,7 +38,7 @@
       "schedule": "50 14 * * 1-5"
     },
     {
-      "path": "/api/market-dynamic-refresh-retry",
+      "path": "/api/market-dynamic-refresh",
       "schedule": "35 15 * * 1-5"
     }
   ]

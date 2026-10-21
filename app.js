@@ -148,7 +148,7 @@ function mergeStockMeta(data,meta){
   return {...data,code:meta.code||data?.code||data?.symbol,symbol:data?.symbol||meta.symbol||meta.code,name:name||meta.name||data?.name||data?.shortName,shortName:name||meta.name||data?.shortName||data?.name,market:meta.market||data?.market||data?.marketLabel,marketLabel:meta.market||data?.marketLabel||data?.market,industry};
 }
 
-const MARKET_SESSION_STORAGE_KEY="stockzone_market_session_v2683"; // discard pre-v2.6.8.3 false-holiday flags
+const MARKET_SESSION_STORAGE_KEY="stockzone_market_session_v2683"; // discard pre-v2.6.8.4 false-holiday flags
 let marketNextProbeAt=0;
 function taipeiMarketClock(now=new Date()){
   const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(now).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
@@ -308,7 +308,7 @@ async function quote(query,market="",options={}){
   const phase=taiwanMarketPhase(),intraday=phase.phase==="live"&&marketSessionForToday()?.status!=="holiday";
   if(intraday){
     const live=await yahooQuote(query,market,{live:true});
-    // v2.6.8.3: 09:00~09:59 舊行情不判定休市，10:00 才啟用既有休市邏輯。
+    // v2.6.8.4: 09:00~09:59 舊行情不判定休市，10:00 才啟用既有休市邏輯。
     // 仍維持每 30 秒查詢；列表 09:05 啟動時間不變。
     rememberMarketSessionFromQuote(live,{allowHolidayMark:true});
     marketNextProbeAt=0;
@@ -4192,7 +4192,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.8.3";
+const FUND_FLOW_CLIENT_REV="2.6.8.4";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
