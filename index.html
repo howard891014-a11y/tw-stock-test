@@ -2723,7 +2723,31 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 .fundflow-return-prob{display:block;margin-top:5px;color:#7b899a;font-size:10px;font-weight:600;line-height:1.35;font-variant-numeric:tabular-nums}.fundflow-return-item strong.positive{color:#128668}.fundflow-return-item strong.negative{color:#c55757}
 @media(max-width:420px){.fundflow-price-return-grid{gap:4px}.fundflow-return-item strong{font-size:12px}}
 
-</style></head>
+</style>
+<style id="sz-featured-five-plus-five-style">
+[data-view-panel="featured"].sz-featured-panel{min-width:0;padding:20px!important;background:#fff!important;color:#2d3e54!important}
+.sz-featured-panel .sz-featured-meta{display:flex;gap:8px 15px;flex-wrap:wrap;margin:10px 0 15px;color:#7f8fa3;font-size:11px}
+.sz-featured-panel .sz-featured-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.sz-featured-panel .sz-featured-bucket{min-width:0;padding:15px;border:1px solid #e0e8f1;border-radius:15px;background:#fbfdff}
+.sz-featured-panel .sz-featured-bucket-extended{background:#fcfcfd;border-color:#e8ebf0}
+.sz-featured-panel .sz-featured-bucket-title{display:flex;justify-content:space-between;align-items:start;gap:10px}
+.sz-featured-panel .sz-featured-bucket-title h3{font-size:18px;margin:0;color:#273e57;font-weight:850}
+.sz-featured-panel .sz-featured-bucket-title h3 small{font-weight:650;color:#8395a9;font-size:10px}
+.sz-featured-panel .sz-featured-bucket-title p{font-size:10px;line-height:1.55;color:#8a99a9;margin:5px 0 0}
+.sz-featured-panel .sz-featured-bucket-title>strong{flex:none;border-radius:999px;padding:4px 9px;background:#eaf2fc;color:#4278ad;font-size:12px;white-space:nowrap}
+.sz-featured-panel .sz-featured-bucket-extended .sz-featured-bucket-title>strong{background:#f0f2f5;color:#66778e}
+.sz-featured-panel .sz-featured-list{display:grid;gap:7px;margin-top:13px}
+.sz-featured-panel .sz-featured-stock{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;border-radius:12px;padding:10px 11px;border:1px solid #e3eaf3;background:#fff}
+.sz-featured-panel .sz-featured-rank{color:#869eb6;font-size:11px;font-weight:800}
+.sz-featured-panel .sz-featured-name{display:grid;gap:3px;min-width:0}
+.sz-featured-panel .sz-featured-name b{color:#263e56;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sz-featured-panel .sz-featured-name small{color:#8a9bac;font-size:10px}
+.sz-featured-panel .sz-featured-score{color:#5085b7;font-size:12px;font-weight:800}
+.sz-featured-panel .sz-featured-empty{padding:15px;background:#f8fafd;border:1px dashed #e4eaf2;border-radius:11px;color:#8293a8;font-size:11px;line-height:1.7;margin:0}
+.sz-featured-panel .sz-featured-disclaimer{color:#8c9bb0;font-size:10px;line-height:1.7;margin:14px 1px 0}
+@media(max-width:850px){.sz-featured-panel .sz-featured-layout{grid-template-columns:1fr}}
+</style>
+</head>
 <body>
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
@@ -3141,7 +3165,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           <div class="md-secondary-row">
             <div class="md-stat"><span class="market-dynamic-kicker">外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></div>
             <div class="md-stat"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></div>
-            <div class="md-stat"><span class="market-dynamic-kicker">大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong><span class="sz-w3-health" id="marketW3Health">等待更新</span></div><small>資料交易日 <span id="marketW3TradeDate">--</span></small><small>上次狀態切換 <span id="marketW3SwitchDate">--</span></small><small id="marketW3Warning">W3-D.1.1｜等待資料</small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
+            <div class="md-stat"><span class="market-dynamic-kicker">大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong><span class="sz-w3-health" id="marketW3Health">等待更新</span></div><small>資料交易日 <span id="marketW3TradeDate">--</span></small><small>上次狀態切換 <span id="marketW3SwitchDate">--</span></small><small id="marketW3Warning">W3-D.1.2｜等待資料</small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
             <div class="md-stat"><span class="market-dynamic-kicker">資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></div>
           </div>
         </div>
@@ -3193,7 +3217,21 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         </section>
       </section>
     </article>
-    <article class="card detail-panel simple-detail" data-view-panel="featured"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-featured" aria-hidden="true"></i><span>近期精選</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>近期精選標的</span><strong>✦</strong><small>之後接入智慧選股近期精選結果</small></div></article>
+    <article class="card detail-panel sz-featured-panel" data-view-panel="featured">
+      <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-featured" aria-hidden="true"></i><span>近期精選</span></span><span class="badge" id="szFeaturedBadge">尚未同步</span></div>
+      <div class="sz-featured-meta"><span id="szFeaturedDate">選股日期：--</span><span id="szFeaturedState">市場狀態：--</span><span id="szFeaturedVersion">研究模型：尚未接入</span></div>
+      <div class="sz-featured-layout">
+        <section class="sz-featured-bucket" aria-label="推薦股票">
+          <div class="sz-featured-bucket-title"><div><h3>推薦 <small>核心觀察</small></h3><p>第一至第五順位；不強制補滿。</p></div><strong id="szFeaturedCoreCount">-- / 5</strong></div>
+          <div class="sz-featured-list" id="szFeaturedCoreList" aria-live="polite"><p class="sz-featured-empty">選股日更資料尚未接入，尚無可核對的股票名單。</p></div>
+        </section>
+        <section class="sz-featured-bucket sz-featured-bucket-extended" aria-label="延伸股票">
+          <div class="sz-featured-bucket-title"><div><h3>延伸 <small>候選觀察</small></h3><p>通過原版 S2 資格線，排除推薦後最多五檔。</p></div><strong id="szFeaturedExtendedCount">-- / 5</strong></div>
+          <div class="sz-featured-list" id="szFeaturedExtendedList" aria-live="polite"><p class="sz-featured-empty">延伸不代表自動買進；交由模擬交易觀察。</p></div>
+        </section>
+      </div>
+      <p class="sz-featured-disclaimer" id="szFeaturedNote">OFF 一律 0 推薦、0 延伸；若沒有當日經驗證資料，不將「未同步」偽裝成 0 檔。模型未接即時資料、未部署自動交易。</p>
+    </article>
     <article class="card detail-panel simple-detail" data-view-panel="simulation"><div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-simulation" aria-hidden="true"></i><span>模擬交易</span></span><span class="badge">待接功能</span></div><div class="hero-value"><span>模擬交易績效</span><strong>◎</strong><small>之後接入智慧選股模擬交易與績效回饋</small></div></article>
 
 
@@ -4015,6 +4053,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
+<script defer src="./featured-picks-ui.js?v=1.0.0"></script>
 </body>
 </html>
 <style>
