@@ -37,8 +37,9 @@ assert(app.includes('若只缺一邊就補該日'),'manual UI must explain targe
 const existingCrons=(vercel.crons||[]).filter(x=>x.path==='/api/sync-status');
 assert.strictEqual(existingCrons.length,3,'existing price/institutional/credit jobs must stay unchanged');
 assert.deepStrictEqual(existingCrons.map(x=>x.schedule),['0 7 * * 1-5','0 11 * * 1-5','0 14 * * 1-5']);
-assert.deepStrictEqual((vercel.crons||[]).filter(x=>x.path==='/api/market-dynamic-refresh').map(x=>x.schedule),['50 14 * * 1-5']);
-assert.deepStrictEqual((vercel.crons||[]).filter(x=>x.path==='/api/market-dynamic-refresh-retry').map(x=>x.schedule),['35 15 * * 1-5']);
+assert.deepStrictEqual((vercel.crons||[]).filter(x=>x.path==='/api/market-dynamic-refresh').map(x=>x.schedule),['50 14 * * 1-5','35 15 * * 1-5']);
+assert(!(vercel.crons||[]).some(x=>x.path==='/api/market-dynamic-refresh-retry'));
+assert.strictEqual(fs.readdirSync('api').filter(x=>x.endsWith('.js')).length,12,'Hobby plan may deploy at most 12 API Functions');
 console.log('Latest market gap validation PASS — three existing sync crons unchanged, two isolated W3 snapshot jobs');
 
 assert(syncService.includes("const TPEX_HISTORY_URL = 'https://www.tpex.org.tw/www/zh-tw/afterTrading/otc';"),'TPEx historical primary must use current afterTrading/otc route');

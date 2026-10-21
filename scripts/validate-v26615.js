@@ -1,7 +1,7 @@
 const fs=require('fs'),path=require('path'),root=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const checks=[
-  ['index.html','data-view="market-dynamic"'],['index.html','data-view-panel="market-dynamic"'],['index.html','v2.6.8.3'],
+  ['index.html','data-view="market-dynamic"'],['index.html','data-view-panel="market-dynamic"'],['index.html','v2.6.8.4'],
   ['app.js','loadMarketDynamic(false)'],['app.js','screening","market-dynamic","fundflow'],
   ['lib/market-dynamic.js','CREATE TABLE IF NOT EXISTS market_dynamic_daily'],['lib/market-dynamic.js','FMTQIK'],
   ['lib/storage-policy.js','marketDynamics: 500'],['api/market-dynamic.js','getMarketDynamicCached']
