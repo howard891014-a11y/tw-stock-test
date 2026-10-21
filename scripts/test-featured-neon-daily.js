@@ -1,0 +1,27 @@
+'use strict';
+const assert=require('node:assert/strict');
+const Module=require('node:module');
+const realLoad=Module._load;
+Module._load=function(request,parent,isMain){if(request==='@neondatabase/serverless')return {neon:()=>({query:()=>{throw Error('unexpected live database')}})};return realLoad.call(this,request,parent,isMain)};
+const {getFeaturedDaily,FEATURE_QUERY,DATES_QUERY}=require('../lib/featured-neon-daily');
+const {computeW3D112}=require('../lib/w3-d112');
+const start=new Date('2026-01-01T00:00:00Z');
+const fixture=Array.from({length:65},(_,i)=>{const d=new Date(start);d.setUTCDate(d.getUTCDate()+i);return {date:d.toISOString().slice(0,10),taiex:20000+21*i+Math.sin(i)*60,advance_ratio:60,breadth5:62,institutional_value_twd:1e9*Math.sin(i*.2),financing_value_twd:1e11*(1+i*.0003)}});
+const last=computeW3D112(fixture).records.at(-1),day=last.date;
+assert.equal(last.regime,'RiskOn');
+const dates={latest_sector:day,latest_stockflow:day,latest_research:day,latest_w3:day,latest_price:day,latest_market:day};
+const sql={async query(q,args){if(q===DATES_QUERY)return [dates];if(q.includes('FROM market_w3_run_daily WHERE trade_date='))return [{trade_date:day,regime:last.regime,model_version:'W3-D.1.2'}];if(q===FEATURE_QUERY)return Array.from({length:60},(_,i)=>({trade_date:day,market:'上市',stock_code:String(2000+i),stock_name:'驗證股'+i,tag_id:'demo',avg_value20:100000001,trade_value:50000001,ret5:2+i*.2,taiex_ret5:0,relative_industry_ret5:2,flow5:3,sector_flow5:2,dflow5_3:2+i*.05,delta_sector_flow:3+i*.1,relative_gap20:1,ret20:5+i*.3,ret3:3+i*.1,ma20:80,sd20:4+i*.1}));throw Error('Unexpected SQL');}};
+(async()=>{
+ const r=await getFeaturedDaily({sql,inputsFetcher:async()=>fixture,skipConnectionCheck:true});
+ assert.equal(r.version,'v2.6.8.2');assert.equal(r.w3ModelVersion,'W3-D.1.2');assert.equal(r.asOfDate,day);
+ assert.equal(r.sourceQuality.origin,'Neon PostgreSQL');assert.ok(r.coreCount<=5&&r.extendedCount<=5);assert.equal(new Set([...r.core,...r.extended].map(x=>x.stock_code)).size,r.coreCount+r.extendedCount);
+ assert.equal(r.paperTradingReady,false);
+ assert.ok(!FEATURE_QUERY.toLowerCase().includes('supabase'));
+ const bad={...sql,async query(q,args){if(q===DATES_QUERY)return [{...dates,latest_w3:'2026-01-01'}];return sql.query(q,args)}};
+ await assert.rejects(getFeaturedDaily({sql:bad,inputsFetcher:async()=>fixture,skipConnectionCheck:true}),/截止日期不同/);
+ const badW3={...sql,async query(q,args){if(q===DATES_QUERY)return [dates];if(q.includes('FROM market_w3_run_daily WHERE trade_date='))return[{trade_date:day,regime:'RiskOff',model_version:'W3-D.1.2'}];return sql.query(q,args)}};
+ await assert.rejects(getFeaturedDaily({sql:badW3,inputsFetcher:async()=>fixture,skipConnectionCheck:true}),/不一致/);
+ process.env.DB_URL='postgres://wrong:password@db.example.supabase.co/postgres';
+ await assert.rejects(getFeaturedDaily({sql,inputsFetcher:async()=>fixture}),/非 Neon/);
+ console.log('PASS v2.6.8.2 Neon-only adapter, dated freeze, matching W3, 5+5 payload, mismatch fail-closed and Supabase host rejection');
+})().catch(e=>{console.error(e);process.exitCode=1;});
