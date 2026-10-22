@@ -4462,6 +4462,26 @@ function marketFmtPct(v){const n=marketNum(v);return n===null?"--":`${n>=0?"+":"
 function marketFmtIndex(v){const n=marketNum(v);return n===null?"--":n.toLocaleString("zh-TW",{maximumFractionDigits:2})}
 function marketFmtMoney(v){const n=marketNum(v);return n===null?"--":`${n>=0?"+":""}${(n/1e8).toFixed(1)}億`}
 function marketTone(el,v){if(!el)return;el.classList.remove("is-up","is-down");const n=marketNum(v);if(n!==null&&n>0)el.classList.add("is-up");else if(n!==null&&n<0)el.classList.add("is-down")}
+function marketStableTradeDate(){
+  const latest=marketDynamicData?.latest||null;
+  const history=Array.isArray(marketDynamicData?.history)?marketDynamicData.history:[];
+  const model=marketDynamicData?.w3||{};
+  const records=Array.isArray(model.records)?model.records:[];
+  const w3Ready=(date)=>{
+    if(!date)return false;
+    if(model.error||model.stale||!model.isLiveModel)return false;
+    const r=records.findLast?.(x=>x?.valid&&x.date===date) || [...records].reverse().find(x=>x?.valid&&x.date===date);
+    return Boolean(r&&r.status==='computed');
+  };
+  const latestDate=String(latest?.date||'');
+  const latestComplete=Boolean(latestDate)&&latest?.institutionalComplete!==false&&w3Ready(latestDate);
+  if(latestComplete)return latestDate;
+  for(const row of history){
+    const date=String(row?.date||'');
+    if(date&&row?.institutionalComplete!==false&&w3Ready(date))return date;
+  }
+  return String(model.lastValidDate||model.sourceDate||latestDate||'');
+}
 function renderMarketDistribution(){
   const dist=marketDynamicData?.distribution;
   const chart=$("marketDistributionChart"),summary=$("marketDistributionSummary");
@@ -4493,18 +4513,13 @@ function szW3Label(s,warning=false){
 }
 function renderW3Verification(){
  const w=marketDynamicData?.w3||{}, records=Array.isArray(w.records)?w.records:[],latest=records.at(-1)||null;
- const dataDate=String(w.sourceDate||marketDynamicData?.latest?.date||'');
+ const dataDate=marketStableTradeDate()||String(w.sourceDate||marketDynamicData?.latest?.date||'');
  const computed=String(latest?.computedAt||w.computedAt||'');
- const health=$('marketW3Health');let status='等待更新';
- if(w.error)status='資料異常';
- else if(w.stale||!w.isLiveModel||!latest||latest.date!==dataDate)status='資料待補';
- else if(computed&&latest.inputHash&&latest.status==='computed'&&latest.valid)status='已更新';
- if(health){health.textContent=status;health.classList.toggle('is-updated',status==='已更新');health.classList.toggle('is-error',status==='資料異常'||status==='資料待補')}
  const put=(id,v)=>{const e=$(id);if(e)e.textContent=v||'--'};
  put('marketW3TradeDate',dataDate);put('marketW3Calculated',szDateTaiwan(computed));
  put('marketW3SwitchDate',w.lastSwitchDate||'尚無切換紀錄');put('marketW3HeldDays',Number.isFinite(Number(w.heldTradingDays))?`${w.heldTradingDays} 個交易日`:'--');
  const storage=$('szW3Storage');if(storage){const bytes=Number(w.storageBytes);storage.textContent=Number.isFinite(bytes)?`Neon W3：${(bytes/1048576).toFixed(3)} MB / 20 MB｜警戒 10 MB｜每日結果長期保留`:'Neon W3 容量尚未取得｜警戒 10 MB｜管理目標 20 MB';storage.style.color=bytes>=10*1048576?'#b45309':''}
- const meta=$('szW3RecordMeta');if(meta)meta.textContent=`W3-D.1.2 正式版｜${records.length} 筆｜最新資料 ${dataDate||'--'}｜${status}`;
+ const meta=$('szW3RecordMeta');if(meta)meta.textContent=`W3-D.1.2 正式版｜${records.length} 筆｜最新資料 ${dataDate||'--'}`;
  const rows=$('szW3RecordRows');if(rows){rows.replaceChildren();for(const r of [...records].reverse().slice(0,500)){
  const tr=document.createElement('tr');for(const v of [r.date,r.valid?szW3Label(r.regime,r.warning):'資料不足',szDateTaiwan(r.computedAt),r.status==='incomplete'?'資料不足':r.status==='computed'?'已運算':'待驗證']){const td=document.createElement('td');td.textContent=v||'--';tr.appendChild(td)}rows.appendChild(tr)
  }}
@@ -4522,7 +4537,8 @@ function marketBreadthComment(d){
 function renderMarketDynamic(){
   const d=marketDynamicData?.latest;if(!d)return;
   const set=(id,t)=>{const e=$(id);if(e)e.textContent=t};
-  set("marketDynamicDateBadge",d.date||"--");
+  const stableTradeDate=marketStableTradeDate()||d.date||"--";
+  set("marketDynamicDateBadge",stableTradeDate);
   const w3=stockzoneW3Regime(),model=marketDynamicData?.w3||{};
   // OFF always wins; a visible warning is only possible while ON.
   const warning=w3==="on"&&model.warning===true;
@@ -4542,7 +4558,7 @@ function renderMarketDynamic(){
   set("marketTaiex",marketFmtIndex(d.taiexClose));
   set("marketTaiexChange",`${marketFmtPct(d.changePct)}｜成交 ${marketNum(d.tradeValue)===null?"--":(marketNum(d.tradeValue)/1e8).toFixed(0)+" 億"}`);
   set("marketTrend",marketFmtPct(d.ret20));
-  set("marketTrendDetail",`距高點 ${marketFmtPct(d.drawdown20)}｜波動幅度 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}`);
+  set("marketTrendDetail",`距高點 ${marketFmtPct(d.drawdown20)}\n波動幅度 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}`);
   marketTone($("marketTrend")?.closest(".md-stat"),d.ret20);
   set("marketBreadth",marketNum(d.advanceRatio)===null?"--":marketNum(d.advanceRatio).toFixed(1)+"%");
   set("marketBreadthDetail",marketBreadthComment(d));
@@ -4553,7 +4569,7 @@ function renderMarketDynamic(){
     breadthCard.classList.toggle("is-danger",breadthValue!==null&&breadthValue<50);
   }
   set("marketForeign",d.institutionalComplete?marketFmtMoney(d.foreignValue):"待更新");
-  set("marketInstitutionDetail",d.institutionalComplete?`投信 ${marketFmtMoney(d.trustValue)}｜自營 ${marketFmtMoney(d.dealerValue)}`:"上市／上櫃法人或股價資料尚未齊全");
+  set("marketInstitutionDetail",d.institutionalComplete?`投信 ${marketFmtMoney(d.trustValue)}\n自營 ${marketFmtMoney(d.dealerValue)}`:"上市／上櫃法人或股價資料尚未齊全");
   marketTone($("marketForeign")?.closest(".md-stat"),d.institutionalComplete?d.foreignValue:null);
   set("marketCoverage",marketNum(d.coverage)===null?"--":marketNum(d.coverage).toFixed(1)+"%");
   renderMarketDistribution();
