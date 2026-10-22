@@ -2708,6 +2708,16 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 .market-distribution-title-icon{-webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round'%3E%3Cpath d='M4 27h24'/%3E%3Cpath d='M7 24V17M12 24V11M17 24V7M22 24V14M27 24V19'/%3E%3C/g%3E%3C/svg%3E")!important;mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round'%3E%3Cpath d='M4 27h24'/%3E%3Cpath d='M7 24V17M12 24V11M17 24V7M22 24V14M27 24V19'/%3E%3C/g%3E%3C/svg%3E")!important}
 .market-distribution-card{padding:20px 22px!important}.market-distribution-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.market-distribution-tabs{display:inline-flex;gap:6px;padding:4px;background:#f5f7fa;border:1px solid #e5eaf0;border-radius:12px}.market-distribution-tabs button{border:0;background:transparent;color:#7a899d;font-weight:800;padding:7px 14px;border-radius:9px}.market-distribution-tabs button.active{background:#fff;color:#1f6fd6;box-shadow:0 1px 5px rgba(31,78,121,.10)}.market-distribution-summary{font-size:12px;color:#718096;font-weight:800;margin:4px 0 12px}.market-distribution-chart{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:7px;align-items:end;min-height:190px;padding:12px 4px 0}.market-dist-bin{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0;height:170px}.market-dist-count{font-size:11px;font-weight:800;color:#4a5a70;margin-bottom:6px}.market-dist-bar-wrap{height:112px;width:100%;display:flex;align-items:flex-end;justify-content:center}.market-dist-bar{width:min(26px,78%);min-height:2px;border-radius:6px 6px 3px 3px;background:#a9b3c0}.market-dist-bin.neg .market-dist-bar{background:#35b76f}.market-dist-bin.pos .market-dist-bar{background:#ed5a5a}.market-dist-label{font-size:9px;line-height:1.2;color:#7b899b;margin-top:7px;text-align:center;white-space:nowrap}
 @media(max-width:600px){.market-distribution-card{padding:16px!important}.market-distribution-chart{gap:3px;min-height:165px;padding-left:0;padding-right:0}.market-dist-bin{height:148px}.market-dist-bar-wrap{height:94px}.market-dist-count{font-size:9px}.market-dist-label{font-size:8px;transform:rotate(-30deg);transform-origin:top center;margin-top:9px}.market-distribution-tabs button{padding:6px 11px}}
+.market-history-title-icon{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 25h23'/%3E%3Cpath d='M8 18l5-6 5 4 7-9'/%3E%3Ccircle cx='8' cy='18' r='2'/%3E%3Ccircle cx='13' cy='12' r='2'/%3E%3Ccircle cx='18' cy='16' r='2'/%3E%3Ccircle cx='25' cy='7' r='2'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 25h23'/%3E%3Cpath d='M8 18l5-6 5 4 7-9'/%3E%3Ccircle cx='8' cy='18' r='2'/%3E%3Ccircle cx='13' cy='12' r='2'/%3E%3Ccircle cx='18' cy='16' r='2'/%3E%3Ccircle cx='25' cy='7' r='2'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+/* Compact distribution switcher; keep a practical tap height on mobile. */
+.market-dynamic-page .market-distribution-tabs{gap:3px!important;padding:3px!important;border-radius:11px!important;}
+.market-dynamic-page .market-distribution-tabs button{
+  font-size:12px!important;line-height:1.25!important;padding:7px 9px!important;
+  border-radius:8px!important;min-height:31px!important;min-width:43px!important;
+}
 </style>
 <style id="sz-2673-css">
 .sz-settings-fold{border:1px solid #e3e8ee;border-radius:16px;margin:14px 0;background:#fff;overflow:hidden}.sz-settings-fold>summary{cursor:pointer;padding:18px 16px;font-size:16px;font-weight:700;color:#243349;list-style:none;display:flex;align-items:center;justify-content:space-between}.sz-settings-fold>summary::-webkit-details-marker{display:none}.sz-settings-fold>summary:after{content:'⌄';font-size:22px;color:#8493a6}.sz-settings-fold[open]>summary:after{content:'⌃'}.sz-fold-body{padding:0 14px 16px}.sz-fold-body .settings-manual-update{margin:12px 0}.sz-w3-health{margin-top:8px;font-weight:700;font-size:13px;color:#66788a}.sz-w3-health.is-updated{color:#178359}.sz-w3-health.is-error{color:#bc4646}.sz-w3-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.sz-w3-facts>div{min-width:0}.sz-w3-facts span{display:block;font-size:11px;color:#8290a1;margin-bottom:4px}.sz-w3-facts strong{font-size:12px;color:#253449;overflow-wrap:anywhere}.sz-w3-table-wrap{overflow-x:auto;max-height:360px}.sz-w3-table{width:100%;font-size:12px;border-collapse:collapse}.sz-w3-table th,.sz-w3-table td{padding:8px 5px;text-align:left;border-bottom:1px solid #e9edf2;white-space:nowrap}.sz-w3-record-meta{font-size:12px;color:#64748b;margin-bottom:12px}#szW3Download{margin-top:12px}
@@ -2781,7 +2791,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.6</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.7</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3173,14 +3183,13 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
             <div class="md-stat md-tile md-tile-regime"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-regime" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 4l6 4v8l-6 4-6-4V8z"></path><path d="M9.5 12.5l1.7 1.7 3.3-3.4"></path></svg></i>大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong><span class="sz-w3-health" id="marketW3Health">等待更新</span></div><small>資料交易日 <span id="marketW3TradeDate">--</span></small><small>上次狀態切換 <span id="marketW3SwitchDate">--</span></small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
           </div>
           <div class="md-footer-notes">
-            <div class="md-stat md-risk-note"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></div>
-            <div class="md-coverage-note"><span>資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></div>
+            <div class="md-coverage-note"><span>資料完整性</span><strong id="marketCoverage">--</strong></div>
           </div>
         </div>
       </section>
 
       <section class="card market-dynamic-history-card">
-        <div class="card-title">近 20 日市場軌跡 <span class="badge">Compact</span></div>
+        <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon market-history-title-icon" aria-hidden="true"></i><span>近期市場軌跡</span></span></div>
         <div class="market-dynamic-table-wrap"><table class="market-dynamic-table"><thead><tr><th>日期</th><th>加權</th><th>漲跌</th><th>廣度</th><th>外資</th></tr></thead><tbody id="marketDynamicHistory"><tr><td colspan="5">等待資料</td></tr></tbody></table></div>
       </section>
       <section class="card market-distribution-card">
@@ -3578,8 +3587,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.6"></script>
-  <script src="./app.js?v=2.6.8.6"></script>
+  <script src="./capital-flow.js?v=2.6.8.7"></script>
+  <script src="./app.js?v=2.6.8.7"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4062,7 +4071,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.6.8.6"></script>
+<script defer src="./featured-picks-ui.js?v=2.6.8.7"></script>
 </body>
 </html>
 <style>
@@ -6061,10 +6070,7 @@ body.mode-analysis #technical>.card-title.theme-white-card-title{
   padding:12px 11px!important;margin:0!important;
   box-shadow:none!important;overflow:hidden!important;
 }
-.market-dynamic-page .md-tile-trend{background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important;}
-.market-dynamic-page .md-tile-breadth{background:linear-gradient(180deg,#f6f0ff,#f1e9ff)!important;}
-.market-dynamic-page .md-tile-foreign{background:linear-gradient(180deg,#fff5f6,#fff0f2)!important;}
-.market-dynamic-page .md-tile-regime{background:linear-gradient(180deg,#eff9f4,#eaf7f1)!important;}
+.market-dynamic-page .md-metric-tiles>.md-tile{background:linear-gradient(180deg,#f3f7ff,#edf3ff)!important;}
 .market-dynamic-page .md-tile>.market-dynamic-kicker{
   display:flex!important;align-items:center!important;gap:8px!important;
   font-size:12px!important;line-height:1.35!important;letter-spacing:0!important;
@@ -6080,20 +6086,15 @@ body.mode-analysis #technical>.card-title.theme-white-card-title{
   stroke:currentColor!important;fill:none!important;stroke-width:2!important;
   stroke-linecap:round!important;stroke-linejoin:round!important;
 }
-.market-dynamic-page .md-tile-trend .md-tile-icon{background:#e0e7ff;color:#6a7deb;}
-.market-dynamic-page .md-tile-breadth .md-tile-icon{background:#eaddff;color:#9562df;}
-.market-dynamic-page .md-tile-foreign .md-tile-icon{background:#ffe0e7;color:#df647e;}
-.market-dynamic-page .md-tile-regime .md-tile-icon{background:#d7f2e3;color:#32a776;}
+.market-dynamic-page .md-metric-tiles>.md-tile .md-tile-icon{background:#e0eaff!important;color:#5d80d7!important;}
 .market-dynamic-page .md-metric-tiles>.md-tile>strong,
 .market-dynamic-page .md-metric-tiles>.md-tile .md-w3-value>strong{
   display:block!important;margin:8px 0 5px!important;
   font-size:17px!important;line-height:1.3!important;font-weight:850!important;
   overflow-wrap:anywhere!important;
 }
-.market-dynamic-page .md-tile-trend>strong{color:#4b76d4!important;}
-.market-dynamic-page .md-tile-breadth>strong{color:#8659ce!important;}
-.market-dynamic-page .md-tile-foreign>strong{color:#d84f5d!important;}
-.market-dynamic-page .md-tile-regime .md-w3-value>strong{color:#278b65!important;}
+.market-dynamic-page .md-metric-tiles>.md-tile>strong,
+.market-dynamic-page .md-metric-tiles>.md-tile .md-w3-value>strong{color:#5074bc!important;}
 .market-dynamic-page .md-metric-tiles>.md-tile>small{
   display:block!important;font-size:10px!important;line-height:1.45!important;
   color:#7e8da0!important;overflow-wrap:anywhere!important;
@@ -6107,13 +6108,15 @@ body.mode-analysis #technical>.card-title.theme-white-card-title{
   margin:2px 0 0!important;padding:3px 6px!important;
   border-radius:999px!important;
 }
-/* Tone overrides retain the price colors from the existing data logic. */
-.market-dynamic-page .md-tile-trend.is-up>strong,
-.market-dynamic-page .md-tile-breadth.is-up>strong,
-.market-dynamic-page .md-tile-foreign.is-up>strong{color:#d84f5d!important;}
-.market-dynamic-page .md-tile-trend.is-down>strong,
-.market-dynamic-page .md-tile-breadth.is-down>strong,
-.market-dynamic-page .md-tile-foreign.is-down>strong{color:#278b65!important;}
+/* Taiwan market color convention: gains/danger red; declines/safety green. */
+.market-dynamic-page .md-metric-tiles>.md-tile-trend.is-up>strong,
+.market-dynamic-page .md-metric-tiles>.md-tile-foreign.is-up>strong,
+.market-dynamic-page .md-metric-tiles>.md-tile-breadth.is-danger>strong,
+.market-dynamic-page .md-metric-tiles>.md-tile-regime.is-danger .md-w3-value>strong{color:#db4d58!important;}
+.market-dynamic-page .md-metric-tiles>.md-tile-trend.is-down>strong,
+.market-dynamic-page .md-metric-tiles>.md-tile-foreign.is-down>strong,
+.market-dynamic-page .md-metric-tiles>.md-tile-breadth.is-safe>strong,
+.market-dynamic-page .md-metric-tiles>.md-tile-regime.is-safe .md-w3-value>strong{color:#219767!important;}
 .market-dynamic-page .md-footer-notes{
   padding:9px 4px 0!important;margin:0!important;
   border-top:1px solid #edf1f5!important;
@@ -6121,31 +6124,18 @@ body.mode-analysis #technical>.card-title.theme-white-card-title{
   align-items:baseline!important;
   font-size:10px!important;line-height:1.55!important;color:#8694a6!important;
 }
-.market-dynamic-page .md-footer-notes .md-risk-note{
-  display:flex!important;flex-direction:column!important;align-items:flex-start!important;
-  gap:2px!important;min-width:0!important;padding:0!important;margin:0!important;
-  border:0!important;background:none!important;flex:1 1 100%!important;
-}
 .market-dynamic-page .md-footer-notes .md-coverage-note{
   display:inline-flex!important;flex-direction:row!important;align-items:baseline!important;
   gap:5px!important;flex-wrap:wrap!important;min-width:0!important;
   padding:0!important;margin:0!important;border:0!important;background:none!important;
 }
-.market-dynamic-page .md-footer-notes span,
-.market-dynamic-page .md-footer-notes small{
+.market-dynamic-page .md-footer-notes span{
   font-size:10px!important;line-height:1.55!important;font-weight:500!important;
   margin:0!important;color:#8897a8!important;
 }
 .market-dynamic-page .md-footer-notes strong{
   font-size:10px!important;line-height:1.55!important;font-weight:800!important;
   margin:0!important;color:#657991!important;
-}
-.market-dynamic-page .md-footer-notes .md-risk-note strong,
-.market-dynamic-page .md-footer-notes .md-risk-note small{
-  display:block!important;
-}
-.market-dynamic-page .md-footer-notes .md-risk-note strong{
-  color:#657991!important;
 }
 @media (max-width:600px){
  .market-dynamic-page .md-main-row>.md-lead strong{font-size:32px!important;}

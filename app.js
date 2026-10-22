@@ -4192,7 +4192,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.8.4";
+const FUND_FLOW_CLIENT_REV="2.6.8.7";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4486,7 +4486,11 @@ document.querySelectorAll("[data-market-dist]").forEach(btn=>btn.addEventListene
 }));
 
 function szDateTaiwan(s){if(!s)return'--';const d=new Date(s);return Number.isNaN(d.getTime())?'--':d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}
-function szW3Label(s){return({RiskOn:'多頭環境',RiskOff:'風險升溫'})[s]||'資料待補'}
+function szW3Label(s,warning=false){
+  if(s==='RiskOff')return '空頭環境';
+  if(s==='RiskOn')return warning?'風險升溫':'多頭環境';
+  return '資料待補';
+}
 function renderW3Verification(){
  const w=marketDynamicData?.w3||{}, records=Array.isArray(w.records)?w.records:[],latest=records.at(-1)||null;
  const dataDate=String(w.sourceDate||marketDynamicData?.latest?.date||'');
@@ -4502,19 +4506,10 @@ function renderW3Verification(){
  const storage=$('szW3Storage');if(storage){const bytes=Number(w.storageBytes);storage.textContent=Number.isFinite(bytes)?`Neon W3：${(bytes/1048576).toFixed(3)} MB / 20 MB｜警戒 10 MB｜每日結果長期保留`:'Neon W3 容量尚未取得｜警戒 10 MB｜管理目標 20 MB';storage.style.color=bytes>=10*1048576?'#b45309':''}
  const meta=$('szW3RecordMeta');if(meta)meta.textContent=`W3-D.1.2 正式版｜${records.length} 筆｜最新資料 ${dataDate||'--'}｜${status}`;
  const rows=$('szW3RecordRows');if(rows){rows.replaceChildren();for(const r of [...records].reverse().slice(0,500)){
- const tr=document.createElement('tr');for(const v of [r.date,r.valid?szW3Label(r.regime):'資料不足',szDateTaiwan(r.computedAt),r.status==='incomplete'?'資料不足':r.status==='computed'?'已運算':'待驗證']){const td=document.createElement('td');td.textContent=v||'--';tr.appendChild(td)}rows.appendChild(tr)
+ const tr=document.createElement('tr');for(const v of [r.date,r.valid?szW3Label(r.regime,r.warning):'資料不足',szDateTaiwan(r.computedAt),r.status==='incomplete'?'資料不足':r.status==='computed'?'已運算':'待驗證']){const td=document.createElement('td');td.textContent=v||'--';tr.appendChild(td)}rows.appendChild(tr)
  }}
 }
 $('szW3Download')?.addEventListener('click',()=>{const rows=marketDynamicData?.w3?.records||[];if(!rows.length)return;const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv='\ufeff'+[['trade_date','regime','computed_at','status','input_hash','risk_score','warning','reason','model_version'],...rows.map(r=>[r.date,r.valid?r.regime:'',r.computedAt,r.status,r.inputHash,r.score,r.warning,r.reason,r.modelVersion])].map(r=>r.map(q).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='stockzone-w3-d112-records.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1500)});
-function marketTrendComment(d){
-  const ret20=marketNum(d?.ret20), ma20Gap=marketNum(d?.ma20Gap), ma60Gap=marketNum(d?.ma60Gap);
-  if(ret20===null&&ma20Gap===null&&ma60Gap===null)return "近20日趨勢資料待補。";
-  if(ret20!==null&&ret20<=-5)return ma60Gap!==null&&ma60Gap>0?"近20日明顯回落，但仍守住60日均線。":"近20日走勢偏弱，短線仍在整理。";
-  if(ret20!==null&&ret20<0)return ma20Gap!==null&&ma20Gap<0?"近20日回檔偏弱，仍在20日均線下方。":"近20日小幅整理，觀察是否重新轉強。";
-  if(ret20!==null&&ret20>=5&&ma20Gap!==null&&ma20Gap>0)return "近20日維持上升，短中期均線結構偏強。";
-  if(ret20!==null&&ret20>0)return ma20Gap!==null&&ma20Gap<0?"近20日仍有漲幅，但短線轉為震盪。":"近20日溫和走強，均線結構尚可。";
-  return "近20日走勢中性，等待方向更明確。";
-}
 function marketBreadthComment(d){
   const ratio=marketNum(d?.advanceRatio), breadth5=marketNum(d?.breadth5), up=Number(d?.up||0), down=Number(d?.down||0);
   if(ratio===null)return "市場廣度資料待補。";
@@ -4524,40 +4519,43 @@ function marketBreadthComment(d){
   if(ratio<40)return up<down?"下跌家數較多，市場廣度偏弱。":"市場廣度轉弱，短線分歧仍大。";
   return "漲跌家數接近，市場分歧仍大。";
 }
-function marketRiskComment(d){
-  const drawdown=marketNum(d?.drawdown20), vol20=marketNum(d?.vol20);
-  if(drawdown===null&&vol20===null)return "風險結構資料待補。";
-  if(drawdown!==null&&drawdown<=-8)return vol20!==null&&vol20>=1.5?"距高點回落且波動偏大，短線風險較高。":"距高點回落明顯，短線仍需保守。";
-  if(drawdown!==null&&drawdown<=-4)return vol20!==null&&vol20>=1.2?"距高點仍有回落，且波動偏大。":"距高點仍有回落，市場風險中性偏高。";
-  if(drawdown!==null&&drawdown>-2&&vol20!==null&&vol20<1)return "距高點不遠，近期波動仍算溫和。";
-  return "回撤與波動皆在中性區間，持續觀察後續變化。";
-}
-
 function renderMarketDynamic(){
   const d=marketDynamicData?.latest;if(!d)return;
   const set=(id,t)=>{const e=$(id);if(e)e.textContent=t};
   set("marketDynamicDateBadge",d.date||"--");
-  const w3=stockzoneW3Regime(),w3Label={on:"多頭環境",off:"風險升溫"};
-  const oldW3=marketDynamicData?.w3||{};
-  const historyOnly=!w3&&Boolean(oldW3.lastValidRegime);
-  set("marketW3Regime",historyOnly?`前次${({RiskOn:"多頭環境",RiskOff:"風險升溫"})[oldW3.lastValidRegime]||"有效狀態"}`:(w3Label[w3]||"資料待補"));
+  const w3=stockzoneW3Regime(),model=marketDynamicData?.w3||{};
+  // OFF always wins; a visible warning is only possible while ON.
+  const warning=w3==="on"&&model.warning===true;
+  const historyOnly=!w3&&Boolean(model.lastValidRegime);
+  const historyRecord=historyOnly?(model.records||[]).findLast(r=>r?.valid&&r.date===model.lastValidDate):null;
+  const label=historyOnly?`前次${szW3Label(model.lastValidRegime,historyRecord?.warning===true)}`:
+    w3==="off"?"空頭環境":warning?"風險升溫":w3==="on"?"多頭環境":"資料待補";
+  set("marketW3Regime",label);
   renderW3Verification();
   const w3Card=$("marketW3Regime")?.closest(".md-stat");
-  if(w3Card){w3Card.classList.toggle("stockzone-w3-on",w3==="on");w3Card.classList.toggle("stockzone-w3-off",w3==="off");}
+  if(w3Card){
+    w3Card.classList.toggle("stockzone-w3-on",w3==="on");
+    w3Card.classList.toggle("stockzone-w3-off",w3==="off");
+    w3Card.classList.toggle("is-safe",w3==="on"&&!warning);
+    w3Card.classList.toggle("is-danger",w3==="off"||warning);
+  }
   set("marketTaiex",marketFmtIndex(d.taiexClose));
   set("marketTaiexChange",`${marketFmtPct(d.changePct)}｜成交 ${marketNum(d.tradeValue)===null?"--":(marketNum(d.tradeValue)/1e8).toFixed(0)+" 億"}`);
   set("marketTrend",marketFmtPct(d.ret20));
-  set("marketTrendDetail",marketTrendComment(d));
+  set("marketTrendDetail",`距高點 ${marketFmtPct(d.drawdown20)}｜波動幅度 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}`);
   marketTone($("marketTrend")?.closest(".md-stat"),d.ret20);
   set("marketBreadth",marketNum(d.advanceRatio)===null?"--":marketNum(d.advanceRatio).toFixed(1)+"%");
   set("marketBreadthDetail",marketBreadthComment(d));
+  const breadthCard=$("marketBreadth")?.closest(".md-stat");
+  const breadthValue=marketNum(d.advanceRatio);
+  if(breadthCard){
+    breadthCard.classList.toggle("is-safe",breadthValue!==null&&breadthValue>50);
+    breadthCard.classList.toggle("is-danger",breadthValue!==null&&breadthValue<50);
+  }
   set("marketForeign",d.institutionalComplete?marketFmtMoney(d.foreignValue):"待更新");
   set("marketInstitutionDetail",d.institutionalComplete?`投信 ${marketFmtMoney(d.trustValue)}｜自營 ${marketFmtMoney(d.dealerValue)}`:"上市／上櫃法人或股價資料尚未齊全");
   marketTone($("marketForeign")?.closest(".md-stat"),d.institutionalComplete?d.foreignValue:null);
-  set("marketRisk",`距20日高點 ${marketFmtPct(d.drawdown20)}｜波動幅度 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}`);
-  set("marketRiskDetail",marketRiskComment(d));
   set("marketCoverage",marketNum(d.coverage)===null?"--":marketNum(d.coverage).toFixed(1)+"%");
-  set("marketCoverageDetail",`${marketDynamicData?.meta?.returnedDays||0}D 顯示｜資料保留 ${marketDynamicData?.meta?.retentionDays||500}D`);
   renderMarketDistribution();
   const body=$("marketDynamicHistory");
   if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.foreignValue)>0?"is-up":marketNum(r.foreignValue)<0?"is-down":""}">${r.institutionalComplete?marketFmtMoney(r.foreignValue):"待更新"}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
@@ -4580,7 +4578,7 @@ async function loadMarketDynamic(force=false){
     void stockzoneIdbPut("marketCache",MARKET_DYNAMIC_LOCAL_CACHE_KEY,{savedAt:Date.now(),data:payload});
   }catch(e){
     console.warn("大盤動態讀取失敗",e);
-    if(!marketDynamicData){const b=$("marketCoverageDetail");if(b)b.textContent=`讀取失敗：${e?.message||e}`}
+    if(!marketDynamicData){const b=$("marketCoverage");if(b){b.textContent="讀取失敗";b.title=String(e?.message||e)}}
   }finally{marketDynamicLoading=false}
 }
 function setView(view){
