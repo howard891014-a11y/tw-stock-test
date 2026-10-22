@@ -4506,6 +4506,33 @@ function renderW3Verification(){
  }}
 }
 $('szW3Download')?.addEventListener('click',()=>{const rows=marketDynamicData?.w3?.records||[];if(!rows.length)return;const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv='\ufeff'+[['trade_date','regime','computed_at','status','input_hash','risk_score','warning','reason','model_version'],...rows.map(r=>[r.date,r.valid?r.regime:'',r.computedAt,r.status,r.inputHash,r.score,r.warning,r.reason,r.modelVersion])].map(r=>r.map(q).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='stockzone-w3-d112-records.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1500)});
+function marketTrendComment(d){
+  const ret20=marketNum(d?.ret20), ma20Gap=marketNum(d?.ma20Gap), ma60Gap=marketNum(d?.ma60Gap);
+  if(ret20===null&&ma20Gap===null&&ma60Gap===null)return "近20日趨勢資料待補。";
+  if(ret20!==null&&ret20<=-5)return ma60Gap!==null&&ma60Gap>0?"近20日明顯回落，但仍守住60日均線。":"近20日走勢偏弱，短線仍在整理。";
+  if(ret20!==null&&ret20<0)return ma20Gap!==null&&ma20Gap<0?"近20日回檔偏弱，仍在20日均線下方。":"近20日小幅整理，觀察是否重新轉強。";
+  if(ret20!==null&&ret20>=5&&ma20Gap!==null&&ma20Gap>0)return "近20日維持上升，短中期均線結構偏強。";
+  if(ret20!==null&&ret20>0)return ma20Gap!==null&&ma20Gap<0?"近20日仍有漲幅，但短線轉為震盪。":"近20日溫和走強，均線結構尚可。";
+  return "近20日走勢中性，等待方向更明確。";
+}
+function marketBreadthComment(d){
+  const ratio=marketNum(d?.advanceRatio), breadth5=marketNum(d?.breadth5), up=Number(d?.up||0), down=Number(d?.down||0);
+  if(ratio===null)return "市場廣度資料待補。";
+  const improved=breadth5!==null&&ratio-breadth5>=10;
+  if(ratio>=60)return improved?"上漲家數明顯占優，較近5日平均明顯改善。":"上漲家數明顯多於下跌，今日廣度偏強。";
+  if(ratio>=50)return improved?"上漲家數略占優勢，廣度較近5日改善。":"漲多於跌，市場廣度中性偏強。";
+  if(ratio<40)return up<down?"下跌家數較多，市場廣度偏弱。":"市場廣度轉弱，短線分歧仍大。";
+  return "漲跌家數接近，市場分歧仍大。";
+}
+function marketRiskComment(d){
+  const drawdown=marketNum(d?.drawdown20), vol20=marketNum(d?.vol20);
+  if(drawdown===null&&vol20===null)return "風險結構資料待補。";
+  if(drawdown!==null&&drawdown<=-8)return vol20!==null&&vol20>=1.5?"距高點回落且波動偏大，短線風險較高。":"距高點回落明顯，短線仍需保守。";
+  if(drawdown!==null&&drawdown<=-4)return vol20!==null&&vol20>=1.2?"距高點仍有回落，且波動偏大。":"距高點仍有回落，市場風險中性偏高。";
+  if(drawdown!==null&&drawdown>-2&&vol20!==null&&vol20<1)return "距高點不遠，近期波動仍算溫和。";
+  return "回撤與波動皆在中性區間，持續觀察後續變化。";
+}
+
 function renderMarketDynamic(){
   const d=marketDynamicData?.latest;if(!d)return;
   const set=(id,t)=>{const e=$(id);if(e)e.textContent=t};
@@ -4514,27 +4541,26 @@ function renderMarketDynamic(){
   const oldW3=marketDynamicData?.w3||{};
   const historyOnly=!w3&&Boolean(oldW3.lastValidRegime);
   set("marketW3Regime",historyOnly?`前次${({RiskOn:"多頭環境",RiskOff:"風險升溫"})[oldW3.lastValidRegime]||"有效狀態"}`:(w3Label[w3]||"資料待補"));
-  set("marketW3Warning",historyOnly?`資料待補｜前次有效日 ${oldW3.lastValidDate||"--"}（非今日訊號）`:marketDynamicData?.w3?.stale?"資料未齊，暫停新訊號":marketDynamicData?.w3?.warning?`風險預警 ${Number(marketDynamicData.w3.riskScore).toFixed(1)} 分`:`W3-D.1.2｜風險 ${Number(marketDynamicData?.w3?.riskScore??0).toFixed(1)} 分`);
   renderW3Verification();
   const w3Card=$("marketW3Regime")?.closest(".md-stat");
   if(w3Card){w3Card.classList.toggle("stockzone-w3-on",w3==="on");w3Card.classList.toggle("stockzone-w3-off",w3==="off");}
   set("marketTaiex",marketFmtIndex(d.taiexClose));
   set("marketTaiexChange",`${marketFmtPct(d.changePct)}｜成交 ${marketNum(d.tradeValue)===null?"--":(marketNum(d.tradeValue)/1e8).toFixed(0)+" 億"}`);
   set("marketTrend",marketFmtPct(d.ret20));
-  set("marketTrendDetail",`5D ${marketFmtPct(d.ret5)}｜20MA ${marketFmtPct(d.ma20Gap)}｜60MA ${marketFmtPct(d.ma60Gap)}`);
+  set("marketTrendDetail",marketTrendComment(d));
   marketTone($("marketTrend")?.closest(".md-stat"),d.ret20);
   set("marketBreadth",marketNum(d.advanceRatio)===null?"--":marketNum(d.advanceRatio).toFixed(1)+"%");
-  set("marketBreadthDetail",`上 ${d.up||0}｜下 ${d.down||0}｜5D ${marketNum(d.breadth5)===null?"--":marketNum(d.breadth5).toFixed(1)+"%"}`);
-  set("marketForeign",d.institutionalComplete?"約"+marketFmtMoney(d.foreignValue):"待更新");
-  set("marketInstitutionDetail",d.institutionalComplete?`收盤價估算｜投信 ${marketFmtMoney(d.trustValue)}｜自營 ${marketFmtMoney(d.dealerValue)}`:"上市／上櫃法人或股價資料尚未齊全");
+  set("marketBreadthDetail",marketBreadthComment(d));
+  set("marketForeign",d.institutionalComplete?marketFmtMoney(d.foreignValue):"待更新");
+  set("marketInstitutionDetail",d.institutionalComplete?`投信 ${marketFmtMoney(d.trustValue)}｜自營 ${marketFmtMoney(d.dealerValue)}`:"上市／上櫃法人或股價資料尚未齊全");
   marketTone($("marketForeign")?.closest(".md-stat"),d.institutionalComplete?d.foreignValue:null);
-  set("marketRisk",marketFmtPct(d.drawdown20));
-  set("marketRiskDetail",`20D 波動 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}｜20D 回撤`);
+  set("marketRisk",`距20日高點 ${marketFmtPct(d.drawdown20)}｜波動幅度 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}`);
+  set("marketRiskDetail",marketRiskComment(d));
   set("marketCoverage",marketNum(d.coverage)===null?"--":marketNum(d.coverage).toFixed(1)+"%");
   set("marketCoverageDetail",`${marketDynamicData?.meta?.returnedDays||0}D 顯示｜資料保留 ${marketDynamicData?.meta?.retentionDays||500}D`);
   renderMarketDistribution();
   const body=$("marketDynamicHistory");
-  if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.foreignValue)>0?"is-up":marketNum(r.foreignValue)<0?"is-down":""}">${r.institutionalComplete?"約"+marketFmtMoney(r.foreignValue):"待更新"}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
+  if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.foreignValue)>0?"is-up":marketNum(r.foreignValue)<0?"is-down":""}">${r.institutionalComplete?marketFmtMoney(r.foreignValue):"待更新"}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
 }
 async function loadMarketDynamic(force=false){
   if(marketDynamicLoading)return;
