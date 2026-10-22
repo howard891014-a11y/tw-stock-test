@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const state={summary:null,detail:null,opened:'',loading:false,lastFetch:0,query:'',scope:'all',filter:'all',sort:'x',limit:32,stockFilter:'candidates',stockSort:'gap',sequence:0};
+const state={summary:null,detail:null,opened:'',loading:false,lastFetch:0,query:'',scope:'all',filter:'all',sort:'x',limit:32,stockFilter:'candidates',stockSort:'gap',sequence:0,stockMatches:[],searchPending:false,searchError:false};
 const n=v=>v===null||v===undefined||v===''?null:(Number.isFinite(Number(v))?Number(v):null);
 const esc=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const signed=(v,{pct=false,d=1}={})=>{const x=n(v);return x===null?'—':`${x>0?'+':''}${x.toFixed(d)}${pct?'%':''}`;};
@@ -18,12 +18,12 @@ function summaryCards(){const rows=state.summary?.sectors||[],valid=rows.filter(
   $('cfMetrics').innerHTML=`${pill('法人近5日淨流入產業',inflow.length,{text:String(inflow.length),sub:`共 ${valid.length} 個有效產業`})}${pill('資金動能改善',improving.length,{text:String(improving.length),sub:'X20近3日增加≥3'})}${pill('資金廣泛流入',wide.length,{text:String(wide.length),sub:'買超廣度≥60%'})}${pill('資金先行個股',chances,{text:String(chances),sub:'候選數・可能跨產業重複'})}`;
   $('cfMarket').textContent=marketText(state.summary?.market);$('cfAsOf').textContent=state.summary?.asOf?`資料日 ${state.summary.asOf.replaceAll('-','/')}`:'資料待補';
 }
-function filtered(){const list=state.summary?.sectors||[];let rows=list.filter(s=>{
+function filtered(){const list=state.summary?.sectors||[];const matched=new Set(state.stockMatches);let rows=list.filter(s=>{
    if(state.scope==='tech'&&!['technology-fine','electronics-product'].includes(s.scope))return false;
    if(state.scope==='traditional'&&s.scope!=='traditional-coarse')return false;
    if(state.filter==='inflow'&&!(s.flow5Pct>0))return false;
    if(state.filter==='reverse'&&!(state.summary?.market?.aligned&&state.summary.market.regime==='RiskOff'&&s.x>0&&s.flow5Pct>0&&s.breadthPct>=50))return false;
-   const q=state.query.trim().toLowerCase();return !q||[s.name,s.parentName,s.tagId].some(t=>String(t||'').toLowerCase().includes(q));
+   const q=state.query.trim().toLowerCase();return !q||matched.has(s.tagId)||[s.name,s.parentName,s.tagId].some(t=>String(t||'').toLowerCase().includes(q));
  });
  const val=(s)=>state.sort==='breadth'?(s.breadthPct??-10000):state.sort==='momentum'?(s.dx3??-10000):state.sort==='candidate'?((s.opportunityCount||0)*10+(s.x||0)*.05):(s.x??-10000);
  rows.sort((a,b)=>val(b)-val(a)||(b.flow5Pct??-10000)-(a.flow5Pct??-10000));return rows;
@@ -37,8 +37,8 @@ function rowHtml(s,i){const b=s.breadthPct===null?0:Math.max(0,Math.min(100,s.br
  </button>`;
 }
 function renderList(){const data=state.summary;if(!data)return;summaryCards();const rows=filtered(),shown=rows.slice(0,state.limit);
- $('cfCount').textContent=`符合 ${rows.length} 個產業・依${labelSort[state.sort]}排序`;
- $('cfList').innerHTML=shown.map(rowHtml).join('')||'<div class="cf-empty">目前沒有符合條件的產業。可切換篩選查看其他族群。</div>';
+ $('cfCount').textContent=`${state.searchPending?'正在搜尋公司／代號… · ':''}符合 ${rows.length} 個產業・依${labelSort[state.sort]}排序`;
+ $('cfList').innerHTML=shown.map(rowHtml).join('')||`<div class="cf-empty">${state.searchPending?'正在比對公司名稱及股票代號…':state.searchError?'公司搜尋暫時失敗，仍可搜尋產業名稱。':'找不到符合條件的產業或成分股，可調整搜尋文字或篩選條件。'}</div>`;
  const more=$('cfMore');more.hidden=shown.length>=rows.length;more.textContent=`顯示更多產業（${shown.length}/${rows.length}）`;
  setButtons('scope',state.scope);setButtons('sort',state.sort);setButtons('filter',state.filter);
 }
@@ -86,9 +86,35 @@ async function open(tagId){
  catch(e){if(serial===state.sequence){$('cfDetailTitle').textContent='載入失敗';$('cfStockList').innerHTML=`<div class="cf-empty">${esc(e.message)}</div>`;}}
 }
 function back(){++state.sequence;state.opened='';state.detail=null;$('cfDetail').hidden=true;$('cfOverview').hidden=false;renderList();$('cfOverview').scrollIntoView({behavior:'smooth',block:'start'});}
+let searchTimer=null;
+let searchSequence=0;
+function updateSearch(value){
+  state.query=value;state.limit=32;state.stockMatches=[];state.searchError=false;
+  if(searchTimer!==null)clearTimeout(searchTimer);
+  const q=String(value||'').trim();
+  const seq=++searchSequence;
+  state.searchPending=Boolean(q);
+  renderList();
+  if(!q)return;
+  // Debounced lookup maps a company name/code to every classified sector; industry-name search stays local.
+  searchTimer=setTimeout(async()=>{
+    try{
+      const response=await fetch(`/api/capital-flow?view=search&q=${encodeURIComponent(q)}`);
+      const data=await response.json();
+      if(!response.ok||!data.ok)throw new Error(data.error||'查詢失敗');
+      if(seq!==searchSequence)return;
+      state.stockMatches=Array.isArray(data.tagIds)?data.tagIds:[];
+    }catch(e){
+      if(seq!==searchSequence)return;
+      state.searchError=true;state.stockMatches=[];
+    }finally{
+      if(seq===searchSequence){state.searchPending=false;renderList();}
+    }
+  },250);
+}
 function init(){if(!$('cfOverview'))return;
  $('cfRefresh')?.addEventListener('click',()=>load(true));
- $('cfSearch')?.addEventListener('input',e=>{state.query=e.target.value||'';state.limit=32;renderList()});
+ $('cfSearch')?.addEventListener('input',e=>updateSearch(e.target.value||''));
  document.querySelectorAll('[data-cf-scope]').forEach(b=>b.addEventListener('click',()=>{state.scope=b.dataset.cfScope;state.limit=32;renderList()}));
  document.querySelectorAll('[data-cf-sort]').forEach(b=>b.addEventListener('click',()=>{state.sort=b.dataset.cfSort;state.limit=32;renderList()}));
  document.querySelectorAll('[data-cf-filter]').forEach(b=>b.addEventListener('click',()=>{state.filter=b.dataset.cfFilter;state.limit=32;renderList()}));

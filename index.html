@@ -2752,6 +2752,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 .sz-featured-panel .sz-featured-disclaimer{color:#8c9bb0;font-size:10px;line-height:1.7;margin:14px 1px 0}
 @media(max-width:850px){.sz-featured-panel .sz-featured-layout{grid-template-columns:1fr}}
 </style>
+
 </head>
 <body>
 <div class="app-shell">
@@ -3164,14 +3165,16 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <div class="market-dynamic-grid">
           <div class="md-main-row">
             <div class="md-stat md-lead"><span class="market-dynamic-kicker">TAIEX 加權指數</span><strong id="marketTaiex">--</strong><small id="marketTaiexChange">等待資料</small></div>
-            <div class="md-stat"><span class="market-dynamic-kicker">大盤漲跌趨勢</span><strong id="marketTrend">--</strong><small id="marketTrendDetail">5D / 20D</small></div>
-            <div class="md-stat"><span class="market-dynamic-kicker">市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">上漲 / 下跌</small></div>
           </div>
-          <div class="md-secondary-row">
-            <div class="md-stat"><span class="market-dynamic-kicker">外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></div>
-            <div class="md-stat"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></div>
-            <div class="md-stat"><span class="market-dynamic-kicker">大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong><span class="sz-w3-health" id="marketW3Health">等待更新</span></div><small>資料交易日 <span id="marketW3TradeDate">--</span></small><small>上次狀態切換 <span id="marketW3SwitchDate">--</span></small><small id="marketW3Warning">W3-D.1.2｜等待資料</small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
-            <div class="md-stat"><span class="market-dynamic-kicker">資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></div>
+          <div class="md-metric-tiles" aria-label="大盤四項關鍵指標">
+            <div class="md-stat md-tile md-tile-trend"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-trend" aria-hidden="true">↗</i>大盤漲跌趨勢</span><strong id="marketTrend">--</strong><small id="marketTrendDetail">5D / 20D</small></div>
+            <div class="md-stat md-tile md-tile-breadth"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-breadth" aria-hidden="true">◉</i>市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">上漲 / 下跌</small></div>
+            <div class="md-stat md-tile md-tile-foreign"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-foreign" aria-hidden="true">↗</i>外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></div>
+            <div class="md-stat md-tile md-tile-regime"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-regime" aria-hidden="true">◇</i>大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong><span class="sz-w3-health" id="marketW3Health">等待更新</span></div><small>資料交易日 <span id="marketW3TradeDate">--</span></small><small>上次狀態切換 <span id="marketW3SwitchDate">--</span></small><small id="marketW3Warning">W3-D.1.2｜等待資料</small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
+          </div>
+          <div class="md-footer-notes">
+            <div class="md-stat md-risk-note"><span class="market-dynamic-kicker">風險結構</span><strong id="marketRisk">--</strong><small id="marketRiskDetail">20D 波動 / 回撤</small></div>
+            <div class="md-coverage-note"><span>資料完整性</span><strong id="marketCoverage">--</strong><small id="marketCoverageDetail">等待資料</small></div>
           </div>
         </div>
       </section>
@@ -3199,7 +3202,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         </div>
         <section class="cf-board cf-card" aria-label="產業資金排行">
           <div class="cf-board-header"><div><span class="cf-eyebrow">SECTOR MONITOR</span><h3>產業資金排行</h3><p>保留原 X20 資金公式，搭配動能、法人買超廣度分析。</p></div><span class="cf-help">點產業查看個股 ›</span></div>
-          <div class="cf-toolbar"><label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業・CoWoS、ASIC、散熱…" aria-label="搜尋產業"></label>
+          <div class="cf-toolbar"><label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業、公司名稱或股票代號" aria-label="搜尋產業、公司名稱或股票代號"></label>
             <div class="cf-chips" aria-label="產業範圍"><button type="button" class="is-on" data-cf-scope="all">全部產業</button><button type="button" data-cf-scope="tech">科技／電子</button><button type="button" data-cf-scope="traditional">傳產／金融</button></div>
             <div class="cf-chips cf-chips-quiet" aria-label="資金狀態"><button type="button" class="is-on" data-cf-filter="all">全部資金</button><button type="button" data-cf-filter="inflow">近期流入</button><button type="button" data-cf-filter="reverse">逆勢吸金</button></div>
           </div>
@@ -3575,7 +3578,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.2"></script>
+  <script src="./capital-flow.js?v=2.6.8.4-ui1"></script>
   <script src="./app.js?v=2.6.8.4"></script>
 
 <style id="v2522-technical">
@@ -6013,5 +6016,129 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
  .cf-stock-board-head{display:block}.cf-stock-board-head>small{display:block;margin-top:6px}.cf-stock-values strong{font-size:12px}
  .cf-stock{padding:11px}.cf-stock-name b{font-size:12px}.cf-stock-badge{font-size:8px;padding:5px}
  .cf-interpret-title small{flex:1;font-size:9px}.cf-interpret p{font-size:12px}
+}
+</style>
+
+<style id="stockzone-v2685-ui-refinement">
+/* Four-card metrics and consistent 14px title-to-content geometry, based strictly on 2.6.8.4. */
+#overviewResonanceCard .overview-resonance-head{
+  display:flex!important;align-items:center!important;gap:10px!important;
+  margin:0 0 14px!important;padding:0!important;
+}
+#overviewResonanceCard .overview-resonance-head h2.overview-section-title{
+  display:flex!important;align-items:center!important;vertical-align:top!important;
+  margin:0!important;padding:0!important;
+}
+#overviewResonanceCard .overview-resonance-metrics{
+  margin-top:0!important;
+}
+body.mode-analysis #technical>.card-title.theme-white-card-title{
+  margin:0 0 14px!important;
+}
+#news>.news-analysis-head{margin:0 0 14px!important;}
+#news .news-analysis-head>.card-title.theme-white-card-title{margin:0!important;}
+/* Market summary: keep the index prominent, echo the four pastel resonance tiles. */
+.market-dynamic-page .market-dynamic-grid{
+  display:flex!important;flex-direction:column!important;gap:12px!important;
+}
+.market-dynamic-page .md-main-row{display:block!important;}
+.market-dynamic-page .md-main-row>.md-lead{
+  display:flex!important;flex-direction:column!important;
+  margin:0!important;padding:0 4px 12px!important;
+  border:0!important;border-bottom:1px solid #e6eaf0!important;
+}
+.market-dynamic-page .md-main-row>.md-lead strong{
+  font-size:34px!important;line-height:1.25!important;margin:6px 0!important;
+}
+.market-dynamic-page .md-metric-tiles{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;align-items:stretch!important;
+}
+.market-dynamic-page .md-metric-tiles>.md-tile{
+  display:flex!important;flex-direction:column!important;
+  min-width:0!important;min-height:110px!important;
+  border:1px solid #edf1f7!important;border-radius:15px!important;
+  padding:12px 11px!important;margin:0!important;
+  box-shadow:none!important;overflow:hidden!important;
+}
+.market-dynamic-page .md-tile-trend{background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important;}
+.market-dynamic-page .md-tile-breadth{background:linear-gradient(180deg,#f6f0ff,#f1e9ff)!important;}
+.market-dynamic-page .md-tile-foreign{background:linear-gradient(180deg,#fff5f6,#fff0f2)!important;}
+.market-dynamic-page .md-tile-regime{background:linear-gradient(180deg,#eff9f4,#eaf7f1)!important;}
+.market-dynamic-page .md-tile>.market-dynamic-kicker{
+  display:flex!important;align-items:center!important;gap:8px!important;
+  font-size:12px!important;line-height:1.35!important;letter-spacing:0!important;
+  font-weight:750!important;color:#7c8da2!important;
+}
+.market-dynamic-page .md-tile-icon{
+  width:28px;height:28px;flex:0 0 28px;
+  border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-size:15px;font-style:normal;font-weight:900;line-height:1;
+}
+.market-dynamic-page .md-tile-trend .md-tile-icon{background:#e0e7ff;color:#6a7deb;}
+.market-dynamic-page .md-tile-breadth .md-tile-icon{background:#eaddff;color:#9562df;}
+.market-dynamic-page .md-tile-foreign .md-tile-icon{background:#ffe0e7;color:#df647e;}
+.market-dynamic-page .md-tile-regime .md-tile-icon{background:#d7f2e3;color:#32a776;}
+.market-dynamic-page .md-metric-tiles>.md-tile>strong,
+.market-dynamic-page .md-metric-tiles>.md-tile .md-w3-value>strong{
+  display:block!important;margin:8px 0 5px!important;
+  font-size:17px!important;line-height:1.3!important;font-weight:850!important;
+  overflow-wrap:anywhere!important;
+}
+.market-dynamic-page .md-tile-trend>strong{color:#4b76d4!important;}
+.market-dynamic-page .md-tile-breadth>strong{color:#8659ce!important;}
+.market-dynamic-page .md-tile-foreign>strong{color:#d84f5d!important;}
+.market-dynamic-page .md-tile-regime .md-w3-value>strong{color:#278b65!important;}
+.market-dynamic-page .md-metric-tiles>.md-tile>small{
+  display:block!important;font-size:10px!important;line-height:1.45!important;
+  color:#7e8da0!important;overflow-wrap:anywhere!important;
+}
+.market-dynamic-page .md-metric-tiles>.md-tile .md-w3-value{
+  display:flex!important;align-items:center!important;gap:4px 7px!important;
+  flex-wrap:wrap!important;margin:0 0 2px!important;
+}
+.market-dynamic-page .md-tile .md-w3-value .sz-w3-health{
+  font-size:9px!important;line-height:1.25!important;
+  margin:2px 0 0!important;padding:3px 6px!important;
+  border-radius:999px!important;
+}
+/* Tone overrides retain the price colors from the existing data logic. */
+.market-dynamic-page .md-tile-trend.is-up>strong,
+.market-dynamic-page .md-tile-breadth.is-up>strong,
+.market-dynamic-page .md-tile-foreign.is-up>strong{color:#d84f5d!important;}
+.market-dynamic-page .md-tile-trend.is-down>strong,
+.market-dynamic-page .md-tile-breadth.is-down>strong,
+.market-dynamic-page .md-tile-foreign.is-down>strong{color:#278b65!important;}
+.market-dynamic-page .md-footer-notes{
+  padding:9px 4px 0!important;margin:0!important;
+  border-top:1px solid #edf1f5!important;
+  display:flex!important;gap:8px 16px!important;flex-wrap:wrap!important;
+  align-items:baseline!important;
+  font-size:10px!important;line-height:1.55!important;color:#8694a6!important;
+}
+.market-dynamic-page .md-footer-notes .md-risk-note,
+.market-dynamic-page .md-footer-notes .md-coverage-note{
+  display:inline-flex!important;flex-direction:row!important;align-items:baseline!important;
+  gap:5px!important;flex-wrap:wrap!important;min-width:0!important;
+  padding:0!important;margin:0!important;border:0!important;background:none!important;
+}
+.market-dynamic-page .md-footer-notes span,
+.market-dynamic-page .md-footer-notes small{
+  font-size:10px!important;line-height:1.55!important;font-weight:500!important;
+  margin:0!important;color:#8897a8!important;
+}
+.market-dynamic-page .md-footer-notes strong{
+  font-size:10px!important;line-height:1.55!important;font-weight:800!important;
+  margin:0!important;color:#657991!important;
+}
+.market-dynamic-page .md-footer-notes .md-risk-note strong{
+  color:#657991!important;
+}
+@media (max-width:600px){
+ .market-dynamic-page .md-main-row>.md-lead strong{font-size:32px!important;}
+ .market-dynamic-page .md-metric-tiles>.md-tile{padding:11px 10px!important;min-height:105px!important;}
+ .market-dynamic-page .md-metric-tiles>.md-tile>strong,
+ .market-dynamic-page .md-metric-tiles>.md-tile .md-w3-value>strong{font-size:16px!important;}
+ .market-dynamic-page .md-metric-tiles>.md-tile>small{font-size:10px!important;}
 }
 </style>
