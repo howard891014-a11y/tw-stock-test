@@ -2763,6 +2763,35 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 @media(max-width:850px){.sz-featured-panel .sz-featured-layout{grid-template-columns:1fr}}
 </style>
 
+
+<style id="stockzone-v2688-market-dynamic-polish">
+/* v2.6.8.8 — 市場頁標題/切換/圖示微調。 */
+#marketDynamicDateBadge{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  width:auto!important;min-width:0!important;height:auto!important;
+  padding:4px 8px!important;border:1px solid #e6edf5!important;border-radius:20px!important;
+  background:linear-gradient(180deg,#ffffff,#f8fbff)!important;box-shadow:none!important;
+  color:#7C8DA2!important;font-size:10px!important;font-weight:400!important;
+  line-height:1.2!important;letter-spacing:0!important;white-space:nowrap!important;
+}
+#screeningTabs{display:flex!important;overflow:hidden!important;gap:0!important;}
+#screeningTabs button{flex:1 1 0!important;min-width:0!important;padding:0 8px!important;text-align:center!important;}
+@media(max-width:520px){#screeningTabs button{padding:0 4px!important;font-size:12px!important;}}
+.market-dynamic-page .market-dynamic-history-card>.card-title{margin:0 0 14px!important;}
+.market-dynamic-page .market-dynamic-history-card .market-dynamic-table{margin-top:0!important;}
+.market-history-title-icon{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 25h22'/%3E%3Cpath d='M7.5 20V9.5M13 20v-5.5M18.5 20v-8.5M24 20v-4.5'/%3E%3Cpath d='M6.5 13.5l5-3 4 2 8-6'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 25h22'/%3E%3Cpath d='M7.5 20V9.5M13 20v-5.5M18.5 20v-8.5M24 20v-4.5'/%3E%3Cpath d='M6.5 13.5l5-3 4 2 8-6'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+.market-distribution-card{padding:20px 22px!important;}
+.market-distribution-head{align-items:flex-start!important;gap:10px!important;margin-bottom:14px!important;}
+.market-distribution-head .card-title{margin:0!important;}
+.market-dynamic-page .market-distribution-tabs{gap:2px!important;padding:2px!important;border-radius:10px!important;}
+.market-dynamic-page .market-distribution-tabs button{font-size:12px!important;line-height:1.2!important;padding:5px 11px!important;border-radius:8px!important;min-height:28px!important;min-width:42px!important;}
+@media(max-width:600px){
+  .market-dynamic-page .market-distribution-tabs button{padding:4px 10px!important;min-height:26px!important;}
+}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2791,7 +2820,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.7</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.8</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3178,9 +3207,9 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
           </div>
           <div class="md-metric-tiles" aria-label="大盤四項關鍵指標">
             <div class="md-stat md-tile md-tile-trend"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-trend" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 18h16"></path><path d="M6 15l4-4 3 3 5-6"></path><path d="M15 8h3v3"></path></svg></i>20日趨勢</span><strong id="marketTrend">--</strong><small id="marketTrendDetail">等待資料</small></div>
-            <div class="md-stat md-tile md-tile-breadth"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-breadth" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M5 17v-3"></path><path d="M10 17V9"></path><path d="M15 17v-5"></path><path d="M20 17V7"></path><path d="M4 18h17"></path></svg></i>市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">等待資料</small></div>
-            <div class="md-stat md-tile md-tile-foreign"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-foreign" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M5 16c2-4 5-6 8-6 2.5 0 4.2.8 6 2"></path><path d="M16 6l3 6-6-1"></path><path d="M4 18h16"></path></svg></i>外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></div>
-            <div class="md-stat md-tile md-tile-regime"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-regime" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 4l6 4v8l-6 4-6-4V8z"></path><path d="M9.5 12.5l1.7 1.7 3.3-3.4"></path></svg></i>大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong><span class="sz-w3-health" id="marketW3Health">等待更新</span></div><small>資料交易日 <span id="marketW3TradeDate">--</span></small><small>上次狀態切換 <span id="marketW3SwitchDate">--</span></small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
+            <div class="md-stat md-tile md-tile-breadth"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-breadth" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 18h16"></path><path d="M6.5 18v-3.5"></path><path d="M10.5 18V9.5"></path><path d="M14.5 18v-5"></path><path d="M18.5 18V7"></path><path d="M5.5 13l4-3 3 2 5-4"></path></svg></i>市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">等待資料</small></div>
+            <div class="md-stat md-tile md-tile-foreign"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-foreign" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 18h16"></path><path d="M5.5 8.5h9"></path><path d="M11.5 5.5l3 3-3 3"></path><path d="M18.5 14.5h-9"></path><path d="M12.5 11.5l-3 3 3 3"></path></svg></i>外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></div>
+            <div class="md-stat md-tile md-tile-regime"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-regime" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 4.5l5.5 3.2v5.2c0 3.3-2.2 5.8-5.5 7.1-3.3-1.3-5.5-3.8-5.5-7.1V7.7z"></path><path d="M9.5 12.3l1.8 1.8 3.5-3.6"></path></svg></i>大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong><span class="sz-w3-health" id="marketW3Health">等待更新</span></div><small>資料交易日 <span id="marketW3TradeDate">--</span></small><small>上次狀態切換 <span id="marketW3SwitchDate">--</span></small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
           </div>
           <div class="md-footer-notes">
             <div class="md-coverage-note"><span>資料完整性</span><strong id="marketCoverage">--</strong></div>
@@ -3587,8 +3616,8 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.7"></script>
-  <script src="./app.js?v=2.6.8.7"></script>
+  <script src="./capital-flow.js?v=2.6.8.8"></script>
+  <script src="./app.js?v=2.6.8.8"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4071,7 +4100,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.6.8.7"></script>
+<script defer src="./featured-picks-ui.js?v=2.6.8.8"></script>
 </body>
 </html>
 <style>
