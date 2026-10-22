@@ -4456,6 +4456,7 @@ $("fundflowDetailClose")?.addEventListener("click",fundflowClearSelection);
 
 
 let marketDynamicData=null,marketDynamicLoading=false,marketDynamicFetchedAt=0,marketDistributionMode="listed";
+let marketIndexQuote=null,marketIndexLoading=false,marketIndexFetchedAt=0,marketIndexFetchedSlot="";
 const MARKET_DYNAMIC_LOCAL_CACHE_KEY="v2683:market-dynamic:60d";
 function marketNum(v){if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null}
 function marketFmtPct(v){const n=marketNum(v);return n===null?"--":`${n>=0?"+":""}${n.toFixed(2)}%`}
@@ -4534,12 +4535,56 @@ function marketBreadthComment(d){
   if(ratio<40)return up<down?"下跌家數較多，市場廣度偏弱。":"市場廣度轉弱，短線分歧仍大。";
   return "漲跌家數接近，市場分歧仍大。";
 }
+// v2.6.8.13 official EOD: index and turnover are independent of W3 and other snapshots.
+function marketIndexTaiwanClock(){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+  return {weekday:p.weekday,minute:Number(p.hour)*60+Number(p.minute)};
+}
+function marketIndexPollingWindow(){const c=marketIndexTaiwanClock();return c.weekday!=='Sat'&&c.weekday!=='Sun'&&c.minute>=840&&c.minute<1080;}
+function marketTradeValueLabel(v){const n=marketNum(v);return n===null?'待更新':`${(n/1e8).toLocaleString('zh-TW',{maximumFractionDigits:1,minimumFractionDigits:0})} 億`;}
+function renderMarketIndexBanner(){
+  const d=marketDynamicData?.latest||null,q=marketIndexQuote;
+  const useOfficial=Boolean(q?.ok&&q.date&&marketNum(q.taiexClose)!==null&&(!d?.date||q.date>=d.date));
+  const day=useOfficial?q.date:d?.date;
+  const close=useOfficial?q.taiexClose:d?.taiexClose;
+  const change=useOfficial?q.changePct:d?.changePct;
+  if(!day||marketNum(close)===null)return;
+  const dateEl=$("screeningMarketBannerDate");if(dateEl)dateEl.textContent=day;
+  const idx=$("marketTaiex");if(idx){idx.textContent=marketFmtIndex(close);idx.classList.toggle("is-up",marketNum(change)>0);idx.classList.toggle("is-down",marketNum(change)<0);}
+  const sub=$("marketTaiexChange");if(sub)sub.textContent=marketFmtPct(change);
+  // Only show official EOD turnover on the same date as the displayed index.
+  const a=useOfficial?marketNum(q.listedValue):null;
+  const b=useOfficial?marketNum(q.otcValue):null;
+  const t=useOfficial&&q.turnoverComplete?marketNum(q.totalValue):null;
+  const listed=$("marketListedTurnover"),otc=$("marketOtcTurnover"),total=$("marketCombinedTurnover");
+  if(listed)listed.textContent=`上市成交 ${marketTradeValueLabel(a)}`;
+  if(otc)otc.textContent=`上櫃成交 ${marketTradeValueLabel(b)}`;
+  if(total)total.textContent=t===null?'合計成交 待兩市資料齊全':`合計成交 ${marketTradeValueLabel(t)}`;
+}
+async function loadMarketIndexQuick(force=false){
+  if(marketIndexLoading)return;
+  // Off-hours and weekends still read stored data once per page opening; never re-poll official sources.
+  if(!force&&!marketIndexPollingWindow()&&marketIndexFetchedAt){renderMarketIndexBanner();return;}
+  const clock=marketIndexTaiwanClock();
+  const slot=marketIndexPollingWindow()?`${new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'})}:${Math.floor(clock.minute/10)}`:'closed';
+  // Switch to the 14:00 bucket immediately even when an opening-time read ran moments before.
+  if(!force&&slot===marketIndexFetchedSlot&&Date.now()-marketIndexFetchedAt<600000){renderMarketIndexBanner();return;}
+  marketIndexLoading=true;marketIndexFetchedAt=Date.now();marketIndexFetchedSlot=slot;
+  try{
+    const r=await fetch('/api/market-dynamic?view=index',{cache:'no-store'});
+    const q=await r.json();
+    if(r.ok&&q?.ok&&q?.date){
+      if(!marketIndexQuote||q.date>=marketIndexQuote.date){marketIndexQuote=q;renderMarketIndexBanner();}
+    }
+  }catch(e){console.warn('加權指數盤後快照暫不可用',e?.message||e)}
+  finally{marketIndexLoading=false;}
+}
 function renderMarketDynamic(){
   const d=marketDynamicData?.latest;if(!d)return;
   const set=(id,t)=>{const e=$(id);if(e)e.textContent=t};
   const stableTradeDate=marketStableTradeDate()||d.date||"--";
   set("marketDynamicDateBadge",stableTradeDate);
-  set("screeningMarketBannerDate",stableTradeDate);
+  // Banner date follows the latest independent official index snapshot, not W3 readiness.
   const w3=stockzoneW3Regime(),model=marketDynamicData?.w3||{};
   // OFF always wins; a visible warning is only possible while ON.
   const warning=w3==="on"&&model.warning===true;
@@ -4556,11 +4601,7 @@ function renderMarketDynamic(){
     w3Card.classList.toggle("is-safe",w3==="on"&&!warning);
     w3Card.classList.toggle("is-danger",w3==="off"||warning);
   }
-  set("marketTaiex",marketFmtIndex(d.taiexClose));
-  // Use the same close-to-close change sign for index quote color as individual stocks.
-  const indexNumber=$("marketTaiex"),dailyPct=marketNum(d.changePct);
-  if(indexNumber){indexNumber.classList.toggle("is-up",dailyPct!==null&&dailyPct>0);indexNumber.classList.toggle("is-down",dailyPct!==null&&dailyPct<0);}
-  set("marketTaiexChange",`${marketFmtPct(d.changePct)}｜成交 ${marketNum(d.tradeValue)===null?"--":(marketNum(d.tradeValue)/1e8).toFixed(0)+" 億"}`);
+  renderMarketIndexBanner();
   set("marketTrend",marketFmtPct(d.ret20));
   set("marketTrendDetail",`距高點 ${marketFmtPct(d.drawdown20)}\n波動幅度 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}`);
   marketTone($("marketTrend")?.closest(".md-stat"),d.ret20);
@@ -4609,7 +4650,7 @@ function setView(view){
   document.body.classList.add(`mode-${mode}`);
   const modeEyebrow=$("modeEyebrow"); if(modeEyebrow) modeEyebrow.textContent=mode==="screening"?"智慧選股":mode==="management"?"股票管理":"個股分析";
   if(view==="screening")view="market-dynamic";
-  if(screeningViews.has(view)){loadMarketDynamic(false);}
+  if(screeningViews.has(view)){loadMarketIndexQuick(false);loadMarketDynamic(false);}
   if(view==="fundflow"){window.StockZoneCapital?.load(false);}
   if(view==="featured"){window.StockZoneFeatured?.load();}
   document.body.classList.toggle("view-overview",view==="overview");
@@ -5123,3 +5164,8 @@ $("runFundflowValidation")?.addEventListener("click",runFundflowValidation);
   if(e.target.closest?.(".formula-popover-close")){if(pop)pop.hidden=true;}
  });
 })();
+
+
+// Browser-visible scheduler; backend enforces holiday + 14:00–18:00 TWSE window and ten-minute slots.
+setInterval(()=>{if(document.visibilityState==='visible'&&document.body.classList.contains('mode-screening')&&marketIndexPollingWindow())void loadMarketIndexQuick(false)},60000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&document.body.classList.contains('mode-screening'))void loadMarketIndexQuick(false)});

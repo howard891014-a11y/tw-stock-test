@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const state={summary:null,detail:null,opened:'',loading:false,lastFetch:0,query:'',scope:'all',filter:'all',sort:'x',limit:32,stockFilter:'candidates',stockSort:'gap',sequence:0};
+const state={summary:null,detail:null,opened:'',loading:false,lastFetch:0,query:'',scope:'all',filter:'all',sort:'x',limit:32,stockFilter:'candidates',stockSort:'gap',period:'5',sequence:0};
 const n=v=>v===null||v===undefined||v===''?null:(Number.isFinite(Number(v))?Number(v):null);
 const esc=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const signed=(v,{pct=false,d=1}={})=>{const x=n(v);return x===null?'—':`${x>0?'+':''}${x.toFixed(d)}${pct?'%':''}`;};
@@ -14,25 +14,29 @@ function setStatus(msg,problem=false){const el=$('cfState');if(el){el.textConten
 function pill(label,value,opts={}){return `<div class="cf-stat"><small>${label}</small><b class="${opts.signed?'cf-'+tone(value):''}">${opts.text||signed(value,{pct:!!opts.percent,d:opts.d??1})}</b>${opts.sub?`<em>${opts.sub}</em>`:''}</div>`;}
 function note(s){return esc(String(s||'').split('。')[0]||'資料正在整理');}
 function setButtons(which,key){document.querySelectorAll(`[data-cf-${which}]`).forEach(b=>{const on=b.dataset[`cf${which.charAt(0).toUpperCase()+which.slice(1)}`]===key;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));});}
-// A "流入/流出" ranking is based on the existing, stored 5-day institutional net-flow
-// ratio (flow5Pct), NOT TWD net buy amount. Never infer amounts or mix in X20.
+// The percentages come from stored Neon flow_1_pct / flow_5_pct for the SAME
+// trade date; they are not capital amounts and do not recompute X20.
 function top10Group(rows,positive){
-  const choices=rows.filter(s=>n(s.flow5Pct)!==null&&(positive?s.flow5Pct>0:s.flow5Pct<0));
-  choices.sort((a,b)=>positive?(b.flow5Pct-a.flow5Pct)||(String(a.tagId).localeCompare(String(b.tagId))):(a.flow5Pct-b.flow5Pct)||(String(a.tagId).localeCompare(String(b.tagId))));
+  const key=state.period==='1'?'flow1Pct':'flow5Pct';
+  const label=state.period==='1'?'今日':'近5日';
+  const choices=rows.filter(s=>n(s[key])!==null&&(positive?s[key]>0:s[key]<0));
+  choices.sort((a,b)=>positive?(b[key]-a[key])||String(a.tagId).localeCompare(String(b.tagId)):(a[key]-b[key])||String(a.tagId).localeCompare(String(b.tagId)));
   const display=choices.slice(0,10),type=positive?'in':'out';
-  return `<section class="cf-top10-group ${type}" aria-label="近5日法人淨${positive?'流入':'流出'}前十產業">
+  return `<section class="cf-top10-group ${type}" aria-label="${label}法人淨${positive?'流入':'流出'}前十產業">
     <h3 class="cf-top10-heading">${positive?'資金流入 TOP 10':'資金流出 TOP 10'}<span class="cf-top10-direction">${positive?'▲ 流入':'▼ 流出'}</span></h3>
-    <small class="cf-top10-caption">近5日法人淨流量比</small>
-    ${display.length?display.map((s,i)=>`<button class="cf-top10-row" type="button" data-cf-open="${esc(s.tagId)}" title="${esc(s.name)}｜${signed(s.flow5Pct,{pct:true,d:1})}｜點選查看產業成分股"><span class="cf-top10-rank">${i+1}</span><span class="cf-top10-name">${esc(s.name)}</span><strong class="cf-top10-flow">${signed(s.flow5Pct,{pct:true,d:1})}</strong></button>`).join(''):'<div class="cf-top10-empty">目前沒有符合條件的產業</div>'}
+    <small class="cf-top10-caption">${label}法人淨流量比</small>
+    ${display.length?display.map((s,i)=>`<button class="cf-top10-row" type="button" data-cf-open="${esc(s.tagId)}" title="${esc(s.name)}｜${signed(s[key],{pct:true,d:1})}｜點選查看產業成分股"><span class="cf-top10-rank">${i+1}</span><span class="cf-top10-name">${esc(s.name)}</span><strong class="cf-top10-flow">${signed(s[key],{pct:true,d:1})}</strong></button>`).join(''):'<div class="cf-top10-empty">此期間沒有符合條件的產業</div>'}
   </section>`;
 }
 function summaryCards(){
   const data=state.summary,rows=data?.sectors||[];
-  const eligible=rows.filter(s=>n(s.flow5Pct)!==null&&Number(s.valid)>0);
+  const key=state.period==='1'?'flow1Pct':'flow5Pct';
+  const eligible=rows.filter(s=>n(s[key])!==null&&Number(s.valid)>0);
   $('cfMetrics').innerHTML=top10Group(eligible,true)+top10Group(eligible,false)
-    +'<small class="cf-top10-note">依現有產業近5日法人淨流量比排序（%），非買賣金額；僅列有有效資料的產業。點選產業可查看成分股，產業分類可能重疊。</small>';
-  $('cfMarket').textContent=marketText(data?.market);
+    +`<small class="cf-top10-note">依${state.period==='1'?'今日':'近5日'}法人淨流量比（%）排序，非買賣金額；資料日期 ${esc(data?.asOf||'--')}。產業分類可能重疊。</small>`;
+  const market=$('cfMarket');if(market)market.textContent=marketText(data?.market);
   const date=$('cfAsOfBadge');if(date){date.textContent=data?.asOf||'--';date.dateTime=data?.asOf||'';}
+  document.querySelectorAll('[data-cf-period]').forEach(b=>{const on=b.dataset.cfPeriod===state.period;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
 }
 function filtered(){const list=state.summary?.sectors||[];let rows=list.filter(s=>{
    if(state.scope==='tech'&&!['technology-fine','electronics-product'].includes(s.scope))return false;
@@ -48,7 +52,7 @@ function rowHtml(s,i){const b=s.breadthPct===null?0:Math.max(0,Math.min(100,s.br
  const status=s.flow5Pct===null?'資料待補':s.flow5Pct>0?(s.dx3>=3?'流入增強':'法人淨流入'):(s.dx3<=-3?'撤退加快':'法人淨流出');
  return `<button type="button" class="cf-sector" data-cf-open="${esc(s.tagId)}" aria-label="查看${esc(s.name)}的法人資金與個股機會">
  <div class="cf-row-head"><span class="cf-rank">${String(i+1).padStart(2,'0')}</span><span class="cf-row-title"><b>${esc(s.name)}</b><small>${esc(scopeText(s.scope))} · ${s.valid}/${s.members} 家有效</small></span><span class="cf-status ${s.flow5Pct>0?'is-positive':s.flow5Pct<0?'is-negative':''}">${esc(status)}</span><span class="cf-chevron">›</span></div>
- <div class="cf-row-grid"><div><small>X20・資金位置</small><strong class="cf-${tone(s.x)}">${signed(s.x,{d:1})}</strong></div><div><small>法人近5日</small><strong class="cf-${tone(s.flow5Pct)}">${signed(s.flow5Pct,{pct:true})}</strong></div><div><small>3日動能 ΔX</small><strong class="cf-${tone(s.dx3)}">${signed(s.dx3)}</strong></div><div><small>流入廣度</small><strong>${s.breadthPct===null?'—':s.breadthPct.toFixed(0)+'%'}</strong></div></div>
+ <div class="cf-row-grid"><div><small>資金強度</small><strong class="cf-${tone(s.x)}">${signed(s.x,{d:1})}</strong></div><div><small>法人近5日</small><strong class="cf-${tone(s.flow5Pct)}">${signed(s.flow5Pct,{pct:true})}</strong></div><div><small>3日動能 ΔX</small><strong class="cf-${tone(s.dx3)}">${signed(s.dx3)}</strong></div><div><small>流入廣度</small><strong>${s.breadthPct===null?'—':s.breadthPct.toFixed(0)+'%'}</strong></div></div>
  <div class="cf-breadth-track"><i style="width:${b}%"></i></div><div class="cf-row-bottom"><span>${note(s.reading)}。</span>${s.opportunityCount?`<b>${s.opportunityCount} 檔資金先行</b>`:''}</div>
  </button>`;
 }
@@ -60,7 +64,7 @@ function renderList(){const data=state.summary;if(!data)return;summaryCards();co
 }
 function detailStockHtml(s,i){const match=s.candidate;return `<div class="cf-stock ${match?'cf-stock-match':''}">
  <div class="cf-stock-head"><span class="cf-stock-index">${String(i+1).padStart(2,'0')}</span><span class="cf-stock-name"><b>${esc(s.name)}</b><small>${esc(s.code)} · ${s.importance==='core'?'核心公司':'相關公司'}</small></span>${match?'<span class="cf-stock-badge">資金先行</span>':`<span class="cf-stock-muted">${esc(s.signal)}</span>`}</div>
- <div class="cf-stock-values"><span><small>X20</small><strong class="cf-${tone(s.x)}">${signed(s.x)}</strong></span><span><small>法人5日</small><strong class="cf-${tone(s.flow5Pct)}">${signed(s.flow5Pct,{pct:true})}</strong></span><span><small>股價5日</small><strong class="cf-${tone(s.return5Pct)}">${signed(s.return5Pct,{pct:true})}</strong></span><span><small>股價20日</small><strong class="cf-${tone(s.return20Pct)}">${signed(s.return20Pct,{pct:true})}</strong></span></div></div>`;}
+ <div class="cf-stock-values"><span><small>資金強度</small><strong class="cf-${tone(s.x)}">${signed(s.x)}</strong></span><span><small>法人今日</small><strong class="cf-${tone(s.flow1Pct)}">${signed(s.flow1Pct,{pct:true})}</strong></span><span><small>法人5日</small><strong class="cf-${tone(s.flow5Pct)}">${signed(s.flow5Pct,{pct:true})}</strong></span><span><small>股價今日</small><strong class="cf-${tone(s.todayChangePct)}">${signed(s.todayChangePct,{pct:true})}</strong></span><span><small>股價5日</small><strong class="cf-${tone(s.return5Pct)}">${signed(s.return5Pct,{pct:true})}</strong></span><span><small>股價20日</small><strong class="cf-${tone(s.return20Pct)}">${signed(s.return20Pct,{pct:true})}</strong></span></div></div>`;}
 function stockSort(stocks){return stocks.sort((a,b)=>{
  if(state.stockSort==='flow')return (b.flow5Pct??-999)-(a.flow5Pct??-999);
  if(state.stockSort==='price')return (a.return5Pct??999)-(b.return5Pct??999);
@@ -68,7 +72,7 @@ function stockSort(stocks){return stocks.sort((a,b)=>{
 });}
 function renderDetail(){const d=state.detail;if(!d)return;const s=d.sector;const candidates=d.stocks.filter(x=>x.candidate),sorted=stockSort(d.stocks.filter(x=>state.stockFilter==='all'||x.candidate));
  $('cfDetailTitle').textContent=s.name;$('cfDetailMeta').textContent=`${esc(scopeText(s.scope))}・${s.members} 家成分股・資料日 ${d.asOf||'--'}`;
- $('cfDetailKPIs').innerHTML=`${pill('X20・法人資金位置',s.x,{signed:true,sub:'沿用既有標準化X20'})}${pill('近5日法人流量',s.flow5Pct,{signed:true,percent:true,sub:'淨買賣金額／成交值'})}${pill('近3日資金動能',s.dx3,{signed:true,sub:s.momentum.label})}${pill('流入廣度',s.breadthPct,{percent:true,sub:`${s.inflowCount}/${s.breadthValid} 檔法人買超`})}`;
+ $('cfDetailKPIs').innerHTML=`${pill('資金強度',s.x,{signed:true,sub:'沿用既有模型分數'})}${pill('近5日法人流量',s.flow5Pct,{signed:true,percent:true,sub:'淨買賣金額／成交值'})}${pill('近3日資金動能',s.dx3,{signed:true,sub:s.momentum.label})}${pill('流入廣度',s.breadthPct,{percent:true,sub:`${s.inflowCount}/${s.breadthValid} 檔法人買超`})}`;
  $('cfCoreBreadth').textContent=s.coreBreadthPct===null?'核心公司資料不足':`核心公司流入廣度 ${signed(s.coreBreadthPct,{pct:true,d:0})}（${s.coreInflowCount}/${s.coreBreadthValid}）`;
  $('cfReading').textContent=s.reading;
  $('cfPotentialCount').textContent=`${candidates.length} 檔符合初步篩選`;
@@ -77,13 +81,13 @@ function renderDetail(){const d=state.detail;if(!d)return;const s=d.sector;const
  $('cfStockListTotal').textContent=`顯示 ${sorted.length} / ${d.stocks.length} 家`;
  $('cfStockSort').value=state.stockSort;
  const path=d.history||[],xvalues=path.map(z=>z.x).filter(v=>v!==null),flow=path.map(z=>z.flow5Pct).filter(v=>v!==null);
- $('cfTrend').innerHTML=`<div class="cf-trend-title"><b>資金位置・近${path.length}個交易日</b><small>保留既有 X20 計算結果</small></div>${sparkline(path,'x',xvalues)}<div class="cf-trend-dates"><span>${esc(path[0]?.date||'')}</span><span>${esc(path.at(-1)?.date||'')}</span></div><div class="cf-mini-legend">● X20 強度　　近5日法人流量 ${signed(s.flow5Pct,{pct:true})}</div>`;
+ $('cfTrend').innerHTML=`<div class="cf-trend-title"><b>資金強度・近${path.length}個交易日</b><small>保留既有 資金強度計算結果</small></div>${sparkline(path,'x',xvalues)}<div class="cf-trend-dates"><span>${esc(path[0]?.date||'')}</span><span>${esc(path.at(-1)?.date||'')}</span></div><div class="cf-mini-legend">● 資金強度　　近5日法人流量 ${signed(s.flow5Pct,{pct:true})}</div>`;
 }
 function sparkline(data,key,values){if(values.length<2)return '<p class="cf-empty">歷史資料不足</p>';const mi=Math.min(0,...values),ma=Math.max(0,...values),range=Math.max(1,ma-mi),w=720,h=120;
  const pts=data.map((r,i)=>({x:20+i*680/Math.max(1,data.length-1),y:r[key]===null?null:108-(r[key]-mi)/range*92}));
  const segments=[];let curr=[];for(const p of pts){if(p.y===null){if(curr.length>1)segments.push(curr);curr=[];}else curr.push(p);}if(curr.length>1)segments.push(curr);
  const zeroY=108-(0-mi)/range*92;
- return `<svg class="cf-spark" role="img" aria-label="產業 X20 歷史走勢" viewBox="0 0 720 120" preserveAspectRatio="none"><line x1="16" x2="704" y1="${zeroY.toFixed(2)}" y2="${zeroY.toFixed(2)}" stroke="#d6e3ed" stroke-dasharray="5 6"/>${segments.map(a=>`<polyline fill="none" stroke="#437fae" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${a.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ')}"/>`).join('')}${pts.filter(p=>p.y!==null).slice(-1).map(p=>`<circle r="5" cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" fill="#3678ad" stroke="white" stroke-width="2"/>`).join('')}</svg>`;
+ return `<svg class="cf-spark" role="img" aria-label="產業資金強度歷史走勢" viewBox="0 0 720 120" preserveAspectRatio="none"><line x1="16" x2="704" y1="${zeroY.toFixed(2)}" y2="${zeroY.toFixed(2)}" stroke="#d6e3ed" stroke-dasharray="5 6"/>${segments.map(a=>`<polyline fill="none" stroke="#437fae" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${a.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ')}"/>`).join('')}${pts.filter(p=>p.y!==null).slice(-1).map(p=>`<circle r="5" cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" fill="#3678ad" stroke="white" stroke-width="2"/>`).join('')}</svg>`;
 }
 async function load(force=false){
  if(state.loading)return;
@@ -111,6 +115,7 @@ function init(){if(!$('cfOverview'))return;
  $('cfMore')?.addEventListener('click',()=>{state.limit+=32;renderList()});
  $('cfList')?.addEventListener('click',e=>{const item=e.target.closest('[data-cf-open]');if(item)void open(item.dataset.cfOpen)});
  $('cfMetrics')?.addEventListener('click',e=>{const item=e.target.closest('[data-cf-open]');if(item)void open(item.dataset.cfOpen)});
+ document.querySelectorAll('[data-cf-period]').forEach(b=>b.addEventListener('click',()=>{state.period=b.dataset.cfPeriod==='1'?'1':'5';if(state.summary)summaryCards()}));
  $('cfBack')?.addEventListener('click',back);
  $('cfStockCandidates')?.addEventListener('click',()=>{state.stockFilter='candidates';renderDetail()});
  $('cfStockAll')?.addEventListener('click',()=>{state.stockFilter='all';renderDetail()});

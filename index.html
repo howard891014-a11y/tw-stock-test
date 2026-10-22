@@ -2765,7 +2765,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 
 
 <style id="stockzone-v2688-market-dynamic-polish">
-/* v2.6.8.11 — 市場頁標題/切換/圖示微調。 */
+/* v2.6.8.13 — 市場頁標題/切換/圖示微調。 */
 #marketDynamicDateBadge{
   display:inline-flex!important;align-items:center!important;justify-content:center!important;
   width:auto!important;min-width:0!important;height:auto!important;
@@ -2794,7 +2794,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 </style>
 
 <style id="stockzone-v2689-market-dynamic-fine-tune">
-/* v2.6.8.11 — 大盤動態卡片間距/對齊/圖示微調。 */
+/* v2.6.8.13 — 大盤動態卡片間距/對齊/圖示微調。 */
 body.mode-analysis #technical.technical-card{padding-top:16px!important;}
 .market-dynamic-page .market-dynamic-master-card,
 .market-dynamic-page .market-dynamic-history-card,
@@ -2848,7 +2848,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.11</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.13</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2879,10 +2879,15 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         </div>
       </section>
 
-      <!-- v2.6.8.11: market snapshot is shared by all 智慧選股 subpages. -->
+      <!-- v2.6.8.13: market snapshot is shared by all 智慧選股 subpages. -->
       <section class="screening-market-banner" id="screeningMarketBanner" aria-label="台股加權指數資訊">
         <div class="smb-heading"><span>TAIEX 加權指數</span><small id="screeningMarketBannerDate">資料待補</small></div>
         <div class="smb-number"><strong id="marketTaiex">--</strong><span id="marketTaiexChange">等待資料</span></div>
+        <div class="smb-turnover" aria-label="上市上櫃盤後成交金額">
+          <span id="marketListedTurnover">上市成交 待更新</span>
+          <span id="marketOtcTurnover">上櫃成交 待更新</span>
+          <strong id="marketCombinedTurnover">合計成交 待兩市資料齊全</strong>
+        </div>
       </section>
       <nav class="section-tabs analysis-tabs" id="analysisTabs" aria-label="個股分析導覽">
         <button class="active" data-view="overview" type="button">總覽</button>
@@ -3265,21 +3270,22 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
       <section id="cfOverview" class="cf-overview">
         <div class="cf-hero cf-card">
           <div class="cf-hero-top"><h2 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-flow" aria-hidden="true"></i><span>資金流向</span></span></h2><time id="cfAsOfBadge" class="sz-market-date-pill" aria-label="產業資金資料日期">--</time></div>
-          <div class="cf-context"><span id="cfMarket">大盤狀態讀取中</span><span id="cfState" hidden></span></div>
-          <div class="cf-top10-grid" id="cfMetrics" aria-label="近5日法人產業淨流入及淨流出排行"><div class="cf-top10-placeholder">產業資料讀取中…</div></div>
+          <span id="cfMarket" hidden></span><div class="cf-context" id="cfState" hidden></div>
+          <div class="cf-period-toggle" id="cfPeriodToggle" role="group" aria-label="法人淨流量比期間"><button type="button" data-cf-period="5" class="active" aria-pressed="true">近5日</button><button type="button" data-cf-period="1" aria-pressed="false">今日</button></div>
+          <div class="cf-top10-grid" id="cfMetrics" aria-label="法人產業淨流入及淨流出排行"><div class="cf-top10-placeholder">產業資料讀取中…</div></div>
         </div>
         <section class="cf-board cf-card" aria-label="產業資金排行">
-          <div class="cf-board-header"><div><h3 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-sector" aria-hidden="true"></i><span>產業資金排行</span></span></h3></div><span class="cf-help">點產業查看個股 ›</span></div>
+          <div class="cf-board-header"><div><h3 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-sector" aria-hidden="true"></i><span>產業資金排行</span></span></h3></div></div>
           <div class="cf-toolbar"><label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業、公司名稱或股票代號" aria-label="搜尋產業、公司名稱或股票代號"></label>
             <div class="cf-chips" aria-label="產業範圍"><button type="button" class="is-on" data-cf-scope="all">全部產業</button><button type="button" data-cf-scope="tech">科技／電子</button><button type="button" data-cf-scope="traditional">傳產／金融</button></div>
             <div class="cf-chips cf-chips-quiet" aria-label="資金狀態"><button type="button" class="is-on" data-cf-filter="all">全部資金</button><button type="button" data-cf-filter="inflow">近期流入</button><button type="button" data-cf-filter="reverse">逆勢吸金</button></div>
           </div>
           <div class="cf-sort-wrap"><span>排序</span><div class="cf-sort" role="group" aria-label="資金指標排序"><button class="is-on" type="button" data-cf-sort="x">中期資金</button><button type="button" data-cf-sort="momentum">資金動能</button><button type="button" data-cf-sort="breadth">資金廣度</button><button type="button" data-cf-sort="candidate">個股機會</button></div></div>
-          <div class="cf-list-caption"><span id="cfCount">正在讀取產業…</span><small>紅＝增加　綠＝減少（台股慣例）</small></div>
+          <div class="cf-list-caption" hidden><span id="cfCount">正在讀取產業…</span></div>
           <div class="cf-sector-list" id="cfList" aria-live="polite"><div class="cf-empty">正在整理產業資金資料…</div></div>
           <button class="cf-more" id="cfMore" type="button" hidden>顯示更多</button>
         </section>
-        <p class="cf-disclaimer">說明：X20 是既有法人資金強度分數，不是百分比；流入廣度是一家公司一票的法人淨買超比例。個股「資金先行」只表示符合資金與股價落差條件，並非買進建議。</p>
+        <p class="cf-disclaimer">說明：資金強度是既有模型的標準化分數，不是百分比；流入廣度是一家公司一票的法人淨買超比例。個股「資金先行」只表示符合資金與股價落差條件，並非買進建議。</p>
       </section>
       <section id="cfDetail" class="cf-detail" hidden>
         <div class="cf-card cf-detail-head"><button type="button" id="cfBack" class="cf-back">← 返回產業排行</button><span class="cf-eyebrow">SECTOR DEEP DIVE</span><h2 id="cfDetailTitle">正在載入</h2><p id="cfDetailMeta">—</p>
@@ -3646,8 +3652,8 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.11"></script>
-  <script src="./app.js?v=2.6.8.11"></script>
+  <script src="./capital-flow.js?v=2.6.8.13"></script>
+  <script src="./app.js?v=2.6.8.13"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4130,10 +4136,10 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.6.8.11"></script>
+<script defer src="./featured-picks-ui.js?v=2.6.8.13"></script>
 
 <style id="stockzone-v26811-ui">
-/* v2.6.8.11 | UI display only; capital flow rankings reuse existing flow5Pct API data. */
+/* v2.6.8.13 | UI display only; capital flow rankings reuse existing flow5Pct API data. */
 body.mode-screening .screening-market-banner .smb-number strong{
   font-size:28px!important;font-weight:800!important;
   line-height:1.25!important;letter-spacing:normal!important;
@@ -4182,6 +4188,79 @@ body.mode-screening .cf-page .cf-top10-empty,.cf-top10-placeholder{font-size:11p
  body.mode-screening .cf-page .cf-top10-heading{font-size:11px;}
  body.mode-screening .cf-page .cf-top10-name,body.mode-screening .cf-page .cf-top10-flow{font-size:10px;}
  body.mode-screening .cf-page .cf-top10-row{grid-template-columns:14px minmax(0,1fr) auto;gap:3px;}
+}
+</style>
+
+<style id="stockzone-v26812-ui">
+/* v2.6.8.13 — structural geometry matched to 基本面. */
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile{
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;
+  padding:12px 11px 10px!important;min-height:110px!important;
+}
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile>.market-dynamic-kicker{
+  display:flex!important;align-items:center!important;gap:7px!important;
+  min-height:26px!important;line-height:1.2!important;margin:0!important;
+}
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile>.market-dynamic-kicker .md-tile-icon{
+  width:26px!important;height:26px!important;flex:0 0 26px!important;
+}
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile>strong,
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile>.md-w3-value{
+  margin:8px 0 0 33px!important;width:calc(100% - 33px)!important;
+  padding:0!important;text-align:left!important;line-height:1.2!important;min-height:21px!important;
+  display:block!important;flex:0 0 auto!important;
+}
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile>.md-w3-value>strong{
+  display:block!important;margin:0!important;width:100%!important;
+  line-height:1.2!important;text-align:left!important;
+}
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile>small{
+  display:block!important;flex:0 0 auto!important;
+  margin:6px 0 0 33px!important;width:calc(100% - 33px)!important;
+  font-size:10px!important;line-height:1.45!important;min-height:28px!important;
+  text-align:left!important;white-space:pre-line!important;overflow-wrap:anywhere!important;
+}
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile-regime>small + small{
+  margin-top:0!important;min-height:0!important;
+}
+body.mode-screening .cf-page .cf-context[hidden],body.mode-screening .cf-page .cf-list-caption[hidden]{display:none!important;}
+body.mode-screening .cf-page .cf-period-toggle{
+  display:flex;justify-content:flex-start;gap:3px;margin:12px 0 12px;
+  background:#f3f6fa;border:1px solid #e4ebf3;border-radius:12px;padding:3px;width:max-content;
+}
+body.mode-screening .cf-page .cf-period-toggle button{
+  border:0;background:transparent;color:#8392a4;border-radius:9px;padding:6px 13px;
+  font-size:11px;font-weight:800;line-height:1.2;cursor:pointer;
+}
+body.mode-screening .cf-page .cf-period-toggle button.active{
+  background:#fff;color:#286fc7;box-shadow:0 1px 5px rgba(50,80,125,.12);
+}
+body.mode-screening .cf-page .cf-stock-values{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px 6px!important;}
+body.mode-screening .cf-page .cf-stock-values span{min-width:0!important;}
+body.mode-screening .cf-page .cf-stock-values small{font-size:9px!important;}
+@media(max-width:520px){
+ body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile{padding:12px 10px 10px!important;}
+ body.mode-screening .cf-page .cf-stock-values strong{font-size:12px!important;}
+}
+</style>
+<style id="stockzone-v26813-official-eod-amounts">
+/* v2.6.8.13: display only verified, date-matched TWSE & TPEx cross-market turnover. */
+body.mode-screening .screening-market-banner .smb-turnover{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:3px 12px!important;margin-top:7px!important;padding-top:9px!important;
+  border-top:1px solid #edf1f6!important;font-size:11px!important;line-height:1.55!important;
+  color:#8695a7!important;min-width:0!important;
+}
+body.mode-screening .screening-market-banner .smb-turnover span,
+body.mode-screening .screening-market-banner .smb-turnover strong{
+  display:block!important;white-space:normal!important;text-align:left!important;overflow-wrap:break-word!important;
+}
+body.mode-screening .screening-market-banner .smb-turnover strong{
+  grid-column:1 / -1!important;font-size:12px!important;color:#293b54!important;font-weight:800!important;
+}
+@media(max-width:600px){
+  body.mode-screening .screening-market-banner .smb-turnover{font-size:10px!important;}
+  body.mode-screening .screening-market-banner .smb-turnover strong{font-size:11px!important;}
 }
 </style>
 </body>
@@ -6258,7 +6337,7 @@ body.mode-analysis #technical>.card-title.theme-white-card-title{
 }
 </style>
 <style id="stockzone-v26810-shared-screening-header">
-/* v2.6.8.11 – shared index summary + consistent typography. */
+/* v2.6.8.13 – shared index summary + consistent typography. */
 .screening-market-banner{display:none!important}
 body.mode-screening .screening-market-banner{
   display:flex!important;flex-direction:column!important;gap:5px!important;
@@ -6330,3 +6409,5 @@ body.mode-screening .cf-page .cf-unified-title .theme-title-icon{
   body.mode-screening .cf-page .cf-unified-title{font-size:20px!important;}
 }
 </style>
+
+
