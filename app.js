@@ -4539,6 +4539,7 @@ function renderMarketDynamic(){
   const set=(id,t)=>{const e=$(id);if(e)e.textContent=t};
   const stableTradeDate=marketStableTradeDate()||d.date||"--";
   set("marketDynamicDateBadge",stableTradeDate);
+  set("screeningMarketBannerDate",stableTradeDate);
   const w3=stockzoneW3Regime(),model=marketDynamicData?.w3||{};
   // OFF always wins; a visible warning is only possible while ON.
   const warning=w3==="on"&&model.warning===true;
@@ -4605,7 +4606,7 @@ function setView(view){
   document.body.classList.add(`mode-${mode}`);
   const modeEyebrow=$("modeEyebrow"); if(modeEyebrow) modeEyebrow.textContent=mode==="screening"?"智慧選股":mode==="management"?"股票管理":"個股分析";
   if(view==="screening")view="market-dynamic";
-  if(view==="market-dynamic"){loadMarketDynamic(false);}
+  if(screeningViews.has(view)){loadMarketDynamic(false);}
   if(view==="fundflow"){window.StockZoneCapital?.load(false);}
   if(view==="featured"){window.StockZoneFeatured?.load();}
   document.body.classList.toggle("view-overview",view==="overview");

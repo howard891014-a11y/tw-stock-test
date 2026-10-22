@@ -2765,7 +2765,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 
 
 <style id="stockzone-v2688-market-dynamic-polish">
-/* v2.6.8.9 — 市場頁標題/切換/圖示微調。 */
+/* v2.6.8.10 — 市場頁標題/切換/圖示微調。 */
 #marketDynamicDateBadge{
   display:inline-flex!important;align-items:center!important;justify-content:center!important;
   width:auto!important;min-width:0!important;height:auto!important;
@@ -2794,7 +2794,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 </style>
 
 <style id="stockzone-v2689-market-dynamic-fine-tune">
-/* v2.6.8.9 — 大盤動態卡片間距/對齊/圖示微調。 */
+/* v2.6.8.10 — 大盤動態卡片間距/對齊/圖示微調。 */
 body.mode-analysis #technical.technical-card{padding-top:16px!important;}
 .market-dynamic-page .market-dynamic-master-card,
 .market-dynamic-page .market-dynamic-history-card,
@@ -2817,6 +2817,9 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
   .market-dynamic-page .market-distribution-card{padding-top:16px!important;}
 }
 </style>
+
+
+
 </head>
 <body>
 <div class="app-shell">
@@ -2845,7 +2848,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.9</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.10</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2876,6 +2879,11 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         </div>
       </section>
 
+      <!-- v2.6.8.10: market snapshot is shared by all 智慧選股 subpages. -->
+      <section class="screening-market-banner" id="screeningMarketBanner" aria-label="台股加權指數資訊">
+        <div class="smb-heading"><span>TAIEX 加權指數</span><small id="screeningMarketBannerDate">資料待補</small></div>
+        <div class="smb-number"><strong id="marketTaiex">--</strong><span id="marketTaiexChange">等待資料</span></div>
+      </section>
       <nav class="section-tabs analysis-tabs" id="analysisTabs" aria-label="個股分析導覽">
         <button class="active" data-view="overview" type="button">總覽</button>
         <button data-view="analysis" type="button">分析</button>
@@ -3227,14 +3235,11 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
       <section class="card market-dynamic-master-card">
         <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon market-dynamic-title-icon" aria-hidden="true"></i><span>大盤動態</span></span><span class="badge" id="marketDynamicDateBadge">--</span></div>
         <div class="market-dynamic-grid">
-          <div class="md-main-row">
-            <div class="md-stat md-lead"><span class="market-dynamic-kicker">TAIEX 加權指數</span><strong id="marketTaiex">--</strong><small id="marketTaiexChange">等待資料</small></div>
-          </div>
           <div class="md-metric-tiles" aria-label="大盤四項關鍵指標">
             <div class="md-stat md-tile md-tile-trend"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-trend" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 18h16"></path><path d="M6 15l4-4 3 3 5-6"></path><path d="M15 8h3v3"></path></svg></i>20日趨勢</span><strong id="marketTrend">--</strong><small id="marketTrendDetail">等待資料</small></div>
-            <div class="md-stat md-tile md-tile-breadth"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-breadth" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 4.5a7.5 7.5 0 1 0 7.5 7.5"></path><path d="M12 4.5V12h7.5"></path><path d="M12 12 7 16.8"></path></svg></i>市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">等待資料</small></div>
+            <div class="md-stat md-tile md-tile-breadth"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-breadth" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M11 2.5a9.5 9.5 0 1 0 9.5 9.5H11V2.5z"></path><path d="M13 2.7V10h7.3A9.5 9.5 0 0 0 13 2.7z"></path></svg></i>市場廣度</span><strong id="marketBreadth">--</strong><small id="marketBreadthDetail">等待資料</small></div>
             <div class="md-stat md-tile md-tile-foreign"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-foreign" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 18h16"></path><path d="M5.5 8.5h9"></path><path d="M11.5 5.5l3 3-3 3"></path><path d="M18.5 14.5h-9"></path><path d="M12.5 11.5l-3 3 3 3"></path></svg></i>外資</span><strong id="marketForeign">--</strong><small id="marketInstitutionDetail">投信 / 自營商</small></div>
-            <div class="md-stat md-tile md-tile-regime"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-regime" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 4.5l5.5 3.2v5.2c0 3.3-2.2 5.8-5.5 7.1-3.3-1.3-5.5-3.8-5.5-7.1V7.7z"></path><path d="M9.5 12.3l1.8 1.8 3.5-3.6"></path></svg></i>大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong></div><small>資料交易日 <span id="marketW3TradeDate">--</span></small><small>上次狀態切換 <span id="marketW3SwitchDate">--</span></small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
+            <div class="md-stat md-tile md-tile-regime"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-regime" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 4.5l5.5 3.2v5.2c0 3.3-2.2 5.8-5.5 7.1-3.3-1.3-5.5-3.8-5.5-7.1V7.7z"></path><path d="M9.5 12.3l1.8 1.8 3.5-3.6"></path></svg></i>大盤環境</span><div class="md-w3-value"><strong id="marketW3Regime">待模型資料</strong></div><small>資料日期 <span id="marketW3TradeDate">--</span></small><small>上次切換 <span id="marketW3SwitchDate">--</span></small><div hidden><span id="marketW3Calculated">--</span><span id="marketW3HeldDays">--</span></div></div>
           </div>
           <div class="md-footer-notes">
             <div class="md-coverage-note"><span>資料完整性</span><strong id="marketCoverage">--</strong></div>
@@ -3259,12 +3264,12 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
     <article class="detail-panel fundflow-page cf-page" data-view-panel="fundflow">
       <section id="cfOverview" class="cf-overview">
         <div class="cf-hero cf-card">
-          <div class="cf-hero-top"><div><span class="cf-eyebrow">STOCKZONE · CAPITAL FLOW</span><h2>資金流向 <small>產業觀察</small></h2><p>看資金在哪裡、是否加速流入，以及哪些個股尚未明顯上漲。</p></div><button id="cfRefresh" class="cf-refresh" type="button" aria-label="重新整理資金資料">↻ <span>更新</span></button></div>
+          <div class="cf-hero-top"><div><h2 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-flow" aria-hidden="true"></i><span>資金流向</span></span><small>產業觀察</small></h2><p>看資金在哪裡、是否加速流入，以及哪些個股尚未明顯上漲。</p></div><button id="cfRefresh" class="cf-refresh" type="button" aria-label="重新整理資金資料">↻ <span>更新</span></button></div>
           <div class="cf-context"><span id="cfAsOf">資料待補</span><span id="cfMarket">大盤狀態讀取中</span><span id="cfState">準備讀取</span></div>
           <div class="cf-kpis" id="cfMetrics"><div class="cf-stat"><small>法人資金</small><b>—</b></div><div class="cf-stat"><small>資金動能</small><b>—</b></div><div class="cf-stat"><small>流入廣度</small><b>—</b></div><div class="cf-stat"><small>個股機會</small><b>—</b></div></div>
         </div>
         <section class="cf-board cf-card" aria-label="產業資金排行">
-          <div class="cf-board-header"><div><span class="cf-eyebrow">SECTOR MONITOR</span><h3>產業資金排行</h3><p>保留原 X20 資金公式，搭配動能、法人買超廣度分析。</p></div><span class="cf-help">點產業查看個股 ›</span></div>
+          <div class="cf-board-header"><div><h3 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-sector" aria-hidden="true"></i><span>產業資金排行</span></span></h3><p>保留原 X20 資金公式，搭配動能、法人買超廣度分析。</p></div><span class="cf-help">點產業查看個股 ›</span></div>
           <div class="cf-toolbar"><label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業、公司名稱或股票代號" aria-label="搜尋產業、公司名稱或股票代號"></label>
             <div class="cf-chips" aria-label="產業範圍"><button type="button" class="is-on" data-cf-scope="all">全部產業</button><button type="button" data-cf-scope="tech">科技／電子</button><button type="button" data-cf-scope="traditional">傳產／金融</button></div>
             <div class="cf-chips cf-chips-quiet" aria-label="資金狀態"><button type="button" class="is-on" data-cf-filter="all">全部資金</button><button type="button" data-cf-filter="inflow">近期流入</button><button type="button" data-cf-filter="reverse">逆勢吸金</button></div>
@@ -3641,8 +3646,8 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.9"></script>
-  <script src="./app.js?v=2.6.8.9"></script>
+  <script src="./capital-flow.js?v=2.6.8.10"></script>
+  <script src="./app.js?v=2.6.8.10"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4125,7 +4130,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.6.8.9"></script>
+<script defer src="./featured-picks-ui.js?v=2.6.8.10"></script>
 </body>
 </html>
 <style>
@@ -6197,5 +6202,78 @@ body.mode-analysis #technical>.card-title.theme-white-card-title{
  .market-dynamic-page .md-metric-tiles>.md-tile>strong,
  .market-dynamic-page .md-metric-tiles>.md-tile .md-w3-value>strong{font-size:16px!important;}
  .market-dynamic-page .md-metric-tiles>.md-tile>small{font-size:10px!important;}
+}
+</style>
+<style id="stockzone-v26810-shared-screening-header">
+/* v2.6.8.10 – shared index summary + consistent typography. */
+.screening-market-banner{display:none!important}
+body.mode-screening .screening-market-banner{
+  display:flex!important;flex-direction:column!important;gap:5px!important;
+  padding:16px 18px!important;margin:9px 0 10px!important;
+  background:#fff!important;border:1px solid #e8eef5!important;border-radius:23px!important;
+  box-shadow:0 12px 28px rgba(17,34,61,.05)!important;
+  color:#13233a!important;min-width:0!important;
+}
+.screening-market-banner .smb-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;}
+.screening-market-banner .smb-heading>span{font-size:16px;line-height:1.3;color:#203651;font-weight:800;}
+.screening-market-banner .smb-heading>small{font-size:10px;font-weight:400;line-height:1.2;color:#7c8da2;
+  padding:4px 8px;border:1px solid #e6edf5;border-radius:20px;background:linear-gradient(180deg,#fff,#f8fbff);white-space:nowrap;}
+.screening-market-banner .smb-number{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;min-width:0;}
+.screening-market-banner .smb-number strong{font-size:clamp(26px,3vw,38px);line-height:1.25;font-weight:900;letter-spacing:-.035em;color:#13233a;white-space:nowrap;}
+.screening-market-banner .smb-number span{font-size:12px;line-height:1.5;font-weight:650;color:#8190a5;white-space:normal;text-align:right;}
+@media(max-width:600px){
+  body.mode-screening .screening-market-banner{padding:14px 16px!important;margin:8px 8px 8px!important;}
+  .screening-market-banner .smb-heading>span{font-size:13px;}
+  .screening-market-banner .smb-number strong{font-size:29px;}
+  .screening-market-banner .smb-number span{font-size:11px;}
+}
+/* Mirror basic-data tile geometry: figures align with LABEL TEXT, not with icon/cell edge. */
+.market-dynamic-page .md-metric-tiles>.md-tile>strong,
+.market-dynamic-page .md-metric-tiles>.md-tile>small,
+.market-dynamic-page .md-metric-tiles>.md-tile>.md-w3-value{
+  width:calc(100% - 36px)!important;
+  margin-left:36px!important;
+  text-align:left!important;min-width:0!important;
+}
+.market-dynamic-page .md-metric-tiles>.md-tile>.md-w3-value>strong{
+  width:100%!important;margin:0!important;text-align:left!important;
+}
+.market-dynamic-page .md-metric-tiles>.md-tile>.md-w3-value{align-items:flex-start!important;}
+.market-dynamic-page .md-metric-tiles>.md-tile>small{white-space:pre-line!important;overflow-wrap:break-word!important;}
+/* Pie-circle matching fundamental-panel 毛利率; blue theme inherited from market tile. */
+.market-dynamic-page .md-metric-tiles .md-tile-icon-breadth svg{
+  fill:currentColor!important;stroke:none!important;
+}
+/* Fund-flow headings follow theme-white-card-title and same technical-title icon metrics. */
+body.mode-screening .cf-page .cf-unified-title{
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:10px!important;font-size:var(--theme-title-size)!important;
+  font-weight:var(--theme-title-weight)!important;line-height:1.2!important;
+  color:var(--theme-title-color)!important;letter-spacing:0!important;
+  margin:0 0 14px!important;padding:0!important;
+}
+body.mode-screening .cf-page .cf-unified-title>.theme-title-group{
+  display:inline-flex!important;gap:var(--theme-title-gap)!important;align-items:center!important;min-width:0!important;
+}
+body.mode-screening .cf-page .cf-unified-title>small{
+  color:#8391a3!important;font-size:12px!important;font-weight:600!important;letter-spacing:0!important;margin:0!important;
+}
+body.mode-screening .cf-page .cf-unified-title .theme-title-icon{
+  display:inline-block!important;width:var(--theme-title-icon-w)!important;height:var(--theme-title-icon-h)!important;
+  flex:0 0 var(--theme-title-icon-w)!important;background:var(--theme-title-icon-color)!important;
+  -webkit-mask-size:contain!important;mask-size:contain!important;
+  -webkit-mask-repeat:no-repeat!important;mask-repeat:no-repeat!important;
+  -webkit-mask-position:center!important;mask-position:center!important;
+}
+.cf-title-icon-flow{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='9' cy='8' rx='5.5' ry='2.6'/%3E%3Cpath d='M3.5 8v8c0 1.5 2.4 2.6 5.5 2.6 2 0 3.4-.5 4.3-1.2M3.5 13c0 1.5 2.4 2.6 5.5 2.6'/%3E%3Cpath d='M17 10h10M24 6l4 4-4 4M27 22H17M20 18l-4 4 4 4'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='9' cy='8' rx='5.5' ry='2.6'/%3E%3Cpath d='M3.5 8v8c0 1.5 2.4 2.6 5.5 2.6 2 0 3.4-.5 4.3-1.2M3.5 13c0 1.5 2.4 2.6 5.5 2.6'/%3E%3Cpath d='M17 10h10M24 6l4 4-4 4M27 22H17M20 18l-4 4 4 4'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+.cf-title-icon-sector{
+  -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 28h26M5 24V19h4v5M12 24V13h4v11M19 24V8h4v16M26 24V17h3v7'/%3E%3Cpath d='M5 11l8-5 6 4 9-6'/%3E%3C/g%3E%3C/svg%3E")!important;
+  mask-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 28h26M5 24V19h4v5M12 24V13h4v11M19 24V8h4v16M26 24V17h3v7'/%3E%3Cpath d='M5 11l8-5 6 4 9-6'/%3E%3C/g%3E%3C/svg%3E")!important;
+}
+@media(max-width:600px){
+  body.mode-screening .cf-page .cf-unified-title{font-size:20px!important;}
 }
 </style>
