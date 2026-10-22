@@ -2765,7 +2765,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 
 
 <style id="stockzone-v2688-market-dynamic-polish">
-/* v2.6.8.13 — 市場頁標題/切換/圖示微調。 */
+/* v2.6.8.14 — 市場頁標題/切換/圖示微調。 */
 #marketDynamicDateBadge{
   display:inline-flex!important;align-items:center!important;justify-content:center!important;
   width:auto!important;min-width:0!important;height:auto!important;
@@ -2794,7 +2794,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 </style>
 
 <style id="stockzone-v2689-market-dynamic-fine-tune">
-/* v2.6.8.13 — 大盤動態卡片間距/對齊/圖示微調。 */
+/* v2.6.8.14 — 大盤動態卡片間距/對齊/圖示微調。 */
 body.mode-analysis #technical.technical-card{padding-top:16px!important;}
 .market-dynamic-page .market-dynamic-master-card,
 .market-dynamic-page .market-dynamic-history-card,
@@ -2848,7 +2848,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.13</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.14</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2879,14 +2879,14 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         </div>
       </section>
 
-      <!-- v2.6.8.13: market snapshot is shared by all 智慧選股 subpages. -->
+      <!-- v2.6.8.14: market snapshot is shared by all 智慧選股 subpages. -->
       <section class="screening-market-banner" id="screeningMarketBanner" aria-label="台股加權指數資訊">
         <div class="smb-heading"><span>TAIEX 加權指數</span><small id="screeningMarketBannerDate">資料待補</small></div>
         <div class="smb-number"><strong id="marketTaiex">--</strong><span id="marketTaiexChange">等待資料</span></div>
         <div class="smb-turnover" aria-label="上市上櫃盤後成交金額">
-          <span id="marketListedTurnover">上市成交 待更新</span>
-          <span id="marketOtcTurnover">上櫃成交 待更新</span>
-          <strong id="marketCombinedTurnover">合計成交 待兩市資料齊全</strong>
+          <div class="smb-turnover-item"><span class="smb-turnover-label">上市成交</span><strong id="marketListedTurnover">待更新</strong></div>
+          <div class="smb-turnover-item"><span class="smb-turnover-label">上櫃成交</span><strong id="marketOtcTurnover">待更新</strong></div>
+          <div class="smb-turnover-item"><span class="smb-turnover-label">合計成交</span><strong id="marketCombinedTurnover">待兩市資料齊全</strong></div>
         </div>
       </section>
       <nav class="section-tabs analysis-tabs" id="analysisTabs" aria-label="個股分析導覽">
@@ -3259,9 +3259,12 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
       <section class="card market-distribution-card">
         <div class="market-distribution-head">
           <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon market-distribution-title-icon" aria-hidden="true"></i><span>漲跌分佈</span></span></div>
+          <time id="marketDistributionDateBadge" class="sz-market-date-pill" aria-label="漲跌分佈資料日期">--</time>
+        </div>
+        <div class="market-distribution-meta">
+          <div class="market-distribution-summary" id="marketDistributionSummary">等待資料</div>
           <div class="market-distribution-tabs"><button class="active" type="button" data-market-dist="listed">上市</button><button type="button" data-market-dist="otc">上櫃</button></div>
         </div>
-        <div class="market-distribution-summary" id="marketDistributionSummary">等待資料</div>
         <div class="market-distribution-chart" id="marketDistributionChart"></div>
       </section>
     </article>
@@ -3275,7 +3278,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
           <div class="cf-top10-grid" id="cfMetrics" aria-label="法人產業淨流入及淨流出排行"><div class="cf-top10-placeholder">產業資料讀取中…</div></div>
         </div>
         <section class="cf-board cf-card" aria-label="產業資金排行">
-          <div class="cf-board-header"><div><h3 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-sector" aria-hidden="true"></i><span>產業資金排行</span></span></h3></div></div>
+          <div class="cf-board-header"><div><h3 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-sector" aria-hidden="true"></i><span>產業資金排行</span></span></h3></div><time id="cfSectorDateBadge" class="sz-market-date-pill" aria-label="產業資金排行資料日期">--</time></div>
           <div class="cf-toolbar"><label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業、公司名稱或股票代號" aria-label="搜尋產業、公司名稱或股票代號"></label>
             <div class="cf-chips" aria-label="產業範圍"><button type="button" class="is-on" data-cf-scope="all">全部產業</button><button type="button" data-cf-scope="tech">科技／電子</button><button type="button" data-cf-scope="traditional">傳產／金融</button></div>
             <div class="cf-chips cf-chips-quiet" aria-label="資金狀態"><button type="button" class="is-on" data-cf-filter="all">全部資金</button><button type="button" data-cf-filter="inflow">近期流入</button><button type="button" data-cf-filter="reverse">逆勢吸金</button></div>
@@ -3652,8 +3655,8 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.13"></script>
-  <script src="./app.js?v=2.6.8.13"></script>
+  <script src="./capital-flow.js?v=2.6.8.14"></script>
+  <script src="./app.js?v=2.6.8.14"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4136,10 +4139,10 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.6.8.13"></script>
+<script defer src="./featured-picks-ui.js?v=2.6.8.14"></script>
 
 <style id="stockzone-v26811-ui">
-/* v2.6.8.13 | UI display only; capital flow rankings reuse existing flow5Pct API data. */
+/* v2.6.8.14 | UI display only; capital flow rankings reuse existing flow5Pct API data. */
 body.mode-screening .screening-market-banner .smb-number strong{
   font-size:28px!important;font-weight:800!important;
   line-height:1.25!important;letter-spacing:normal!important;
@@ -4192,7 +4195,7 @@ body.mode-screening .cf-page .cf-top10-empty,.cf-top10-placeholder{font-size:11p
 </style>
 
 <style id="stockzone-v26812-ui">
-/* v2.6.8.13 — structural geometry matched to 基本面. */
+/* v2.6.8.14 — structural geometry matched to 基本面. */
 body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile{
   display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;
   padding:12px 11px 10px!important;min-height:110px!important;
@@ -4244,7 +4247,7 @@ body.mode-screening .cf-page .cf-stock-values small{font-size:9px!important;}
 }
 </style>
 <style id="stockzone-v26813-official-eod-amounts">
-/* v2.6.8.13: display only verified, date-matched TWSE & TPEx cross-market turnover. */
+/* v2.6.8.14: display only verified, date-matched TWSE & TPEx cross-market turnover. */
 body.mode-screening .screening-market-banner .smb-turnover{
   display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
   gap:3px 12px!important;margin-top:7px!important;padding-top:9px!important;
@@ -6337,7 +6340,7 @@ body.mode-analysis #technical>.card-title.theme-white-card-title{
 }
 </style>
 <style id="stockzone-v26810-shared-screening-header">
-/* v2.6.8.13 – shared index summary + consistent typography. */
+/* v2.6.8.14 – shared index summary + consistent typography. */
 .screening-market-banner{display:none!important}
 body.mode-screening .screening-market-banner{
   display:flex!important;flex-direction:column!important;gap:5px!important;
@@ -6411,3 +6414,110 @@ body.mode-screening .cf-page .cf-unified-title .theme-title-icon{
 </style>
 
 
+
+
+<style id="stockzone-v26814-screening-polish">
+/* v2.6.8.14 — layout/label refinements, no calculation formula changes. */
+body.mode-screening .screening-market-banner{gap:0!important;}
+body.mode-screening .screening-market-banner .smb-heading{margin-bottom:8px!important;}
+body.mode-screening .screening-market-banner .smb-heading>small{
+  font:400 10px/1.2 Arial,'Microsoft JhengHei',sans-serif!important;
+  color:#7c8da2!important;padding:4px 8px!important;
+  border:1px solid #e6edf5!important;border-radius:20px!important;
+  background:linear-gradient(180deg,#fff,#f8fbff)!important;
+}
+body.mode-screening .screening-market-banner .smb-number{
+  display:flex!important;align-items:baseline!important;justify-content:space-between!important;
+  gap:8px!important;flex-wrap:nowrap!important;min-width:0!important;
+}
+body.mode-screening .screening-market-banner .smb-number strong{
+  font-size:clamp(30px,5.9vw,43px)!important;line-height:1.15!important;
+  font-weight:850!important;letter-spacing:-.025em!important;white-space:nowrap!important;
+  margin:0!important;min-width:0!important;
+}
+body.mode-screening .screening-market-banner .smb-number span{
+  flex:0 0 auto!important;display:inline-flex!important;align-items:center!important;
+  white-space:nowrap!important;font-size:clamp(12px,2.5vw,17px)!important;
+  line-height:1.3!important;font-weight:800!important;text-align:right!important;
+}
+body.mode-screening .screening-market-banner .smb-number #marketTaiexChange.is-up{color:#df5364!important;}
+body.mode-screening .screening-market-banner .smb-number #marketTaiexChange.is-down{color:#219767!important;}
+body.mode-screening .screening-market-banner .smb-turnover{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:0!important;margin-top:13px!important;padding:12px 0 0!important;
+  border-top:1px solid #e8edf3!important;line-height:1.4!important;min-width:0!important;
+}
+body.mode-screening .screening-market-banner .smb-turnover-item{
+  display:flex!important;flex-direction:column!important;justify-content:flex-start!important;
+  gap:4px!important;min-width:0!important;padding:0 12px!important;
+}
+body.mode-screening .screening-market-banner .smb-turnover-item:first-child{padding-left:0!important;}
+body.mode-screening .screening-market-banner .smb-turnover-item+ .smb-turnover-item{
+  border-left:1px solid #e1e8ef!important;
+}
+body.mode-screening .screening-market-banner .smb-turnover .smb-turnover-label{
+  display:block!important;font-size:11px!important;font-weight:500!important;
+  color:#8191a6!important;white-space:nowrap!important;line-height:1.3!important;
+}
+body.mode-screening .screening-market-banner .smb-turnover .smb-turnover-item>strong{
+  display:block!important;font-size:clamp(11px,2.5vw,17px)!important;
+  line-height:1.28!important;color:#162b46!important;font-weight:800!important;
+  white-space:nowrap!important;letter-spacing:-.025em!important;
+  overflow-wrap:normal!important;
+}
+@media(max-width:430px){
+  body.mode-screening .screening-market-banner .smb-turnover-item{padding:0 7px!important;}
+  body.mode-screening .screening-market-banner .smb-turnover .smb-turnover-item>strong{font-size:clamp(10.5px,3vw,13.5px)!important;}
+  body.mode-screening .screening-market-banner .smb-turnover .smb-turnover-label{font-size:10px!important;}
+  body.mode-screening .screening-market-banner .smb-number strong{font-size:clamp(27px,8.1vw,38px)!important;}
+  body.mode-screening .screening-market-banner .smb-number span{font-size:12px!important;}
+}
+/* Technical-analysis date pill tokens shared across pages. */
+body.mode-screening .market-distribution-card .sz-market-date-pill,
+body.mode-screening .cf-page .sz-market-date-pill{
+  display:inline-flex!important;flex:0 0 auto!important;align-items:center!important;justify-content:center!important;
+  padding:4px 8px!important;border:1px solid #e6edf5!important;border-radius:20px!important;
+  background:linear-gradient(180deg,#fff,#f8fbff)!important;box-shadow:none!important;
+  color:#7c8da2!important;font:400 10px/1.2 Arial,'Microsoft JhengHei',sans-serif!important;
+  letter-spacing:0!important;white-space:nowrap!important;
+}
+body.mode-screening .market-distribution-card .market-distribution-head{
+  display:flex!important;justify-content:space-between!important;align-items:center!important;
+  gap:8px!important;margin:0 0 14px!important;
+}
+body.mode-screening .market-distribution-card .market-distribution-head>.card-title{margin:0!important;}
+body.mode-screening .market-distribution-card .market-distribution-meta{
+  display:flex!important;flex-wrap:nowrap!important;align-items:center!important;
+  justify-content:space-between!important;gap:5px!important;min-width:0!important;
+  margin:0 0 12px!important;
+}
+body.mode-screening .market-distribution-card .market-distribution-meta .market-distribution-summary{
+  flex:1 1 auto!important;min-width:0!important;margin:0!important;
+  font-size:clamp(9px,2.45vw,12px)!important;line-height:1.35!important;
+  letter-spacing:-.025em!important;white-space:nowrap!important;
+}
+body.mode-screening .market-distribution-card .market-distribution-meta .market-distribution-tabs{
+  flex:0 0 auto!important;margin:0!important;display:inline-flex!important;
+}
+body.mode-screening .market-distribution-card .market-distribution-meta .market-distribution-tabs button{
+  font-size:12px!important;min-height:26px!important;padding:4px 9px!important;
+}
+@media(max-width:375px){
+  body.mode-screening .market-distribution-card .market-distribution-meta{gap:3px!important;}
+  body.mode-screening .market-distribution-card .market-distribution-meta .market-distribution-summary{font-size:8.5px!important;}
+  body.mode-screening .market-distribution-card .market-distribution-meta .market-distribution-tabs button{padding:4px 7px!important;min-width:32px!important;}
+}
+/* W3 date labels should be consecutive compact lines, not separated by a blank line. */
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile-regime>small{
+  margin:5px 0 0 33px!important;min-height:0!important;
+  line-height:1.45!important;white-space:nowrap!important;
+}
+body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile-regime>small+small{
+  margin-top:2px!important;min-height:0!important;
+}
+body.mode-screening .cf-page .cf-board-header{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;
+}
+body.mode-screening .cf-page .cf-board-header>div{min-width:0!important;}
+body.mode-screening .cf-page .cf-board-header .cf-unified-title{margin:0!important;}
+</style>

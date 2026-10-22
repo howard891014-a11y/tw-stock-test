@@ -4488,13 +4488,18 @@ function renderMarketDistribution(){
   const chart=$("marketDistributionChart"),summary=$("marketDistributionSummary");
   if(!chart||!summary)return;
   const src=dist?.[marketDistributionMode];
-  if(!dist||!src){chart.innerHTML="";summary.textContent="等待資料";return}
+  if(!dist||!src){chart.innerHTML="";summary.textContent="等待資料";const badge=$("marketDistributionDateBadge");if(badge){badge.textContent="--";badge.dateTime=""}return}
   const bins=Array.isArray(src.bins)?src.bins:[],labels=dist.labels||[];
   const max=Math.max(1,...bins.map(v=>Number(v)||0));
   const neg=bins.slice(0,5).reduce((a,b)=>a+(Number(b)||0),0);
   const flat=Number(bins[5])||0;
   const pos=bins.slice(6).reduce((a,b)=>a+(Number(b)||0),0);
-  summary.textContent=(src.market||"")+"｜跌 "+neg+"｜平 "+flat+"｜漲 "+pos+"｜共 "+(Number(src.total)||0)+" 家";
+  // Keep the summary and listing/OTC switch on one row on narrow phones.
+  const compact=window.matchMedia?.('(max-width:375px)').matches;
+  summary.textContent=compact
+    ?`${src.market||''}｜跌${neg}｜平${flat}｜漲${pos}｜共${Number(src.total)||0}家`
+    :(src.market||"")+"｜跌 "+neg+"｜平 "+flat+"｜漲 "+pos+"｜共 "+(Number(src.total)||0)+" 家";
+  const dateBadge=$("marketDistributionDateBadge");if(dateBadge){const day=marketDynamicData?.latest?.date||"--";dateBadge.textContent=day;dateBadge.dateTime=day==="--"?"":day;}
   chart.innerHTML=bins.map((v,i)=>{
     const n=Number(v)||0,cls=i<5?"neg":i>5?"pos":"flat",h=Math.max(2,Math.round(n/max*100));
     return '<div class="market-dist-bin '+cls+'"><div class="market-dist-count">'+n+'</div><div class="market-dist-bar-wrap"><div class="market-dist-bar" style="height:'+h+'%"></div></div><div class="market-dist-label">'+(labels[i]||"")+'</div></div>';
@@ -4532,7 +4537,7 @@ function marketBreadthComment(d){
   const improved=breadth5!==null&&ratio-breadth5>=10;
   if(ratio>=60)return improved?"上漲家數明顯占優，較近5日平均明顯改善。":"上漲家數明顯多於下跌，今日廣度偏強。";
   if(ratio>=50)return improved?"上漲家數略占優勢，廣度較近5日改善。":"漲多於跌，市場廣度中性偏強。";
-  if(ratio<40)return up<down?"下跌家數較多，市場廣度偏弱。":"市場廣度轉弱，短線分歧仍大。";
+  if(ratio<40)return up<down?"下跌家數較多\n市場廣度偏弱":"市場廣度轉弱，短線分歧仍大。";
   return "漲跌家數接近，市場分歧仍大。";
 }
 // v2.6.8.13 official EOD: index and turnover are independent of W3 and other snapshots.
@@ -4551,15 +4556,15 @@ function renderMarketIndexBanner(){
   if(!day||marketNum(close)===null)return;
   const dateEl=$("screeningMarketBannerDate");if(dateEl)dateEl.textContent=day;
   const idx=$("marketTaiex");if(idx){idx.textContent=marketFmtIndex(close);idx.classList.toggle("is-up",marketNum(change)>0);idx.classList.toggle("is-down",marketNum(change)<0);}
-  const sub=$("marketTaiexChange");if(sub)sub.textContent=marketFmtPct(change);
+  const sub=$("marketTaiexChange");if(sub){const n=marketNum(change);sub.textContent=n===null?"--":`${n<0?"▼ ":n>0?"▲ ":""}${marketFmtPct(change)}`;sub.classList.toggle("is-up",n!==null&&n>0);sub.classList.toggle("is-down",n!==null&&n<0);}
   // Only show official EOD turnover on the same date as the displayed index.
   const a=useOfficial?marketNum(q.listedValue):null;
   const b=useOfficial?marketNum(q.otcValue):null;
   const t=useOfficial&&q.turnoverComplete?marketNum(q.totalValue):null;
   const listed=$("marketListedTurnover"),otc=$("marketOtcTurnover"),total=$("marketCombinedTurnover");
-  if(listed)listed.textContent=`上市成交 ${marketTradeValueLabel(a)}`;
-  if(otc)otc.textContent=`上櫃成交 ${marketTradeValueLabel(b)}`;
-  if(total)total.textContent=t===null?'合計成交 待兩市資料齊全':`合計成交 ${marketTradeValueLabel(t)}`;
+  if(listed)listed.textContent=marketTradeValueLabel(a);
+  if(otc)otc.textContent=marketTradeValueLabel(b);
+  if(total)total.textContent=t===null?'待兩市資料齊全':marketTradeValueLabel(t);
 }
 async function loadMarketIndexQuick(force=false){
   if(marketIndexLoading)return;

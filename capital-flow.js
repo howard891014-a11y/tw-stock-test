@@ -8,6 +8,20 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&
 const signed=(v,{pct=false,d=1}={})=>{const x=n(v);return x===null?'—':`${x>0?'+':''}${x.toFixed(d)}${pct?'%':''}`;};
 const tone=v=>n(v)===null?'neutral':Number(v)>0?'up':Number(v)<0?'down':'neutral';
 const scopeText=v=>String(v||'').includes('technology')?'科技':v==='electronics-product'?'電子產品':'傳產／金融';
+function cfTradeDate(v){
+ const s=String(v||'').trim();
+ const iso=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(iso)return iso[0];
+ const explicit=s.match(/\b(20\d{2})\b/);if(explicit){const d=new Date(s);return Number.isNaN(+d)?'--':d.toISOString().slice(0,10);}
+ const m=s.match(/^(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})$/i);
+ if(m){
+  const year=Number(new Intl.DateTimeFormat('en',{timeZone:'Asia/Taipei',year:'numeric'}).format(new Date()));
+  const month=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[1].toLowerCase())+1;
+  const today=Date.now();
+  const nearest=[year-1,year,year+1].map(y=>({y,d:Date.UTC(y,month-1,Number(m[2]))})).sort((a,b)=>Math.abs(a.d-today)-Math.abs(b.d-today))[0];
+  return `${nearest.y}-${String(month).padStart(2,'0')}-${String(Number(m[2])).padStart(2,'0')}`;
+ }
+ return '--';
+}
 const marketText=m=>!m?.aligned?'大盤資料未同步':m.regime==='RiskOff'?'大盤・風險防禦':m.regime==='RiskOn'?'大盤・風險偏好':'大盤・狀態待定';
 const labelSort={x:'中期資金',momentum:'資金動能',breadth:'資金廣度',candidate:'個股機會'};
 function setStatus(msg,problem=false){const el=$('cfState');if(el){el.textContent=problem?msg:'';el.hidden=!problem;el.classList.toggle('cf-error',problem);}}
@@ -33,9 +47,10 @@ function summaryCards(){
   const key=state.period==='1'?'flow1Pct':'flow5Pct';
   const eligible=rows.filter(s=>n(s[key])!==null&&Number(s.valid)>0);
   $('cfMetrics').innerHTML=top10Group(eligible,true)+top10Group(eligible,false)
-    +`<small class="cf-top10-note">依${state.period==='1'?'今日':'近5日'}法人淨流量比（%）排序，非買賣金額；資料日期 ${esc(data?.asOf||'--')}。產業分類可能重疊。</small>`;
+    +`<small class="cf-top10-note">依${state.period==='1'?'今日':'近5日'}法人淨流量比（%）排序，非買賣金額；產業分類可能重疊。</small>`;
   const market=$('cfMarket');if(market)market.textContent=marketText(data?.market);
-  const date=$('cfAsOfBadge');if(date){date.textContent=data?.asOf||'--';date.dateTime=data?.asOf||'';}
+  const dateString=cfTradeDate(data?.asOf);
+  for(const id of ['cfAsOfBadge','cfSectorDateBadge']){const date=$(id);if(date){date.textContent=dateString;date.dateTime=dateString==='--'?'':dateString;}}
   document.querySelectorAll('[data-cf-period]').forEach(b=>{const on=b.dataset.cfPeriod===state.period;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
 }
 function filtered(){const list=state.summary?.sectors||[];let rows=list.filter(s=>{
