@@ -4557,6 +4557,9 @@ function renderMarketDynamic(){
     w3Card.classList.toggle("is-danger",w3==="off"||warning);
   }
   set("marketTaiex",marketFmtIndex(d.taiexClose));
+  // Use the same close-to-close change sign for index quote color as individual stocks.
+  const indexNumber=$("marketTaiex"),dailyPct=marketNum(d.changePct);
+  if(indexNumber){indexNumber.classList.toggle("is-up",dailyPct!==null&&dailyPct>0);indexNumber.classList.toggle("is-down",dailyPct!==null&&dailyPct<0);}
   set("marketTaiexChange",`${marketFmtPct(d.changePct)}｜成交 ${marketNum(d.tradeValue)===null?"--":(marketNum(d.tradeValue)/1e8).toFixed(0)+" 億"}`);
   set("marketTrend",marketFmtPct(d.ret20));
   set("marketTrendDetail",`距高點 ${marketFmtPct(d.drawdown20)}\n波動幅度 ${marketNum(d.vol20)===null?"--":marketNum(d.vol20).toFixed(2)+"%"}`);
