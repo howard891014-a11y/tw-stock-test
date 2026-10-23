@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const {getSummary,getDetail,observeState,SUMMARY_SQL,DETAIL_SQL,DETAIL_STOCK_MONEY_SQL}=require('../lib/capital-flow');
 const {LOAD_SQL,VERSION}=require('../lib/capital-flow-money');
 const html=fs.readFileSync('index.html','utf8'),app=fs.readFileSync('app.js','utf8'),client=fs.readFileSync('capital-flow.js','utf8');
-for(const a of ['cfOverview','cfDetail','cfStockList','cfMetrics','cfReading','cfList','cfSearch','cfStockSort','cfDetailKPIs','cfCoreBreadth'])
+for(const a of ['cfOverview','cfDetail','cfStockList','cfMetrics','cfReading','cfList','cfSearch','cfStockSort','cfDetailKPIs','cfCoreBreadth','cfObserveTitle','cfObserveDescription','cfSortExplanation','cfCombinationExplain','cfScopeSelect','cfSortSelect'])
  assert(html.includes(`id="${a}"`),'missing '+a);
 assert(!html.includes('id="fundflowXySvg"'),'XY legacy UI returned');
 assert(!html.includes('id="fundflowDetailCard"'),'old UI returned');
@@ -12,6 +12,14 @@ assert(client.includes('/api/capital-flow?view=summary')&&client.includes('/api/
 const viewMarkup=html.slice(html.indexOf('<article class="detail-panel fundflow-page'),html.indexOf('<article class="card detail-panel sz-featured-panel'));
 assert(viewMarkup.includes('產業資金觀察'));
 assert(viewMarkup.includes('data-cf-filter="returning"')&&viewMarkup.includes('data-cf-filter="warning"'));
+assert(viewMarkup.includes('你想觀察什麼？')&&viewMarkup.includes('資金回流｜觀察'));
+assert(viewMarkup.includes('id="cfSortSelect"')&&viewMarkup.includes('id="cfScopeSelect"'));
+assert(!viewMarkup.includes('data-cf-sort=')&&!viewMarkup.includes('data-cf-scope='),'old multi-row filter buttons returned');
+assert(client.includes("filter:'returning',sort:'auto'"),'default must be capital return + mode-aware sorting');
+for(const s of ['資金回流｜觀察','強勢延續｜觀察','轉弱警訊｜觀察','弱勢延續｜觀察','全部產業｜查看'])assert(client.includes(s),'missing specific mode explanation '+s);
+assert(client.includes('cfSortExplanation')&&client.includes('cfCombinationExplain')&&client.includes('modeSortSentence'),'dynamic combo explanation missing');
+assert(client.includes("state.sort='auto'"),'mode change must reset to mode-auto sorting');
+assert(client.includes("state.filter==='warning'||state.filter==='weak'"),'negative flows must sort by magnitude, not descending signed value');
 assert(viewMarkup.includes('data-cf-stock-filter="core"')&&viewMarkup.includes('data-cf-stock-filter="related"'));
 assert(!viewMarkup.includes('資金先行')&&!viewMarkup.includes('id="cfStockCandidates"')&&!viewMarkup.includes('個股機會'));
 assert(!client.includes('candidate')&&!client.includes('opportunityCount'),'candidate shortcut still active');
@@ -67,5 +75,5 @@ const fake={query:async(q,args=[])=>{requests.push([q,args]);
  assert(!('candidate' in d.stocks[0]));
  assert(requests.every(([q])=>!/^\s*(DELETE|UPDATE|INSERT|ALTER)/i.test(q)));
  assert.equal(VERSION,'capital-money-corebreadth50-samecore100-v1','settled money model altered');
- console.log('Capital Flow v2.6.8.16 PASS: sector observation, four crossover states, company raw flows, no candidate picks, SELECT-only queries.');
+ console.log('Capital Flow v2.6.8.17 PASS: sector observation, four crossover states, company raw flows, no candidate picks, SELECT-only queries.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
