@@ -4192,7 +4192,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.8.18";
+const FUND_FLOW_CLIENT_REV="2.6.8.19";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -5006,6 +5006,52 @@ async function runManualXYRecovery(){
 }
 $("manualXYRecovery")?.addEventListener("click",runManualXYRecovery);
 
+// StockZone industry changes — Blob candidates only; never write approved taxonomy.
+let szIndustryChangeSecret='',szIndustryChangeEntries=[],szIndustryChangeBusy=false;
+const szIndustryChangeApi='/api/fundflow?view=industry-changes';
+function szIndustryText(id,text){const node=$(id);if(node)node.textContent=text;}
+function szIndustryToken(){
+  if(szIndustryChangeSecret)return szIndustryChangeSecret;
+  const key=window.prompt('輸入開發者產業異動密鑰（只在本頁暫存，不會顯示於其他使用者）');
+  if(!key)return '';
+  szIndustryChangeSecret=key.trim();return szIndustryChangeSecret;
+}
+async function szIndustryRequest(action,method='GET',body=null){
+  const key=szIndustryToken();if(!key)throw new Error('尚未輸入開發者密鑰');
+  const res=await fetch(`${szIndustryChangeApi}&action=${encodeURIComponent(action)}`,{method,cache:'no-store',headers:{'Authorization':`Bearer ${key}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  if(res.status===401)szIndustryChangeSecret='';return await readJson(res,'產業異動');
+}
+function szIndustryRender(){
+  const container=$('industryChangeRows');if(!container)return;container.replaceChildren();
+  if(!szIndustryChangeEntries.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.className='sz-change-empty';td.textContent='目前沒有異動紀錄';tr.append(td);container.append(tr);return;}
+  for(const row of szIndustryChangeEntries){
+    const tr=document.createElement('tr');
+    const fields=[row.date||'—',row.name||'—',row.code||'—',row.industry||'待分類',row.market||'—',row.role||'待驗證'];
+    for(const field of fields){const td=document.createElement('td');td.textContent=field;tr.append(td);}
+    const td=document.createElement('td'),label=document.createElement('span');label.className=row.imported?'sz-change-done':'sz-change-pending';label.textContent=row.imported?'已導入':'未導入';td.append(label);
+    // Deliberate two-layer permission: no X for unimported rows, and API independently denies deletion.
+    if(row.imported){const button=document.createElement('button');button.type='button';button.className='sz-change-remove';button.textContent='×';button.setAttribute('aria-label',`刪除已導入 ${row.name||row.code} 異動紀錄`);button.addEventListener('click',async()=>{
+      if(!window.confirm(`刪除 ${row.name||row.code} 已導入的異動紀錄？（不修改正式分類）`))return;
+      try{await szIndustryRequest('delete','POST',{id:row.id});szIndustryChangeEntries=szIndustryChangeEntries.filter(e=>e.id!==row.id);szIndustryRender();szIndustryText('industryChangeStatus','已刪除已導入紀錄，正式分類未受影響');}catch(e){szIndustryText('industryChangeStatus',`刪除失敗：${e.message}`);}
+    });td.append(button);}
+    tr.append(td);container.append(tr);
+  }
+}
+async function szIndustryRefresh(){
+  if(szIndustryChangeBusy)return;szIndustryChangeBusy=true;szIndustryText('industryChangeStatus','讀取異動紀錄中…');
+  try{const data=await szIndustryRequest('list');szIndustryChangeEntries=Array.isArray(data?.rows)?data.rows:[];szIndustryRender();const pending=szIndustryChangeEntries.filter(e=>!e.imported).length;szIndustryText('industryChangeStatus',`共 ${szIndustryChangeEntries.length} 筆｜未導入 ${pending} 筆｜已導入 ${szIndustryChangeEntries.length-pending} 筆`);}catch(e){szIndustryText('industryChangeStatus',`讀取失敗：${e.message}`);}finally{szIndustryChangeBusy=false;}
+}
+$('industryChangeLogin')?.addEventListener('click',()=>{szIndustryChangeSecret='';if(szIndustryToken())szIndustryRefresh();});
+$('industryChangeRefresh')?.addEventListener('click',szIndustryRefresh);
+$('industryChangeScan')?.addEventListener('click',async()=>{
+  if(szIndustryChangeBusy)return;szIndustryText('industryChangeStatus','正在掃描官方名單（結果只存於 Private Blob）…');
+  try{const data=await szIndustryRequest('scan','POST');szIndustryText('industryChangeStatus',`偵測完成：${data.mode==='initialized-baseline'?'已建立基準名單':`新增 ${data.events} 筆待驗證異動`}（Neon 寫入0筆）`);await szIndustryRefresh();}catch(e){szIndustryText('industryChangeStatus',`掃描失敗：${e.message}`);}
+});
+$('industryChangeExport')?.addEventListener('click',()=>{
+  const pending=szIndustryChangeEntries.filter(e=>!e.imported);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),source:'StockZone candidate-only Private Blob',rows:pending},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`StockZone_待鐵證產業異動_${new Date().toISOString().slice(0,10)}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+});
+$('szDeveloperMode')?.addEventListener('toggle',e=>{if(e.target.open&&szIndustryChangeSecret)szIndustryRefresh();});
+
 let manualTaxonomySyncLoading=false;
 function downloadTaxonomyDiagnostic(payload){
   const body=JSON.stringify(payload,null,2),blob=new Blob([body],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a"),stamp=new Date().toISOString().replace(/[:.]/g,"-");
@@ -5014,14 +5060,14 @@ function downloadTaxonomyDiagnostic(payload){
 async function runManualTaxonomySyncExport(){
   if(manualTaxonomySyncLoading)return;
   const btn=$("manualTaxonomySyncExport"),status=$("manualTaxonomySyncExportStatus");manualTaxonomySyncLoading=true;
-  if(btn){btn.disabled=true;btn.textContent="同步中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="比對 final Company_Map，只寫差異；完成後下載診斷 JSON…"}
+  if(btn){btn.disabled=true;btn.textContent="讀取中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="唯讀比較 Neon 正式分類與基準分類；不回寫任何成員…"}
   try{
     const res=await fetch("/api/sync-status?action=taxonomy-sync-export-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Taxonomy-Sync":"1"}}),data=await readJson(res,"分類同步＋匯出診斷"),s=data?.summary||{},w=s?.writes||{};
     if(data?.diagnostic)downloadTaxonomyDiagnostic(data.diagnostic);
-    if(status){status.classList.add(s.snapshotCurrent&&s.diffClean?"is-ok":"is-warn");status.textContent=`分類同步完成｜${s.taxonomyCount??"--"} 類｜${s.membershipEdges??"--"} 關係｜寫入：新增 ${w.insert??0} / 刪除 ${w.delete??0} / 角色更新 ${w.roleUpdate??0}｜${s.snapshotCurrent?`XY ${s.withXY??0}/${s.taxonomyCount??0}`:"接著按「更新 XY / 分類快照」"}`;}
+    if(status){status.classList.add(s.snapshotCurrent&&s.diffClean?"is-ok":"is-warn");status.textContent=`Neon 唯讀診斷完成｜${s.taxonomyCount??"--"} 類｜基準 ${s.membershipEdges??"--"} 筆｜資料庫寫入 0 筆｜${s.snapshotCurrent?`XY ${s.withXY??0}/${s.taxonomyCount??0}`:"請按「更新 XY / 分類快照」"}`;}
     fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;fundflowDetailCache.clear();
   }catch(e){console.warn("分類同步＋匯出診斷失敗",e);if(status){status.classList.add("is-error");status.textContent=`同步失敗：${e?.message||e}`}}
-  finally{manualTaxonomySyncLoading=false;if(btn){btn.disabled=false;btn.textContent="分類同步＋匯出診斷"}}
+  finally{manualTaxonomySyncLoading=false;if(btn){btn.disabled=false;btn.textContent="分類唯讀診斷＋匯出"}}
 }
 $("manualTaxonomySyncExport")?.addEventListener("click",runManualTaxonomySyncExport);
 
@@ -5036,7 +5082,7 @@ async function runManualFundflowWarm(){
     const gapRes=await fetch("/api/sync-status?action=fundflow-gap-repair-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Warm":"1"}}),gap=await readJson(gapRes,"最新交易日補洞");
     if(status&&gap?.repaired){status.classList.add("is-warn");status.textContent=`已補齊 ${gap.market||"市場"} ${gap.targetDate||"最新交易日"}｜正在增量更新 XY／分類快照…`;}
     let data=null,lastGatewayStatus=0;
-    for(let step=0;step<3;step++){
+    for(let step=0;step<15;step++){
       const res=await fetch("/api/sync-status?action=fundflow-warm-manual",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-Warm":"1"}});
       if([502,504].includes(Number(res.status))){lastGatewayStatus=Number(res.status);if(status){status.classList.add("is-warn");status.textContent=`主快照可能已保存（HTTP ${res.status}）；正在自動續跑未完成階段…`;}await new Promise(r=>setTimeout(r,500));continue;}
       data=await readJson(res,"XY / 分類快照更新");

@@ -50,6 +50,10 @@
     {
       "path": "/api/capital-flow",
       "schedule": "8 8 * * 1-5"
+    },
+    {
+      "path": "/api/fundflow?view=industry-changes&action=scan",
+      "schedule": "30 9 * * 1-5"
     }
   ]
 }

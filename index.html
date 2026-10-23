@@ -2848,7 +2848,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.18</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.19</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3611,18 +3611,47 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
     <pre class="settings-validation-details" id="fundflowValidationDetails" hidden></pre>
   </div>
 </section>
-<section class="settings-manual-update settings-validation" aria-label="分類同步與匯出診斷">
-  <div class="settings-manual-update-head"><span>分類同步 / 診斷</span><small>final taxonomy｜差異寫入</small></div>
+<section class="settings-manual-update settings-validation" aria-label="產業異動" id="industryChangeSection">
+  <div class="settings-manual-update-head"><span>產業異動</span><small>官方異動自動偵測｜鐵證審核後導入</small></div>
   <div class="settings-manual-update-box">
-    <p>只同步 Company_Map 差異；未變更關係不 UPDATE，不新增 Neon 表。診斷只在手動按下時讀取並下載 JSON，不增加日常傳出。</p>
-    <button id="manualTaxonomySyncExport" type="button">分類同步＋匯出診斷</button>
+    <p>僅保存待驗證異動於獨立 Private Blob，不修改 Neon 正式分類。未導入禁止刪除；已導入才會顯示 ×。</p>
+    <div class="sz-change-toolbar">
+      <button type="button" id="industryChangeLogin">輸入管理密鑰</button>
+      <button type="button" id="industryChangeRefresh">讀取異動</button>
+      <button type="button" id="industryChangeScan">立即偵測</button>
+      <button type="button" id="industryChangeExport">匯出待驗證 JSON</button>
+    </div>
+    <small class="settings-manual-update-status" id="industryChangeStatus">尚未載入｜每天收盤後自動檢查上市、上櫃、公司業務變化</small>
+    <div class="sz-change-scroll"><table class="sz-change-table" aria-label="產業異動紀錄">
+      <thead><tr><th>日期</th><th>公司名</th><th>公司代號</th><th>產業</th><th>上市櫃／下市</th><th>核心／相關</th><th>已／未導入</th></tr></thead>
+      <tbody id="industryChangeRows"><tr><td colspan="7" class="sz-change-empty">輸入管理密鑰後讀取</td></tr></tbody>
+    </table></div>
+  </div>
+</section>
+<style id="stockzone-industry-changes-style">
+#industryChangeSection .sz-change-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+#industryChangeSection .sz-change-scroll{max-width:100%;max-height:380px;overflow:auto;border:1px solid #e6e8ec;border-radius:10px;margin-top:10px}
+#industryChangeSection .sz-change-table{width:100%;border-collapse:collapse;min-width:735px;font-size:12px;background:#fff;color:#323942}
+#industryChangeSection .sz-change-table th{position:sticky;top:0;background:#f8f9fb;z-index:1;font-weight:600;text-align:left;white-space:nowrap}
+#industryChangeSection .sz-change-table th,#industryChangeSection .sz-change-table td{padding:10px 9px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+#industryChangeSection .sz-change-table td:nth-child(4){max-width:210px;white-space:normal}
+#industryChangeSection .sz-change-empty{text-align:center;color:#858d99;padding:22px}
+#industryChangeSection .sz-change-pending{color:#98744a}
+#industryChangeSection .sz-change-done{color:#26835c}
+#industryChangeSection .sz-change-remove{background:none!important;border:0!important;color:#687580!important;font-size:17px!important;margin-left:10px!important;padding:0 5px!important;cursor:pointer}
+</style>
+<section class="settings-manual-update settings-validation" aria-label="分類同步與匯出診斷">
+  <div class="settings-manual-update-head"><span>分類同步 / 診斷</span><small>Neon 正式分類｜唯讀診斷</small></div>
+  <div class="settings-manual-update-box">
+    <p>僅比對 Neon 正式分類與程式基準並匯出診斷；不會用舊分類覆蓋已驗證的 Neon 分類。</p>
+    <button id="manualTaxonomySyncExport" type="button">分類唯讀診斷＋匯出</button>
     <small class="settings-manual-update-status" id="manualTaxonomySyncExportStatus">尚未同步</small>
   </div>
 </section>
 <section class="settings-manual-update" aria-label="XY 快照手動更新">
   <div class="settings-manual-update-head"><span>XY / 分類快照</span><small>開發模式：手動</small></div>
   <div class="settings-manual-update-box">
-    <p>.64 分類改版採 taxonomy-only migration：第一次按更新會用既有 DB 60D 重算 topic history／member／snapshot，不重寫 stock compact、不呼叫 TWSE／TPEx／MIS；之後有新交易日時仍只做最近 25D 的最新日增量更新。</p>
+    <p>.64 分類改版採 taxonomy-only migration：分類變更後會以 Neon 核可版本逐批更新現有 DB 60D topic history／snapshot；不修改正式 member，不重寫 stock compact、不呼叫 TWSE／TPEx／MIS；之後有新交易日時仍只做最近 25D 的最新日增量更新。</p>
     <button id="manualFundflowWarm" type="button">更新 XY / 分類快照</button>
     <small class="settings-manual-update-status" id="manualFundflowWarmStatus">尚未手動更新</small>
   </div>
@@ -3670,8 +3699,8 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.18"></script>
-  <script src="./app.js?v=2.6.8.18"></script>
+  <script src="./capital-flow.js?v=2.6.8.19"></script>
+  <script src="./app.js?v=2.6.8.19"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

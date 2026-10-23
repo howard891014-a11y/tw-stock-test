@@ -1,9 +1,10 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.8.18",
+  "version": "2.6.8.19",
   "private": true,
   "dependencies": {
-    "@neondatabase/serverless": "1.1.0"
+    "@neondatabase/serverless": "1.1.0",
+    "@vercel/blob": "^2.3.0"
   },
   "scripts": {
     "validate:business-tags": "node scripts/validate-business-tags.js",
@@ -59,6 +60,7 @@
     "validate:w3-d111": "node scripts/validate-w3-d111.js && node scripts/validate-w3-d111-official.js",
     "validate:capital-flow": "node scripts/validate-capital-flow.js",
     "validate:featured-neon": "node scripts/test-featured-neon-daily.js",
-    "validate:capital-money": "node scripts/validate-capital-money.js"
+    "validate:capital-money": "node scripts/validate-capital-money.js",
+    "validate:industry-changes": "node scripts/validate-industry-changes.js"
   }
 }
