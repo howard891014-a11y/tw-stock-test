@@ -59,7 +59,7 @@ assert(!audit.includes('readPathAuditSnapshot(sql)'),'lightweight validation mus
 const stateFn=core.slice(core.indexOf('async function readCurrentPreparedState'),core.indexOf('async function warmCurrentEngineFromStoredDb'));assert(!stateFn.includes('payload'),'state probe must not transfer prepared JSON payloads');
 
 assert(!sync.includes('refreshBusinessFlowDaily'));assert(sync.includes("reason:'manual XY snapshot mode during development'"));
-assert(core.includes('async function warmCurrentEngineFromStoredDb'));assert(core.includes("followupStage:'prepared-snapshot-path-audit'"));assert(app.includes('for(let step=0;step<3;step++)'));assert(app.includes('platformHint=status>=500'));assert(status.includes("action==='fundflow-warm-manual'"));assert(status.includes("action==='fundflow-clean-rebuild-manual'"));assert(status.includes('x-stockzone-manual-history'));assert(app.includes('X-StockZone-Manual-History'));
+assert(core.includes('async function warmCurrentEngineFromStoredDb'));assert(core.includes("followupStage:'prepared-snapshot-path-audit'"));assert(app.includes('for(let step=0;step<15;step++)'));assert(app.includes('platformHint=status>=500'));assert(status.includes("action==='fundflow-warm-manual'"));assert(status.includes("action==='fundflow-clean-rebuild-manual'"));assert(status.includes('x-stockzone-manual-history'));assert(app.includes('X-StockZone-Manual-History'));
 assert(!(vercel.crons||[]).some(x=>x.schedule==='0 10 * * *'));
 for(const table of ['market_business_xy2_topic_daily','market_business_xy2_snapshot','market_business_xy2_member'])assert(!enrich.includes('DELETE FROM '+table),'legacy Blind Coverage MUST NOT clear '+table);
 assert(!enrich.includes('DELETE FROM market_business_xy_daily'));

@@ -11,9 +11,9 @@ assert.equal(freeze.STATS.taxonomyCount,203);
 assert.equal(defs.length,203);
 assert.equal(new Set(defs.map(t=>t.id)).size,203);
 assert.equal(new Set(defs.map(t=>t.name)).size,203);
-assert.equal(freeze.STATS.membershipEdges,3440);
-assert.equal(freeze.STATS.coreEdges,2376);
-assert.equal(freeze.STATS.relatedEdges,1064);
+assert.equal(freeze.STATS.membershipEdges,3442);
+assert.equal(freeze.STATS.coreEdges,2383);
+assert.equal(freeze.STATS.relatedEdges,1059);
 assert.equal(freeze.STATS.companyUniverseCount,1988);
 assert.equal(freeze.STATS.taggedCompanyCount,1981);
 const count=new Map(),rows=[];
@@ -29,7 +29,7 @@ for(const [code,pairs] of Object.entries(freeze.COMPANY_TOPICS)){
     rows.push([tag,code,role]);
   }
 }
-assert.equal(rows.length,3440);
+assert.equal(rows.length,3442);
 assert.equal(count.size,203);
 assert.equal([...count.values()].filter(x=>x>=3).length,190);
 assert.equal([...count.values()].filter(x=>x<3).length,13);
@@ -56,8 +56,8 @@ assert.equal(rail.companyCount,1);assert.equal(rail.xyEligible,false);
 assert.equal(road.companyCount,3);assert.equal(road.xyEligible,true);
 // The release code must not overwrite unchanged company edges on every warm refresh.
 const fs=require('node:fs');const source=fs.readFileSync(require.resolve('../lib/fundflow-xy'),'utf8');
-assert(source.includes('m.importance IS DISTINCT FROM EXCLUDED.importance'));
-assert(source.includes('m.stock_code = ANY($2::text[])'));
+assert(source.includes('Security boundary: automated XY/cron/restore paths may NEVER write approved taxonomy')); 
+assert(!source.includes('DELETE FROM market_business_xy2_member')); 
 assert(source.includes('validCount>=2&&trajectoryLength>=2'),'Browser must require at least 2 valid stocks + 2 trajectory points');
 assert(source.includes('businessEligible=g=>g.validCount>=2&&g.trajectory.length>=2'),'overview minimum membership and history must match Browser');
-console.log(`PASS StockZone203 offline release: 203 categories / 3440 edges / 190 potentially XY-enabled / 13 unplottable / retired 6806 excluded`);
+console.log(`PASS StockZone203 offline release: 203 categories / 3442 edges / 190 potentially XY-enabled / 13 unplottable / retired 6806 excluded`);

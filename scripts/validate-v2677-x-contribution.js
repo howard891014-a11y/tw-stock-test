@@ -14,15 +14,19 @@ async function testSqlBoundDate(){
   const calls=[];
   const sql={query:async(q,args)=>{
     calls.push({q,args});
+    if(q.includes('SELECT md5(COALESCE(string_agg'))return [{fingerprint:'a'.repeat(32),count:3445}];
+    if(q.includes('SELECT tag_id,stock_code,market,importance,weight FROM market_business_xy2_member ORDER BY'))return Array.from({length:1001},()=>({tag_id:'semiconductor_test_equipment',stock_code:'7769',market:'上市',importance:'related',weight:0.2}));
     if(q.includes('SELECT DISTINCT p.stock_code'))return [{stock_code:'7769',stock_name:'鴻勁',market:'上市'}];
     if(q.includes('WITH activity_dates'))return [{trade_date:'2026-10-08'}];
     return [];
   }};
   const out=await loadTagEngineInputs(sql,'semiconductor_test_equipment',5,{asOf:'2026-10-08'});
   assert.equal(out.dates.at(-1),'2026-10-08');
-  assert(calls[1].q.includes('a.trade_date <= $2::date'));
-  assert.deepEqual(calls[1].args.slice(-1),['2026-10-08']);
-  assert.equal(calls[2].args.at(-1),'2026-10-08');
+  const datesCall=calls.find(x=>x.q.includes('a.trade_date <= $2::date'));
+  const activityCall=calls.find(x=>x.q.includes('JOIN market_business_xy2_member m ON m.tag_id=$1'));
+  assert(datesCall&&activityCall);
+  assert.deepEqual(datesCall.args.slice(-1),['2026-10-08']);
+  assert.equal(activityCall.args.at(-1),'2026-10-08');
 }
 function testNoFakeZero(){
   const companies=[['2360','致茂'],['6261','久元'],['6706','惠特'],['7769','鴻勁']].map(([stock_code,stock_name])=>({stock_code,stock_name,market:['6261'].includes(stock_code)?'上櫃':'上市',industry_code:'24',industry:'半導體業'}));

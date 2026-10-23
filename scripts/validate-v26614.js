@@ -13,7 +13,7 @@ assert.equal(freeze.STATS.taxonomyCount,203);
 assert(xy.includes('const definitions=registry;'),'browser definition universe must always be frozen 203 taxonomy');
 assert(xy.includes('company_map_version'),'snapshot table must persist Company_Map version');
 assert(xy.includes('AND company_map_version=$7'),'prepared snapshot read must require Company_Map version');
-assert(xy.includes('companyMapFreezeVersion:COMPANY_MAP_VERSION'),'overview/browser payloads must carry the same Company_Map version as the snapshot row');
+assert(xy.includes('companyMapFreezeVersion:currentCompanyMapVersion()'),'overview/browser payloads must carry the same Company_Map version as the snapshot row');
 assert(xy.includes("snapshot-7.0.4-focuspack-path31-taxonomy26-browser203"),'snapshot schema must invalidate old 187-category payloads');
 assert.equal(STORAGE_POLICY.referenceBudgetMb,1024);
 assert.equal(STORAGE_POLICY.softTargetMb,800);
