@@ -19,7 +19,7 @@ assert(CREATE_SQL.includes('PRIMARY KEY (trade_date, tag_id)'));
 
 const api=fs.readFileSync('api/capital-flow.js','utf8');
 const config=JSON.parse(fs.readFileSync('vercel.json','utf8'));
-assert.equal(fs.readdirSync('api').filter(x=>x.endsWith('.js')).length,12,'Vercel Hobby max 12 API functions');
+assert(fs.readdirSync('api').filter(x=>x.endsWith('.js')).length<=12,'Vercel Hobby must not exceed 12 API functions');
 assert(api.includes('CAPITAL_CRON_SCHEDULE') && api.includes('refreshMoney(asOf,sql)'));
 assert(!fs.existsSync('api/capital-flow-refresh.js'));
 assert(config.crons.some(x=>x.path==='/api/capital-flow' && x.schedule==='8 8 * * 1-5'));
