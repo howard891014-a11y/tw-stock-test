@@ -16,7 +16,7 @@ assert(market.includes('getMarketDynamicCached'));
 assert(market.includes('readMarketSnapshot(sql)'));
 assert(market.includes('writeMarketSnapshot(getSql(),data)'));
 assert(cron.includes('refreshMarketSnapshot()'));
-assert.strictEqual(fs.readdirSync('api').filter(x=>x.endsWith('.js')).length,12,'Hobby plan API Functions limit');
+assert(fs.readdirSync('api').filter(x=>x.endsWith('.js')).length<=12,'Hobby plan API Functions limit');
 assert(!fs.existsSync('api/market-dynamic-refresh-retry.js'));
 assert(!cfg.functions['api/market-dynamic-refresh-retry.js']);
 assert.deepStrictEqual(cfg.crons.filter(x=>x.path==='/api/market-dynamic-refresh').map(x=>x.schedule),['50 14 * * 1-5','35 15 * * 1-5']);

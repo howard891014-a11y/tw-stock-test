@@ -16,7 +16,7 @@ assert(!summarizeDw4Audit(sparse,active,'2026-10-08').ok,'low coverage must fail
 const withOld=JSON.parse(JSON.stringify(res));withOld.horizonResults[5].predictions.push({...makePred(5,0),tagId:'retired_mother'});
 assert(summarizeDw4Audit(withOld,active,'2026-10-08').ok,'unmatched history tags are reported, never treated as eligible');
 assert.equal(summarizeDw4Audit(withOld,active,'2026-10-08').horizonResults[5].unmatchedHistoryTags,1);
-const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),core=fs.readFileSync('lib/fundflow-xy.js','utf8'),api=fs.readFileSync('api/dw4.js','utf8');
+const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),core=fs.readFileSync('lib/fundflow-xy.js','utf8'),api=fs.readFileSync('api/fundflow.js','utf8');
 assert(html.includes('執行 XY／dW4 驗證')&&!html.includes('執行 XY / Path 驗證'));
 assert(app.includes('/api/dw4?view=audit')&&app.includes('fundflow-audit&target=60'));
 assert(!app.includes('Path 5D Top1')&&!app.includes('Path audit 重建逾時'));
