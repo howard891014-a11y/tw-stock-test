@@ -2848,7 +2848,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.17</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.18</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3290,26 +3290,25 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
             </div>
             <div class="cf-mode-explain" id="cfModeExplain" aria-live="polite" aria-atomic="true">
               <strong id="cfObserveTitle">資金回流｜觀察中期偏弱、近期流入的產業</strong>
-              <p id="cfObserveDescription">X20 中期強度不高於0，但近5日法人淨額為正。這是資金位置與方向的交叉觀察，不代表剛轉正或適合買進。</p>
-              <p class="cf-mode-order" id="cfSortExplanation">自動排序：優先顯示X20近3日改善幅度較大的產業。</p>
+              <p id="cfObserveDescription">中期資金強度不高於0，但近5日法人淨額為正。這是資金位置與方向的交叉觀察，不代表剛轉正或適合買進。</p>
+              <p class="cf-mode-order" id="cfSortExplanation">自動排序：優先顯示中期資金強度近3日改善幅度較大的產業。</p>
             </div>
             <div class="cf-control-pair">
               <label class="cf-select-field"><span>產業範圍</span><select id="cfScopeSelect" aria-label="產業觀察範圍"><option value="all">全部產業</option><option value="tech">科技／電子</option><option value="traditional">傳產／金融</option></select></label>
-              <label class="cf-select-field"><span>排序方式</span><select id="cfSortSelect" aria-label="產業觀察排序"><option value="auto">依觀察目的自動排序</option><option value="money">法人近5日淨額</option><option value="x">X20中期強度</option><option value="momentum">X20近3日變化</option><option value="breadth">核心資金廣度</option></select></label>
+              <label class="cf-select-field"><span>排序方式</span><select id="cfSortSelect" aria-label="產業觀察排序"><option value="auto">依觀察目的自動排序</option><option value="money">法人近5日淨額</option><option value="x">中期資金強度</option><option value="momentum">近3日強度變化</option><option value="breadth">核心資金廣度</option></select></label>
             </div>
             <p class="cf-combination-explain" id="cfCombinationExplain" aria-live="polite">目前條件：全部產業・資金回流・依模式自動排序。</p>
-            <label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業名稱" aria-label="搜尋產業名稱"></label>
+            <label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業、公司名稱或股票代號" aria-label="搜尋產業、公司名稱或股票代號"></label>
           </div>
-          <div class="cf-list-caption"><span id="cfCount">正在讀取產業…</span></div>
           <div class="cf-sector-list" id="cfList" aria-live="polite"><div class="cf-empty">正在整理產業資金資料…</div></div>
           <button class="cf-more" id="cfMore" type="button" hidden>顯示更多</button>
         </section>
-        <p class="cf-disclaimer">說明：X20是既有模型的標準化分數，不是金額或百分比；近5日法人淨額是收盤價換算後依核心／相關分配的估算金額。核心買超廣度是一家公司一票；核心公司不足3家標示「個股主導」。此處只做資金觀察，個股進場判斷交由「近期精選」。</p>
+        <p class="cf-disclaimer">說明：中期資金強度是模型計算的相對分數，不是金額或百分比；近5日法人淨額是收盤價換算後依核心／相關分配的估算金額。核心買超廣度是一家公司一票；核心公司不足3家標示「個股主導」。此處只做資金觀察，個股進場判斷交由「近期精選」。</p>
       </section>
       <section id="cfDetail" class="cf-detail" hidden>
         <div class="cf-card cf-detail-head"><button type="button" id="cfBack" class="cf-back">← 返回產業觀察</button><span class="cf-eyebrow">SECTOR CAPITAL REVIEW</span><h2 id="cfDetailTitle">正在載入</h2><p id="cfDetailMeta">—</p>
           <div class="cf-kpis cf-detail-kpis" id="cfDetailKPIs"></div><p class="cf-core-note" id="cfCoreBreadth">—</p></div>
-        <section class="cf-card cf-interpret"><div class="cf-interpret-title"><span class="cf-accent-dot"></span><h3>資金狀態解讀</h3><small>X20 × 近5日法人淨額 × 核心廣度</small></div><p id="cfReading">載入中…</p></section>
+        <section class="cf-card cf-interpret"><div class="cf-interpret-title"><span class="cf-accent-dot"></span><h3>資金狀態解讀</h3><small>中期資金強度 × 近5日法人淨額 × 核心廣度</small></div><p id="cfReading">載入中…</p></section>
         <section class="cf-card cf-trend-card" id="cfTrend"></section>
         <section class="cf-card cf-stock-board"><div class="cf-stock-board-head"><div><span class="cf-eyebrow">SECTOR MEMBERS</span><h3>成分股・資金拆解</h3><p id="cfPotentialCount">—</p></div><small>核心／相關各自檢視</small></div>
           <div class="cf-stock-controls"><div class="cf-chips" aria-label="成分股分類"><button type="button" data-cf-stock-filter="core" class="is-on">核心公司</button><button type="button" data-cf-stock-filter="related">相關公司</button><button type="button" data-cf-stock-filter="all">全部公司</button></div><label class="cf-stock-sort-label">排序 <select id="cfStockSort"><option value="buy">法人近5日買超最多</option><option value="sell">法人近5日賣超最多</option><option value="flow">法人5日比例</option></select></label></div>
@@ -3671,8 +3670,8 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.17"></script>
-  <script src="./app.js?v=2.6.8.17"></script>
+  <script src="./capital-flow.js?v=2.6.8.18"></script>
+  <script src="./app.js?v=2.6.8.18"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4325,6 +4324,7 @@ body.mode-screening .cf-page .cf-observe-controls .cf-search{margin-top:0}
  body.mode-screening .cf-page .cf-mode-explain{padding:11px 12px}
 }
 </style>
+
 </body>
 </html>
 <style>
@@ -6579,4 +6579,30 @@ body.mode-screening .cf-page .cf-board-header{
 }
 body.mode-screening .cf-page .cf-board-header>div{min-width:0!important;}
 body.mode-screening .cf-page .cf-board-header .cf-unified-title{margin:0!important;}
+</style>
+<style id="stockzone-v26818-ui-tuning">
+/* Align the market index card to the same content edges as the stock quote card. */
+body.mode-screening #screeningMarketBanner.screening-market-banner{
+ box-sizing:border-box!important;width:100%!important;max-width:100%!important;
+ margin-left:0!important;margin-right:0!important;
+}
+/* Four concise indicators in a single row on all screen sizes, without changing values. */
+body.mode-screening .cf-page .cf-row-grid{
+ grid-template-columns:repeat(4,minmax(0,1fr))!important;
+ gap:6px!important;align-items:start!important;
+}
+body.mode-screening .cf-page .cf-row-grid>div{min-width:0!important}
+body.mode-screening .cf-page .cf-row-grid small{
+ font-size:clamp(8px,2.3vw,10px)!important;white-space:nowrap!important;
+ overflow:visible!important;text-overflow:clip!important;letter-spacing:-.035em!important;
+}
+body.mode-screening .cf-page .cf-row-grid strong{
+ font-size:clamp(11px,3vw,16px)!important;
+ white-space:nowrap!important;letter-spacing:-.035em!important;
+}
+@media(max-width:365px){
+ body.mode-screening .cf-page .cf-row-grid{gap:3px!important}
+ body.mode-screening .cf-page .cf-row-grid small{font-size:8px!important;letter-spacing:-.06em!important}
+ body.mode-screening .cf-page .cf-row-grid strong{font-size:11px!important}
+}
 </style>
