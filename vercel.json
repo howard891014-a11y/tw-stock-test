@@ -55,5 +55,23 @@
       "path": "/api/fundflow?view=industry-changes&action=scan",
       "schedule": "30 9 * * 1-5"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/stock",
+      "destination": "/api/quote?sz_route=stock"
+    },
+    {
+      "source": "/api/dw4",
+      "destination": "/api/fundflow?sz_route=dw4"
+    },
+    {
+      "source": "/api/w3-d111-shadow",
+      "destination": "/api/market-dynamic?sz_shadow=d111"
+    },
+    {
+      "source": "/api/w3-d112-shadow",
+      "destination": "/api/market-dynamic?sz_shadow=d112"
+    }
   ]
 }
