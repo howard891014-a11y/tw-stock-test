@@ -31,6 +31,12 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const monitorSrc=fs.readFileSync(path.join(root,'lib/industry-change-monitor.js'),'utf8');
 const xy=fs.readFileSync(path.join(root,'lib/fundflow-xy.js'),'utf8');
 assert(html.includes('已／未導入')&&html.includes('industryChangeRows'),'developer UI must include 7 columns');
+assert(!html.includes('id="industryChangeLogin"'),'no special management-key button inside industry changes');
+assert(!js.includes('szIndustryChangeSecret')&&!js.includes('szIndustryToken('),'no stand-alone industry management password prompt');
+const candidateApi=require('../lib/industry-change-api');
+assert(candidateApi._test.sameOriginBrowserPost({headers:{host:'example.vercel.app',origin:'https://example.vercel.app','sec-fetch-site':'same-origin'}}),'same-origin browser POST accepted');
+assert(!candidateApi._test.sameOriginBrowserPost({headers:{host:'example.vercel.app',origin:'https://evil.example','sec-fetch-site':'cross-site'}}),'cross-site POST rejected');
+assert(!candidateApi._test.sameOriginBrowserPost({headers:{host:'example.vercel.app'}}),'non-browser mutation without origin refused');
 assert(js.includes('if(row.imported){const button=document.createElement(\'button\')'),'only imported candidates get delete X');
 assert(monitorSrc.includes("if(!e.imported)throw new Error('未導入紀錄禁止刪除')"),'server must enforce no-delete');
 assert(monitorSrc.includes('FROM market_taxonomy_release'),'cannot auto-confirm without verified release');
@@ -48,4 +54,31 @@ async function scanSmoke(){
   const second=await moduleUnderTest.scan({...req,date:'2026-10-24',fetchRoster:async()=>fetchRosters[1]});
   assert.equal(second.mode,'detected');assert.equal(second.neonWrites,0);assert(logs.some(x=>x.value.code==='9012'&&x.value.event==='listing'));
 }
-scanSmoke().then(()=>console.log('PASS industry-change-monitor — first baseline, idempotence, five change classes, two-day missing gate, no pending delete, immutable Neon memberships; injected-storage smoke')).catch(e=>{console.error(e);process.exitCode=1});
+async function apiAccessSmoke(){
+  const api=require('../lib/industry-change-api'),oldToken=process.env.BLOB_READ_WRITE_TOKEN,oldCron=process.env.CRON_SECRET;
+  const originals={listChanges:moduleUnderTest.listChanges,scan:moduleUnderTest.scan,removeConfirmed:moduleUnderTest.removeConfirmed};
+  moduleUnderTest.listChanges=async()=>[];moduleUnderTest.scan=async()=>({ok:true,neonWrites:0});moduleUnderTest.removeConfirmed=async id=>({ok:true,removed:id});
+  process.env.BLOB_READ_WRITE_TOKEN='fake-unit-test-token';process.env.CRON_SECRET='fake-cron';
+  async function request(act='list',method='GET',headers={},body={}){
+    const res={code:0,body:null,setHeader(){return this;},status(n){this.code=n;return this;},json(obj){this.body=obj;return this;}};
+    await api({method,query:{action:act},headers,body},res);return res;
+  }
+  try{
+    assert.equal((await request('list')).code,200,'ordinary viewers may read candidate list without typing a key');
+    assert.equal((await request('scan','GET')).code,401,'scheduled scan GET still requires CRON_SECRET');
+    assert.equal((await request('scan','GET',{authorization:'Bearer fake-cron'})).code,200,'Cron may scan');
+    const origin={host:'stockzone.example',origin:'https://stockzone.example','sec-fetch-site':'same-origin','content-type':'application/json'};
+    assert.equal((await request('scan','POST',origin)).code,200,'browser manual scan remains available');
+    assert.equal((await request('delete','POST',origin,{id:'f'.repeat(24)})).code,200,'verified-row delete endpoint remains available');
+    assert.equal((await request('delete','POST',{host:'stockzone.example',origin:'https://stranger.example','sec-fetch-site':'cross-site'},{id:'f'.repeat(24)})).code,403,'cross-origin mutation denied');
+    assert.equal((await request('delete','POST',{host:'stockzone.example'},{id:'f'.repeat(24)})).code,403,'originless mutation denied');
+    assert.equal((await request('confirm','POST',origin,{ids:['f'.repeat(24)]})).code,405,'cannot mark candidates imported using a public endpoint');
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+    assert.equal((await request('list')).code,503,'missing Private Blob prevents fake-success');
+  }finally{
+    Object.assign(moduleUnderTest,originals);
+    if(oldToken===undefined)delete process.env.BLOB_READ_WRITE_TOKEN;else process.env.BLOB_READ_WRITE_TOKEN=oldToken;
+    if(oldCron===undefined)delete process.env.CRON_SECRET;else process.env.CRON_SECRET=oldCron;
+  }
+}
+scanSmoke().then(apiAccessSmoke).then(()=>console.log('PASS industry-change-monitor + keyless candidate API — smoke, Cron guard, same-origin mutation, confirm forbidden, official Neon immutable')).catch(e=>{console.error(e);process.exitCode=1});
