@@ -282,7 +282,30 @@ async function fetchYahoo(symbol,official){
   return null;
 }
 
+// StockZone v2.6.6.19
+// Consolidated stock-detail API router. Keeps low-frequency stock routes out of
+// Vercel's top-level /api function budget without changing their handlers.
+const handlers = {
+  disposal: require('../lib/api-routes/disposal'),
+  fundamentals: require('../lib/api-routes/fundamentals'),
+  valuation: require('../lib/api-routes/valuation'),
+  targets: require('../lib/api-routes/targets'),
+  institutional: require('../lib/api-routes/institutional'),
+};
+
+async function szStockActionHandler(req, res) {
+  const action = String(req.query?.action || '').trim().toLowerCase();
+  const target = handlers[action];
+  if (!target) {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(400).json({ ok: false, error: 'unknown stock api action' });
+  }
+  return target(req, res);
+};
+
 async function handler(req,res){
+  // Backward-compatible Vercel rewrite: /api/stock -> /api/quote?sz_route=stock
+  if(String(req.query?.sz_route||'')==='stock')return szStockActionHandler(req,res);
   const mode=String(req.query?.mode||"").trim().toLowerCase();
   if(mode==="meta")return stockmetaHandler(req,res);
   res.setHeader("Cache-Control",quoteCacheControl(mode));res.setHeader("Access-Control-Allow-Origin","*");

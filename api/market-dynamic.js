@@ -1,6 +1,9 @@
 const { getMarketDynamicCached } = require('../lib/market-dynamic');
 const { getMarketIndexQuote } = require('../lib/market-index-eod');
 module.exports=async function handler(req,res){
+  // Explicit shadow selection; each original immutable model stays independent.
+  if(String(req.query?.sz_shadow||'')==='d111')return require('../lib/api-routes/w3-shadow').d111(req,res);
+  if(String(req.query?.sz_shadow||'')==='d112')return require('../lib/api-routes/w3-shadow').d112(req,res);
   try{
     if(req.method&&req.method!=='GET')return res.status(405).json({ok:false,error:'GET only'});
     // Fast index endpoint is independent of heavy W3 snapshot refresh.
