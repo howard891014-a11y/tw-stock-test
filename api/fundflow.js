@@ -14,6 +14,7 @@ function cacheHeader(data,{force=false,browser=false}={}){
 
 module.exports=async function handler(req,res){
   try{
+    if(String(req.query?.view||'')==='industry-changes')return await require('../lib/industry-change-api')(req,res);
     const view=String(req.query?.view||'overview').trim().toLowerCase();
     const days=boundedDays(req.query?.days);
     if(view==='browser'||view==='fundflow-browser'){
