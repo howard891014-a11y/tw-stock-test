@@ -28,26 +28,29 @@ function setStatus(msg,problem=false){const el=$('cfState');if(el){el.textConten
 function pill(label,value,opts={}){return `<div class="cf-stat"><small>${label}</small><b class="${opts.signed?'cf-'+tone(value):''}">${opts.text||signed(value,{pct:!!opts.percent,d:opts.d??1})}</b>${opts.sub?`<em>${opts.sub}</em>`:''}</div>`;}
 function note(s){return esc(String(s||'').split('。')[0]||'資料正在整理');}
 function setButtons(which,key){document.querySelectorAll(`[data-cf-${which}]`).forEach(b=>{const on=b.dataset[`cf${which.charAt(0).toUpperCase()+which.slice(1)}`]===key;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));});}
-// The percentages come from stored Neon flow_1_pct / flow_5_pct for the SAME
-// trade date; they are not capital amounts and do not recompute X20.
+// Monetary TOP10 is a separate cached model. Existing flow1Pct/flow5Pct/X20,
+// sector strength and smart-selection signals are intentionally untouched.
 function top10Group(rows,positive){
-  const key=state.period==='1'?'flow1Pct':'flow5Pct';
+  const key=state.period==='1'?'money1E8':'money5E8';
   const label=state.period==='1'?'今日':'近5日';
   const choices=rows.filter(s=>n(s[key])!==null&&(positive?s[key]>0:s[key]<0));
   choices.sort((a,b)=>positive?(b[key]-a[key])||String(a.tagId).localeCompare(String(b.tagId)):(a[key]-b[key])||String(a.tagId).localeCompare(String(b.tagId)));
   const display=choices.slice(0,10),type=positive?'in':'out';
   return `<section class="cf-top10-group ${type}" aria-label="${label}法人淨${positive?'流入':'流出'}前十產業">
     <h3 class="cf-top10-heading">${positive?'資金流入 TOP 10':'資金流出 TOP 10'}<span class="cf-top10-direction">${positive?'▲ 流入':'▼ 流出'}</span></h3>
-    <small class="cf-top10-caption">${label}法人淨流量比</small>
-    ${display.length?display.map((s,i)=>`<button class="cf-top10-row" type="button" data-cf-open="${esc(s.tagId)}" title="${esc(s.name)}｜${signed(s[key],{pct:true,d:1})}｜點選查看產業成分股"><span class="cf-top10-rank">${i+1}</span><span class="cf-top10-name">${esc(s.name)}</span><strong class="cf-top10-flow">${signed(s[key],{pct:true,d:1})}</strong></button>`).join(''):'<div class="cf-top10-empty">此期間沒有符合條件的產業</div>'}
+    <small class="cf-top10-caption">${label}法人估算淨額（億元）</small>
+    ${display.length?display.map((s,i)=>`<button class="cf-top10-row" type="button" data-cf-open="${esc(s.tagId)}" title="${esc(s.name)}｜${signed(s[key],{d:1})}億元｜點選查看產業成分股"><span class="cf-top10-rank">${i+1}</span><span class="cf-top10-name">${esc(s.name)}</span><strong class="cf-top10-flow">${signed(s[key],{d:1})}億</strong></button>`).join(''):'<div class="cf-top10-empty">此期間沒有符合條件的產業</div>'}
   </section>`;
 }
 function summaryCards(){
-  const data=state.summary,rows=data?.sectors||[];
-  const key=state.period==='1'?'flow1Pct':'flow5Pct';
-  const eligible=rows.filter(s=>n(s[key])!==null&&Number(s.valid)>0);
-  $('cfMetrics').innerHTML=top10Group(eligible,true)+top10Group(eligible,false)
-    +`<small class="cf-top10-note">依${state.period==='1'?'今日':'近5日'}法人淨流量比（%）排序，非買賣金額；產業分類可能重疊。</small>`;
+  const data=state.summary,rows=data?.sectors||[],money=data?.capitalMoney;
+  const key=state.period==='1'?'money1E8':'money5E8';
+  const eligible=rows.filter(s=>n(s[key])!==null&&Number(s[state.period==='1'?'moneyCoreValid1':'moneyCoreValid5'])>0);
+  const ready=!!money?.ready&&money.asOf===cfTradeDate(data?.asOf);
+  $('cfMetrics').innerHTML=ready?
+    (top10Group(eligible,true)+top10Group(eligible,false)+
+      `<small class="cf-top10-note">每日法人買賣股數×當日收盤價之估算金額（億元）；核心1／相關0.2，同方向核心資金廣度嚴格&gt;50%才納入相關股，單一相關股金額上限為核心同方向金額100%。不代表實際成交金額；不影響下方產業強度指標。</small>`):
+    `<div class="cf-top10-empty" style="grid-column:1/-1">法人金額資料尚未同步完成，暫不以舊版比例替代。可稍後重新整理。</div>`;
   const market=$('cfMarket');if(market)market.textContent=marketText(data?.market);
   const dateString=cfTradeDate(data?.asOf);
   for(const id of ['cfAsOfBadge','cfSectorDateBadge']){const date=$(id);if(date){date.textContent=dateString;date.dateTime=dateString==='--'?'':dateString;}}

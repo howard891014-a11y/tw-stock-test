@@ -18,6 +18,12 @@
         "sin1"
       ],
       "maxDuration": 60
+    },
+    "api/capital-flow.js": {
+      "regions": [
+        "sin1"
+      ],
+      "maxDuration": 60
     }
   },
   "crons": [
@@ -40,6 +46,10 @@
     {
       "path": "/api/market-dynamic-refresh",
       "schedule": "35 15 * * 1-5"
+    },
+    {
+      "path": "/api/capital-flow",
+      "schedule": "8 8 * * 1-5"
     }
   ]
 }
