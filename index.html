@@ -2848,7 +2848,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.15</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.16</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3277,27 +3277,28 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
           <div class="cf-period-toggle" id="cfPeriodToggle" role="group" aria-label="法人資金淨額期間"><button type="button" data-cf-period="5" class="active" aria-pressed="true">近5日</button><button type="button" data-cf-period="1" aria-pressed="false">今日</button></div>
           <div class="cf-top10-grid" id="cfMetrics" aria-label="法人產業淨流入及淨流出排行"><div class="cf-top10-placeholder">產業資料讀取中…</div></div>
         </div>
-        <section class="cf-board cf-card" aria-label="產業資金排行">
-          <div class="cf-board-header"><div><h3 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-sector" aria-hidden="true"></i><span>產業資金排行</span></span></h3></div><time id="cfSectorDateBadge" class="sz-market-date-pill" aria-label="產業資金排行資料日期">--</time></div>
+        <section class="cf-board cf-card" aria-label="產業資金觀察">
+          <div class="cf-board-header"><div><h3 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-sector" aria-hidden="true"></i><span>產業資金觀察</span></span></h3></div><time id="cfSectorDateBadge" class="sz-market-date-pill" aria-label="產業資金觀察資料日期">--</time></div>
           <div class="cf-toolbar"><label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業、公司名稱或股票代號" aria-label="搜尋產業、公司名稱或股票代號"></label>
             <div class="cf-chips" aria-label="產業範圍"><button type="button" class="is-on" data-cf-scope="all">全部產業</button><button type="button" data-cf-scope="tech">科技／電子</button><button type="button" data-cf-scope="traditional">傳產／金融</button></div>
-            <div class="cf-chips cf-chips-quiet" aria-label="資金狀態"><button type="button" class="is-on" data-cf-filter="all">全部資金</button><button type="button" data-cf-filter="inflow">近期流入</button><button type="button" data-cf-filter="reverse">逆勢吸金</button></div>
+            <div class="cf-chips cf-chips-quiet" aria-label="產業資金觀察狀態"><button type="button" class="is-on" data-cf-filter="all">全部狀態</button><button type="button" data-cf-filter="aligned">強勢延續</button><button type="button" data-cf-filter="returning">資金回流</button><button type="button" data-cf-filter="warning">流出留意</button><button type="button" data-cf-filter="weak">弱勢延續</button></div>
           </div>
-          <div class="cf-sort-wrap"><span>排序</span><div class="cf-sort" role="group" aria-label="資金指標排序"><button class="is-on" type="button" data-cf-sort="x">中期資金</button><button type="button" data-cf-sort="momentum">資金動能</button><button type="button" data-cf-sort="breadth">資金廣度</button><button type="button" data-cf-sort="candidate">個股機會</button></div></div>
+          <p class="cf-observe-help">X20 看中期資金位置；近5日法人淨額看近期資金方向。交叉狀態只表示已發生的變化，不代表買點。</p>
+          <div class="cf-sort-wrap"><span>排序</span><div class="cf-sort" role="group" aria-label="產業觀察排序"><button class="is-on" type="button" data-cf-sort="money">法人近5日</button><button type="button" data-cf-sort="x">中期X20</button><button type="button" data-cf-sort="momentum">X20三日變化</button><button type="button" data-cf-sort="breadth">核心買超廣度</button></div></div>
           <div class="cf-list-caption" hidden><span id="cfCount">正在讀取產業…</span></div>
           <div class="cf-sector-list" id="cfList" aria-live="polite"><div class="cf-empty">正在整理產業資金資料…</div></div>
           <button class="cf-more" id="cfMore" type="button" hidden>顯示更多</button>
         </section>
-        <p class="cf-disclaimer">說明：資金強度是既有模型的標準化分數，不是百分比；流入廣度是一家公司一票的法人淨買超比例。個股「資金先行」只表示符合資金與股價落差條件，並非買進建議。</p>
+        <p class="cf-disclaimer">說明：X20是既有模型的標準化分數，不是金額或百分比；近5日法人淨額是收盤價換算後依核心／相關分配的估算金額。核心買超廣度是一家公司一票；核心公司不足3家標示「個股主導」。此處只做資金觀察，個股進場判斷交由「近期精選」。</p>
       </section>
       <section id="cfDetail" class="cf-detail" hidden>
-        <div class="cf-card cf-detail-head"><button type="button" id="cfBack" class="cf-back">← 返回產業排行</button><span class="cf-eyebrow">SECTOR DEEP DIVE</span><h2 id="cfDetailTitle">正在載入</h2><p id="cfDetailMeta">—</p>
+        <div class="cf-card cf-detail-head"><button type="button" id="cfBack" class="cf-back">← 返回產業觀察</button><span class="cf-eyebrow">SECTOR CAPITAL REVIEW</span><h2 id="cfDetailTitle">正在載入</h2><p id="cfDetailMeta">—</p>
           <div class="cf-kpis cf-detail-kpis" id="cfDetailKPIs"></div><p class="cf-core-note" id="cfCoreBreadth">—</p></div>
-        <section class="cf-card cf-interpret"><div class="cf-interpret-title"><span class="cf-accent-dot"></span><h3>系統判讀</h3><small>市場環境 × 資金位置 × 動能 × 廣度</small></div><p id="cfReading">載入中…</p></section>
+        <section class="cf-card cf-interpret"><div class="cf-interpret-title"><span class="cf-accent-dot"></span><h3>資金狀態解讀</h3><small>X20 × 近5日法人淨額 × 核心廣度</small></div><p id="cfReading">載入中…</p></section>
         <section class="cf-card cf-trend-card" id="cfTrend"></section>
-        <section class="cf-card cf-stock-board"><div class="cf-stock-board-head"><div><span class="cf-eyebrow">CAPITAL BEFORE PRICE</span><h3>成分股・資金先行觀察</h3><p id="cfPotentialCount">—</p></div><small>僅供研究・非未來漲幅預測</small></div>
-          <div class="cf-stock-controls"><div class="cf-chips"><button type="button" id="cfStockCandidates" class="is-on">資金先行</button><button type="button" id="cfStockAll">全部成分股</button></div><label class="cf-stock-sort-label">排序 <select id="cfStockSort"><option value="gap">優先顯示資金先行</option><option value="flow">近5日資金最多</option><option value="price">近5日漲幅最小</option></select></label></div>
-          <p class="cf-method">資金先行條件：5日法人資金≥+1%、20日法人資金為正、X20為正；個股近5日漲幅介於−6%～+10%，20日漲幅不高於25%（缺20日資料則保留標記）。</p>
+        <section class="cf-card cf-stock-board"><div class="cf-stock-board-head"><div><span class="cf-eyebrow">SECTOR MEMBERS</span><h3>成分股・資金拆解</h3><p id="cfPotentialCount">—</p></div><small>核心／相關各自檢視</small></div>
+          <div class="cf-stock-controls"><div class="cf-chips" aria-label="成分股分類"><button type="button" data-cf-stock-filter="core" class="is-on">核心公司</button><button type="button" data-cf-stock-filter="related">相關公司</button><button type="button" data-cf-stock-filter="all">全部公司</button></div><label class="cf-stock-sort-label">排序 <select id="cfStockSort"><option value="buy">法人近5日買超最多</option><option value="sell">法人近5日賣超最多</option><option value="flow">法人5日比例</option></select></label></div>
+          <p class="cf-method">此處「個股法人5日原始淨額」未依核心／相關產業分攤；上方的產業淨額／核心／相關金額才是正式分配後結果。原始額用於辨識哪家公司資金變化較大，不代表推薦或適合進場。</p>
           <div class="cf-stock-list" id="cfStockList"><div class="cf-empty">載入中…</div></div><p class="cf-list-total" id="cfStockListTotal">—</p>
         </section>
       </section>
@@ -3655,8 +3656,8 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.15"></script>
-  <script src="./app.js?v=2.6.8.15"></script>
+  <script src="./capital-flow.js?v=2.6.8.16"></script>
+  <script src="./app.js?v=2.6.8.16"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4265,6 +4266,21 @@ body.mode-screening .screening-market-banner .smb-turnover strong{
   body.mode-screening .screening-market-banner .smb-turnover{font-size:10px!important;}
   body.mode-screening .screening-market-banner .smb-turnover strong{font-size:11px!important;}
 }
+</style>
+
+<style id="stockzone-v26816-sector-observe">
+/* Sector observation only. Do not alter capital TOP10 or Featured Picks. */
+body.mode-screening .cf-page .cf-observe-help{font-size:10px!important;color:#7890a6!important;line-height:1.6!important;margin:12px 1px 2px!important;}
+body.mode-screening .cf-page .cf-status-returning{color:#447da3;background:#edf5ff;}
+body.mode-screening .cf-page .cf-status-aligned{color:#b45c67;background:#fff0f2;}
+body.mode-screening .cf-page .cf-status-warning{color:#ac773e;background:#fff6e9;}
+body.mode-screening .cf-page .cf-status-weak{color:#39896f;background:#eaf7f0;}
+body.mode-screening .cf-page .cf-row-grid strong{font-variant-numeric:tabular-nums;}
+body.mode-screening .cf-page .cf-row-bottom b{white-space:nowrap;font-weight:750;color:#8494a7;}
+body.mode-screening .cf-page .cf-stock-badge-core{color:#2e78aa;background:#eaf4ff;}
+body.mode-screening .cf-page .cf-stock-badge-related{color:#7b8698;background:#f2f5f8;}
+body.mode-screening .cf-page .cf-stock-values{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+@media (max-width:600px){body.mode-screening .cf-page .cf-row-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 7px;}body.mode-screening .cf-page .cf-row-grid small{font-size:9px;}body.mode-screening .cf-page .cf-row-grid strong{font-size:15px;}body.mode-screening .cf-page .cf-status{max-width:80px;text-align:center;}}
 </style>
 </body>
 </html>
