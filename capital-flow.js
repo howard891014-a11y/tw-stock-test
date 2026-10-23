@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const state={summary:null,detail:null,opened:'',loading:false,lastFetch:0,query:'',scope:'all',filter:'all',sort:'money',limit:32,stockFilter:'core',stockSort:'buy',period:'5',sequence:0};
+const state={summary:null,detail:null,opened:'',loading:false,lastFetch:0,query:'',scope:'all',filter:'returning',sort:'auto',limit:32,stockFilter:'core',stockSort:'buy',period:'5',sequence:0};
 const n=v=>v===null||v===undefined||v===''?null:(Number.isFinite(Number(v))?Number(v):null);
 const esc=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const signed=(v,{pct=false,d=1}={})=>{const x=n(v);return x===null?'—':`${x>0?'+':''}${x.toFixed(d)}${pct?'%':''}`;};
@@ -23,7 +23,36 @@ function cfTradeDate(v){
  return '--';
 }
 const marketText=m=>!m?.aligned?'大盤資料未同步':m.regime==='RiskOff'?'大盤・風險防禦':m.regime==='RiskOn'?'大盤・風險偏好':'大盤・狀態待定';
-const labelSort={money:'近5日法人淨額',x:'中期X20',momentum:'X20三日變化',breadth:'核心買超廣度'};
+const labelSort={money:'法人近5日淨額',x:'X20中期強度',momentum:'X20近3日變化',breadth:'核心資金廣度'};
+const modeHelp={
+  all:{title:'全部產業｜查看整體資金分布',description:'不依資金狀態篩選；可比較各產業的X20中期強度與近5日法人淨額。包含方向不明或資料尚未齊全的產業。'},
+  returning:{title:'資金回流｜觀察中期偏弱、近期流入的產業',description:'X20中期強度≤0、近5日法人淨額>0。中期尚未轉強，但近期有資金流入；不代表資金剛由流出轉為流入，也不表示適合買進。'},
+  aligned:{title:'強勢延續｜觀察中期強、近期也流入的產業',description:'X20中期強度>0、近5日法人淨額>0。中期與近期資金方向相同；不保證未來持續走強。'},
+  warning:{title:'轉弱警訊｜觀察中期仍強、近期卻流出的產業',description:'X20中期強度>0、近5日法人淨額<0。中期仍偏強但近期有資金流出；提醒觀察，不等於已確認反轉。'},
+  weak:{title:'弱勢延續｜觀察中期弱、近期也流出的產業',description:'X20中期強度≤0、近5日法人淨額<0。中期與近期資金皆偏弱；不代表一定會繼續下跌。'}
+};
+const scopeLabels={all:'全部產業',tech:'科技／電子',traditional:'傳產／金融'};
+const autoSort={all:'money',returning:'momentum',aligned:'money',warning:'money',weak:'money'};
+function effectiveSort(){return state.sort==='auto'?(autoSort[state.filter]||'money'):state.sort;}
+function outflowMode(){return state.filter==='warning'||state.filter==='weak';}
+function sortDescending(key){return !(outflowMode()&&(key==='money'||key==='momentum'||key==='x'));}
+function modeSortSentence(){const key=effectiveSort(),reverse=outflowMode();
+  if(key==='money')return reverse?'依法人近5日淨流出金額由多到少排列，先看近期流出較大的產業。':'依法人近5日淨流入金額由多到少排列，先看近期流入較大的產業。';
+  if(key==='momentum')return reverse?'依X20近3日變化由低到高排列，先看中期強度惡化較多的產業。':'依X20近3日變化由高到低排列，先看中期強度改善較多的產業（不是法人金額的加速度）。';
+  if(key==='x')return reverse?'依X20由低到高排列，先看中期強度較弱的產業。':'依X20由高到低排列，先看中期強度較強的產業。';
+  if(reverse)return '依核心公司5日賣超家數占比由高到低排列，先看賣壓較普遍的產業。';
+  return '依核心公司5日買超家數占比由高到低排列，先看買盤較普遍的產業。';
+}
+function refreshObserveHelp(count){
+  const info=modeHelp[state.filter]||modeHelp.all,key=effectiveSort(),auto=state.sort==='auto';
+  const title=$('cfObserveTitle'),desc=$('cfObserveDescription'),order=$('cfSortExplanation'),cond=$('cfCombinationExplain');
+  if(title)title.textContent=info.title;
+  if(desc)desc.textContent=info.description;
+  if(order)order.textContent=`${auto?'自動排序':'自訂排序'}：${modeSortSentence()}`;
+  const scope=scopeLabels[state.scope]||scopeLabels.all;
+  if(cond)cond.textContent=`目前條件：${scope}・${state.filter==='all'?'全部狀態':({'returning':'資金回流','aligned':'強勢延續','warning':'轉弱警訊','weak':'弱勢延續'}[state.filter]||'全部')}・${auto?'依觀察目的自動排序':labelSort[key]}${state.query.trim()?'・搜尋「'+state.query.trim()+'」':''}。${count} 個產業符合條件。`;
+  const scopeSel=$('cfScopeSelect'),sortSel=$('cfSortSelect');if(scopeSel)scopeSel.value=state.scope;if(sortSel)sortSel.value=state.sort;
+}
 function setStatus(msg,problem=false){const el=$('cfState');if(el){el.textContent=problem?msg:'';el.hidden=!problem;el.classList.toggle('cf-error',problem);}}
 function pill(label,value,opts={}){return `<div class="cf-stat"><small>${label}</small><b class="${opts.signed?'cf-'+tone(value):''}">${opts.text||signed(value,{pct:!!opts.percent,d:opts.d??1})}</b>${opts.sub?`<em>${opts.sub}</em>`:''}</div>`;}
 function note(s){return esc(String(s||'').split('。')[0]||'資料正在整理');}
@@ -64,13 +93,32 @@ function filtered(){const list=state.summary?.sectors||[];let rows=list.filter(s
   if(state.filter!=='all'&&s.observation?.key!==state.filter)return false;
   const q=state.query.trim().toLowerCase();return !q||[s.name,s.parentName,s.tagId].some(t=>String(t||'').toLowerCase().includes(q));
  });
- const val=s=>state.sort==='money'?n(s.money5E8)??-1e14:state.sort==='breadth'?corePct(s)??-1e14:state.sort==='momentum'?n(s.dx3)??-1e14:n(s.x)??-1e14;
- rows.sort((a,b)=>val(b)-val(a)||(n(b.money5E8)??-1e14)-(n(a.money5E8)??-1e14)||a.tagId.localeCompare(b.tagId));return rows;
+ const selected=effectiveSort(),reverse=outflowMode();
+ const value=s=>{
+   if(selected==='money')return n(s.money5E8);
+   if(selected==='breadth'){
+     const v=n(s.moneyCoreValid5),part=n(reverse?s.moneyCoreSell5:s.moneyCoreBuy5);
+     return v>0&&part!==null?100*part/v:null;
+   }
+   if(selected==='momentum')return n(s.dx3);
+   return n(s.x);
+ };
+ const desc=sortDescending(selected);
+ rows.sort((a,b)=>{
+   const av=value(a),bv=value(b);
+   if(av===null&&bv!==null)return 1;
+   if(av!==null&&bv===null)return -1;
+   if(av!==null&&bv!==null&&av!==bv)return desc?bv-av:av-bv;
+   const ma=n(a.money5E8),mb=n(b.money5E8);
+   if(ma!==null&&mb!==null&&ma!==mb)return reverse?ma-mb:mb-ma;
+   return String(a.tagId).localeCompare(String(b.tagId));
+ });
+ return rows;
 }
 function rowHtml(s,i){
  const breadth=corePct(s),b=breadth===null?0:Math.max(0,Math.min(100,breadth)),v=Number(s.moneyCoreValid5)||0;
  const status=s.observation||{key:'unknown',label:'待補資料'};
- const label=status.key==='aligned'?'強勢延續':status.key==='returning'?'資金回流':status.key==='warning'?'流出留意':status.key==='weak'?'弱勢延續':status.label;
+ const label=status.key==='aligned'?'強勢延續':status.key==='returning'?'資金回流':status.key==='warning'?'轉弱警訊':status.key==='weak'?'弱勢延續':status.label;
  return `<button type="button" class="cf-sector" data-cf-open="${esc(s.tagId)}" aria-label="查看${esc(s.name)}的產業資金觀察與成分股">
  <div class="cf-row-head"><span class="cf-rank">${String(i+1).padStart(2,'0')}</span><span class="cf-row-title"><b>${esc(s.name)}</b><small>${esc(scopeText(s.scope))} · ${s.valid}/${s.members} 家成分股有效</small></span><span class="cf-status cf-status-${esc(status.key)}">${esc(label)}</span><span class="cf-chevron">›</span></div>
  <div class="cf-row-grid"><div><small>X20中期強度</small><strong class="cf-${tone(s.x)}">${signed(s.x,{d:1})}</strong></div><div><small>法人近5日淨額</small><strong class="cf-${tone(s.money5E8)}">${signed(s.money5E8,{d:1})}${n(s.money5E8)===null?'':'億'}</strong></div><div><small>X20近3日變化</small><strong class="cf-${tone(s.dx3)}">${signed(s.dx3)}</strong></div><div><small>核心買超廣度</small><strong>${breadth===null?'—':breadth.toFixed(0)+'%'}</strong></div></div>
@@ -78,10 +126,11 @@ function rowHtml(s,i){
  </button>`;
 }
 function renderList(){const data=state.summary;if(!data)return;summaryCards();const rows=filtered(),shown=rows.slice(0,state.limit);
- $('cfCount').textContent=`符合 ${rows.length} 個產業・依${labelSort[state.sort]}排序`;
+ $('cfCount').textContent=`找到 ${rows.length} 個產業 · ${state.sort==='auto'?'自動排序':labelSort[effectiveSort()]}`;
+ refreshObserveHelp(rows.length);
  $('cfList').innerHTML=shown.map(rowHtml).join('')||'<div class="cf-empty">目前沒有符合條件的產業。可切換觀察狀態查看其他產業。</div>';
  const more=$('cfMore');more.hidden=shown.length>=rows.length;more.textContent=`顯示更多產業（${shown.length}/${rows.length}）`;
- setButtons('scope',state.scope);setButtons('sort',state.sort);setButtons('filter',state.filter);
+ setButtons('filter',state.filter);
 }
 function detailStockHtml(s,i){
  const money=n(s.money5RawE8);
@@ -97,7 +146,7 @@ function stockSort(stocks){return stocks.sort((a,b)=>{
 function renderDetail(){const d=state.detail;if(!d)return;const s=d.sector;
  const stocks=d.stocks.filter(x=>state.stockFilter==='all'||x.importance===state.stockFilter),sorted=stockSort(stocks);
  const v=Number(s.moneyCoreValid5)||0,buy=Number(s.moneyCoreBuy5)||0,sell=Number(s.moneyCoreSell5)||0;
- const badge=v<3?'・個股主導':'',o=s.observation?.label||'待補資料';
+ const badge=v<3?'・個股主導':'',o=s.observation?.key==='warning'?'轉弱警訊':(s.observation?.label||'待補資料');
  $('cfDetailTitle').textContent=s.name;
  $('cfDetailMeta').textContent=`${scopeText(s.scope)} · ${s.members} 家成分股 · 資料日 ${d.asOf||'--'} · ${o}${badge}`;
  $('cfDetailKPIs').innerHTML=`${pill('法人5日估算淨額',s.money5E8,{signed:true,d:2,sub:'億元・核心＋相關'})}${pill('核心公司歸屬',s.moneyCore5E8,{signed:true,d:2,sub:'億元・分配後'})}${pill('相關公司歸屬',s.moneyRelated5E8,{signed:true,d:2,sub:'億元・分配後'})}${pill('X20中期強度',s.x,{signed:true,sub:'原模型，未修改'})}${pill('X20近3日變化',s.dx3,{signed:true,sub:s.momentum.label})}${pill('產業近5日漲幅',s.price5Pct,{signed:true,percent:true,sub:'價格已實現變動'})}`;
@@ -137,9 +186,9 @@ function back(){++state.sequence;state.opened='';state.detail=null;$('cfDetail')
 function init(){if(!$('cfOverview'))return;
  $('cfRefresh')?.addEventListener('click',()=>load(true));
  $('cfSearch')?.addEventListener('input',e=>{state.query=e.target.value||'';state.limit=32;renderList()});
- document.querySelectorAll('[data-cf-scope]').forEach(b=>b.addEventListener('click',()=>{state.scope=b.dataset.cfScope;state.limit=32;renderList()}));
- document.querySelectorAll('[data-cf-sort]').forEach(b=>b.addEventListener('click',()=>{state.sort=b.dataset.cfSort;state.limit=32;renderList()}));
- document.querySelectorAll('[data-cf-filter]').forEach(b=>b.addEventListener('click',()=>{state.filter=b.dataset.cfFilter;state.limit=32;renderList()}));
+ $('cfScopeSelect')?.addEventListener('change',e=>{state.scope=e.target.value;state.limit=32;renderList()});
+ $('cfSortSelect')?.addEventListener('change',e=>{state.sort=e.target.value;state.limit=32;renderList()});
+ document.querySelectorAll('[data-cf-filter]').forEach(b=>b.addEventListener('click',()=>{state.filter=b.dataset.cfFilter;state.sort='auto';state.limit=32;renderList()}));
  $('cfMore')?.addEventListener('click',()=>{state.limit+=32;renderList()});
  $('cfList')?.addEventListener('click',e=>{const item=e.target.closest('[data-cf-open]');if(item)void open(item.dataset.cfOpen)});
  $('cfMetrics')?.addEventListener('click',e=>{const item=e.target.closest('[data-cf-open]');if(item)void open(item.dataset.cfOpen)});

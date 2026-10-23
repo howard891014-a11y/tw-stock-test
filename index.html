@@ -2848,7 +2848,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.16</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.17</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3279,13 +3279,28 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         </div>
         <section class="cf-board cf-card" aria-label="產業資金觀察">
           <div class="cf-board-header"><div><h3 class="card-title theme-white-card-title cf-unified-title"><span class="theme-title-group"><i class="theme-title-icon cf-title-icon-sector" aria-hidden="true"></i><span>產業資金觀察</span></span></h3></div><time id="cfSectorDateBadge" class="sz-market-date-pill" aria-label="產業資金觀察資料日期">--</time></div>
-          <div class="cf-toolbar"><label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業、公司名稱或股票代號" aria-label="搜尋產業、公司名稱或股票代號"></label>
-            <div class="cf-chips" aria-label="產業範圍"><button type="button" class="is-on" data-cf-scope="all">全部產業</button><button type="button" data-cf-scope="tech">科技／電子</button><button type="button" data-cf-scope="traditional">傳產／金融</button></div>
-            <div class="cf-chips cf-chips-quiet" aria-label="產業資金觀察狀態"><button type="button" class="is-on" data-cf-filter="all">全部狀態</button><button type="button" data-cf-filter="aligned">強勢延續</button><button type="button" data-cf-filter="returning">資金回流</button><button type="button" data-cf-filter="warning">流出留意</button><button type="button" data-cf-filter="weak">弱勢延續</button></div>
+          <div class="cf-observe-controls">
+            <h4 class="cf-mode-question" id="cfModeQuestion">你想觀察什麼？</h4>
+            <div class="cf-chips cf-mode-chips" role="group" aria-labelledby="cfModeQuestion">
+              <button type="button" data-cf-filter="all" aria-pressed="false">全部</button>
+              <button type="button" data-cf-filter="returning" class="is-on" aria-pressed="true">資金回流</button>
+              <button type="button" data-cf-filter="aligned" aria-pressed="false">強勢延續</button>
+              <button type="button" data-cf-filter="warning" aria-pressed="false">轉弱警訊</button>
+              <button type="button" data-cf-filter="weak" aria-pressed="false">弱勢延續</button>
+            </div>
+            <div class="cf-mode-explain" id="cfModeExplain" aria-live="polite" aria-atomic="true">
+              <strong id="cfObserveTitle">資金回流｜觀察中期偏弱、近期流入的產業</strong>
+              <p id="cfObserveDescription">X20 中期強度不高於0，但近5日法人淨額為正。這是資金位置與方向的交叉觀察，不代表剛轉正或適合買進。</p>
+              <p class="cf-mode-order" id="cfSortExplanation">自動排序：優先顯示X20近3日改善幅度較大的產業。</p>
+            </div>
+            <div class="cf-control-pair">
+              <label class="cf-select-field"><span>產業範圍</span><select id="cfScopeSelect" aria-label="產業觀察範圍"><option value="all">全部產業</option><option value="tech">科技／電子</option><option value="traditional">傳產／金融</option></select></label>
+              <label class="cf-select-field"><span>排序方式</span><select id="cfSortSelect" aria-label="產業觀察排序"><option value="auto">依觀察目的自動排序</option><option value="money">法人近5日淨額</option><option value="x">X20中期強度</option><option value="momentum">X20近3日變化</option><option value="breadth">核心資金廣度</option></select></label>
+            </div>
+            <p class="cf-combination-explain" id="cfCombinationExplain" aria-live="polite">目前條件：全部產業・資金回流・依模式自動排序。</p>
+            <label class="cf-search"><span aria-hidden="true">⌕</span><input id="cfSearch" type="search" placeholder="搜尋產業名稱" aria-label="搜尋產業名稱"></label>
           </div>
-          <p class="cf-observe-help">X20 看中期資金位置；近5日法人淨額看近期資金方向。交叉狀態只表示已發生的變化，不代表買點。</p>
-          <div class="cf-sort-wrap"><span>排序</span><div class="cf-sort" role="group" aria-label="產業觀察排序"><button class="is-on" type="button" data-cf-sort="money">法人近5日</button><button type="button" data-cf-sort="x">中期X20</button><button type="button" data-cf-sort="momentum">X20三日變化</button><button type="button" data-cf-sort="breadth">核心買超廣度</button></div></div>
-          <div class="cf-list-caption" hidden><span id="cfCount">正在讀取產業…</span></div>
+          <div class="cf-list-caption"><span id="cfCount">正在讀取產業…</span></div>
           <div class="cf-sector-list" id="cfList" aria-live="polite"><div class="cf-empty">正在整理產業資金資料…</div></div>
           <button class="cf-more" id="cfMore" type="button" hidden>顯示更多</button>
         </section>
@@ -3656,8 +3671,8 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.16"></script>
-  <script src="./app.js?v=2.6.8.16"></script>
+  <script src="./capital-flow.js?v=2.6.8.17"></script>
+  <script src="./app.js?v=2.6.8.17"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4281,6 +4296,34 @@ body.mode-screening .cf-page .cf-stock-badge-core{color:#2e78aa;background:#eaf4
 body.mode-screening .cf-page .cf-stock-badge-related{color:#7b8698;background:#f2f5f8;}
 body.mode-screening .cf-page .cf-stock-values{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
 @media (max-width:600px){body.mode-screening .cf-page .cf-row-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 7px;}body.mode-screening .cf-page .cf-row-grid small{font-size:9px;}body.mode-screening .cf-page .cf-row-grid strong{font-size:15px;}body.mode-screening .cf-page .cf-status{max-width:80px;text-align:center;}}
+</style>
+
+<style id="stockzone-v26817-observe-controls">
+/* Industry observation UI only; TOP10 and Featured Picks stay unchanged. */
+body.mode-screening .cf-page .cf-observe-controls{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+body.mode-screening .cf-page .cf-mode-question{font-size:13px!important;font-weight:850;color:#334a65;line-height:1.45;margin:0!important;letter-spacing:.01em}
+body.mode-screening .cf-page .cf-mode-chips{overflow:visible;flex-wrap:wrap;gap:8px;padding-bottom:0}
+body.mode-screening .cf-page .cf-mode-chips button{font-size:11px;min-height:37px;padding:8px 13px;border:1px solid #dfe7ef;border-radius:999px;background:#fff;color:#5f748c;font-weight:800;white-space:nowrap}
+body.mode-screening .cf-page .cf-mode-chips button.is-on{background:#334e6c;color:#fff;border-color:#334e6c;box-shadow:0 2px 6px rgba(50,80,110,.12)}
+body.mode-screening .cf-page .cf-mode-chips button:focus-visible,body.mode-screening .cf-page .cf-select-field select:focus-visible{outline:2px solid #4993d1;outline-offset:2px}
+body.mode-screening .cf-page .cf-mode-explain{background:#f4f8fc;border:1px solid #e3edf6;border-left:3px solid #86afce;border-radius:12px;padding:12px 13px;line-height:1.55}
+body.mode-screening .cf-page .cf-mode-explain strong{display:block;font-size:12px;color:#304f6c;font-weight:850;margin-bottom:5px}
+body.mode-screening .cf-page .cf-mode-explain p{color:#62788e;font-size:11px!important;line-height:1.65;margin:0!important}
+body.mode-screening .cf-page .cf-mode-explain .cf-mode-order{margin-top:5px!important;color:#52799b}
+body.mode-screening .cf-page .cf-control-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body.mode-screening .cf-page .cf-select-field{display:flex;flex-direction:column;gap:6px;min-width:0;color:#70849a;font-size:10px;font-weight:800}
+body.mode-screening .cf-page .cf-select-field select{display:block;width:100%;min-width:0;min-height:40px;border:1px solid #dfe7ef;border-radius:11px;background:#fff;color:#354f6a;padding:8px 27px 8px 11px;font-size:11px;font-weight:780;cursor:pointer}
+body.mode-screening .cf-page .cf-combination-explain{font-size:10px!important;line-height:1.6;color:#73879a!important;margin:0!important}
+body.mode-screening .cf-page .cf-list-caption{display:flex;justify-content:space-between;align-items:center;padding:11px 0 8px;margin:8px 0 4px;border-top:1px solid #eef2f7}
+body.mode-screening .cf-page #cfCount{font-size:11px;color:#70869b;font-weight:740}
+body.mode-screening .cf-page .cf-observe-controls .cf-search{margin-top:0}
+@media(max-width:600px){
+ body.mode-screening .cf-page .cf-mode-chips{gap:7px}
+ body.mode-screening .cf-page .cf-mode-chips button{font-size:10px;min-height:35px;padding:7px 11px}
+ body.mode-screening .cf-page .cf-control-pair{gap:8px}
+ body.mode-screening .cf-page .cf-select-field select{font-size:10.5px;padding-left:9px}
+ body.mode-screening .cf-page .cf-mode-explain{padding:11px 12px}
+}
 </style>
 </body>
 </html>
