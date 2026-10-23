@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs');
-const {getSummary,getDetail,observeState,SUMMARY_SQL,DETAIL_SQL,DETAIL_STOCK_MONEY_SQL}=require('../lib/capital-flow');
+const {getSummary,getDetail,observeState,SUMMARY_SQL,SEARCH_INDEX_SQL,DETAIL_SQL,DETAIL_STOCK_MONEY_SQL}=require('../lib/capital-flow');
 const {LOAD_SQL,VERSION}=require('../lib/capital-flow-money');
 const html=fs.readFileSync('index.html','utf8'),app=fs.readFileSync('app.js','utf8'),client=fs.readFileSync('capital-flow.js','utf8');
 for(const a of ['cfOverview','cfDetail','cfStockList','cfMetrics','cfReading','cfList','cfSearch','cfStockSort','cfDetailKPIs','cfCoreBreadth','cfObserveTitle','cfObserveDescription','cfSortExplanation','cfCombinationExplain','cfScopeSelect','cfSortSelect'])
@@ -20,11 +20,21 @@ for(const s of ['資金回流｜觀察','強勢延續｜觀察','轉弱警訊｜
 assert(client.includes('cfSortExplanation')&&client.includes('cfCombinationExplain')&&client.includes('modeSortSentence'),'dynamic combo explanation missing');
 assert(client.includes("state.sort='auto'"),'mode change must reset to mode-auto sorting');
 assert(client.includes("state.filter==='warning'||state.filter==='weak'"),'negative flows must sort by magnitude, not descending signed value');
+assert(!viewMarkup.includes('id="cfCount"'),'redundant search count must be removed');
+assert(viewMarkup.includes('placeholder="搜尋產業、公司名稱或股票代號"'),'company lookup placeholder missing');
+assert(client.includes("sort:'auto',limit:10"),'initial display must show ten sectors');
+assert(client.includes('s.stockSearchText'),'company and stock code search missing');
+assert(client.includes("state.limit===10?Number.MAX_SAFE_INTEGER:10"),'show more/collapse missing');
+assert(!client.includes('有效核心'),'old core company label remains');
+assert(!client.includes('X20')&&!viewMarkup.includes('X20'),'visible X20 needs descriptive terminology');
+assert(!client.includes('核心1／相關0.2'),'internal monetary weights must not be exposed');
+assert(html.includes('stockzone-v26818-ui-tuning'),'mobile 4-column and card width CSS missing');
+
 assert(viewMarkup.includes('data-cf-stock-filter="core"')&&viewMarkup.includes('data-cf-stock-filter="related"'));
 assert(!viewMarkup.includes('資金先行')&&!viewMarkup.includes('id="cfStockCandidates"')&&!viewMarkup.includes('個股機會'));
 assert(!client.includes('candidate')&&!client.includes('opportunityCount'),'candidate shortcut still active');
 assert(!SUMMARY_SQL.includes('opportunity_count')&&!SUMMARY_SQL.includes('JOIN market_activity_daily'),'unnecessary candidate query survived');
-for(const q of [SUMMARY_SQL,DETAIL_SQL,DETAIL_STOCK_MONEY_SQL]) {
+for(const q of [SUMMARY_SQL,SEARCH_INDEX_SQL,DETAIL_SQL,DETAIL_STOCK_MONEY_SQL]) {
  assert(/^\s*(WITH|SELECT)\b/i.test(q),'read model must use SELECT');
  assert(!/\b(DELETE|TRUNCATE|DROP|ALTER|UPDATE|INSERT)\b/i.test(q),'observation query cannot write to Neon');
 }
@@ -50,6 +60,7 @@ const moneyRows=[moneyRow,...Array.from({length:197},(_,i)=>({...moneyRow,tag_id
 let requests=[];
 const fake={query:async(q,args=[])=>{requests.push([q,args]);
  if(q===SUMMARY_SQL)return mockRows;
+ if(q===SEARCH_INDEX_SQL)return [{tag_id:'ai_server',stock_search_text:'1234 甲 5678 乙 2330 台積電'}];
  if(q===DETAIL_SQL)return detailRows;
  if(q===DETAIL_STOCK_MONEY_SQL)return [
   {stock_code:'1234',market:'上市',raw_money_1_e8:'2',raw_money_5_e8:'8.5'},
@@ -65,7 +76,9 @@ const fake={query:async(q,args=[])=>{requests.push([q,args]);
  throw new Error('Unexpected SQL: '+q.slice(0,140));}};
 (async()=>{
  const r=await getSummary(fake);
+ assert.equal(r.capitalMoney.method,'stockzone-adjusted-v1');
  assert.equal(r.sectors[0].x,30);assert.equal(r.sectors[0].money5E8,40.2);
+ assert.match(r.sectors[0].stockSearchText,/2330 台積電/);
  assert.equal(r.sectors[0].observation.key,'aligned');assert.equal(r.sectors[0].momentum.key,'improving');
  assert.match(r.sectors[0].reading,/核心同方向 6\/7/);
  const d=await getDetail('ai_server',fake);
@@ -75,5 +88,5 @@ const fake={query:async(q,args=[])=>{requests.push([q,args]);
  assert(!('candidate' in d.stocks[0]));
  assert(requests.every(([q])=>!/^\s*(DELETE|UPDATE|INSERT|ALTER)/i.test(q)));
  assert.equal(VERSION,'capital-money-corebreadth50-samecore100-v1','settled money model altered');
- console.log('Capital Flow v2.6.8.17 PASS: sector observation, four crossover states, company raw flows, no candidate picks, SELECT-only queries.');
+ console.log('Capital Flow v2.6.8.18 PASS: sector observation, four crossover states, company raw flows, no candidate picks, SELECT-only queries.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
