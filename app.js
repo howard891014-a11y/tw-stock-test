@@ -5007,19 +5007,18 @@ async function runManualXYRecovery(){
 $("manualXYRecovery")?.addEventListener("click",runManualXYRecovery);
 
 // StockZone industry changes — Blob candidates only; never write approved taxonomy.
-let szIndustryChangeSecret='',szIndustryChangeEntries=[],szIndustryChangeBusy=false;
+// Industry-change candidate viewer: no stand-alone password. A future developer-mode
+// lock MUST protect the whole developer section and *all* its server mutations.
+let szIndustryChangeEntries=[],szIndustryChangeBusy=false;
 const szIndustryChangeApi='/api/fundflow?view=industry-changes';
 function szIndustryText(id,text){const node=$(id);if(node)node.textContent=text;}
-function szIndustryToken(){
-  if(szIndustryChangeSecret)return szIndustryChangeSecret;
-  const key=window.prompt('輸入開發者產業異動密鑰（只在本頁暫存，不會顯示於其他使用者）');
-  if(!key)return '';
-  szIndustryChangeSecret=key.trim();return szIndustryChangeSecret;
-}
 async function szIndustryRequest(action,method='GET',body=null){
-  const key=szIndustryToken();if(!key)throw new Error('尚未輸入開發者密鑰');
-  const res=await fetch(`${szIndustryChangeApi}&action=${encodeURIComponent(action)}`,{method,cache:'no-store',headers:{'Authorization':`Bearer ${key}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
-  if(res.status===401)szIndustryChangeSecret='';return await readJson(res,'產業異動');
+  const res=await fetch(`${szIndustryChangeApi}&action=${encodeURIComponent(action)}`,{
+    method,cache:'no-store',credentials:'same-origin',
+    headers:{...(body?{'Content-Type':'application/json'}:{})},
+    ...(body?{body:JSON.stringify(body)}:{})
+  });
+  return await readJson(res,'產業異動');
 }
 function szIndustryRender(){
   const container=$('industryChangeRows');if(!container)return;container.replaceChildren();
@@ -5041,7 +5040,6 @@ async function szIndustryRefresh(){
   if(szIndustryChangeBusy)return;szIndustryChangeBusy=true;szIndustryText('industryChangeStatus','讀取異動紀錄中…');
   try{const data=await szIndustryRequest('list');szIndustryChangeEntries=Array.isArray(data?.rows)?data.rows:[];szIndustryRender();const pending=szIndustryChangeEntries.filter(e=>!e.imported).length;szIndustryText('industryChangeStatus',`共 ${szIndustryChangeEntries.length} 筆｜未導入 ${pending} 筆｜已導入 ${szIndustryChangeEntries.length-pending} 筆`);}catch(e){szIndustryText('industryChangeStatus',`讀取失敗：${e.message}`);}finally{szIndustryChangeBusy=false;}
 }
-$('industryChangeLogin')?.addEventListener('click',()=>{szIndustryChangeSecret='';if(szIndustryToken())szIndustryRefresh();});
 $('industryChangeRefresh')?.addEventListener('click',szIndustryRefresh);
 $('industryChangeScan')?.addEventListener('click',async()=>{
   if(szIndustryChangeBusy)return;szIndustryText('industryChangeStatus','正在掃描官方名單（結果只存於 Private Blob）…');
@@ -5050,7 +5048,7 @@ $('industryChangeScan')?.addEventListener('click',async()=>{
 $('industryChangeExport')?.addEventListener('click',()=>{
   const pending=szIndustryChangeEntries.filter(e=>!e.imported);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),source:'StockZone candidate-only Private Blob',rows:pending},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`StockZone_待鐵證產業異動_${new Date().toISOString().slice(0,10)}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
 });
-$('szDeveloperMode')?.addEventListener('toggle',e=>{if(e.target.open&&szIndustryChangeSecret)szIndustryRefresh();});
+$('szDeveloperMode')?.addEventListener('toggle',e=>{if(e.target.open)szIndustryRefresh();});
 
 let manualTaxonomySyncLoading=false;
 function downloadTaxonomyDiagnostic(payload){
