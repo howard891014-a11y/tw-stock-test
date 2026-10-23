@@ -1,0 +1,52 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {VERSION,CREATE_SQL,UPSERT_SQL,LOAD_SQL,COVERAGE_SQL,loadMoney,refreshMoney,asData}=require('../lib/capital-flow-money');
+const front=fs.readFileSync('capital-flow.js','utf8'),server=fs.readFileSync('lib/capital-flow.js','utf8');
+assert.equal(VERSION,'capital-money-corebreadth50-samecore100-v1');
+assert(UPSERT_SQL.includes('s.core_buy::numeric/NULLIF(s.core_valid,0)>0.50'));
+assert(UPSERT_SQL.includes('s.core_sell::numeric/NULLIF(s.core_valid,0)>0.50'));
+assert(UPSERT_SQL.includes('s.core_pos_gross ELSE s.core_neg_gross'));
+assert(UPSERT_SQL.includes('0.2::numeric/(m.nc+0.2*m.nr)'));
+assert(UPSERT_SQL.includes('LEAST('));
+assert(UPSERT_SQL.includes('cash*(1-COALESCE(u.allocated_related,0))/m.nc'));
+assert(UPSERT_SQL.includes('HAVING COUNT(*) FILTER(WHERE importance=\'core\')>0'));
+assert(UPSERT_SQL.includes('AND (SELECT n FROM oldest)=5'));
+for(const forbidden of ['DROP TABLE','TRUNCATE','DELETE FROM','UPDATE institutional_trading_daily','UPDATE market_business_xy2_topic_daily','UPDATE market_daily_history'])
+ assert(!UPSERT_SQL.includes(forbidden),'money query may not mutate original data');
+assert(LOAD_SQL.includes('method_version=$2'));
+assert(CREATE_SQL.includes('PRIMARY KEY (trade_date, tag_id)'));
+
+const api=fs.readFileSync('api/capital-flow.js','utf8');
+const config=JSON.parse(fs.readFileSync('vercel.json','utf8'));
+assert.equal(fs.readdirSync('api').filter(x=>x.endsWith('.js')).length,12,'Vercel Hobby max 12 API functions');
+assert(api.includes('CAPITAL_CRON_SCHEDULE') && api.includes('refreshMoney(asOf,sql)'));
+assert(!fs.existsSync('api/capital-flow-refresh.js'));
+assert(config.crons.some(x=>x.path==='/api/capital-flow' && x.schedule==='8 8 * * 1-5'));
+
+assert(front.includes('money1E8') && front.includes('money5E8'));
+assert(front.includes('法人估算淨額（億元）'));
+assert(front.includes('n(s[key])!==null'));
+assert(front.includes('money?.ready'));
+assert(!front.includes('依${state.period===\'1\'?\'今日\':\'近5日\'}法人淨流量比'));
+assert(server.includes('Object.assign(s,money.rows.get(s.tagId)||{})'));
+let requests=[];
+const fake={query:async (q,args)=>{requests.push({q,args});
+ if(q===LOAD_SQL)return [];
+ if(q===COVERAGE_SQL)return [{price_stocks:1863,prior_stocks:1863}];
+ if(q===CREATE_SQL)return [];
+ if(q===UPSERT_SQL)return Array.from({length:198},(_,i)=>({tag_id:String(i)}));
+ throw Error('Unexpected SQL');
+}};
+(async()=>{
+ const r=await refreshMoney('2026-10-22',fake);
+ assert.equal(r.ok,true);assert.equal(r.changedRows,198);
+ assert.deepEqual(requests.map(x=>x.q),[COVERAGE_SQL,CREATE_SQL,UPSERT_SQL]);
+ assert.equal(requests.at(-1).args[1],VERSION);
+ const x=asData({flow_1_e8:'57.125',flow_5_e8:'153.26',core_valid_5:43,core_buy_5:24});
+ assert.equal(x.money1E8,57.125);assert.equal(x.money5E8,153.26);assert.equal(x.moneyCoreBuy5,24);
+ const stale={query:async(q)=>q===LOAD_SQL?[]:[{price_stocks:1000,prior_stocks:1863}]};
+ const miss=await loadMoney('2026-10-22',stale,true);
+ assert.equal(miss.ready,false);
+ console.log('Capital money v2.6.8.15 PASS: date coherence, gross caps, 1D/5D, gate, read cache, partial feed guard, original models untouched');
+})().catch(e=>{console.error(e);process.exitCode=1;});
