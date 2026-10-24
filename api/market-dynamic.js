@@ -1,7 +1,6 @@
 const { getMarketDynamicCached } = require('../lib/market-dynamic');
 const { getMarketIndexQuote } = require('../lib/market-index-eod');
 module.exports=async function handler(req,res){
-  if(String(req.query?.sz_recalculate||'')==='1')return require('../lib/w3-recalculate')(req,res);
   // Explicit shadow selection; each original immutable model stays independent.
   if(String(req.query?.sz_shadow||'')==='d111')return require('../lib/api-routes/w3-shadow').d111(req,res);
   if(String(req.query?.sz_shadow||'')==='d112')return require('../lib/api-routes/w3-shadow').d112(req,res);
