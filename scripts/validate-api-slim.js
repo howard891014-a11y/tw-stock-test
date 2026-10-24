@@ -25,7 +25,7 @@ assert(q.includes('async function szStockActionHandler')&&q.includes('stockRoute
 assert(f.includes('async function szDw4Handler')&&f.includes('persist:false'));
 assert(m.includes("require('../lib/api-routes/w3-shadow').d111")&&m.includes("require('../lib/api-routes/w3-shadow').d112"));
 assert(fs.existsSync(path.join(root,'lib/api-routes/w3-shadow.js')));
-assert.equal((config.crons||[]).length,7,'All existing scheduled jobs must be preserved');
+assert.equal((config.crons||[]).length,8,'Seven existing scheduled jobs plus private D study cron must be preserved');
 assert.equal((config.crons||[]).filter(x=>x.path==='/api/fundflow?view=industry-changes&action=scan').length,1);
 assert(!Object.keys(config.functions||{}).some(x=>!fs.existsSync(path.join(root,x))));
 
