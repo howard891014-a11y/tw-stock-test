@@ -9,6 +9,7 @@ const mock=(name,exports)=>{const p=require.resolve(name);require.cache[p]={id:p
 mock('../lib/db',{getSql(){throw new Error('unit tests must NEVER connect Neon');}});
 mock('../lib/sync-service',{_test:{companyProfileRows(){throw new Error('not used');}}});
 const moduleUnderTest=require('../lib/industry-change-monitor');
+const actionMonitor=require('../lib/company-action-monitor');
 const mon=moduleUnderTest._test;
 const date='2026-10-23';
 const c=(code,name,market,industry='電機機械',business='原有產品')=>({stock_code:code,stock_name:name,market,industry,industry_code:'01',main_business:business});
@@ -57,6 +58,8 @@ async function scanSmoke(){
 async function apiAccessSmoke(){
   const api=require('../lib/industry-change-api'),oldToken=process.env.BLOB_READ_WRITE_TOKEN,oldCron=process.env.CRON_SECRET;
   const originals={listChanges:moduleUnderTest.listChanges,scan:moduleUnderTest.scan,removeConfirmed:moduleUnderTest.removeConfirmed};
+  const originalActions={list:actionMonitor.list,scanRecent:actionMonitor.scanRecent,removeApproved:actionMonitor.removeApproved};
+  actionMonitor.list=async()=>[];actionMonitor.scanRecent=async()=>({ok:true,complete:true,inserted:0});actionMonitor.removeApproved=async id=>({ok:true,removed:id});
   moduleUnderTest.listChanges=async()=>[];moduleUnderTest.scan=async()=>({ok:true,neonWrites:0});moduleUnderTest.removeConfirmed=async id=>({ok:true,removed:id});
   process.env.BLOB_READ_WRITE_TOKEN='fake-unit-test-token';process.env.CRON_SECRET='fake-cron';
   async function request(act='list',method='GET',headers={},body={}){
@@ -70,13 +73,15 @@ async function apiAccessSmoke(){
     const origin={host:'stockzone.example',origin:'https://stockzone.example','sec-fetch-site':'same-origin','content-type':'application/json'};
     assert.equal((await request('scan','POST',origin)).code,200,'browser manual scan remains available');
     assert.equal((await request('delete','POST',origin,{id:'f'.repeat(24)})).code,200,'verified-row delete endpoint remains available');
+    assert.equal((await request('delete-action','POST',origin,{id:'f'.repeat(24)})).code,200,'verified company-action candidate delete');
+    assert.equal((await request('scan-actions','POST',origin)).code,200,'manual corporate action scan');
     assert.equal((await request('delete','POST',{host:'stockzone.example',origin:'https://stranger.example','sec-fetch-site':'cross-site'},{id:'f'.repeat(24)})).code,403,'cross-origin mutation denied');
     assert.equal((await request('delete','POST',{host:'stockzone.example'},{id:'f'.repeat(24)})).code,403,'originless mutation denied');
     assert.equal((await request('confirm','POST',origin,{ids:['f'.repeat(24)]})).code,405,'cannot mark candidates imported using a public endpoint');
     delete process.env.BLOB_READ_WRITE_TOKEN;
     assert.equal((await request('list')).code,503,'missing Private Blob prevents fake-success');
   }finally{
-    Object.assign(moduleUnderTest,originals);
+    Object.assign(moduleUnderTest,originals);Object.assign(actionMonitor,originalActions);
     if(oldToken===undefined)delete process.env.BLOB_READ_WRITE_TOKEN;else process.env.BLOB_READ_WRITE_TOKEN=oldToken;
     if(oldCron===undefined)delete process.env.CRON_SECRET;else process.env.CRON_SECRET=oldCron;
   }
