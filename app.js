@@ -4192,7 +4192,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.8.21";
+const FUND_FLOW_CLIENT_REV="2.6.8.22";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4517,26 +4517,6 @@ function szW3Label(s,warning=false){
   if(s==='RiskOn')return warning?'風險升溫':'多頭環境';
   return '資料待補';
 }
-// Local page-memory only: never persist the management token to browser storage.
-let szW3RecheckSecret='';
-async function szW3RecheckDate(date,button,cell){
-  const secret=szW3RecheckSecret||window.prompt('重新運算會查詢Neon原始資料。請輸入 W3_RECALC_SECRET 或 CRON_SECRET 管理密鑰：');
-  if(!secret)return;
-  szW3RecheckSecret=secret;
-  button.disabled=true;button.textContent='運算中…';
-  try{
-    const res=await fetch('/api/market-dynamic?sz_recalculate=1',{method:'POST',cache:'no-store',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
-      body:JSON.stringify({date})});
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok){if(res.status===401)szW3RecheckSecret='';throw new Error(data.error||'伺服器拒絕重新運算')}
-    if(data.computed){button.textContent='已完成';cell.title=data.note||'重算完成';
-      await loadMarketDynamic(true);
-    }else{button.textContent='仍不足';cell.title=(data.missing||[]).join('、')+'。'+(data.note||'');
-      window.alert(date+' 仍然資料不足：\n'+(data.missing||[]).join('、')+'\n原始資料缺漏時，重跑公式無法補出結果。');}
-  }catch(e){button.textContent='重新運算';window.alert('重新運算未完成：'+String(e?.message||e));}
-  finally{button.disabled=false; if(button.textContent==='運算中…')button.textContent='重新運算';}
-}
 function renderW3Verification(){
  const w=marketDynamicData?.w3||{}, records=Array.isArray(w.records)?w.records:[],latest=records.at(-1)||null;
  const dataDate=marketStableTradeDate()||String(w.sourceDate||marketDynamicData?.latest?.date||'');
@@ -4552,11 +4532,6 @@ function renderW3Verification(){
     const status=r.status==='historical_saved'?'Neon已存・未重驗':r.status==='computed'?'已運算':r.status==='incomplete'?'資料不足':'待驗證';
     for(const v of [r.date,label,szDateTaiwan(r.computedAt)]){const td=document.createElement('td');td.textContent=v||'--';tr.appendChild(td)}
     const td=document.createElement('td');td.textContent=status;
-    if(r.status==='incomplete'){
-      const btn=document.createElement('button');btn.type='button';btn.className='sz-w3-recheck';
-      btn.textContent='重新運算';btn.title='管理員操作：使用原始W3公式重跑；缺少原始資料仍會不足';
-      btn.addEventListener('click',()=>szW3RecheckDate(r.date,btn,td));td.appendChild(btn);
-    }
     tr.appendChild(td);rows.appendChild(tr);
   }}
 }
