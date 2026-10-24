@@ -4192,7 +4192,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.8.22";
+const FUND_FLOW_CLIENT_REV="2.6.8.23";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4774,6 +4774,18 @@ async function runManualResearch500Backfill(){
     if(status)status.textContent=!result.ok?`研究未寫入：${result.reason||"品質檢查未通過"}${result.failedDate?`（${result.failedDate}）`:""}；本次暫存 ${result.stored??result.officialStagedRows??0} 筆`:result.skipped?`本次暫存 ${result.officialStagedRows??0} 筆，研究未新增：${result.reason||"等待足夠暖機資料"}｜暫存有效日期 ${result.stageSourceDays??"--"} 日`:
       `本批官方抓取 ${result.officialFetchedDays||0} 日，新增研究 ${result.processedDates||0} 日、${result.insertedOrReplacedRows||0} 筆；研究 ${result.after?.currentDays||0}/500D`;
     historyProgressFetchedAt=0;await loadHistoryProgress(true);
+    // New verified Neon releases are discovered dynamically; no new deploy
+    // after SZ-鐵證 publishing. Only candidate inbox is scanned/refreshed.
+    try{
+      const actionCheck=await szIndustryRequest('scan-actions','POST');
+      await szIndustryRefresh();
+      if(!actionCheck.complete&&status){status.classList.add('is-warn');status.classList.remove('is-ok');
+        status.textContent+='｜公司行動來源未全數成功，暫存仍保留，可稍後重新偵測';}
+    }catch(actionError){
+      try{await szIndustryRefresh();}catch{}
+      if(status){status.classList.add('is-warn');status.classList.remove('is-ok');
+        status.textContent+=`｜公司行動偵測未完成：${actionError?.message||actionError}`;}
+    }
   }catch(e){if(status)status.textContent=`本批未確認完成：${e?.message||e}；可再按一次續補，已暫存資料不會重複寫入。`;}
   finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!research500TaxonomyReady||!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="手動補齊 500D（每次最多 3 個官方日期）";}}
 }
@@ -5030,13 +5042,13 @@ function szIndustryRender(){
   if(!szIndustryChangeEntries.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.className='sz-change-empty';td.textContent='目前沒有異動紀錄';tr.append(td);container.append(tr);return;}
   for(const row of szIndustryChangeEntries){
     const tr=document.createElement('tr');
-    const fields=[row.date||'—',row.name||'—',row.code||'—',row.industry||'待分類',row.market||'—',row.role||'待驗證'];
+    const fields=[row.date||'—',row.name||'—',row.code||'—',row.industry||'待分類',row.behavior||row.market||'—',row.role||'待驗證'];
     for(const field of fields){const td=document.createElement('td');td.textContent=field;tr.append(td);}
     const td=document.createElement('td'),label=document.createElement('span');label.className=row.imported?'sz-change-done':'sz-change-pending';label.textContent=row.imported?'已導入':'未導入';td.append(label);
     // Deliberate two-layer permission: no X for unimported rows, and API independently denies deletion.
     if(row.imported){const button=document.createElement('button');button.type='button';button.className='sz-change-remove';button.textContent='×';button.setAttribute('aria-label',`刪除已導入 ${row.name||row.code} 異動紀錄`);button.addEventListener('click',async()=>{
-      if(!window.confirm(`刪除 ${row.name||row.code} 已導入的異動紀錄？（不修改正式分類）`))return;
-      try{await szIndustryRequest('delete','POST',{id:row.id});szIndustryChangeEntries=szIndustryChangeEntries.filter(e=>e.id!==row.id);szIndustryRender();szIndustryText('industryChangeStatus','已刪除已導入紀錄，正式分類未受影響');}catch(e){szIndustryText('industryChangeStatus',`刪除失敗：${e.message}`);}
+      if(!window.confirm(`刪除 ${row.name||row.code}「${row.behavior||'異動'}」已導入的暫存事件？（不刪 Neon 正式核准紀錄，也不修改分類）`))return;
+      try{await szIndustryRequest(row.recordType==='company-action'?'delete-action':'delete','POST',{id:row.id});szIndustryChangeEntries=szIndustryChangeEntries.filter(e=>e.id!==row.id);szIndustryRender();szIndustryText('industryChangeStatus','已刪除暫存事件，Neon 正式核准紀錄及分類未受影響');}catch(e){szIndustryText('industryChangeStatus',`刪除失敗：${e.message}`);}
     });td.append(button);}
     tr.append(td);container.append(tr);
   }
@@ -5047,11 +5059,11 @@ async function szIndustryRefresh(){
 }
 $('industryChangeRefresh')?.addEventListener('click',szIndustryRefresh);
 $('industryChangeScan')?.addEventListener('click',async()=>{
-  if(szIndustryChangeBusy)return;szIndustryText('industryChangeStatus','正在掃描官方名單（結果只存於 Private Blob）…');
-  try{const data=await szIndustryRequest('scan','POST');szIndustryText('industryChangeStatus',`偵測完成：${data.mode==='initialized-baseline'?'已建立基準名單':`新增 ${data.events} 筆待驗證異動`}（Neon 寫入0筆）`);await szIndustryRefresh();}catch(e){szIndustryText('industryChangeStatus',`掃描失敗：${e.message}`);}
+  if(szIndustryChangeBusy)return;szIndustryText('industryChangeStatus','正在偵測產業異動與官方公司行動（暫存與正式 Neon 分離）…');
+  try{const data=await szIndustryRequest('scan','POST');await szIndustryRefresh();szIndustryText('industryChangeStatus',`偵測${data.partial?'部分完成':'完成'}：產業新增 ${data.industry?.events??'—'} 筆、公司行動新增 ${data.actions?.inserted??'—'} 筆暫存｜正式 Neon 不修改${data.errors?.length?`｜未完成：${data.errors.join('；').slice(0,380)}`:''}`);}catch(e){szIndustryText('industryChangeStatus',`掃描失敗：${e.message}`);}
 });
 $('industryChangeExport')?.addEventListener('click',()=>{
-  const pending=szIndustryChangeEntries.filter(e=>!e.imported);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),source:'StockZone candidate-only Private Blob',rows:pending},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`StockZone_待鐵證產業異動_${new Date().toISOString().slice(0,10)}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+  const pending=szIndustryChangeEntries.filter(e=>!e.imported);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),source:'StockZone SZ-鐵證待審核（產業 Private Blob／公司行動 Neon 暫存）',rows:pending},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`StockZone_待鐵證產業與公司行動_${new Date().toISOString().slice(0,10)}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
 });
 $('szDeveloperMode')?.addEventListener('toggle',e=>{if(e.target.open)szIndustryRefresh();});
 

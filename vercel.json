@@ -1,6 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
+    "api/fundflow.js": {
+      "regions": ["sin1"],
+      "maxDuration": 60
+    },
     "api/sync-status.js": {
       "regions": [
         "sin1"

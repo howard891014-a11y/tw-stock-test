@@ -2849,7 +2849,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.22</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.23</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3595,17 +3595,17 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 </section>
 <details class="sz-settings-fold" id="szW3Records"><summary>W3 運算紀錄</summary><div class="sz-fold-body"><div id="szW3RecordMeta" class="sz-w3-record-meta">尚未載入運算紀錄</div><div id="szW3Storage" class="sz-w3-record-meta">Neon W3 容量：讀取中｜警戒 0.5 MB｜管理目標 1 MB（非硬上限）</div><div class="sz-w3-table-wrap"><table class="sz-w3-table"><thead><tr><th>交易日</th><th>大盤環境</th><th>運算時間</th><th>結果</th></tr></thead><tbody id="szW3RecordRows"></tbody></table></div><button type="button" id="szW3Download">下載 W3 CSV</button></div></details>
 <details class="sz-settings-fold" id="szDeveloperMode"><summary>開發者模式</summary><div class="sz-fold-body"><section class="settings-manual-update settings-validation" aria-label="產業異動" id="industryChangeSection">
-  <div class="settings-manual-update-head"><span>產業異動</span><small>官方異動自動偵測｜鐵證審核後導入</small></div>
+  <div class="settings-manual-update-head"><span>產業異動</span><small>官方異動＋增資／減資／分割／除權｜鐵證審核後導入</small></div>
   <div class="settings-manual-update-box">
-    <p>僅保存待驗證異動於獨立 Private Blob，不修改 Neon 正式分類。未導入禁止刪除；已導入才會顯示 ×。</p>
+    <p>產業異動暫存於 Private Blob；增資／減資／分割／除權待驗證事件暫存於 Neon。經 SZ-鐵證確認並正式寫入 Neon 後才顯示「已導入」與 ×；× 只刪暫存，不刪正式紀錄。</p>
     <div class="sz-change-toolbar">
       <button type="button" id="industryChangeRefresh">讀取異動</button>
       <button type="button" id="industryChangeScan">立即偵測</button>
       <button type="button" id="industryChangeExport">匯出待驗證 JSON</button>
     </div>
-    <small class="settings-manual-update-status" id="industryChangeStatus">尚未載入｜每天收盤後自動檢查上市、上櫃、公司業務變化</small>
+    <small class="settings-manual-update-status" id="industryChangeStatus">尚未載入｜定時檢查產業與公司行動，官方來源失敗會顯示未完成</small>
     <div class="sz-change-scroll"><table class="sz-change-table" aria-label="產業異動紀錄">
-      <thead><tr><th>日期</th><th>公司名</th><th>公司代號</th><th>產業</th><th>上市櫃／下市</th><th>核心／相關</th><th>已／未導入</th></tr></thead>
+      <thead><tr><th>日期</th><th>公司名</th><th>公司代號</th><th>產業</th><th>行為</th><th>核心／相關</th><th>已／未導入</th></tr></thead>
       <tbody id="industryChangeRows"><tr><td colspan="7" class="sz-change-empty">開啟開發者模式後自動讀取</td></tr></tbody>
     </table></div>
   </div>
@@ -3640,12 +3640,9 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 </section>
 <details class="sz-settings-fold sz-developer-advanced" id="szDeveloperAdvanced"><summary>進階維護／故障排除（平時不需操作）</summary><div class="sz-fold-body">
   <p class="sz-advanced-note">以下為事故修復、歷史研究補值與只讀稽核工具。例行更新使用上方「產業異動」與「更新 XY／分類快照」，不需操作這些按鈕。</p>
-  <details class="sz-settings-fold" id="szAdvancedData"><summary>歷史資料與公司行動修復</summary><div class="sz-fold-body">
+  <details class="sz-settings-fold" id="szAdvancedData"><summary>歷史資料修復</summary><div class="sz-fold-body">
   <div class="settings-research-backfill-actions"><button type="button" id="manualResearch500Backfill" disabled>手動補齊 500D（每次最多 3 個官方日期）</button><small id="manualResearch500Status" aria-live="polite">手動從 TWSE＋TPEx 補舊日期；只暫存必要欄位，不改日常 120D／90D。</small></div>
   <div class="settings-research-backfill-actions"><button type="button" id="manualXYRecovery">安全恢復 203 產業／XY（不重算 500D）</button><small id="manualXYRecoveryStatus" aria-live="polite">適用於分類成員或 XY 被意外清空；從定案 203 類恢復，分批建立衍生資料，不碰既有 500D／X／Y。</small></div>
-  <div class="settings-research-backfill-actions"><button type="button" id="manualActionScan">批次查官方公司行動（2025/2/25 起）</button><small id="manualActionScanStatus" aria-live="polite">上市／上櫃除權息、減資、面額變更；官方來源缺失會中止，不會把未查證當作無事件。</small></div>
-  <div class="settings-research-backfill-actions"><button type="button" id="manualActionPreview">預覽下一批公司行動的 Y 修正</button><small id="manualActionPreviewStatus" aria-live="polite">先比對官方事件、原始股價及舊 Y，驗證未通過不寫入。</small></div>
-  <div class="settings-research-backfill-actions"><button type="button" id="manualActionApply">確認後分批校正報酬／Y（可續跑）</button><small id="manualActionApplyStatus" aria-live="polite">只修核對通過的個股權息事件；現增、減資、分割尚未核對換股比例時會中止。備份原值、不動 X。</small></div>
   <div class="settings-research-backfill-actions"><button type="button" id="manualResearchPriceRepair">一鍵校正舊研究報酬／Y（自動分批）</button><small id="manualResearchPriceRepairStatus" aria-live="polite">僅處理截至 2026/10/13 已存在的研究歷史；先備份，官方價格不足會停止。不動 X、正式 XY 與 500D 天數。</small></div>
   <div class="settings-research-backfill-actions"><button type="button" id="manualResearchXGapRepair">一鍵修復研究 X 中段缺口（自動分批）</button><small id="manualResearchXGapStatus" aria-live="polite">只補 X／法人 1D／5D 缺值；保留原有 Y、X 與 500D 計數。</small></div>
 </div></details>
@@ -3718,8 +3715,8 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.22"></script>
-  <script src="./app.js?v=2.6.8.22"></script>
+  <script src="./capital-flow.js?v=2.6.8.23"></script>
+  <script src="./app.js?v=2.6.8.23"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

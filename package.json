@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.8.22",
+  "version": "2.6.8.23",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -61,7 +61,7 @@
     "validate:capital-flow": "node scripts/validate-capital-flow.js",
     "validate:featured-neon": "node scripts/test-featured-neon-daily.js",
     "validate:capital-money": "node scripts/validate-capital-money.js",
-    "validate:industry-changes": "node scripts/validate-industry-changes.js",
+    "validate:industry-changes": "node scripts/validate-industry-changes.js && node scripts/validate-company-action-inbox.js",
     "validate:api-slim": "node scripts/validate-api-slim.js",
     "validate:d-policy": "node scripts/validate-stockzone-d.js",
     "validate:d-paper": "node scripts/validate-stockzone-d-paper.js",
