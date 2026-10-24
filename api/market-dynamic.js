@@ -1,6 +1,7 @@
 const { getMarketDynamicCached } = require('../lib/market-dynamic');
 const { getMarketIndexQuote } = require('../lib/market-index-eod');
 module.exports=async function handler(req,res){
+  if(String(req.query?.sz_recalculate||'')==='1')return require('../lib/w3-recalculate')(req,res);
   // Explicit shadow selection; each original immutable model stays independent.
   if(String(req.query?.sz_shadow||'')==='d111')return require('../lib/api-routes/w3-shadow').d111(req,res);
   if(String(req.query?.sz_shadow||'')==='d112')return require('../lib/api-routes/w3-shadow').d112(req,res);
@@ -13,8 +14,8 @@ module.exports=async function handler(req,res){
       return res.status(200).json(quote);
     }
     // Regular page views never trigger repeat raw data synchronization/W3 audits.
-    const data=await getMarketDynamicCached({days:req.query?.days});
-    res.setHeader('Cache-Control','no-store'); // Do not retain yesterday's model behind CDN TTL.
+    const data=await getMarketDynamicCached({days:req.query?.days,fresh:String(req.query?.refresh||'')==='1'});
+    res.setHeader('Cache-Control',String(req.query?.refresh||'')==='1'?'no-store':'public, s-maxage=60, stale-while-revalidate=60'); // No Neon reads when Blob is ready.
     return res.status(200).json(data);
   }catch(e){
     console.error('market-dynamic snapshot read failed',e);
