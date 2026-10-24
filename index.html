@@ -7,6 +7,8 @@
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
+.sz-w3-recheck{margin-left:7px;padding:3px 7px;background:transparent;border:1px solid #cbd5e1;border-radius:5px;color:#475569;font-size:11px;white-space:nowrap}.sz-w3-recheck:disabled{opacity:.55;cursor:not-allowed}
+
 /* v2.6.8.4 compact TPEx disposal details */
 .disposal-extra-detail{margin-top:10px;font-size:12px;line-height:1.6;color:#64748b}
 .disposal-extra-detail summary{cursor:pointer;font-weight:600;color:#475569;user-select:none}
@@ -2848,7 +2850,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.20</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.21</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3592,7 +3594,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
   <div class="settings-ready-grid"><span id="historyLiveReady">20D Live</span><span id="historyBacktestReady">近期 Raw</span><span id="historyResearchReady">500D Research</span></div>
   <small class="settings-history-note" id="historyProgressNote">Raw 採 bounded retention；500D 研究使用窄欄位 numeric compact history，長期個股股價沿用 Yahoo 5Y Browser cache。</small>
 </section>
-<details class="sz-settings-fold" id="szW3Records"><summary>W3 運算紀錄</summary><div class="sz-fold-body"><div id="szW3RecordMeta" class="sz-w3-record-meta">尚未載入運算紀錄</div><div id="szW3Storage" class="sz-w3-record-meta">Neon 容量：讀取中｜警戒 10 MB｜管理目標 20 MB</div><div class="sz-w3-table-wrap"><table class="sz-w3-table"><thead><tr><th>交易日</th><th>大盤環境</th><th>運算時間</th><th>結果</th></tr></thead><tbody id="szW3RecordRows"></tbody></table></div><button type="button" id="szW3Download">下載 W3 CSV</button></div></details>
+<details class="sz-settings-fold" id="szW3Records"><summary>W3 運算紀錄</summary><div class="sz-fold-body"><div id="szW3RecordMeta" class="sz-w3-record-meta">尚未載入運算紀錄</div><div id="szW3Storage" class="sz-w3-record-meta">Neon W3 容量：讀取中｜警戒 0.5 MB｜管理目標 1 MB（非硬上限）</div><div class="sz-w3-table-wrap"><table class="sz-w3-table"><thead><tr><th>交易日</th><th>大盤環境</th><th>運算時間</th><th>結果</th></tr></thead><tbody id="szW3RecordRows"></tbody></table></div><button type="button" id="szW3Download">下載 W3 CSV</button></div></details>
 <details class="sz-settings-fold" id="szDeveloperMode"><summary>開發者模式</summary><div class="sz-fold-body"><section class="settings-manual-update settings-validation" aria-label="產業異動" id="industryChangeSection">
   <div class="settings-manual-update-head"><span>產業異動</span><small>官方異動自動偵測｜鐵證審核後導入</small></div>
   <div class="settings-manual-update-box">
@@ -3717,8 +3719,8 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.20"></script>
-  <script src="./app.js?v=2.6.8.20"></script>
+  <script src="./capital-flow.js?v=2.6.8.21"></script>
+  <script src="./app.js?v=2.6.8.21"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

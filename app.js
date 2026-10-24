@@ -4192,7 +4192,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.8.20";
+const FUND_FLOW_CLIENT_REV="2.6.8.21";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
@@ -4517,6 +4517,26 @@ function szW3Label(s,warning=false){
   if(s==='RiskOn')return warning?'風險升溫':'多頭環境';
   return '資料待補';
 }
+// Local page-memory only: never persist the management token to browser storage.
+let szW3RecheckSecret='';
+async function szW3RecheckDate(date,button,cell){
+  const secret=szW3RecheckSecret||window.prompt('重新運算會查詢Neon原始資料。請輸入 W3_RECALC_SECRET 或 CRON_SECRET 管理密鑰：');
+  if(!secret)return;
+  szW3RecheckSecret=secret;
+  button.disabled=true;button.textContent='運算中…';
+  try{
+    const res=await fetch('/api/market-dynamic?sz_recalculate=1',{method:'POST',cache:'no-store',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
+      body:JSON.stringify({date})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){if(res.status===401)szW3RecheckSecret='';throw new Error(data.error||'伺服器拒絕重新運算')}
+    if(data.computed){button.textContent='已完成';cell.title=data.note||'重算完成';
+      await loadMarketDynamic(true);
+    }else{button.textContent='仍不足';cell.title=(data.missing||[]).join('、')+'。'+(data.note||'');
+      window.alert(date+' 仍然資料不足：\n'+(data.missing||[]).join('、')+'\n原始資料缺漏時，重跑公式無法補出結果。');}
+  }catch(e){button.textContent='重新運算';window.alert('重新運算未完成：'+String(e?.message||e));}
+  finally{button.disabled=false; if(button.textContent==='運算中…')button.textContent='重新運算';}
+}
 function renderW3Verification(){
  const w=marketDynamicData?.w3||{}, records=Array.isArray(w.records)?w.records:[],latest=records.at(-1)||null;
  const dataDate=marketStableTradeDate()||String(w.sourceDate||marketDynamicData?.latest?.date||'');
@@ -4524,13 +4544,23 @@ function renderW3Verification(){
  const put=(id,v)=>{const e=$(id);if(e)e.textContent=v||'--'};
  put('marketW3TradeDate',dataDate);put('marketW3Calculated',szDateTaiwan(computed));
  put('marketW3SwitchDate',w.lastSwitchDate||'尚無切換紀錄');put('marketW3HeldDays',Number.isFinite(Number(w.heldTradingDays))?`${w.heldTradingDays} 個交易日`:'--');
- const storage=$('szW3Storage');if(storage){const bytes=Number(w.storageBytes);storage.textContent=Number.isFinite(bytes)?`Neon W3：${(bytes/1048576).toFixed(3)} MB / 20 MB｜警戒 10 MB｜每日結果長期保留`:'Neon W3 容量尚未取得｜警戒 10 MB｜管理目標 20 MB';storage.style.color=bytes>=10*1048576?'#b45309':''}
- const meta=$('szW3RecordMeta');if(meta)meta.textContent=`W3-D.1.2 正式版｜${records.length} 筆｜最新資料 ${dataDate||'--'}`;
- const rows=$('szW3RecordRows');if(rows){rows.replaceChildren();for(const r of [...records].reverse().slice(0,500)){
- const tr=document.createElement('tr');for(const v of [r.date,r.valid?szW3Label(r.regime,r.warning):'資料不足',szDateTaiwan(r.computedAt),r.status==='incomplete'?'資料不足':r.status==='computed'?'已運算':'待驗證']){const td=document.createElement('td');td.textContent=v||'--';tr.appendChild(td)}rows.appendChild(tr)
- }}
+ const storage=$('szW3Storage');if(storage){const bytes=Number(w.storageBytes);storage.textContent=Number.isFinite(bytes)?`Neon W3：${(bytes/1048576).toFixed(3)} MB｜警戒 0.5 MB｜管理目標 1 MB（非硬上限）`:'Neon W3 容量尚未取得｜警戒 0.5 MB｜管理目標 1 MB（非硬上限）';storage.style.color=bytes>=1048576?'#b91c1c':bytes>=0.5*1048576?'#b45309':''}
+ const meta=$('szW3RecordMeta');if(meta)meta.textContent=`W3-D.1.2 正式版｜${records.length} 筆（顯示最近500筆）｜來源 ${marketDynamicData?.meta?.snapshotBackend==='vercel-private-blob'?'Vercel快照':'備援讀取'}｜最新資料 ${dataDate||'--'}`;
+   const rows=$('szW3RecordRows');if(rows){rows.replaceChildren();for(const r of [...records].reverse().slice(0,500)){
+    const tr=document.createElement('tr');
+    const label=r.status==='historical_saved'?szW3Label(r.regime)+'（舊紀錄）':r.valid?szW3Label(r.regime,r.warning):'資料不足';
+    const status=r.status==='historical_saved'?'Neon已存・未重驗':r.status==='computed'?'已運算':r.status==='incomplete'?'資料不足':'待驗證';
+    for(const v of [r.date,label,szDateTaiwan(r.computedAt)]){const td=document.createElement('td');td.textContent=v||'--';tr.appendChild(td)}
+    const td=document.createElement('td');td.textContent=status;
+    if(r.status==='incomplete'){
+      const btn=document.createElement('button');btn.type='button';btn.className='sz-w3-recheck';
+      btn.textContent='重新運算';btn.title='管理員操作：使用原始W3公式重跑；缺少原始資料仍會不足';
+      btn.addEventListener('click',()=>szW3RecheckDate(r.date,btn,td));td.appendChild(btn);
+    }
+    tr.appendChild(td);rows.appendChild(tr);
+  }}
 }
-$('szW3Download')?.addEventListener('click',()=>{const rows=marketDynamicData?.w3?.records||[];if(!rows.length)return;const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv='\ufeff'+[['trade_date','regime','computed_at','status','input_hash','risk_score','warning','reason','model_version'],...rows.map(r=>[r.date,r.valid?r.regime:'',r.computedAt,r.status,r.inputHash,r.score,r.warning,r.reason,r.modelVersion])].map(r=>r.map(q).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='stockzone-w3-d112-records.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1500)});
+$('szW3Download')?.addEventListener('click',()=>{const rows=marketDynamicData?.w3?.records||[];if(!rows.length)return;const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv='\ufeff'+[['trade_date','regime','computed_at','status','input_hash','risk_score','warning','reason','model_version'],...rows.map(r=>[r.date,r.valid||r.status==='historical_saved'?r.regime:'',r.computedAt,r.status,r.inputHash,r.score,r.warning,r.reason,r.modelVersion])].map(r=>r.map(q).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='stockzone-w3-d112-records.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1500)});
 function marketBreadthComment(d){
   const ratio=marketNum(d?.advanceRatio), breadth5=marketNum(d?.breadth5), up=Number(d?.up||0), down=Number(d?.down||0);
   if(ratio===null)return "市場廣度資料待補。";
