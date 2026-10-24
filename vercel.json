@@ -54,6 +54,10 @@
     {
       "path": "/api/fundflow?view=industry-changes&action=scan",
       "schedule": "30 9 * * 1-5"
+    },
+    {
+      "path": "/api/market-dynamic-refresh?paper=stage3",
+      "schedule": "15 22 * * 1-5"
     }
   ],
   "rewrites": [

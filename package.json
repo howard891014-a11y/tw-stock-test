@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.8.19",
+  "version": "2.6.8.20",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -17,7 +17,7 @@
     "validate:blind-coverage": "node scripts/validate-blind-coverage.js",
     "validate:layout": "node scripts/validate-project-layout.js",
     "validate:storage-cleanup": "node scripts/validate-storage-cleanup.js",
-    "validate:all": "npm run validate:api-slim && npm run validate:capital-flow && npm run validate:v26718 && npm run validate:v26717 && npm run validate:v26716 && npm run validate:v26715 && npm run validate:research500-price-repair && npm run validate:research500-official && npm run validate:research-x-gap && npm run validate:price-path && npm run validate:dw4-probability && npm run validate:dw4 && npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:taxonomy-membership-fixes && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-path-classification && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification && npm run validate:taxonomy-final-freeze && npm run validate:taxonomy-203 && npm run validate:v2668 && npm run validate:v26613 && npm run validate:v26614 && npm run validate:v2675 && npm run validate:v2676 && npm run validate:v2677 && npm run validate:v2678 && npm run validate:v2679",
+    "validate:all": "npm run validate:d-policy && npm run validate:d-paper && npm run validate:d-stage3 && npm run validate:api-slim && npm run validate:capital-flow && npm run validate:v26718 && npm run validate:v26717 && npm run validate:v26716 && npm run validate:v26715 && npm run validate:research500-price-repair && npm run validate:research500-official && npm run validate:research-x-gap && npm run validate:price-path && npm run validate:dw4-probability && npm run validate:dw4 && npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:taxonomy-membership-fixes && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-path-classification && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification && npm run validate:taxonomy-final-freeze && npm run validate:taxonomy-203 && npm run validate:v2668 && npm run validate:v26613 && npm run validate:v26614 && npm run validate:v2675 && npm run validate:v2676 && npm run validate:v2677 && npm run validate:v2678 && npm run validate:v2679",
     "validate:market-topics": "node scripts/validate-market-topics.js",
     "validate:fundflow-browser": "node scripts/validate-fundflow-browser.js",
     "validate:fundflow-ui": "node scripts/validate-capital-flow.js",
@@ -62,6 +62,9 @@
     "validate:featured-neon": "node scripts/test-featured-neon-daily.js",
     "validate:capital-money": "node scripts/validate-capital-money.js",
     "validate:industry-changes": "node scripts/validate-industry-changes.js",
-    "validate:api-slim": "node scripts/validate-api-slim.js"
+    "validate:api-slim": "node scripts/validate-api-slim.js",
+    "validate:d-policy": "node scripts/validate-stockzone-d.js",
+    "validate:d-paper": "node scripts/validate-stockzone-d-paper.js",
+    "validate:d-stage3": "node scripts/validate-stockzone-d-stage3.js"
   }
 }
