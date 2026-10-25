@@ -27,5 +27,5 @@ assert.doesNotMatch(html,/sz-w3-recheck/);
 assert.match(html,/id="szW3Records"/);
 assert.match(html,/id="szDeveloperMode"/);
 // W3 records remain in settings; move them into developer mode and lock that area in a future release.
-const pkg=require('../package.json');assert.equal(pkg.version,'2.6.8.22');
+const pkg=require('../package.json');assert.ok(html.includes('v'+pkg.version), 'sidebar must show deployed package version');
 console.log('W3 Private Blob delivery and manual recalculation fully disabled: PASS');
