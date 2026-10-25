@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.8.24",
+  "version": "2.6.8.25",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -67,6 +67,7 @@
     "validate:d-policy": "node scripts/validate-stockzone-d.js",
     "validate:d-paper": "node scripts/validate-stockzone-d-paper.js",
     "validate:d-stage3": "node scripts/validate-stockzone-d-stage3.js",
-    "validate:w3-blob": "node scripts/validate-w3-blob.js"
+    "validate:w3-blob": "node scripts/validate-w3-blob.js",
+    "validate:historical-winrate": "node scripts/validate-v26825-historical-winrate.js"
   }
 }
