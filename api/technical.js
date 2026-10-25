@@ -1,4 +1,5 @@
 import mopsEps from '../lib/mops-quarterly-eps.js';
+import {validTradingBars} from '../lib/valid-trading-bars.js';
 const UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36';
 const HEADERS={'user-agent':UA,'accept':'application/json,text/plain,*/*'};
 
@@ -59,8 +60,12 @@ async function handleHistory(req,res){
     const benchmarkPromise=firstChart(benchmarkSymbols,period1,period2).catch(()=>null);
     const [stock,benchmark]=await Promise.all([stockPromise,benchmarkPromise]);
     const cutoff=now-Math.round(5*365.25*86400);
-    const stockRows=stock.rows.filter(x=>Number(x.timestamp)>=cutoff);
-    const benchmarkRows=benchmark?.rows?.filter(x=>Number(x.timestamp)>=cutoff)||[];
+    const stockRows=validTradingBars(stock.rows.filter(x=>Number(x.timestamp)>=cutoff));
+    // An index may legitimately omit volume, so match it to confirmed stock sessions
+    // instead of classifying a 0-volume index row as a traded session.
+    const stockTradingDates=new Set(stockRows.map(x=>x.date));
+    const benchmarkRows=benchmark?validTradingBars((benchmark.rows||[]).filter(x=>Number(x.timestamp)>=cutoff),{requireVolume:false})
+      .filter(x=>stockTradingDates.has(x.date)):[];
     res.setHeader('Cache-Control',String(req.query?.refresh||'')==='1'?'no-store':'public, s-maxage=21600, stale-while-revalidate=86400');
     return res.status(200).json({ok:true,source:'Yahoo Finance',code,market,symbol:stock.symbol,windowYears:5,updatedAt:new Date().toISOString(),history:stockRows,benchmark:benchmark?{symbol:benchmark.symbol,history:benchmarkRows}:null});
   }catch(e){
@@ -169,7 +174,9 @@ async function handleTechnical(req,res){
   const q=req.query?.q,market=req.query?.market||'';
   if(!q)return res.status(400).json({ok:false,error:'缺少股票代碼'});
   const symbol=yahooSymbol(q,market),r=await chart(symbol),ts=r.timestamp||[],z=r.indicators?.quote?.[0]||{};
-  const rows=ts.map((t,i)=>({date:yahooTradeDate(t,r.meta||{}),open:num(z.open?.[i]),high:num(z.high?.[i]),low:num(z.low?.[i]),close:num(z.close?.[i]),volume:num(z.volume?.[i])})).filter(x=>[x.open,x.high,x.low,x.close].every(v=>Number.isFinite(v)&&v>0)&&Number.isFinite(x.volume)&&x.volume>=0&&x.high>=x.low&&x.high>=x.open&&x.high>=x.close&&x.low<=x.open&&x.low<=x.close);
+  const rows=validTradingBars(ts.map((t,i)=>({date:yahooTradeDate(t,r.meta||{}),open:num(z.open?.[i]),high:num(z.high?.[i]),low:num(z.low?.[i]),close:num(z.close?.[i]),volume:num(z.volume?.[i])})));
+  // Keep all calculation inputs anchored to the last *actually traded* daily bar;
+  // do not allow holiday/placeholder Yahoo bars to shift MA, MACD, Bollinger or volume. 
   if(rows.length<60)throw new Error('Yahoo 歷史資料不足 60 個交易日');
   const c=rows.map(x=>x.close),v=rows.map(x=>x.volume),last=c.at(-1),ma5=sma(c,5),ma10=sma(c,10),ma20=sma(c,20),ma60=sma(c,60);
   const sd20=std(c,20),upper=ma20+2*sd20,lower=ma20-2*sd20,bw=ma20?((upper-lower)/ma20)*100:null;
