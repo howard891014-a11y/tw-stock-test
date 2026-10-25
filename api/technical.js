@@ -1,3 +1,4 @@
+import mopsEps from '../lib/mops-quarterly-eps.js';
 const UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36';
 const HEADERS={'user-agent':UA,'accept':'application/json,text/plain,*/*'};
 
@@ -116,11 +117,51 @@ async function handleFundamentals(req,res){
   if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
   try{
     const now=Math.floor(Date.now()/1000),period2=now+86400,period1=now-Math.round(3.5*365.25*86400);
-    let data,last=null;for(const s of marketSymbols(code,market)){try{data=await fetchFundamentalSeries(s,period1,period2);break}catch(e){last=e}}
-    if(!data)throw last||new Error('Yahoo fundamentals 取得失敗');
-    const quarters=data.rows.slice(-12).reverse(),coverage={eps:quarters.filter(x=>Number.isFinite(x.eps)).length,revenue:quarters.filter(x=>Number.isFinite(x.revenue)).length,grossMargin:quarters.filter(x=>Number.isFinite(x.grossMargin)).length,operatingMargin:quarters.filter(x=>Number.isFinite(x.operatingMargin)).length};
-    res.setHeader('Cache-Control','public, s-maxage=21600, stale-while-revalidate=86400');
-    return res.status(200).json({ok:true,source:'Yahoo Finance fundamentals-timeseries',code,market,symbol:data.symbol,updatedAt:new Date().toISOString(),quarters,coverage});
+    let data=null,last=null;
+    for(const s of marketSymbols(code,market)){
+      try{data=await fetchFundamentalSeries(s,period1,period2);break}
+      catch(e){last=e}
+    }
+    const yahooRows=data?.rows?.slice(-12).reverse()||[];
+    const officialPeriod=String(req.query?.period||'').trim();
+    const target=mopsEps.reportPeriod(officialPeriod)
+      ? officialPeriod
+      : (yahooRows[0]?.period||'');
+    const targetInfo=mopsEps.reportPeriod(target);
+    const recentEps=yahooRows.filter(x=>Number.isFinite(x.eps)).length;
+    let mops={rows:[],attempted:false,reason:'historical EPS already sufficient'};
+    if(targetInfo&&(!mopsEps.epsPairReady(yahooRows,targetInfo)||recentEps<8)){
+      mops=await mopsEps.supplementMissingEps({code,period:target,rows:yahooRows});
+    }
+    const merged=new Map();
+    for(const x of yahooRows){const p=mopsEps.reportPeriod(x.period);if(p)merged.set(mopsEps.quarterKey(p.year,p.quarter),x);}
+    for(const x of mops.rows||[]){
+      const p=mopsEps.reportPeriod(x.period),key=p?mopsEps.quarterKey(p.year,p.quarter):'';
+      if(!key)continue;
+      const old=merged.get(key)||{};
+      // If Yahoo lacks quarterly EPS, fill it with the MOPS single-quarter result.
+      // Do not replace Yahoo revenue/margin series or mix YTD with quarterly EPS.
+      merged.set(key,{...x,...old,eps:Number.isFinite(old.eps)?old.eps:x.eps,
+        epsSource:Number.isFinite(old.eps)?'Yahoo Finance':x.epsSource});
+    }
+    const quarters=[...merged.values()].sort((a,b)=>{
+      const x=mopsEps.reportPeriod(a.period),y=mopsEps.reportPeriod(b.period);
+      return (y?.year*10+y?.quarter||0)-(x?.year*10+x?.quarter||0);
+    }).slice(0,12);
+    if(!quarters.length)throw last||new Error('Yahoo 與官方歷史EPS皆無可用資料');
+    const coverage={eps:quarters.filter(x=>Number.isFinite(x.eps)).length,
+      revenue:quarters.filter(x=>Number.isFinite(x.revenue)).length,
+      grossMargin:quarters.filter(x=>Number.isFinite(x.grossMargin)).length,
+      operatingMargin:quarters.filter(x=>Number.isFinite(x.operatingMargin)).length,
+      epsYoyReady:targetInfo?mopsEps.epsPairReady(quarters,targetInfo):false,
+      epsQoqReady:targetInfo?mopsEps.numericEpsByKey(quarters).has(mopsEps.quarterKey(targetInfo.year,targetInfo.quarter)) && mopsEps.numericEpsByKey(quarters).has(mopsEps.quarterKey(targetInfo.quarter===1?targetInfo.year-1:targetInfo.year,targetInfo.quarter===1?4:targetInfo.quarter-1)):false,
+      targetPeriod:target||null};
+    // When not fully covered, NEVER have CDN retain an incomplete six-hour response.
+    res.setHeader('Cache-Control',coverage.epsYoyReady&&coverage.epsQoqReady&&coverage.eps>=5?'public, s-maxage=21600, stale-while-revalidate=21600':'no-store');
+    return res.status(200).json({ok:true,source:[data?'Yahoo Finance fundamentals-timeseries':'',
+      (mops.rows?.length||0)?'MOPS官方歷史EPS':''].filter(Boolean).join('＋'),
+      code,market,symbol:data?.symbol||null,updatedAt:new Date().toISOString(),
+      quarters,coverage,epsSupplement:{attempted:mops.attempted,filled:mops.filled||0,reason:mops.reason}});
   }catch(e){return res.status(502).json({ok:false,error:e?.message||'長期基本面資料取得失敗'})}
 }
 
