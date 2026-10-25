@@ -438,11 +438,12 @@ function technicalExpectedTradeDate(code){
 }
 function technicalPayloadDate(data){return dayKey(data?.latest?.date)||dayKey(data?.updatedAt)||dayKey(data?.history?.at?.(-1)?.date)||"";}
 async function technical(query,market){
-  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`technical-v26614:${code}|${String(market||"")}`,phase=taiwanMarketPhase();
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`technical-v26826:${code}|${String(market||"")}`,phase=taiwanMarketPhase();
   const cached=await stockzoneIdbGet("marketCache",key),holiday=phase.weekend||marketSessionForToday()?.status==="holiday",ttl=phase.phase==="live"?15*60*1000:6*60*60*1000,expectedDate=technicalExpectedTradeDate(code),cachedDate=technicalPayloadDate(cached?.data);
   const cacheCoversLatest=!expectedDate||Boolean(cachedDate&&cachedDate>=expectedDate);
-  if(cached?.data&&cacheCoversLatest&&(holiday||Date.now()-Number(cached.savedAt||0)<ttl))return cached.data;
-  const params=new URLSearchParams({q:code,market:String(market||"")});
+  if(cached?.data&&Number(cached.data?.latest?.volume)>0&&cacheCoversLatest&&(holiday||Date.now()-Number(cached.savedAt||0)<ttl))return cached.data;
+  // Cache-bust older CDN responses generated before the daily-bar filter.
+  const params=new URLSearchParams({q:code,market:String(market||""),v:"26826"});
   if(expectedDate&&(!cachedDate||cachedDate<expectedDate)){params.set("refresh","1");params.set("asof",expectedDate);params.set("_",String(Date.now()));}
   const data=await readJson(await fetch(`/api/technical?${params.toString()}`,{cache:"no-store"}),"技術資料");
   void stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});return data;
@@ -450,16 +451,13 @@ async function technical(query,market){
 const HISTORY5Y_CACHE_KEY="stockzone_history5y_v2591",HISTORY5Y_CACHE_MS=12*60*60*1000;
 function readHistory5YCache(){try{return JSON.parse(localStorage.getItem(HISTORY5Y_CACHE_KEY)||"{}")||{}}catch{return{}}}
 async function history5Y(query,market){
-  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`history5y:${code}|${String(market||"")}`;
-  let cached=await stockzoneIdbGet("marketCache",key);
-  if(!cached){
-    const legacy=readHistory5YCache()[`${code}|${String(market||"")}`];
-    if(legacy?.data){cached=legacy;void stockzoneIdbPut("marketCache",key,legacy)}
-  }
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),key=`history5y-v26826:${code}|${String(market||"")}`;
+  // No legacy-cache migration: older five-year caches can contain phantom 0-volume days.
+  const cached=await stockzoneIdbGet("marketCache",key);
   const expectedDate=technicalExpectedTradeDate(code),historyDate=dayKey(cached?.data?.history?.at?.(-1)?.date);
   const cacheCoversLatest=!expectedDate||Boolean(historyDate&&historyDate>=expectedDate);
-  if(cached&&cacheCoversLatest&&Date.now()-Number(cached.savedAt||0)<HISTORY5Y_CACHE_MS&&Array.isArray(cached.data?.history)&&cached.data?.windowYears===5&&cached.data.history.length>180)return cached.data;
-  const params=new URLSearchParams({q:code,market:String(market||"")});if(expectedDate&&(!historyDate||historyDate<expectedDate)){params.set("refresh","1");params.set("asof",expectedDate);params.set("_",String(Date.now()));}
+  if(cached&&cacheCoversLatest&&Date.now()-Number(cached.savedAt||0)<HISTORY5Y_CACHE_MS&&Array.isArray(cached.data?.history)&&cached.data?.windowYears===5&&cached.data.history.length>180&&Number(cached.data.history.at(-1)?.volume)>0)return cached.data;
+  const params=new URLSearchParams({q:code,market:String(market||""),v:"26826"});if(expectedDate&&(!historyDate||historyDate<expectedDate)){params.set("refresh","1");params.set("asof",expectedDate);params.set("_",String(Date.now()));}
   const data=await readJson(await fetch(`/api/technical?mode=history&${params.toString()}`,{cache:"no-store"}),"歷史資料");
   await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});
   return data;
