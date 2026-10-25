@@ -1,12 +1,13 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.8.23",
+  "version": "2.6.8.24",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
     "@vercel/blob": "^2.3.0"
   },
   "scripts": {
+    "validate:fundamental-eps": "node scripts/validate-v26824-fundamental-eps.js",
     "validate:business-tags": "node scripts/validate-business-tags.js",
     "validate:company-business-tags": "node scripts/validate-company-business-tags.js",
     "validate:tags": "npm run validate:business-tags && npm run validate:company-business-tags",

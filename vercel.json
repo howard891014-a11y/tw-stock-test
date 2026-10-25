@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
+    "api/technical.js": {"regions": ["sin1"], "maxDuration": 60},
     "api/fundflow.js": {
       "regions": ["sin1"],
       "maxDuration": 60

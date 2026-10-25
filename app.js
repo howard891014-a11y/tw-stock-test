@@ -465,7 +465,7 @@ async function history5Y(query,market){
   return data;
 }
 
-const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26123",FUNDAMENTALS_CACHE_MS=6*60*60*1000;
+const FUNDAMENTALS_CACHE_KEY="stockzone_fundamentals_v26824",FUNDAMENTALS_CACHE_MS=6*60*60*1000,FUNDAMENTALS_RETRY_MS=2*60*1000;
 function readFundamentalsCache(){try{return JSON.parse(localStorage.getItem(FUNDAMENTALS_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function writeFundamentalsCache(x){try{localStorage.setItem(FUNDAMENTALS_CACHE_KEY,JSON.stringify(x))}catch{}}
 function fundamentalQuarterInfo(row){
@@ -525,10 +525,22 @@ function fundamentalRowsHaveMargins(data){
   const hasOperating=valid(fundamentalMarginValue(off,"operating"))||rows.some(x=>valid(fundamentalMarginValue(x,"operating")));
   return hasGross&&hasOperating;
 }
+function fundamentalEpsPeriodCoverage(data){
+  const rows=fundamentalSortedRows(data),off=fundamentalQuarterInfo(data?.officialStatement);
+  const latest=off||fundamentalQuarterInfo(rows[0]),byQuarter=new Map();
+  for(const row of rows){const p=fundamentalQuarterInfo(row),eps=valuationNum(row?.eps);if(p&&eps!==null)byQuarter.set(p.key,eps)}
+  if(!latest)return {yoy:false,qoq:false,latest:null,reference:null};
+  const cur=byQuarter.get(latest.key),prior=latest.quarter===1?{year:latest.year-1,quarter:4}:{year:latest.year,quarter:latest.quarter-1};
+  return {yoy:cur!==undefined&&byQuarter.has(`${latest.year-1}Q${latest.quarter}`),
+    qoq:cur!==undefined&&byQuarter.has(`${prior.year}Q${prior.quarter}`),
+    count:byQuarter.size,latest:cur??null,reference:latest.key};
+}
 function fundamentalPayloadNeedsSupplement(data){
-  const rows=fundamentalSortedRows(data),eps=rows.map(x=>valuationNum(x?.eps)).filter(Number.isFinite),rev=rows.map(fundamentalRevenueValue).filter(Number.isFinite),monthly=data?.monthlyRevenue||null;
+  const rows=fundamentalSortedRows(data),rev=rows.map(fundamentalRevenueValue).filter(Number.isFinite),monthly=data?.monthlyRevenue||null;
   const hasMonthly=fundamentalMonthlyPct(monthly,"yoy")!==null;
-  return !fundamentalRowsHaveMargins(data)||(!hasMonthly&&rev.length<5)||eps.length<5;
+  const off=data?.officialStatement||null,marginApplicable=off?.marginApplicable!==false;
+  const eps=fundamentalEpsPeriodCoverage(data);
+  return (marginApplicable&&!fundamentalRowsHaveMargins(data))||(!hasMonthly&&rev.length<5)||!eps.yoy||!eps.qoq||(eps.count||0)<5;
 }
 function mergeFundamentalPayload(primary,fallback){
   const a=primary&&typeof primary==="object"?primary:{},b=fallback&&typeof fallback==="object"?fallback:{};
@@ -542,27 +554,34 @@ function mergeFundamentalPayload(primary,fallback){
   return {...b,...a,quarters:fundamentalSortedRows({quarters:mergedQ.length?mergedQ:(aq.length?aq:bq)}),officialStatement:mergeFundamentalObject(a.officialStatement,b.officialStatement),monthlyRevenue:mergeFundamentalObject(a.monthlyRevenue,b.monthlyRevenue),company:mergeFundamentalObject(a.company,b.company),profile:mergeFundamentalObject(a.profile,b.profile),financialData:mergeFundamentalObject(a.financialData,b.financialData),source:source||a.source||b.source};
 }
 async function fundamentals(query,market){
-  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),legacyKey=`${code}|${String(market||"")}`,key=`fundamentals:${legacyKey}`;
-  let cached=await stockzoneIdbGet("marketCache",key);
-  if(!cached){const legacy=readFundamentalsCache()[legacyKey];if(legacy?.data){cached=legacy;void stockzoneIdbPut("marketCache",key,legacy)}}
-  const phase=taiwanMarketPhase(),holiday=phase.weekend||marketSessionForToday()?.status==="holiday";
-  if(cached?.data&&Array.isArray(cached.data?.quarters)&&(holiday||Date.now()-Number(cached.savedAt||0)<FUNDAMENTALS_CACHE_MS))return cached.data;
+  const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),legacyKey=`${code}|${String(market||"")}`;
+  // New namespace invalidates old incomplete 6-hour snapshots, without touching other caches.
+  const key=`fundamentals:v26824:${legacyKey}`;
+  const cached=await stockzoneIdbGet("marketCache",key);
+  const age=Date.now()-Number(cached?.savedAt||0);
+  const good=cached?.data&&!fundamentalPayloadNeedsSupplement(cached.data);
+  if(cached?.data&&Array.isArray(cached.data?.quarters)&&
+    (good?age<FUNDAMENTALS_CACHE_MS:age<FUNDAMENTALS_RETRY_MS))return cached.data;
   const params=new URLSearchParams({q:code,market:String(market||"")});
   const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
   let data=null;
   try{
     data=await readJson(await fetch(`/api/stock?action=fundamentals&${params.toString()}`,{cache:"no-store"}),"長期基本面");
     if(fundamentalPayloadNeedsSupplement(data)){
+      const p=fundamentalQuarterInfo(data?.officialStatement);
+      if(p)fallbackParams.set("period",`${p.year}Q${p.quarter}`);
       try{
-        const supplement=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"長期基本面補充");
+        const supplement=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"歷史季度EPS補充");
         data=mergeFundamentalPayload(data,supplement);
-      }catch(supplementError){console.warn("基本面毛利率／營益率補充失敗",supplementError)}
+      }catch(supplementError){console.warn("歷史季度EPS／財報補充失敗",supplementError)}
     }
   }catch(primaryError){
-    console.warn("官方基本面獨立路由失敗，改用 Yahoo 基本面 fallback",primaryError);
+    console.warn("官方基本面獨立路由失敗，改用 Yahoo／MOPS fallback",primaryError);
     data=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"長期基本面 fallback");
   }
-  await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),data});return data;
+  // Incomplete snapshots get only a short retry cooldown, not the ordinary 6-hour cache.
+  await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),complete:!fundamentalPayloadNeedsSupplement(data),data});
+  return data;
 }
 async function loadFundamentals(stock){
   const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||""),market=stock?.market||stock?.marketLabel||"";
@@ -1725,7 +1744,17 @@ function fundamentalPctSignal(pct,kind="revenue"){
 function longQuantitativeFundamentals(v){
   const data=latestFundamentalData||{},rows=fundamentalSortedRows(data),off=data?.officialStatement||null,monthly=data?.monthlyRevenue||null;
   const eps=rows.map(x=>valuationNum(x.eps)),rev=rows.map(fundamentalRevenueValue),gm=rows.map(x=>fundamentalMarginValue(x,"gross")),om=rows.map(x=>fundamentalMarginValue(x,"operating"));
-  const yoyEps=fundamentalPair(eps[0],eps[4],"eps"),qoqEps=fundamentalPair(eps[0],eps[1],"eps"),ttmNow=eps.slice(0,4).filter(Number.isFinite),ttmPrev=eps.slice(4,8).filter(Number.isFinite),ttmPair=ttmNow.length===4&&ttmPrev.length===4?fundamentalPair(ttmNow.reduce((a,b)=>a+b,0),ttmPrev.reduce((a,b)=>a+b,0),"eps"):{available:false,score:50,label:"--",pct:null};
+  const epsRef=fundamentalQuarterInfo(off)||fundamentalQuarterInfo(rows[0]),epsByPeriod=new Map();
+  for(const row of rows){const p=fundamentalQuarterInfo(row),v=valuationNum(row?.eps);if(p&&v!==null)epsByPeriod.set(p.key,v)}
+  const getEps=(year,quarter)=>epsByPeriod.get(`${year}Q${quarter}`)??null;
+  const epsNow=epsRef?getEps(epsRef.year,epsRef.quarter):null;
+  const epsPrev=epsRef?getEps(epsRef.year-1,epsRef.quarter):null;
+  const prior=epsRef?(epsRef.quarter===1?{year:epsRef.year-1,quarter:4}:{year:epsRef.year,quarter:epsRef.quarter-1}):null;
+  const yoyEps=fundamentalPair(epsNow,epsPrev,"eps"),qoqEps=fundamentalPair(epsNow,prior?getEps(prior.year,prior.quarter):null,"eps");
+  const epsTtmSeq=[];if(epsRef){let year=epsRef.year,quarter=epsRef.quarter;
+    for(let i=0;i<8;i++){epsTtmSeq.push(getEps(year,quarter));if(--quarter===0){year--;quarter=4}}
+  }
+  const ttmNow=epsTtmSeq.slice(0,4),ttmPrev=epsTtmSeq.slice(4,8),ttmPair=epsTtmSeq.length===8&&epsTtmSeq.every(Number.isFinite)?fundamentalPair(ttmNow.reduce((a,b)=>a+b,0),ttmPrev.reduce((a,b)=>a+b,0),"eps"):{available:false,score:50,label:"--",pct:null};
   const epsSignals=[[yoyEps,.65],[qoqEps,.20],[ttmPair,.15]].filter(x=>x[0].available),epsW=epsSignals.reduce((a,x)=>a+x[1],0),officialEps=valuationNum(off?.eps);
   let epsScore=epsW?Math.round(epsSignals.reduce((a,x)=>a+x[0].score*x[1],0)/epsW):null;
   if(epsScore===null&&officialEps!==null)epsScore=officialEps>0?62:officialEps===0?45:25;
@@ -1773,7 +1802,7 @@ function longQuantitativeFundamentals(v){
 }
 function fundamentalAvg(a){const x=(a||[]).filter(Number.isFinite);return x.length?x.reduce((s,n)=>s+n,0)/x.length:null}
 function fundamentalStd(a){const x=(a||[]).filter(Number.isFinite);if(x.length<2)return null;const m=fundamentalAvg(x);return Math.sqrt(x.reduce((s,n)=>s+(n-m)*(n-m),0)/x.length)}
-function fundamentalYoySeries(rows,getter,kind){const out=[];for(let i=0;i<Math.min(4,Math.max(0,rows.length-4));i++){const x=fundamentalPair(getter(rows[i]),getter(rows[i+4]),kind);if(x.available&&Number.isFinite(x.pct))out.push(x.pct)}return out}
+function fundamentalYoySeries(rows,getter,kind){const out=[],byKey=new Map();for(const r of rows){const p=fundamentalQuarterInfo(r);if(p)byKey.set(p.key,r)}for(const r of rows.slice(0,4)){const p=fundamentalQuarterInfo(r);if(!p)continue;const old=byKey.get(`${p.year-1}Q${p.quarter}`);if(!old)continue;const x=fundamentalPair(getter(r),getter(old),kind);if(x.available&&Number.isFinite(x.pct))out.push(x.pct)}return out}
 function fundamentalTrendAssessment(fund){
   const rows=fund?.rows||[],epsSeries=fundamentalYoySeries(rows,x=>valuationNum(x?.eps),"eps"),revSeries=fundamentalYoySeries(rows,fundamentalRevenueValue,"revenue"),signals=[];
   const one=arr=>{if(!arr.length)return null;const recent=fundamentalAvg(arr.slice(0,Math.min(2,arr.length))),older=arr.length>=4?fundamentalAvg(arr.slice(2,4)):arr.length>=2?arr.at(-1):null;return {recent,older,delta:Number.isFinite(recent)&&Number.isFinite(older)?recent-older:null}};
@@ -4192,7 +4221,7 @@ function fundflowApplyDw4(data,dw4){
   return data;
 }
 async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
-const FUND_FLOW_CLIENT_REV="2.6.8.23";
+const FUND_FLOW_CLIENT_REV="2.6.8.24";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
 function fundflowLocalCacheKey(kind,days=10){return `${FUND_FLOW_CLIENT_REV}:${kind}:${Number(days)||10}`}
