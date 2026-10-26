@@ -2122,14 +2122,15 @@ function resetPlayStyle(note="搜尋股票後判讀"){
   latestPlayStyleResult=null;resetShortAnalysis();resetSwingWave();resetLongAnalysis();resetTradeOutputs(note);
 }
 
-// v2.6.8.27 research: shadow only, does not overwrite StockZone production operationProfile or trade style.
+// v2.6.8.29 V4.2 research: shadow only, does not overwrite StockZone production operationProfile or trade style.
 function renderV4PlayCandidate(play){
   const api=window.StockZonePlayV4,el=$('szV4Candidate'),detail=$('szV4CandidateDetail');
   if(!el||!detail||!api)return;
-  const raw=api.classify({personality:play?.personality,fundamental:play?.longEngine?.basicAssessment});
+  const raw=api.classify({personality:play?.personality,fundamental:play?.longEngine?.basicAssessment,
+    fundamentalRows:play?.longEngine?.fundamentals?.rows||[],history:latestHistory5Y?.history||[]});
   if(!raw.available){el.textContent='資料不足，暫不分類';detail.textContent=raw.reason;return}
   el.textContent=`${raw.label}｜核心 ${raw.basePct}%／機動 ${raw.tacticalPct}%${raw.provisional?'（暫定）':''}`;
-  detail.textContent=`${raw.explanation}｜${raw.confidence}。營運：${raw.fundamental.reason}。股性：${raw.rhythm.reason}。未經樣本外回測，正式玩法及買賣決策不變。`;
+  detail.textContent=`${raw.explanation}｜${raw.confidence}。長期基準：${raw.longHistoryDays}日歷史K線；${raw.fundamental.reason}；${raw.rhythm.reason}。中期檢查：${raw.medium.reason}。近1～3個月的技術、估值、法人與目標價只用於進出場；未經樣本外回測，正式玩法及買賣決策不變。`;
 }
 function renderV4TacticalPanel(play,price,expected,decision){
   const api=window.StockZonePlayV4,grid=$('szV4WaveGrid'),note=$('szV4WaveNote');if(!api||!grid||!note)return;
