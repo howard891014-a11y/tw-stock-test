@@ -2657,112 +2657,179 @@ function overviewNodeAlign(x,left,right){
   if(x>=right-70)return 'end';
   return 'middle';
 }
+// v2.6.8.39 — 共振圖只改視覺呈現，玩法／目標／風險計算原封不動。
+// 回看點一定錨定歷史收盤序列；預測價格一定在「現在」右側。
+function overviewWaveHistoricalExtrema(history,referenceHigh){
+  const past=history.slice(0,-4);
+  if(!past.length)return {};
+  const support=past.reduce((a,p)=>p.value<a.value?p:a,past[0]);
+  const peaks=past.filter((p,i)=>i>=2&&i<past.length-2&&p.value>=Math.max(...past.slice(Math.max(0,i-3),i+4).map(x=>x.value))*.997);
+  const highCandidates=peaks.length?peaks:past;
+  const matching=(Number.isFinite(referenceHigh)&&referenceHigh>0)
+    ?highCandidates.map(p=>({p,diff:Math.abs(p.value/referenceHigh-1)})).sort((a,b)=>a.diff-b.diff)[0]
+    :null;
+  const high=matching&&matching.diff<=.035?matching.p:past.reduce((a,p)=>p.value>a.value?p:a,past[0]);
+  return {support,high};
+}
+function overviewWavePlaceLabels(items){
+  const placed=[],W=760,H=414;
+  const overlaps=(a,b)=>Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x)+7)*Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y)+7);
+  for(const item of items){
+    const w=Math.min(122,Math.max(86,Math.max(String(item.title).length*15+20,String(item.value).length*12+18)));
+    const h=52;
+    const forecast=item.side==='right';
+    const defaultX=forecast?W-w-5:item.x-w/2;
+    const xChoices=forecast?[defaultX,defaultX-8,defaultX-24]:[defaultX,defaultX-13,defaultX+13];
+    const above=item.y-h-14,below=item.y+13,center=item.y-h/2;
+    const order=item.prefer==='above'?[above,below,center]:item.prefer==='center'?[center,above,below]:[below,above,center];
+    // 位置衝突時在同一錨點附近尋找替代，不把標籤一律擠到圖下方。
+    const yChoices=[...order,...order.flatMap(v=>[v-22,v+22,v-48,v+48])];
+    let best=null;
+    for(const px of xChoices){for(const py of yChoices){
+      const box={...item,x:Math.max(4,Math.min(W-w-4,px)),y:Math.max(36,Math.min(H-h-5,py)),w,h};
+      const collision=placed.reduce((sum,p)=>sum+overlaps(box,p),0);
+      const distance=Math.abs(box.x-defaultX)*.20+Math.abs(box.y-order[0])*.08;
+      const penalty=collision*100+distance;
+      if(!best||penalty<best.penalty)best={...box,penalty};
+    }}
+    if(best)placed.push(best);
+  }
+  return placed;
+}
+function overviewWaveDrawBubble(svg,node){
+  const {x:px,y:py,w,h,title,value,color,textColor,pointX,pointY}=node;
+  const closestX=Math.max(px+10,Math.min(px+w-10,pointX));
+  const closestY=pointY<py?py:pointY>py+h?py+h:pointY;
+  const connection=Math.hypot(closestX-pointX,closestY-pointY);
+  if(connection>14)svg.append(swingWaveSvg('path',{
+    d:`M ${pointX} ${pointY} L ${closestX} ${closestY}`,
+    stroke:color,'stroke-width':'1.25','stroke-dasharray':'3 4',fill:'none',opacity:'.55'
+  }));
+  svg.append(swingWaveSvg('rect',{
+    x:px,y:py,width:w,height:h,rx:14,fill:'#fff',stroke:color,
+    'stroke-width':1.25,opacity:'.97',filter:'url(#overviewWaveBubbleShadowV26839)'
+  }));
+  svg.append(swingWaveSvg('text',{
+    x:px+w/2,y:py+19,'text-anchor':'middle',class:'overview-wave-tag-title',
+    style:`fill:${node.side==='right'?(textColor||color):'#728298'}!important`
+  },title));
+  svg.append(swingWaveSvg('text',{
+    x:px+w/2,y:py+40,'text-anchor':'middle',class:'overview-wave-tag-price',
+    style:`fill:${node.side==='right'?(textColor||color):'#142843'}!important`
+  },value));
+}
 function drawOverviewResonance(play,expected){
-  const svg=$("overviewResonanceSvg");if(!svg)return;svg.replaceChildren();
-  const price=positionNumber(expected?.price);if(!(price>0))return;
+  const svg=$("overviewResonanceSvg");if(!svg)return;
+  svg.replaceChildren();svg.setAttribute('viewBox','0 0 760 414');
+  const price=positionNumber(expected?.price);
+  if(!(price>0))return;
   const history=overviewHistorySeries(120);
   if(history.length<2)return;
-
-  const res=expected?.plan?.resonance||{},swing=play?.swingWave,se=play?.shortEngine||play?.diagnostics?.shortEngine;
+  // 即時現價只能替換最後一點，絕不修改過去120日的歷史價格。
+  history[history.length-1].value=price;
+  const res=expected?.plan?.resonance||{};
+  const swing=play?.swingWave,se=play?.shortEngine||play?.diagnostics?.shortEngine;
   const breakout=positionNumber(swing?.referenceHigh??swing?.firstWave??se?.resistance?.value??play?.diagnostics?.breakout?.level);
   const main=positionNumber(res?.main?.center??expected?.plan?.levels?.[0]?.value);
   const alt=positionNumber(expected?.plan?.levels?.[1]?.value??res?.secondary?.center??latestValuationScenario?.F);
-  const mainTitle=(res?.main?.familyCount||0)>=2?"主要共振":"主要目標";
-  const altTitle=(res?.secondary?.familyCount||0)>=2?"次要共振":"樂觀目標";
-  const downsideLevels=(expected?.downside?.levels||[]).map((x,i)=>({title:i===0?"支撐":(x?.label||`防守${i+1}`),value:positionNumber(x?.value),dot:i===0?"#3c9cff":"#55b78a"})).filter(x=>x.value!==null);
-  const upNodes=overviewUniqueFutureNodes([
-    {title:'前高／突破',value:breakout,dot:'#f2b340'},
-    {title:mainTitle,value:main,dot:'#7a45f3'},
-    {title:altTitle,value:alt,dot:'#45cb93'}
-  ],price);
-  const downNodes=overviewUniqueDownNodes(downsideLevels.slice(0,2),price);
+  const downside=positionNumber(expected?.downside?.levels?.[0]?.value);
+  const mainTitle=(res?.main?.familyCount||0)>=2?'主要共振':'主要目標';
+  const altTitle=(res?.secondary?.familyCount||0)>=2?'次要共振':'次要目標';
 
-  const left=48,historyRight=498,dividerX=530,forecastLeft=560,right=716,top=28,bottom=248;
-  const historySpan=Math.max(1,history.length-1);
-  history.forEach((p,i)=>p.x=left+(historyRight-left)*(i/historySpan));
-  const currentPoint={x:history.at(-1).x,value:price,dot:'#9aa8ba',title:'現價'};
-
-  if(!history.at(-1)||Math.abs(history.at(-1).value/price-1)>.002){history[history.length-1].value=price;}
-
-  const upXs=upNodes.map((_,i)=>forecastLeft+((right-forecastLeft)/(upNodes.length+1))*(i+1));
-  upNodes.forEach((n,i)=>n.x=upXs[i]);
-  const downXs=downNodes.map((_,i)=>forecastLeft+((right-forecastLeft)/(downNodes.length+1))*(i+1));
-  downNodes.forEach((n,i)=>n.x=downXs[i]);
-
-  const historyValues=history.map(x=>x.value).filter(Number.isFinite);
-  const extraValues=[...upNodes.map(x=>x.value),...downNodes.map(x=>x.value),price].filter(Number.isFinite);
-  const focusRange=overviewFocusRange(historyValues,extraValues,price);
-  const ticks=overviewTickList(focusRange.min,focusRange.max,5),y=v=>bottom-((v-ticks.lo)/(ticks.hi-ticks.lo))*(bottom-top);
+  // 圖面比例直接貼近參考：上方圖例、整體放大的歷史線、右側三條平滑預測線。
+  const left=72,historyRight=520,divider=526,rightGrid=686,top=47,bottom=365,futureX=660;
+  const lastIndex=history.length-1;
+  history.forEach((p,i)=>p.x=left+(historyRight-left)*i/lastIndex);
+  const extrema=overviewWaveHistoricalExtrema(history,breakout);
+  const targetNodes=[];
+  if(main!==null&&main>price*1.002)targetNodes.push({title:mainTitle,value:main,color:'#8150e7',kind:'main'});
+  if(alt!==null&&alt>price*1.002&&!targetNodes.some(n=>Math.abs(n.value/alt-1)<.003))
+    targetNodes.push({title:altTitle,value:alt,color:'#f5b63e',kind:'alternate'});
+  const downNode=downside!==null&&downside<price*.998?{title:'可能回測',value:downside,color:'#34b991',kind:'down'}:null;
+  const numbers=[...history.map(h=>h.value),...targetNodes.map(n=>n.value),...(downNode?[downNode.value]:[])];
+  const minValue=Math.min(...numbers),maxValue=Math.max(...numbers),range=Math.max(1,maxValue-minValue);
+  const step=overviewNiceStep(range*1.12/4);
+  let lo=Math.floor((minValue-range*.07)/step)*step;
+  let hi=Math.ceil((maxValue+range*.07)/step)*step;
+  if(hi-lo<1e-6)hi=lo+Math.max(step,1);
+  const y=v=>bottom-((v-lo)/(hi-lo))*(bottom-top);
 
   const defs=swingWaveSvg('defs');
-  const historyGrad=swingWaveSvg('linearGradient',{id:'overviewWaveHistoryGradientV26836',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
-  historyGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#59a8ff'}),swingWaveSvg('stop',{offset:'55%','stop-color':'#6e86ff'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#8f5dff'}));
-  const futureGrad=swingWaveSvg('linearGradient',{id:'overviewWaveFutureGradientV26836',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
-  futureGrad.append(swingWaveSvg('stop',{offset:'0%','stop-color':'#8f5dff'}),swingWaveSvg('stop',{offset:'100%','stop-color':'#45cb93'}));
-  const bubbleShadow=swingWaveSvg('filter',{id:'overviewWaveBubbleShadowV2612',x:'-20%',y:'-20%',width:'140%',height:'140%'});
-  bubbleShadow.append(swingWaveSvg('feDropShadow',{'dx':'0','dy':'6','stdDeviation':'7','flood-color':'#16314f','flood-opacity':'.12'}));
-  defs.append(historyGrad,futureGrad,bubbleShadow);svg.append(defs);
+  const histGradient=swingWaveSvg('linearGradient',{id:'overviewWaveHistoryGradientV26839',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
+  histGradient.append(
+    swingWaveSvg('stop',{offset:'0%','stop-color':'#4599f8'}),
+    swingWaveSvg('stop',{offset:'48%','stop-color':'#637df3'}),
+    swingWaveSvg('stop',{offset:'100%','stop-color':'#7750ee'})
+  );
+  const areaGradient=swingWaveSvg('linearGradient',{id:'overviewWaveAreaGradientV26839',x1:'0%',y1:'0%',x2:'0%',y2:'100%'});
+  areaGradient.append(
+    swingWaveSvg('stop',{offset:'0%','stop-color':'#869aff','stop-opacity':'.17'}),
+    swingWaveSvg('stop',{offset:'100%','stop-color':'#cfe3ff','stop-opacity':'.025'})
+  );
+  const shadow=swingWaveSvg('filter',{id:'overviewWaveBubbleShadowV26839',x:'-24%',y:'-30%',width:'148%',height:'160%'});
+  shadow.append(swingWaveSvg('feDropShadow',{dx:0,dy:3,stdDeviation:3,'flood-color':'#1a3150','flood-opacity':'.10'}));
+  defs.append(histGradient,areaGradient,shadow);svg.append(defs);
 
-  ticks.ticks.forEach(v=>{
-    const gy=y(v);
-    svg.append(swingWaveSvg('line',{x1:left,y1:gy,x2:right,y2:gy,class:'overview-wave-grid'}));
-    svg.append(swingWaveSvg('text',{x:left-8,y:gy+5,class:'overview-wave-axis','text-anchor':'end'},overviewIntFmt(v)));
-  });
-  svg.append(swingWaveSvg('line',{x1:dividerX,y1:top+6,x2:dividerX,y2:bottom,class:'overview-wave-vline'}));
-  svg.append(swingWaveSvg('text',{x:left,y:18,class:'overview-wave-caption','text-anchor':'start'},'近120日真實走勢'));
-  svg.append(swingWaveSvg('text',{x:dividerX,y:18,class:'overview-wave-caption','text-anchor':'middle'},'現在'));
-  svg.append(swingWaveSvg('text',{x:forecastLeft,y:18,class:'overview-wave-caption','text-anchor':'start'},'預測路徑（虛線）'));
+  // 逐格畫對齊網格，避免實際波幅被過多上下留白壓扁。
+  for(let value=lo,n=0;value<=hi+step*.01&&n<14;value+=step,n++){
+    const gy=y(value);
+    svg.append(swingWaveSvg('line',{x1:left,y1:gy,x2:rightGrid,y2:gy,class:'overview-wave-grid'}));
+    svg.append(swingWaveSvg('text',{x:left-12,y:gy+5,'text-anchor':'end',class:'overview-wave-axis'},overviewIntFmt(value)));
+  }
+  for(let i=0;i<=8;i++){
+    const x=left+(historyRight-left)*i/8;
+    svg.append(swingWaveSvg('line',{x1:x,y1:top,x2:x,y2:bottom,class:'overview-wave-grid overview-wave-grid-vertical'}));
+  }
+  svg.append(swingWaveSvg('line',{x1:divider,y1:top,x2:divider,y2:bottom,class:'overview-wave-vline'}));
+  svg.append(swingWaveSvg('text',{x:left,y:23,class:'overview-wave-caption'},'近120日真實走勢'));
+  svg.append(swingWaveSvg('text',{x:divider,y:23,'text-anchor':'middle',class:'overview-wave-caption'},'現在'));
+  svg.append(swingWaveSvg('text',{x:divider+44,y:23,class:'overview-wave-caption'},'預測路徑（虛線）'));
 
   const histPath=overviewWavePath(history.map(p=>({x:p.x,v:p.value})),y);
   if(histPath){
-    const areaD=`${histPath} L ${history.at(-1).x} ${bottom} L ${history[0].x} ${bottom} Z`;
-    svg.append(swingWaveSvg('path',{d:areaD,fill:'rgba(113,154,255,0.10)'}));
-    svg.append(swingWaveSvg('path',{d:histPath,fill:'none',stroke:'rgba(97,128,204,0.14)','stroke-width':'10','stroke-linecap':'round','stroke-linejoin':'round'}));
-    svg.append(swingWaveSvg('path',{d:histPath,fill:'none',stroke:'url(#overviewWaveHistoryGradientV26836)','stroke-width':'4.5','stroke-linecap':'round','stroke-linejoin':'round'}));
+    svg.append(swingWaveSvg('path',{d:`${histPath} L ${historyRight} ${bottom} L ${left} ${bottom} Z`,fill:'url(#overviewWaveAreaGradientV26839)'}));
+    svg.append(swingWaveSvg('path',{d:histPath,fill:'none',stroke:'#8097ff','stroke-width':8,opacity:'.15','stroke-linecap':'round','stroke-linejoin':'round'}));
+    svg.append(swingWaveSvg('path',{d:histPath,fill:'none',stroke:'url(#overviewWaveHistoryGradientV26839)','stroke-width':3.65,'stroke-linecap':'round','stroke-linejoin':'round'}));
   }
-
-  const upPathPoints=[{x:currentPoint.x,v:price},...upNodes.map(n=>({x:n.x,v:n.value}))];
-  const upPath=overviewWavePath(upPathPoints,y);
-  if(upPath&&upNodes.length){
-    svg.append(swingWaveSvg('path',{d:upPath,fill:'none',stroke:'url(#overviewWaveFutureGradientV26836)','stroke-width':'4','stroke-linecap':'round','stroke-linejoin':'round','stroke-dasharray':'11 9'}));
+  const drawForecast=node=>{
+    const fy=y(node.value),cy=y(price),dx=futureX-historyRight;
+    const path=`M ${historyRight} ${cy} C ${historyRight+dx*.31} ${cy+(fy-cy)*.08}, ${futureX-dx*.58} ${fy-(fy-cy)*.07}, ${futureX} ${fy}`;
+    svg.append(swingWaveSvg('path',{d:path,fill:'none',stroke:node.color,
+      'stroke-width':3.1,'stroke-linecap':'round','stroke-dasharray':'9 8',opacity:'.86'}));
+  };
+  // 高目標較上方：先畫遠目標，再畫主要共振，終點都從「現價」向右投射。
+  targetNodes.filter(n=>n.kind==='alternate').forEach(drawForecast);
+  targetNodes.filter(n=>n.kind==='main').forEach(drawForecast);
+  if(downNode)drawForecast(downNode);
+  const point=(x,value,color,r=5.5)=>{
+    const py=y(value);
+    svg.append(swingWaveSvg('circle',{cx:x,cy:py,r:r+2.3,fill:'#fff',opacity:'.98'}));
+    svg.append(swingWaveSvg('circle',{cx:x,cy:py,r,fill:color}));
+    return py;
+  };
+  // 指標標籤屬於「歷史」或「預測」是兩種資料身份，不可混用。
+  const labels=[];
+  const add=(node,px,py,prefer,side)=>labels.push({
+    pointX:px,pointY:py,x:px,y:py,prefer,side,color:node.color,
+    title:node.title,value:overviewIntFmt(node.value),textColor:node.textColor
+  });
+  if(extrema.support){
+    const e=extrema.support;
+    add({title:'支撐',value:e.value,color:'#409af8',textColor:'#245a9e'},e.x,point(e.x,e.value,'#409af8',5.5),'below','history');
   }
-  const downPathPoints=[{x:currentPoint.x,v:price},...downNodes.map(n=>({x:n.x,v:n.value}))];
-  const downPath=overviewWavePath(downPathPoints,y);
-  if(downPath&&downNodes.length){
-    svg.append(swingWaveSvg('path',{d:downPath,fill:'none',stroke:'#55b78a','stroke-width':'3','stroke-linecap':'round','stroke-linejoin':'round','stroke-dasharray':'9 8',opacity:'.9'}));
+  if(extrema.high&&extrema.high.index!==extrema.support?.index){
+    const e=extrema.high;
+    add({title:'前高',value:e.value,color:'#f4b436',textColor:'#25466d'},e.x,point(e.x,e.value,'#f4b436',5.6),'above','history');
   }
-
-  const addDot=(x,val,color,r=6.3,border='#fff')=>{const cy=y(val);svg.append(swingWaveSvg('circle',{cx:x,cy,r:r+2.4,fill:border,opacity:'0.96'}));svg.append(swingWaveSvg('circle',{cx:x,cy,r,fill:color}));return cy;};
-  const currentY=addDot(currentPoint.x,price,currentPoint.dot,6.9);
-  upNodes.forEach(n=>addDot(n.x,n.value,n.dot,6.6));
-  downNodes.forEach(n=>addDot(n.x,n.value,n.dot,6.4));
-
-  const supportValue=downNodes[0]?.value??positionNumber(downsideLevels[0]?.value);
-  const supportHist=overviewFindNearestHistoryAnchor(history,supportValue);
-  const breakoutHist=breakout!==null?overviewFindNearestHistoryAnchor(history,breakout):null;
-
-  const labelItems=[];
-  labelItems.push({anchorX:currentPoint.x,pointY:currentY,title:'現價',value:overviewIntFmt(price),color:'#8196af'});
-  if(supportHist&&supportHist.index<history.length-1&&supportHist.diff<=.12&&supportValue!==null&&supportValue<price*0.998){
-    const sy=addDot(supportHist.x,supportHist.value,'#3c9cff',5.8);
-    labelItems.push({anchorX:supportHist.x,pointY:sy,title:'支撐',value:overviewIntFmt(supportValue),color:'#3c9cff'});
-  }else if(downNodes[0]){
-    labelItems.push({anchorX:downNodes[0].x,pointY:y(downNodes[0].value),title:downNodes[0].title||'支撐',value:overviewIntFmt(downNodes[0].value),color:'#3c9cff'});
-  }
-  const breakoutSeenInHistory=!!(breakoutHist&&breakoutHist.index<history.length-1&&breakoutHist.diff<=.12);
-  const breakoutHistTitle=(breakout!==null&&breakout<price*0.998)?'前高(已過)':'前高';
-  if(breakoutSeenInHistory){
-    const by=addDot(breakoutHist.x,breakoutHist.value,'#f2b340',5.8);
-    labelItems.push({anchorX:breakoutHist.x,pointY:by,title:breakoutHistTitle,value:overviewIntFmt(breakout),color:'#f2b340'});
-  }else if(upNodes[0]&&upNodes[0].title==='前高／突破'){
-    const breakoutFutureTitle=(breakout!==null&&breakout>price*1.002)?'突破目標':'前高／突破';
-    labelItems.push({anchorX:upNodes[0].x,pointY:y(upNodes[0].value),title:breakoutFutureTitle,value:overviewIntFmt(upNodes[0].value),color:'#f2b340'});
-  }
-  const futureLabels=upNodes.filter(n=>n.title!== '前高／突破').slice(0,2);
-  futureLabels.forEach(n=>labelItems.push({anchorX:n.x,pointY:y(n.value),title:n.title,value:overviewIntFmt(n.value),color:n.dot}));
-
-  const callouts=overviewNodeCardLayout(labelItems,14,746,[284,336,388]);
-  callouts.forEach(item=>overviewNodeBubble(svg,item.anchorX,item.pointY,item.title,item.value,item.color,{x:item.x,y:item.y,w:item.w,h:item.h,anchorX:item.anchorX}));
+  const currentY=point(historyRight,price,'#8798ad',6);
+  add({title:'現價',value:price,color:'#8899b2',textColor:'#142843'},historyRight,currentY,'below','history');
+  const altNode=targetNodes.find(n=>n.kind==='alternate');
+  const mainNode=targetNodes.find(n=>n.kind==='main');
+  if(altNode)add({...altNode,textColor:'#c78316'},futureX,point(futureX,altNode.value,altNode.color,5.7),'above','right');
+  if(mainNode)add({...mainNode,textColor:'#6832cf'},futureX,point(futureX,mainNode.value,mainNode.color,5.7),'below','right');
+  if(downNode)add({...downNode,textColor:'#148766'},futureX,point(futureX,downNode.value,downNode.color,5.7),'center','right');
+  const positioned=overviewWavePlaceLabels(labels);
+  positioned.forEach(n=>overviewWaveDrawBubble(svg,n));
 }
 function renderOverviewResonance(play,expected,decision,risk=null){
   if(!play||!expected){resetOverviewResonance();return}const res=expected?.plan?.resonance||{},mainCluster=res?.main||null,familyCount=mainCluster?.familyCount||0,resonanceStrength=res.adjustedStrength??res.strength??0;
