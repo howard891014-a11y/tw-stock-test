@@ -109,7 +109,7 @@ function stockHeaderMeta(stock){
   const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"—"),market=String(stock?.market||stock?.marketLabel||"台股").trim();
   return [code,market].filter(Boolean).join(" | ");
 }
-const STOCK_META_CACHE_KEY="stockzone_stock_meta_cache_v2625";
+const STOCK_META_CACHE_KEY="stockzone_stock_meta_cache_v26830"; // v2.6.8.30: discard provisional full-company name cache
 function readStockMetaCache(){try{return JSON.parse(localStorage.getItem(STOCK_META_CACHE_KEY)||"{}")||{}}catch{return{}}}
 function cachedStockMeta(query){
   const q=String(query||"").trim(),all=readStockMetaCache(),hit=all[q];
@@ -117,10 +117,13 @@ function cachedStockMeta(query){
   const age=Date.now()-Number(hit.savedAt||0);if(!Number.isFinite(age)||age>30*24*60*60*1000)return null;
   return hit;
 }
-function rememberStockMeta(stock){
-  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"").trim(),name=shortStockName(stock?.name||stock?.shortName||""),market=stock?.market||stock?.marketLabel||"";
+function rememberStockMeta(stock,{verified=false}={}){
+  const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||"").trim(),incomingName=shortStockName(stock?.name||stock?.shortName||""),market=stock?.market||stock?.marketLabel||"";
   if(!/^\d{4,6}$/.test(code))return;
-  const row={code,name,market,symbol:stock?.symbol||`${code}${market==="上櫃"?".TWO":".TW"}`,savedAt:Date.now()},all=readStockMetaCache();
+  const all=readStockMetaCache(),previous=all[code],keepOfficial=!!previous?.verifiedShortName&&!verified;
+  // Yahoo/MIS/full-company quote names must never overwrite a canonical name already verified by stockmeta.
+  const name=keepOfficial?previous.name:incomingName,verifiedShortName=verified||!!(keepOfficial&&previous?.name);
+  const row={code,name,market:market||previous?.market||"",symbol:stock?.symbol||previous?.symbol||`${code}${market==="上櫃"?".TWO":".TW"}`,verifiedShortName,savedAt:Date.now()};
   all[code]=row;if(name)all[name]=row;localStorage.setItem(STOCK_META_CACHE_KEY,JSON.stringify(all));
 }
 async function stockMeta(query){
@@ -144,7 +147,9 @@ function preferredStockName(...values){
 }
 function mergeStockMeta(data,meta){
   if(!meta)return data;
-  const industry=stockIndustryValue(meta,data),name=preferredStockName(data?.name,data?.shortName,meta?.name,meta?.shortName);
+  // Verified stockmeta carries the listed trading abbreviation, which may be LONGER than Yahoo's company name (e.g. 矽力*-KY).
+  const officialName=meta?.verifiedShortName?shortStockName(meta?.name||meta?.shortName):"";
+  const industry=stockIndustryValue(meta,data),name=officialName||preferredStockName(data?.name,data?.shortName,meta?.name,meta?.shortName);
   return {...data,code:meta.code||data?.code||data?.symbol,symbol:data?.symbol||meta.symbol||meta.code,name:name||meta.name||data?.name||data?.shortName,shortName:name||meta.name||data?.shortName||data?.name,market:meta.market||data?.market||data?.marketLabel,marketLabel:meta.market||data?.marketLabel||data?.market,industry};
 }
 
@@ -581,11 +586,38 @@ async function fundamentals(query,market){
   await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),complete:!fundamentalPayloadNeedsSupplement(data),data});
   return data;
 }
+// V4.3 long financial research: separate on-demand series. Keep original fundamentals and 40/45/15 untouched.
+let latestV4HistoricalFinancials=null;
+async function loadV4HistoricalFinancials(code,market){
+  if(!window.StockZonePlayV4)return;
+  const key=`v43-financial-history:${code}|${String(market||'')}`,cache=await stockzoneIdbGet("marketCache",key),age=Date.now()-Number(cache?.savedAt||0);
+  const cachedRows=Array.isArray(cache?.data?.quarters)?cache.data.quarters:[];
+  const cachedGood=cachedRows.filter(x=>Number.isFinite(Number(x?.eps))).length>=16&&cachedRows.filter(x=>Number.isFinite(Number(x?.revenue))&&Number(x.revenue)>0).length>=16;
+  let data=cache?.data||null;
+  if(!data||(cachedGood?age>=FUNDAMENTALS_CACHE_MS:age>=12*60*60*1000)){
+    const mk=offset=>`/api/technical?mode=fundamentals&research=long&offset=${offset}&q=${encodeURIComponent(code)}&market=${encodeURIComponent(String(market||''))}`;
+    try{
+      const primary=await readJson(await fetch(mk(0),{cache:'no-store'}),'V4.3歷史基本面');
+      data=primary;
+      // MOPS fallback only when Yahoo does not provide the 16+ EPS quarters needed for 12-quarter baseline + four recent.
+      if((primary?.quarters||[]).filter(x=>Number.isFinite(Number(x?.eps))).length<16||(primary?.quarters||[]).filter(x=>Number.isFinite(Number(x?.revenue))&&Number(x.revenue)>0).length<16){
+        try{data=mergeFundamentalPayload(primary,await readJson(await fetch(mk(8),{cache:'no-store'}),'V4.3較早季度EPS'));}
+        catch(e){console.warn('較早季度官方EPS暫不可用，研究顯示缺口',e)}
+      }
+      await stockzoneIdbPut('marketCache',key,{savedAt:Date.now(),data});
+    }catch(e){console.warn('長期季度資料補充失敗，保留先前候選/標示缺口',e)}
+  }
+  const current=String(currentStock?.code||String(currentStock?.symbol||'').split('.')[0]||'');
+  if(current!==code)return;
+  latestV4HistoricalFinancials=Array.isArray(data?.quarters)?data:null;
+  if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
+}
 async function loadFundamentals(stock){
+  latestV4HistoricalFinancials=null;
   const code=String(stock?.code||String(stock?.symbol||"").split(".")[0]||""),market=stock?.market||stock?.marketLabel||"";
   try{
     const data=await fundamentals(code,market),cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");
-    if(cur&&cur!==code)return;latestFundamentalData=data;renderFundamentalOverview();const industry=stockIndustryValue(data,data?.company,data?.profile,data?.officialStatement);if(industry&&currentStock)currentStock={...currentStock,industry};if(latestValuationData)renderValuation(latestValuationData);if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();
+    if(cur&&cur!==code)return;latestFundamentalData=data;renderFundamentalOverview();const industry=stockIndustryValue(data,data?.company,data?.profile,data?.officialStatement);if(industry&&currentStock)currentStock={...currentStock,industry};if(latestValuationData)renderValuation(latestValuationData);if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle();void loadV4HistoricalFinancials(code,market);
   }catch(e){console.warn("長期基本面更新失敗",e);const cur=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(!cur||cur===code){latestFundamentalData=null;resetFundamentalOverview("資料不足");if(latestFiveStageResult&&latestTechnicalForPlay)renderPlayStyle()}}
 }
 
@@ -2122,12 +2154,12 @@ function resetPlayStyle(note="搜尋股票後判讀"){
   latestPlayStyleResult=null;resetShortAnalysis();resetSwingWave();resetLongAnalysis();resetTradeOutputs(note);
 }
 
-// v2.6.8.29 V4.2 research: shadow only, does not overwrite StockZone production operationProfile or trade style.
+// v2.6.8.29 V4.3 research: shadow only, does not overwrite StockZone production operationProfile or trade style.
 function renderV4PlayCandidate(play){
   const api=window.StockZonePlayV4,el=$('szV4Candidate'),detail=$('szV4CandidateDetail');
   if(!el||!detail||!api)return;
   const raw=api.classify({personality:play?.personality,fundamental:play?.longEngine?.basicAssessment,
-    fundamentalRows:play?.longEngine?.fundamentals?.rows||[],history:latestHistory5Y?.history||[]});
+    fundamentalRows:latestV4HistoricalFinancials?.quarters||play?.longEngine?.fundamentals?.rows||[],history:latestHistory5Y?.history||[]});
   if(!raw.available){el.textContent='資料不足，暫不分類';detail.textContent=raw.reason;return}
   el.textContent=`${raw.label}｜核心 ${raw.basePct}%／機動 ${raw.tacticalPct}%${raw.provisional?'（暫定）':''}`;
   detail.textContent=`${raw.explanation}｜${raw.confidence}。長期基準：${raw.longHistoryDays}日歷史K線；${raw.fundamental.reason}；${raw.rhythm.reason}。中期檢查：${raw.medium.reason}。近1～3個月的技術、估值、法人與目標價只用於進出場；未經樣本外回測，正式玩法及買賣決策不變。`;
@@ -3334,20 +3366,35 @@ async function search(){
     // market_company_profile + price_snapshot 同時完成「名稱→代碼／市場」與收盤價解析。
     // 不再為每一檔第一次搜尋額外抓官方股票主檔或交易所產業類別。
     let meta=localStockMeta(q)||cachedStockMeta(q);
+    if(meta&&localStockMeta(q))meta={...meta,verifiedShortName:true};
     let data=await quote(meta?.code||q,meta?.market||"");
     if(seq!==activeSearchSeq)return;
     if(!meta&&data){
       const code=String(data.code||String(data.symbol||"").split(".")[0]||"").trim();
       if(/^\d{4,6}$/.test(code))meta={code,name:data.name||data.shortName||(/[\u3400-\u9fff]/.test(q)?q:""),market:data.market||data.marketLabel||"",symbol:data.symbol||`${code}${String(data.market||"")==="上櫃"?".TWO":".TW"}`};
     }
+    // The quote feed supplies PRICES, not a trusted listed short name. Prefer a cached verified identity by code.
+    const resolvedCode=String(data?.code||String(data?.symbol||"").split(".")[0]||"").trim();
+    const officialMeta=localStockMeta(resolvedCode)||cachedStockMeta(resolvedCode);
+    if(officialMeta&&(localStockMeta(resolvedCode)||officialMeta.verifiedShortName))meta={...officialMeta,verifiedShortName:true};
     data=mergeStockMeta(data,meta);renderStock(data);setView(readSessionJson(UI_SESSION_KEY,{view:"overview"})?.view||"overview");
     loadValuation(data);loadTechnical(data);void loadFundamentals(data);void loadInstitutional(data);loadDisposal(data);beginTargetSearch(data.code||data.symbol||q);
     setStatus(`搜尋成功：${shortStockName(data.name)||data.code||q}`);btn.disabled=false;
 
     const code=String(data.code||String(data.symbol||"").split(".")[0]||q),name=data.name||data.shortName||"";
-    // 只有 DB/Yahoo 沒帶齊身分時才背景補查；正常搜尋不再多送一個 meta request。
-    if(!data?.name||!data?.market){
-      void stockMeta(code||q).then(m=>{if(!m||seq!==activeSearchSeq)return;const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(m.code||"")!==curCode)return;currentStock=mergeStockMeta(currentStock,m);rememberStockMeta(currentStock);setText("stockName",shortStockName(currentStock.name||currentStock.shortName)||"—");setText("stockCodeLabel",stockHeaderMeta(currentStock))}).catch(e=>console.warn("股票身分背景補查失敗",e));
+    // v2.6.8.30: Verify each stock's TRADING abbreviation once (30-day cache), rather than trusting a
+    // Yahoo/MIS company name. This never adds a request to 30-second live quote polling.
+    if(!meta?.verifiedShortName){
+      void stockMeta(code||q).then(m=>{
+        if(!m||seq!==activeSearchSeq)return;
+        const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");
+        if(!/^\d{4,6}$/.test(curCode)||String(m.code||"")!==curCode)return;
+        const verified={...m,verifiedShortName:true};
+        currentStock=mergeStockMeta(currentStock,verified);
+        rememberStockMeta(currentStock,{verified:true});
+        setText("stockName",shortStockName(currentStock.name||currentStock.shortName)||"—");
+        setText("stockCodeLabel",stockHeaderMeta(currentStock));
+      }).catch(e=>console.warn("股票簡稱背景查證失敗",e));
     }
     void loadTargetPlay(code,name).catch(e=>console.warn("目標價背景更新失敗",e));
     void loadNews(code,name).catch(e=>console.warn("新聞背景更新失敗",e));
