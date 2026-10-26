@@ -2575,15 +2575,15 @@ function overviewFocusRange(historyValues,extraValues,price){
   min-=pad; max+=pad; span=Math.max(1,max-min);
   return {min,max};
 }
-function overviewNodeCardLayout(items,leftBound=14,rightBound=746,rows=[266,304]){
+function overviewNodeCardLayout(items,leftBound=14,rightBound=746,rows=[284,336,388]){
   const placed=[];
   const sorted=[...(items||[])].sort((a,b)=>a.anchorX-b.anchorX);
   const rowEnds=rows.map(()=>leftBound);
   sorted.forEach(item=>{
     const titleStr=String(item.title||'');
     const valueStr=String(item.value||'--');
-    const w=Math.max(84,Math.min(132,Math.max(titleStr.length*10+28,valueStr.length*12+30)));
-    const h=46;
+    const w=Math.max(78,Math.min(120,Math.max(titleStr.length*9+24,valueStr.length*11+28)));
+    const h=42;
     let bestIdx=0,bestScore=Infinity,bestX=leftBound;
     rows.forEach((rowY,idx)=>{
       let x=Math.max(leftBound,Math.min(rightBound-w,item.anchorX-w/2));
@@ -2600,7 +2600,7 @@ function overviewNodeCardLayout(items,leftBound=14,rightBound=746,rows=[266,304]
 function overviewNodeBubble(svg,x,pointY,title,value,color,opts={}){
   const titleStr=String(title||''), valueStr=String(value||'--');
   const card=swingWaveSvg('g',{});
-  const w=opts.w||100, h=opts.h||46;
+  const w=opts.w||96, h=opts.h||42;
   const boxX=opts.x??Math.max(10,Math.min(750-w,x-w/2));
   const boxY=opts.y??270;
   const anchorX=Math.max(boxX+14,Math.min(boxX+w-14,opts.anchorX??x));
@@ -2739,7 +2739,7 @@ function drawOverviewResonance(play,expected){
 
   const supportValue=downNodes[0]?.value??positionNumber(downsideLevels[0]?.value);
   const supportHist=overviewFindNearestHistoryAnchor(history,supportValue);
-  const breakoutHist=breakout!==null&&breakout<=price*1.002?overviewFindNearestHistoryAnchor(history,breakout):null;
+  const breakoutHist=breakout!==null?overviewFindNearestHistoryAnchor(history,breakout):null;
 
   const labelItems=[];
   labelItems.push({anchorX:currentPoint.x,pointY:currentY,title:'現價',value:overviewIntFmt(price),color:'#8196af'});
@@ -2749,17 +2749,19 @@ function drawOverviewResonance(play,expected){
   }else if(downNodes[0]){
     labelItems.push({anchorX:downNodes[0].x,pointY:y(downNodes[0].value),title:downNodes[0].title||'支撐',value:overviewIntFmt(downNodes[0].value),color:'#3c9cff'});
   }
-  const breakoutTitle=(breakout!==null&&breakout<price*0.998)?'前高(已過)':'前高／突破';
-  if(breakoutHist&&breakoutHist.index<history.length-1&&breakoutHist.diff<=.10){
+  const breakoutSeenInHistory=!!(breakoutHist&&breakoutHist.index<history.length-1&&breakoutHist.diff<=.12);
+  const breakoutHistTitle=(breakout!==null&&breakout<price*0.998)?'前高(已過)':'前高';
+  if(breakoutSeenInHistory){
     const by=addDot(breakoutHist.x,breakoutHist.value,'#f2b340',5.8);
-    labelItems.push({anchorX:breakoutHist.x,pointY:by,title:breakoutTitle,value:overviewIntFmt(breakout),color:'#f2b340'});
+    labelItems.push({anchorX:breakoutHist.x,pointY:by,title:breakoutHistTitle,value:overviewIntFmt(breakout),color:'#f2b340'});
   }else if(upNodes[0]&&upNodes[0].title==='前高／突破'){
-    labelItems.push({anchorX:upNodes[0].x,pointY:y(upNodes[0].value),title:breakoutTitle,value:overviewIntFmt(upNodes[0].value),color:'#f2b340'});
+    const breakoutFutureTitle=(breakout!==null&&breakout>price*1.002)?'突破目標':'前高／突破';
+    labelItems.push({anchorX:upNodes[0].x,pointY:y(upNodes[0].value),title:breakoutFutureTitle,value:overviewIntFmt(upNodes[0].value),color:'#f2b340'});
   }
   const futureLabels=upNodes.filter(n=>n.title!== '前高／突破').slice(0,2);
   futureLabels.forEach(n=>labelItems.push({anchorX:n.x,pointY:y(n.value),title:n.title,value:overviewIntFmt(n.value),color:n.dot}));
 
-  const callouts=overviewNodeCardLayout(labelItems,14,746,[262,302]);
+  const callouts=overviewNodeCardLayout(labelItems,14,746,[284,336,388]);
   callouts.forEach(item=>overviewNodeBubble(svg,item.anchorX,item.pointY,item.title,item.value,item.color,{x:item.x,y:item.y,w:item.w,h:item.h,anchorX:item.anchorX}));
 }
 function renderOverviewResonance(play,expected,decision,risk=null){
