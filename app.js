@@ -2189,6 +2189,7 @@ function renderV4TacticalPanel(play,price,expected,decision,risk){
   // v2.6.8.33: Research-only integration uses the ACTUAL V4.3 candidate, not production play.operationProfile.
   const adviceEl=$('szV4DecisionResearch'),merger=window.StockZoneTradeV4;
   if(adviceEl&&merger){
+    try {
     const known=!!state&&marketDynamicData?.w3?.stale!==true&&marketDynamicData?.w3?.isLiveModel!==false,
       verifiedWarning=known&&typeof marketDynamicData?.w3?.warning==='boolean'?marketDynamicData.w3.warning:null,
       originalRisk=risk||buildDecisionRisk(play,price,expected),holding=expected?.position||currentHoldingPosition(),
@@ -2196,7 +2197,7 @@ function renderV4TacticalPanel(play,price,expected,decision,risk){
       calibrated=resValid?api.resonanceDataConfidence(reson.adjustedStrength,play?.longEngine?.basicAssessment):{available:false},
       conclusion=merger.decide({w3:{valid:known,regime:state==='off'?'RiskOff':state==='on'?'RiskOn':'',warning:verifiedWarning},
         candidate,holding,price,capital:10000,originalDecision:decision,risk:originalRisk,
-        resonance:{valid:resValid,adjustedStrength:res?.adjustedStrength,researchConfidence:calibrated?.available?calibrated.confidence:null},tactical:raw});
+        resonance:{valid:resValid,adjustedStrength:reson?.adjustedStrength,researchConfidence:calibrated?.available?calibrated.confidence:null},tactical:raw});
     adviceEl.textContent=`研究整合：${conclusion.action}｜${conclusion.reason}（不覆蓋正式六價位）`;
     const set=(id,value)=>{const e=$(id);if(e)e.textContent=String(value??'--')};
     set('szV33Summary',conclusion.action);
@@ -2207,6 +2208,13 @@ function renderV4TacticalPanel(play,price,expected,decision,risk){
     set('szV33Levels',conclusion.stageNote);
     set('szV33Reason',`${conclusion.reason}｜${conclusion.position?.holdingLock?.reason||''}｜六價位仍由舊版玩法計算、V4只改研究部位；T+1、交易成本與成交績效須由後續獨立模擬回測驗證。`);
     const card=$('szV33ResearchCard');if(card){card.dataset.state=conclusion.state;card.dataset.riskScope=conclusion.riskScope}
+    } catch (researchError) {
+      // A research-only integration must never break the production six prices or erase loaded fundamentals.
+      console.error('V4.3研究買賣整合顯示失敗（正式買賣與基本面保留）',researchError);
+      adviceEl.textContent='研究整合暫時無法顯示；正式六價位與基本面不受影響。';
+      const card=$('szV33ResearchCard');if(card){card.dataset.state='error';card.dataset.riskScope='unconfirmed'}
+      const summary=$('szV33Summary');if(summary)summary.textContent='研究整合暫時不可用';
+    }
   }
 
   // 並行呈現：本輪不覆寫原始 buildDecisionPlan() 的減碼/止盈/止損價。
