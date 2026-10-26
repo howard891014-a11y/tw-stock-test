@@ -2849,7 +2849,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.26</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.27</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3157,6 +3157,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <b id="playMainAction">搜尋股票後判讀</b>
         <p id="playReason">玩法名稱由最終核心倉／機動倉比例轉換。</p>
         <div class="playstyle-position-mode"><span>部位結構</span><b id="playPositionMode">--</b><small id="playPositionModeNote">等待技術／基本面／估值／目標價整合</small></div>
+        <aside class="sz-v4-candidate" aria-label="V4研究候選玩法"><div class="sz-v4-head"><span>V4 條件式玩法｜研究對照</span><em>不影響正式運算</em></div><b id="szV4Candidate">等待股性及營運資料</b><small id="szV4CandidateDetail">依長期營運品質＋股性結構判斷；不使用當前估值／法人／目標價決定玩法。</small></aside>
       </div>
       <section class="playstyle-short-analysis" id="playShortAnalysis" hidden>
         <div class="playstyle-short-head">
@@ -3347,6 +3348,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
             <div class="trim stop"><span id="decisionTrimStopLabel">減碼止損</span><strong id="decisionTrimStopPrice">--</strong><small id="decisionTrimStopNote">--</small></div>
             <div class="sell stop"><span id="decisionFullStopLabel">全部止損</span><strong id="decisionFullStopPrice">--</strong><small id="decisionFullStopNote">--</small></div>
           </div>
+          <section class="sz-v4-tactical" aria-label="機動倉波段倍率觀察"><div class="sz-v4-head"><span>機動倉倍率目標｜原版波段公式</span><em>觀察價，非自動賣點</em></div><div id="szV4WaveGrid" class="sz-v4-wave-grid"><div>等待波段資料</div></div><small id="szV4WaveNote">由原始第一波價差及回測低點產生1.5X／2X／2.5X；由買賣決策統籌。</small><div id="szV4DecisionResearch" class="sz-v4-orchestrator">研究整合提示：等待大盤／共振／玩法資料</div></section>
           <section class="adaptive-stop-panel" id="adaptiveStopPanel">
             <div class="adaptive-stop-head"><div><span>股性 × 勝率止損模型</span><b id="adaptiveStopMode">等待資料</b></div><small id="adaptiveStopStats">--</small></div>
             <div class="adaptive-stop-grid">
@@ -3715,8 +3717,23 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 <style id="stockzone-v26532-validation">
 .settings-validation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.settings-validation-actions button{flex:1 1 150px}.settings-validation-details{max-width:100%;margin:8px 0 0;padding:10px;border-radius:10px;background:#f6f8fb;border:1px solid #e2e8f1;color:#40536b;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:240px;overflow:auto}.settings-manual-update-status.is-warn{color:#a66d17}
 </style>
-  <script src="./capital-flow.js?v=2.6.8.26"></script>
-  <script src="./app.js?v=2.6.8.26"></script>
+<style id="sz-v4-position-style">
+.sz-v4-candidate,.sz-v4-tactical{margin:12px 0 0;padding:13px 15px;border-radius:15px;border:1px solid #d8e6fa;background:#f5f9ff;color:#263b58}
+.sz-v4-candidate{margin-bottom:4px}
+.sz-v4-head{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:7px;font-weight:800;font-size:13px}
+.sz-v4-head em{font-style:normal;font-size:10px;font-weight:700;color:#7e91a9}
+.sz-v4-candidate>b{display:block;margin:10px 0 6px;font-size:19px;color:#2753a0}
+.sz-v4-candidate small,.sz-v4-tactical>small{display:block;margin:6px 0 0;color:#667c96;line-height:1.55;font-size:11px}
+.sz-v4-wave-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0}
+.sz-v4-wave-grid>div{background:#fff;border:1px solid #d8e6fa;border-radius:12px;padding:9px 7px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.sz-v4-orchestrator{margin-top:12px;padding:9px;border-radius:9px;background:#eaf1fc;color:#3a577d;font-size:11px;line-height:1.6}
+.sz-v4-wave-grid span{color:#647a93;font-size:11px}.sz-v4-wave-grid strong{font-size:17px;color:#345a99}.sz-v4-wave-grid small{color:#72859e;font-size:10px;line-height:1.4}
+@media(max-width:580px){.sz-v4-wave-grid{gap:5px}.sz-v4-wave-grid>div{padding:7px 5px}.sz-v4-wave-grid strong{font-size:14px}.sz-v4-candidate,.sz-v4-tactical{padding:11px 10px}}
+</style>
+  <script src="./capital-flow.js?v=2.6.8.27"></script>
+  <script src="./lib/position-play-v4.js?v=2.6.8.27"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.27"></script>
+  <script src="./app.js?v=2.6.8.27"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
