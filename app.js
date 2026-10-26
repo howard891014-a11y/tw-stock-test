@@ -3151,7 +3151,7 @@ function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
   const riskFoot=risk?.valid?` 風險 ${risk.level.label} ${risk.score}/100：${risk.summary}。`:"";setText("decisionFoot",(profile?`${profile.label}：${profile.note}。價格仍由市場結構／估值決定，持股資料只調整報酬與分批股數。`:"價格來自目前玩法的結構與目標區；持股股數只用來換算分批數量，不改變市場目標價。")+riskFoot);
   return d;
 }
-function renderTradeOutputs(){const expected=renderExpectedUpside(latestPlayStyleResult);if(expected){const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price),risk=buildDecisionRisk(latestPlayStyleResult,price,expected),decision=renderDecision(latestPlayStyleResult,expected,risk);renderOverviewResonance(latestPlayStyleResult,expected,decision,risk)}}
+function renderTradeOutputs(){const expected=renderExpectedUpside(latestPlayStyleResult);if(expected){const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price),risk=buildDecisionRisk(latestPlayStyleResult,price,expected),decision=renderDecision(latestPlayStyleResult,expected,risk);renderOverviewResonance(latestPlayStyleResult,expected,decision,risk);renderResonanceLab(latestPlayStyleResult,expected,risk,decision)}}
 
 function technicalSystemJudgement(direction,personality,seasonality){
   const d=direction||{},pd=personality||{},sd=seasonality||{},f=d.factors||{};
@@ -5691,3 +5691,117 @@ $("runFundflowValidation")?.addEventListener("click",runFundflowValidation);
 // Browser-visible scheduler; backend enforces holiday + 14:00–18:00 TWSE window and ten-minute slots.
 setInterval(()=>{if(document.visibilityState==='visible'&&document.body.classList.contains('mode-screening')&&marketIndexPollingWindow())void loadMarketIndexQuick(false)},60000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&document.body.classList.contains('mode-screening'))void loadMarketIndexQuick(false)});
+
+
+// v2.6.8.41 共振研究室 R1 —— 與正式 V4／共振演算法完全分離的審計介面。
+const SZ_LAB_STORE_KEY='sz_resonance_lab_r1_plans';
+const SZ_LAB_LABELS={short:'短期',mixed:'短波',swing:'波段','long-swing':'長波',long:'長期'};
+const SZ_LAB_CORE={short:20,mixed:35,swing:55,'long-swing':70,long:85};
+let szLabRecent=null,szLabLastStock='',szLabLastBacktest=null,szLabReportCode='';
+function szLabRead(){try{const v=JSON.parse(localStorage.getItem(SZ_LAB_STORE_KEY)||'{}');return v&&typeof v==='object'?v:{}}catch{return{}}}
+function szLabWrite(data){localStorage.setItem(SZ_LAB_STORE_KEY,JSON.stringify(data))}
+function szLabCurrentDate(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
+function szLabBars(){return (latestHistory5Y?.history?.length?latestHistory5Y.history:latestFiveStageResult?.path?.rows)||[]}
+function szLabActive(code){const data=szLabRead()[code]||{};return (data.plans||[]).find(x=>x.id===data.activeId)||null}
+function szLabValues(play,expected,risk,decision){
+ const res=expected?.plan?.resonance||{},levels=expected?.plan?.levels||[],down=expected?.downside?.levels||[];
+ return {price:positionNumber(expected?.price),main:positionNumber(res?.main?.center??levels[0]?.value),secondary:positionNumber(res?.secondary?.center??levels[1]?.value),pullback:positionNumber(down[0]?.value),defense:positionNumber(Array.isArray(decision?.fullStop)?(decision.fullStop[0]+decision.fullStop[1])/2:null),
+   play:play?.key||'swing',corePct:play?.operationProfile?.basePct??50,date:szLabCurrentDate(),capturedAt:new Date().toISOString()};
+}
+function szLabFmt(v){return Number.isFinite(v)&&v>0?technicalFmt(v):'--'}
+function szLabPlanText(v){if(!v)return '尚未建立';return `玩法 ${SZ_LAB_LABELS[v.play]||v.play}｜核心 ${Number.isFinite(v.corePct)?v.corePct:'--'}%\n主要 ${szLabFmt(v.main)}｜次要 ${szLabFmt(v.secondary)}\n回測 ${szLabFmt(v.pullback)}｜防守 ${szLabFmt(v.defense)}`}
+function szLabSetMessage(message,error=false){const el=$('szLabEvaluation');if(!el)return;el.textContent=message;el.style.borderLeftColor=error?'#e36777':'#7e75ee'}
+function renderResonanceLab(play,expected,risk,decision){
+ const lab=window.StockZoneResonanceLab,code=currentStockCode();if(!lab||!code)return;
+ szLabCachedExpected=expected;szLabCachedRisk=risk;szLabCachedDecision=decision;
+ const v=szLabValues(play,expected,risk,decision);szLabRecent={code,v};
+ const select=$('szLabPlaySelect');if(szLabLastStock!==code){if(select)select.value=play?.key||'swing';szLabLastStock=code;szLabLastBacktest=null;szLabReportCode='';setText('szLabBacktest','按「執行五年價格基準回測」開始；它不是原版 V4／共振的歷史重播。')}
+ const normalized=lab.cleanBars(szLabBars());const bars=normalized.bars;
+ const candidate=normalized.valid?lab.entryCandidate(bars,bars.length-1):{valid:false};
+ const reason=normalized.largeJumps?.length?'偵測到未確認的大幅跳變，須先查核公司行動':normalized.errors?.length?'有不完整的 OHLC 日K，基準回測將檢查有效性':'需要至少120根合法日K';
+ setText('szLabCandidate',candidate.valid?`本次入場視角（研究候選）：${candidate.label}｜核心傾向 ${candidate.corePct}%｜${candidate.reason}。
+對照現行正式玩法：${overviewPlayMetricLabel(play)}。此候選只用價格，不含歷史財報／W3，未驗證前不覆蓋原版。`:`研究候選資料不足：${reason}`);
+ if(select&&!select.dataset.szlTouched&&!szLabActive(code))select.value=candidate?.key||play?.key||'swing';
+ const pairs=[['主要',v.main],['次要',v.secondary],['回測',v.pullback]];
+ const reach=pairs.map(([label,target])=>{
+   if(!target)return `${label}：缺少有效目標價`;
+   const stats=lab.reachabilityProfile(szLabBars(),v.price,target);
+   if(!stats.valid)return `${label}：${stats.reason}`;
+   const h20=stats.horizons.find(h=>h.days===20),h40=stats.horizons.find(h=>h.days===40);
+   return `${label}：距現價 ${stats.distancePct>0?'+':''}${stats.distancePct}%｜歷史同幅度20D ${h20.hitPct}%・40D ${h40.hitPct}%（${stats.sample}筆）`;
+ });
+ setText('szLabReach',`到達時間參考（非目標價回測）｜每60交易日取1筆歷史樣本\n${reach.join('\n')}\n到達率僅表示過去相同百分比幅度曾否觸及，不能當成現在共振的預測機率。`);
+ const snapshot=szLabActive(code),record=szLabRead()[code];
+ setText('szLabOriginal',snapshot?`建立 ${snapshot.tradeDate}｜${szLabPlanText(snapshot.initial)}`:'尚未建立。按「鎖定原始交易計畫」記錄目前價格與自行確認的玩法。');
+ setText('szLabLive',szLabPlanText(v));
+ if($('szLabLockPlan'))$('szLabLockPlan').disabled=!!snapshot;
+ if($('szLabSaveUpdate'))$('szLabSaveUpdate').disabled=!snapshot;
+ if($('szLabNewTrade'))$('szLabNewTrade').disabled=!snapshot;
+ if(select)select.disabled=!!snapshot;
+ if(snapshot){
+   const tested=lab.evaluateSnapshot(snapshot,szLabBars());
+   const lines=tested.valid?tested.results.filter(r=>r.status!=='no-target').map(r=>{
+     const label={main:'主要',secondary:'次要',pullback:'回測',defense:'防守'}[r.key],
+       first=r.firstTouchDay?`第${r.firstTouchDay}交易日觸及`:'尚未觸及',
+       h20=r.horizons.find(h=>h.days===20)?.status;
+     return `${label} ${szLabFmt(r.target)}：${first}｜20日視窗 ${h20==='hit'?'已達':h20==='miss'?'未達':'觀察中'}`;
+   }):[tested.reason];
+   szLabSetMessage(`原始目標驗證｜已觀察${tested.observedDays??0}個交易日｜更新存檔 ${(snapshot.updates||[]).length}次\n${lines.join('\n')}`);
+   setText('szLabAudit',`引擎 ${snapshot.modelVersion}｜原始來源 ${snapshot.source}｜建立時間 ${snapshot.capturedAt}｜本檔共有 ${record.plans.length} 筆已保存交易；各筆原始數值不會因重新搜尋被覆寫。僅儲存本裝置，不會自動跨裝置同步。`);
+ }else{
+   szLabSetMessage('尚未建立原始交易計畫。未來只能核對事先保存的預測；不能拿今天的公式結果回填過去當成歷史預測。');
+   setText('szLabAudit','原始 V4.3.1／共振計算未更動。研究室 R1 只讀現有五年日K。交易計畫與更新紀錄只存在此瀏覽器 localStorage，不會寫入 Neon 或 Supabase；建議匯出 JSON 備份。');
+ }
+}
+$('szLabPlaySelect')?.addEventListener('change',e=>{e.target.dataset.szlTouched='1'});
+$('szLabLockPlan')?.addEventListener('click',()=>{
+ try{
+   const lab=window.StockZoneResonanceLab,latest=szLabRecent;if(!lab||!latest)return;
+   const code=latest.code,plans=szLabRead(),record=plans[code]||{plans:[],activeId:null};
+   if(szLabActive(code))return szLabSetMessage('這筆交易已有鎖定計畫；如要重新建一筆，請先封存目前交易。',true);
+   const choice=$('szLabPlaySelect')?.value||'swing',v=latest.v,core=SZ_LAB_CORE[choice];
+   const plan=lab.createSnapshot({code,stockName:currentStock?.name,tradeDate:v.date,capturedAt:v.capturedAt,
+     price:v.price,play:choice,corePct:core,main:v.main,secondary:v.secondary,pullback:v.pullback,defense:v.defense,source:`v2.6.8.40 正式目標價由玩法 ${SZ_LAB_LABELS[v.play]||v.play} 計算；本筆交易人工鎖定玩法 ${SZ_LAB_LABELS[choice]||choice}，如玩法不同，不視為新玩法目標已重算`});
+   plan.id=`${Date.now()}-${Math.floor(Math.random()*100000)}`;record.plans.push(plan);record.activeId=plan.id;plans[code]=record;
+   szLabWrite(plans);renderResonanceLab(latestPlayStyleResult,szLabCachedExpected,szLabCachedRisk,szLabCachedDecision);szLabSetMessage('原始計畫已鎖定。今後同一筆交易只更新即時分析，不改原始價格與玩法。');
+ }catch(e){szLabSetMessage('儲存失敗：'+e.message,true)}
+});
+$('szLabSaveUpdate')?.addEventListener('click',()=>{
+ try{
+   const lab=window.StockZoneResonanceLab,latest=szLabRecent;if(!lab||!latest)return;
+   const all=szLabRead(),r=all[latest.code],i=r?.plans?.findIndex(x=>x.id===r.activeId);if(i<0||i===undefined)return;
+   r.plans[i]=lab.appendUpdate(r.plans[i],latest.v);szLabWrite(all);
+   renderResonanceLab(latestPlayStyleResult,szLabCachedExpected,szLabCachedRisk,szLabCachedDecision);
+ }catch(e){szLabSetMessage('校正保存失敗：'+e.message,true)}
+});
+$('szLabNewTrade')?.addEventListener('click',()=>{
+ const code=currentStockCode(),all=szLabRead(),r=all[code];if(!r?.activeId)return;
+ if(!window.confirm('封存目前交易並允許建立新筆？原始計畫與校正紀錄均會保留。'))return;
+ r.activeId=null;szLabWrite(all);
+ const select=$('szLabPlaySelect');if(select){select.disabled=false;delete select.dataset.szlTouched}
+ renderResonanceLab(latestPlayStyleResult,szLabCachedExpected,szLabCachedRisk,szLabCachedDecision);
+});
+$('szLabRunBacktest')?.addEventListener('click',()=>{
+ const lab=window.StockZoneResonanceLab,code=currentStockCode();if(!lab||!code)return;
+ try{
+  const report=lab.backtestPriceBaselines(szLabBars(),{warmup:120,stride:60,costPct:.5});
+  szLabLastBacktest=report;szLabReportCode=code;
+  const el=$('szLabBacktest');if(!el)return;
+  if(!report.valid){el.textContent=`無法進行價格回測：${report.reason}｜有效K線 ${report.coverage?.days||0}｜${JSON.stringify(report.coverage?.largeJumps||[])}`;return}
+  const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const rows=report.results.map((r)=>`<tr><td>${esc(r.strategy.label)}（${r.strategy.days}日）</td><td>${r.stats.count}</td><td>${r.stats.winPct}%</td><td>${r.stats.avgPct}%</td><td>${r.stats.medianPct}%</td><td>${r.stats.worstMaePct}%</td></tr>`);
+  const cmp=report.policyComparison||{},later=cmp.later||{},whole=cmp.whole||{};
+  const lift=v=>Number.isFinite(v)?`${v>0?'+':''}${v}%`:'--';
+  el.innerHTML=`<b>真實歷史價格基準｜${esc(report.coverage.from)}～${esc(report.coverage.to)}</b><br>同一批 ${report.coverage.signals} 個入場訊號（每60交易日一筆）；T+1開盤、成本0.5%、同日雙觸及先停損。<br>研究候選對比固定波段：全樣本平均淨報酬差 ${lift(whole.meanNetLiftPct)}；後30%時序保留區差 ${lift(later.meanNetLiftPct)}（${later.candidate?.count??0}筆；樣本小，不可視為驗證成功）。<table><thead><tr><th>策略／期限</th><th>筆數</th><th>勝率</th><th>平均淨報酬</th><th>淨報酬中位</th><th>最差MAE</th></tr></thead><tbody>${rows.join('')}</tbody></table><small>此為預先固定停利／止損的價格基準，不使用現行共振預測，因此<strong>不可拿來宣稱 V4.3.1 已通過歷史回測</strong>。資料來源 Yahoo 五年日K；跳變超過35%會暫停並要求校正。</small>`;
+ }catch(e){szLabSetMessage('價格基準回測失敗：'+e.message,true)}
+});
+$('szLabExport')?.addEventListener('click',()=>{
+ const code=currentStockCode();if(!code)return;
+ const data={exportedAt:new Date().toISOString(),code,plans:szLabRead()[code]?.plans||[],
+  priceBacktest:szLabReportCode===code?szLabLastBacktest:null,
+  source:'StockZone v2.6.8.41 research lab R1',disclaimer:'研究候選與價格基準不等於歷史時點完整公式重現'};
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=`sz-resonance-lab-${code}-${szLabCurrentDate()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+});
+// 保留最新一筆畫面計算輸出供按鈕事件使用，不從外部重算正式演算法。
+let szLabCachedExpected=null,szLabCachedRisk=null,szLabCachedDecision=null;

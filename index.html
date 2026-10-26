@@ -2884,7 +2884,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.40</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.41</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2954,6 +2954,24 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
           </div>
           <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 414" role="img" aria-label="共振價格路徑"></svg></div>
           <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
+          <section class="sz-reslab" aria-label="共振研究室">
+            <div class="sz-reslab-header"><b>共振研究室 · R1</b><span>研究模式｜不改正式玩法與共振公式</span></div>
+            <div class="sz-reslab-tip">價格目標目前<strong>沒有已驗證的到達期限</strong>。以下 3／5／10／20／40／60 交易日是驗證視窗，不是承諾到達日期。</div>
+            <div class="sz-reslab-candidate" id="szLabCandidate">讀取歷史資料後產生進場視角研究候選…</div>
+            <div class="sz-reslab-reach" id="szLabReach">歷史同幅度觸及率：等待有效日K與目標價。它不是共振目標達標率。</div>
+            <div class="sz-reslab-controls">
+              <label>本筆交易玩法（建立後鎖定）<select id="szLabPlaySelect" aria-label="本筆交易玩法">
+                <option value="short">短期</option><option value="mixed">短波</option><option value="swing" selected>波段</option><option value="long-swing">長波</option><option value="long">長期</option>
+              </select></label>
+              <button type="button" id="szLabLockPlan">鎖定原始交易計畫</button>
+              <button type="button" id="szLabSaveUpdate">保存即時校正</button>
+            </div>
+            <div class="sz-reslab-dual"><div><span>原始計畫（不覆寫）</span><b id="szLabOriginal">尚未建立</b></div><div><span>最新分析（會更新）</span><b id="szLabLive">等待分析</b></div></div>
+            <div id="szLabEvaluation" class="sz-reslab-eval">有原始計畫後，未來日K可逐次核對到價與時間；尚無未來資料時顯示「待觀察」。</div>
+            <div class="sz-reslab-actions"><button type="button" id="szLabRunBacktest">執行五年價格基準回測</button><button type="button" id="szLabExport">匯出研究紀錄 JSON</button><button type="button" id="szLabNewTrade" title="原本的計畫會封存，不會刪除">封存並新增一筆交易</button></div>
+            <div id="szLabBacktest" class="sz-reslab-backtest">回測基準：固定 5 種出場策略、T+1 開盤成交，結果供比較，不是正式共振價位的歷史回測。按上方按鈕後執行。</div>
+            <details class="sz-reslab-method"><summary>資料來源、版本紀錄與測試限制</summary><p id="szLabAudit">原版 V4.3.1 玩法與價格公式保留；研究室 R1 僅使用已取得的五年日K，沒有自行重算歷史財報或歷史W3。研究結果存於本裝置 localStorage，不會上傳 Neon／Supabase。</p></details>
+          </section>
         </article>
 
         <article class="card overview-decision-card" id="overviewDecisionCard">
@@ -3778,10 +3796,41 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
 @media(max-width:580px){.sz-v33-grid{gap:4px}.sz-v33-grid>div{padding:6px 4px}.sz-v33-grid b{font-size:11px}}
 @media(max-width:580px){.sz-v4-wave-grid{gap:5px}.sz-v4-wave-grid>div{padding:7px 5px}.sz-v4-wave-grid strong{font-size:14px}.sz-v4-candidate,.sz-v4-tactical{padding:11px 10px}}
 </style>
+
+<style id="stockzone-resonance-lab-r1">
+#overviewResonanceCard .sz-reslab{margin-top:15px;padding:14px;border:1px solid #dde6f4;border-radius:18px;background:#f9fbff;color:#29415b}
+#overviewResonanceCard .sz-reslab-header{display:flex;gap:6px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+#overviewResonanceCard .sz-reslab-header b{color:#243753;font-size:16px}
+#overviewResonanceCard .sz-reslab-header span{font-size:11px;color:#7b87a1}
+#overviewResonanceCard .sz-reslab-tip{line-height:1.5;font-size:12px;color:#586c87;background:#edf3ff;border-radius:11px;padding:10px;margin-bottom:10px}
+#overviewResonanceCard .sz-reslab-candidate{font-size:13px;line-height:1.6;padding:9px 10px;background:#fff;border:1px solid #e0e7f3;border-radius:11px}
+#overviewResonanceCard .sz-reslab-reach{font-size:12px;line-height:1.65;padding:9px 10px;background:#f4f6fe;border:1px solid #e0e6fb;border-radius:10px;margin-top:9px;white-space:pre-line}
+#overviewResonanceCard .sz-reslab-controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;margin:12px 0}
+#overviewResonanceCard .sz-reslab-controls label{display:flex;flex-direction:column;gap:4px;color:#586c85;font-size:11px;flex:1;min-width:120px}
+#overviewResonanceCard .sz-reslab select{min-height:35px;max-width:100%;padding:6px 8px;border:1px solid #cfdaeb;border-radius:10px;background:white;color:#243753}
+#overviewResonanceCard .sz-reslab button{padding:9px 10px;min-height:35px;border:1px solid #c9d8f0;background:white;color:#2b5f9c;font-size:12px;border-radius:10px;cursor:pointer;font-weight:700}
+#overviewResonanceCard #szLabLockPlan,#overviewResonanceCard #szLabRunBacktest{background:#347efa;color:white;border-color:#347efa}
+#overviewResonanceCard .sz-reslab button:disabled{opacity:.45;cursor:not-allowed}
+#overviewResonanceCard .sz-reslab-dual{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#overviewResonanceCard .sz-reslab-dual>div{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;border:1px solid #e0e7f1;background:white}
+#overviewResonanceCard .sz-reslab-dual span{font-size:11px;color:#71839c}
+#overviewResonanceCard .sz-reslab-dual b{font-size:12px;white-space:pre-line;line-height:1.6;overflow-wrap:anywhere}
+#overviewResonanceCard .sz-reslab-eval{margin-top:9px;padding:9px 10px;font-size:12px;line-height:1.6;border-left:3px solid #7e75ee;background:#f0f3fc;border-radius:6px}
+#overviewResonanceCard .sz-reslab-actions{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 8px}
+#overviewResonanceCard .sz-reslab-backtest{font-size:12px;line-height:1.6;color:#5c7090;overflow-x:auto}
+#overviewResonanceCard .sz-reslab-backtest table{border-collapse:collapse;min-width:430px;width:100%;margin:8px 0;background:#fff}
+#overviewResonanceCard .sz-reslab-backtest th,#overviewResonanceCard .sz-reslab-backtest td{border-bottom:1px solid #e5ebf3;padding:8px 6px;text-align:right;font-size:11px;white-space:nowrap}
+#overviewResonanceCard .sz-reslab-backtest th:first-child,#overviewResonanceCard .sz-reslab-backtest td:first-child{text-align:left}
+#overviewResonanceCard .sz-reslab-method{margin-top:10px;font-size:11px;color:#73839b}
+#overviewResonanceCard .sz-reslab-method p{line-height:1.65;margin:8px 0 0}
+@media(max-width:570px){#overviewResonanceCard .sz-reslab{padding:11px}#overviewResonanceCard .sz-reslab-controls{gap:6px}#overviewResonanceCard .sz-reslab-dual b{font-size:11px}#overviewResonanceCard .sz-reslab-actions button{flex:1}}
+</style>
+
   <script src="./capital-flow.js?v=2.6.8.29"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
   <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
-  <script src="./app.js?v=2.6.8.40"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.6.8.41"></script>
+  <script src="./app.js?v=2.6.8.41"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
