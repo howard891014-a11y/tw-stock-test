@@ -201,7 +201,7 @@ async function dbCloseQuote(query,marketHint=""){
     return{
       source:"Neon price_snapshot",officialClose:true,
       symbol:symbolFor(String(x.stock_code),market),code:String(x.stock_code),
-      name:shortName(x.stock_name||x.profile_name||FALLBACK_NAMES[x.stock_code]||x.stock_code),market,
+      name:shortName(x.profile_name||x.stock_name||FALLBACK_NAMES[x.stock_code]||x.stock_code),market,
       last,previousClose,change,changePct,
       open:toNumber(x.open_price),high:toNumber(x.high_price),low:toNumber(x.low_price),
       quoteTime:x.quote_time||x.updated_at||null,tradeDate:x.trade_date?String(x.trade_date).slice(0,10):null

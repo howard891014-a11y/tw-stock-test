@@ -121,22 +121,30 @@ async function handleFundamentals(req,res){
   const code=codeOf(req.query.q||req.query.code||req.query.symbol),market=String(req.query.market||'');
   if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
   try{
-    const now=Math.floor(Date.now()/1000),period2=now+86400,period1=now-Math.round(3.5*365.25*86400);
+    const researchLong=String(req.query?.research||'')==='long';
+    const batchOffset=researchLong?Math.max(0,Math.min(16,Math.floor(Number(req.query?.offset)||0))):0;
+    const now=Math.floor(Date.now()/1000),period2=now+86400,period1=now-Math.round((researchLong?6.25:3.5)*365.25*86400);
     let data=null,last=null;
     for(const s of marketSymbols(code,market)){
       try{data=await fetchFundamentalSeries(s,period1,period2);break}
       catch(e){last=e}
     }
-    const yahooRows=data?.rows?.slice(-12).reverse()||[];
+    const yahooRows=data?.rows?.slice(researchLong?-24:-12).reverse()||[];
     const officialPeriod=String(req.query?.period||'').trim();
     const target=mopsEps.reportPeriod(officialPeriod)
       ? officialPeriod
       : (yahooRows[0]?.period||'');
-    const targetInfo=mopsEps.reportPeriod(target);
+    const newestTarget=mopsEps.reportPeriod(target);
+    // 研究模式第二批只讀較早8季：每次伺服端最多補一批，避免20季同時打MOPS超時。
+    const oldPeriods=[];if(newestTarget){let p={...newestTarget};for(let k=0;k<=batchOffset;k++){oldPeriods.push(p);p=mopsEps.priorQuarter(p.year,p.quarter)}}
+    const historicalTarget=researchLong&&batchOffset?oldPeriods[batchOffset]:null;
+    const effectiveTarget=historicalTarget?`${historicalTarget.year}Q${historicalTarget.quarter}`:target;
+    const targetInfo=mopsEps.reportPeriod(effectiveTarget);
     const recentEps=yahooRows.filter(x=>Number.isFinite(x.eps)).length;
+    const recentRevenue=yahooRows.filter(x=>Number.isFinite(x.revenue)&&x.revenue>0).length;
     let mops={rows:[],attempted:false,reason:'historical EPS already sufficient'};
-    if(targetInfo&&(!mopsEps.epsPairReady(yahooRows,targetInfo)||recentEps<8)){
-      mops=await mopsEps.supplementMissingEps({code,period:target,rows:yahooRows});
+    if(targetInfo&&(researchLong?(recentEps<16||recentRevenue<16):(!mopsEps.epsPairReady(yahooRows,targetInfo)||recentEps<8))){
+      mops=await mopsEps.supplementMissingEps({code,period:effectiveTarget,rows:yahooRows,includeRevenue:researchLong});
     }
     const merged=new Map();
     for(const x of yahooRows){const p=mopsEps.reportPeriod(x.period);if(p)merged.set(mopsEps.quarterKey(p.year,p.quarter),x);}
@@ -147,12 +155,14 @@ async function handleFundamentals(req,res){
       // If Yahoo lacks quarterly EPS, fill it with the MOPS single-quarter result.
       // Do not replace Yahoo revenue/margin series or mix YTD with quarterly EPS.
       merged.set(key,{...x,...old,eps:Number.isFinite(old.eps)?old.eps:x.eps,
-        epsSource:Number.isFinite(old.eps)?'Yahoo Finance':x.epsSource});
+        epsSource:Number.isFinite(old.eps)?'Yahoo Finance':x.epsSource,
+        revenue:Number.isFinite(old.revenue)&&old.revenue>0?old.revenue:x.revenue,
+        revenueSource:Number.isFinite(old.revenue)&&old.revenue>0?'Yahoo Finance':x.revenueSource});
     }
     const quarters=[...merged.values()].sort((a,b)=>{
       const x=mopsEps.reportPeriod(a.period),y=mopsEps.reportPeriod(b.period);
       return (y?.year*10+y?.quarter||0)-(x?.year*10+x?.quarter||0);
-    }).slice(0,12);
+    }).slice(0,researchLong?24:12);
     if(!quarters.length)throw last||new Error('Yahoo 與官方歷史EPS皆無可用資料');
     const coverage={eps:quarters.filter(x=>Number.isFinite(x.eps)).length,
       revenue:quarters.filter(x=>Number.isFinite(x.revenue)).length,
@@ -161,12 +171,12 @@ async function handleFundamentals(req,res){
       epsYoyReady:targetInfo?mopsEps.epsPairReady(quarters,targetInfo):false,
       epsQoqReady:targetInfo?mopsEps.numericEpsByKey(quarters).has(mopsEps.quarterKey(targetInfo.year,targetInfo.quarter)) && mopsEps.numericEpsByKey(quarters).has(mopsEps.quarterKey(targetInfo.quarter===1?targetInfo.year-1:targetInfo.year,targetInfo.quarter===1?4:targetInfo.quarter-1)):false,
       targetPeriod:target||null};
-    // When not fully covered, NEVER have CDN retain an incomplete six-hour response.
-    res.setHeader('Cache-Control',coverage.epsYoyReady&&coverage.epsQoqReady&&coverage.eps>=5?'public, s-maxage=21600, stale-while-revalidate=21600':'no-store');
+    // Research payload is stock-specific and incomplete history must not become six-hour CDN truth.
+    res.setHeader('Cache-Control',researchLong?'no-store':coverage.epsYoyReady&&coverage.epsQoqReady&&coverage.eps>=5?'public, s-maxage=21600, stale-while-revalidate=21600':'no-store');
     return res.status(200).json({ok:true,source:[data?'Yahoo Finance fundamentals-timeseries':'',
       (mops.rows?.length||0)?'MOPS官方歷史EPS':''].filter(Boolean).join('＋'),
       code,market,symbol:data?.symbol||null,updatedAt:new Date().toISOString(),
-      quarters,coverage,epsSupplement:{attempted:mops.attempted,filled:mops.filled||0,reason:mops.reason}});
+      quarters,coverage,historyResearch:researchLong?{periodYears:6.25,offset:batchOffset,source:'原版Yahoo季度+MOPS官方歷史季度EPS，僅用於V4.3研究，不寫入正式基本面'}:null,epsSupplement:{attempted:mops.attempted,filled:mops.filled||0,reason:mops.reason}});
   }catch(e){return res.status(502).json({ok:false,error:e?.message||'長期基本面資料取得失敗'})}
 }
 
