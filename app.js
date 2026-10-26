@@ -2696,9 +2696,39 @@ function overviewWavePlaceLabels(items){
   }
   return placed;
 }
+// v2.6.8.40 — 預測標籤隨「價格點」定位；主要/次要是訊號身份，不是高度排序。
+// 如果兩個點太近，以最低必要距離向上下對稱錯開，仍保持較高價格在較上方。
+function overviewWavePlaceForecastLabels(items){
+  if(!items.length)return [];
+  const W=760,H=414,tagHeight=52,gap=7,top=36,bottom=H-tagHeight-5;
+  const sorted=[...items].sort((a,b)=>a.pointY-b.pointY);
+  const widths=sorted.map(item=>Math.min(122,Math.max(86,
+    Math.max(String(item.title).length*15+20,String(item.value).length*12+18))));
+  const step=tagHeight+gap;
+  // PAVA：找出不重疊且最接近每個錨點的標籤位置，不採用名稱推定上下。
+  const blocks=[];
+  sorted.forEach((item,i)=>{
+    const ideal=item.pointY-tagHeight/2-i*step;
+    blocks.push({from:i,to:i,sum:ideal,count:1,mean:ideal});
+    while(blocks.length>1){
+      const b=blocks[blocks.length-1],a=blocks[blocks.length-2];
+      if(a.mean<=b.mean)break;
+      a.to=b.to;a.sum+=b.sum;a.count+=b.count;a.mean=a.sum/a.count;blocks.pop();
+    }
+  });
+  const yPositions=new Array(sorted.length);
+  for(const b of blocks)for(let i=b.from;i<=b.to;i++)yPositions[i]=b.mean+i*step;
+  const shift=yPositions[0]<top?top-yPositions[0]:
+    yPositions.at(-1)>bottom?bottom-yPositions.at(-1):0;
+  return sorted.map((item,i)=>({
+    ...item,w:widths[i],h:tagHeight,
+    x:Math.max(4,Math.min(W-widths[i]-4,item.pointX+10)),
+    y:Math.max(top,Math.min(bottom,yPositions[i]+shift))
+  }));
+}
 function overviewWaveDrawBubble(svg,node){
   const {x:px,y:py,w,h,title,value,color,textColor,pointX,pointY}=node;
-  const closestX=Math.max(px+10,Math.min(px+w-10,pointX));
+  const closestX=node.side==='right'?px:Math.max(px+10,Math.min(px+w-10,pointX));
   const closestY=pointY<py?py:pointY>py+h?py+h:pointY;
   const connection=Math.hypot(closestX-pointX,closestY-pointY);
   if(connection>14)svg.append(swingWaveSvg('path',{
@@ -2797,9 +2827,8 @@ function drawOverviewResonance(play,expected){
     svg.append(swingWaveSvg('path',{d:path,fill:'none',stroke:node.color,
       'stroke-width':3.1,'stroke-linecap':'round','stroke-dasharray':'9 8',opacity:'.86'}));
   };
-  // 高目標較上方：先畫遠目標，再畫主要共振，終點都從「現價」向右投射。
-  targetNodes.filter(n=>n.kind==='alternate').forEach(drawForecast);
-  targetNodes.filter(n=>n.kind==='main').forEach(drawForecast);
+  // 依各目標的實際價格畫線；線條高低由價格決定，與主要／次要身份無關。
+  targetNodes.forEach(drawForecast);
   if(downNode)drawForecast(downNode);
   const point=(x,value,color,r=5.5)=>{
     const py=y(value);
@@ -2825,11 +2854,13 @@ function drawOverviewResonance(play,expected){
   add({title:'現價',value:price,color:'#8899b2',textColor:'#142843'},historyRight,currentY,'below','history');
   const altNode=targetNodes.find(n=>n.kind==='alternate');
   const mainNode=targetNodes.find(n=>n.kind==='main');
-  if(altNode)add({...altNode,textColor:'#c78316'},futureX,point(futureX,altNode.value,altNode.color,5.7),'above','right');
-  if(mainNode)add({...mainNode,textColor:'#6832cf'},futureX,point(futureX,mainNode.value,mainNode.color,5.7),'below','right');
+  if(altNode)add({...altNode,textColor:'#c78316'},futureX,point(futureX,altNode.value,altNode.color,5.7),'center','right');
+  if(mainNode)add({...mainNode,textColor:'#6832cf'},futureX,point(futureX,mainNode.value,mainNode.color,5.7),'center','right');
   if(downNode)add({...downNode,textColor:'#148766'},futureX,point(futureX,downNode.value,downNode.color,5.7),'center','right');
-  const positioned=overviewWavePlaceLabels(labels);
-  positioned.forEach(n=>overviewWaveDrawBubble(svg,n));
+  // 歷史標籤保留原邏輯，右側三個目標一律貼近各自實際終點。
+  const historyLabels=overviewWavePlaceLabels(labels.filter(n=>n.side!=='right'));
+  const forecastLabels=overviewWavePlaceForecastLabels(labels.filter(n=>n.side==='right'));
+  [...historyLabels,...forecastLabels].forEach(n=>overviewWaveDrawBubble(svg,n));
 }
 function renderOverviewResonance(play,expected,decision,risk=null){
   if(!play||!expected){resetOverviewResonance();return}const res=expected?.plan?.resonance||{},mainCluster=res?.main||null,familyCount=mainCluster?.familyCount||0,resonanceStrength=res.adjustedStrength??res.strength??0;
