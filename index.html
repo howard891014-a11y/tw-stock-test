@@ -2821,6 +2821,13 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 
 
 
+<style id="sz-v35-play-version-control">
+.sz-play-version-control{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;margin:8px 0 10px;border:1px solid rgba(126,143,168,.20);border-radius:10px;background:rgba(120,138,167,.055);font-size:12px}
+.sz-play-version-control label{font-weight:650;color:inherit}
+.sz-play-version-control select{background:var(--card-bg,#fff);color:var(--text,#25344a);border:1px solid rgba(120,136,161,.40);border-radius:8px;padding:6px 8px;font:inherit;cursor:pointer;max-width:100%}
+.sz-play-version-control small{color:var(--muted,#7c8da2);font-size:11px;flex-basis:100%}
+body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-control select{background:#1d2a3b;color:#e7f0fa}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2849,7 +2856,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.34</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.35</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3150,14 +3157,15 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
         </article>
 
         <article class="card detail-panel playstyle-card" data-view-panel="analysis" id="playStyleCard">
-      <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-playstyle" aria-hidden="true"></i><span>建議玩法</span></span><span class="badge">v10</span></div>
+      <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-playstyle" aria-hidden="true"></i><span>建議玩法</span></span><span class="badge">V4.3.1</span></div>
       <div class="playstyle-hero">
         <span>主建議玩法</span>
         <strong id="playMainPeriod">--</strong>
         <b id="playMainAction">搜尋股票後判讀</b>
         <p id="playReason">玩法名稱由最終核心倉／機動倉比例轉換。</p>
         <div class="playstyle-position-mode"><span>部位結構</span><b id="playPositionMode">--</b><small id="playPositionModeNote">等待技術／基本面／估值／目標價整合</small></div>
-        <aside class="sz-v4-candidate" aria-label="V4研究候選玩法"><div class="sz-v4-head"><span>V4.3 長期財報＋完整波段｜研究對照</span><em>不影響正式運算</em></div><b id="szV4Candidate">等待股性及營運資料</b><small id="szV4CandidateDetail">長期EPS／營收同比可查證才確認；以已完成的低高低高循環衡量保留漲幅；近期訊號只管進出場。</small></aside>
+        <div class="sz-play-version-control"><label for="szPlayEngineSelector">使用玩法版本</label><select id="szPlayEngineSelector" aria-label="使用玩法版本"><option value="v43" selected>V4.3.1 新版（預設）</option><option value="legacy">原版（備用）</option></select><small id="szPlayEngineStatus">V4.3.1 主引擎；原版保留可切回</small></div>
+        <aside class="sz-v4-candidate" aria-label="V4.3研究與舊版玩法對照"><div class="sz-v4-head"><span>V4.3.1｜多年股性與長期基本面</span><em>目前主引擎・原版可切回</em></div><b id="szV4Candidate">等待股性及營運資料</b><small id="szV4CandidateDetail">長期EPS／營收同比可查證才確認；以已完成的低高低高循環衡量保留漲幅；近期訊號只管進出場。</small></aside>
       </div>
       <section class="playstyle-short-analysis" id="playShortAnalysis" hidden>
         <div class="playstyle-short-head">
@@ -3348,7 +3356,7 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
             <div class="trim stop"><span id="decisionTrimStopLabel">減碼止損</span><strong id="decisionTrimStopPrice">--</strong><small id="decisionTrimStopNote">--</small></div>
             <div class="sell stop"><span id="decisionFullStopLabel">全部止損</span><strong id="decisionFullStopPrice">--</strong><small id="decisionFullStopNote">--</small></div>
           </div>
-          <section class="sz-v4-tactical" aria-label="機動倉波段倍率觀察"><div class="sz-v4-head"><span>機動倉倍率目標｜原版波段公式</span><em>觀察價，非自動賣點</em></div><div id="szV4WaveGrid" class="sz-v4-wave-grid"><div>等待波段資料</div></div><small id="szV4WaveNote">由原始第一波價差及回測低點產生1.5X／2X／2.5X；由買賣決策統籌。</small><div id="szV4DecisionResearch" class="sz-v4-orchestrator">研究整合提示：等待大盤／共振／玩法資料</div><div id="szV33ResearchCard" class="sz-v33-research" data-state="loading" aria-label="V4.3新舊買賣決策研究對照"><div class="sz-v4-head"><span>三引擎買賣整合｜.33研究對照</span><em>不覆蓋原版六價位・不送單</em></div><strong id="szV33Summary">等待大盤／候選玩法／共振</strong><div class="sz-v33-grid"><div><span>W3 風向</span><b id="szV33W3">--</b></div><div><span>V4.3 候選玩法</span><b id="szV33Profile">--</b></div><div><span>共振可信度</span><b id="szV33Resonance">--</b></div></div><div class="sz-v33-detail" id="szV33Budget">待建立核心／機動研究配置</div><div class="sz-v33-detail" id="szV33Levels">等待原版波段倍率</div><small id="szV33Reason">W3主導風控；玩法只決定部位；共振與正式價位決定進出場。模擬資金每檔NT$10,000，僅供比較。</small></div></section>
+          <section class="sz-v4-tactical" aria-label="機動倉波段倍率觀察"><div class="sz-v4-head"><span>機動倉倍率目標｜原版波段公式</span><em>觀察價，非自動賣點</em></div><div id="szV4WaveGrid" class="sz-v4-wave-grid"><div>等待波段資料</div></div><small id="szV4WaveNote">由原始第一波價差及回測低點產生1.5X／2X／2.5X；由買賣決策統籌。</small><div id="szV4DecisionResearch" class="sz-v4-orchestrator">研究整合提示：等待大盤／共振／玩法資料</div><div id="szV33ResearchCard" class="sz-v33-research" data-state="loading" aria-label="V4.3新舊買賣決策研究對照"><div class="sz-v4-head"><span>三引擎買賣統籌｜.35</span><em>玩法以所選版本為準・不送單</em></div><strong id="szV33Summary">等待大盤／候選玩法／共振</strong><div class="sz-v33-grid"><div><span>W3 風向</span><b id="szV33W3">--</b></div><div><span>目前使用玩法</span><b id="szV33Profile">--</b></div><div><span>共振可信度</span><b id="szV33Resonance">--</b></div></div><div class="sz-v33-detail" id="szV33Budget">待建立核心／機動研究配置</div><div class="sz-v33-detail" id="szV33Levels">等待原版波段倍率</div><small id="szV33Reason">W3主導風控；玩法只決定部位；共振與正式價位決定進出場。模擬資金每檔NT$10,000，僅供比較。</small></div></section>
           <section class="adaptive-stop-panel" id="adaptiveStopPanel">
             <div class="adaptive-stop-head"><div><span>股性 × 勝率止損模型</span><b id="adaptiveStopMode">等待資料</b></div><small id="adaptiveStopStats">--</small></div>
             <div class="adaptive-stop-grid">
@@ -3743,9 +3751,9 @@ body.mode-analysis #technical .card-title.theme-white-card-title{margin:0 0 14px
 @media(max-width:580px){.sz-v4-wave-grid{gap:5px}.sz-v4-wave-grid>div{padding:7px 5px}.sz-v4-wave-grid strong{font-size:14px}.sz-v4-candidate,.sz-v4-tactical{padding:11px 10px}}
 </style>
   <script src="./capital-flow.js?v=2.6.8.29"></script>
-  <script src="./lib/position-play-v4.js?v=2.6.8.34"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.34"></script>
-  <script src="./app.js?v=2.6.8.34"></script>
+  <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
+  <script src="./app.js?v=2.6.8.35"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
