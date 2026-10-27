@@ -2865,11 +2865,11 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
 .sz-sr82-levels .sz-sr82-projected{border-style:dashed;color:#607387;background:#f5f7fa}
 .sz-sr82-levels .sz-sr82-missing{opacity:.72}
 .sz-sr82-levels small{flex-basis:100%;font-size:10px;color:#8998a7}
-/* Keep PE/PS/PB title-to-description spacing consistent with EPS. */
-#valuation .valuation-model-tiles .valuation-tech-tile:not(.valuation-tech-tile-eps)>header{margin-bottom:5px!important}
-#valuation .valuation-model-tiles .valuation-tech-tile:not(.valuation-tech-tile-eps)>p{margin:0 0 8px!important;min-height:0!important;padding:0!important;line-height:1.45!important}
-@media(max-width:720px){#valuation .valuation-model-tiles .valuation-tech-tile:not(.valuation-tech-tile-eps)>header{margin-bottom:4px!important}}
+
 </style>
+
+
+
 </head>
 <body>
 <div class="app-shell">
@@ -2898,7 +2898,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.5</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.6</span></button>
   </aside>
 
   <div class="main-shell">
@@ -4531,6 +4531,173 @@ body.mode-screening .cf-page .cf-observe-controls .cf-search{margin-top:0}
 @media(max-width:720px){
   #overviewResonanceCard .overview-wave-shell{padding:5px 1px 2px!important;border-radius:19px!important}
   #overviewResonanceCard .overview-wave-shell svg{height:auto!important;min-height:0!important;max-height:none!important}
+}
+</style>
+<style id="stockzone-v2696-one-blue-card-system">
+/* One shared blue-card layout system across 技術分析, 基本面估值 and 法人動向.
+   Do not add independent title/description/row spacing overrides to individual sections. */
+:root {
+  --sz-blue-card-padding: 10px;
+  --sz-blue-card-head: 28px;
+  --sz-blue-card-head-desc-gap: 8px;
+  --sz-blue-card-desc-height: 34px;
+  --sz-blue-card-desc-row-gap: 9px;
+  --sz-blue-card-row-height: 35px;
+  --sz-blue-card-divider: #d9e3ef;
+  --sz-blue-card-fill: #eef5ff;
+}
+/* The old valuation-only mobile rule had 9px horizontal padding instead of 10px.
+   This stronger component selector restores precisely the shared 10px inset. */
+#valuation.valuation-card .valuation-model-tiles > .valuation-tech-tile {
+  padding:var(--sz-blue-card-padding)!important;
+}
+/* Same surface, padding and inner-width, eliminating inconsistent separator lengths. */
+body.mode-analysis #technical .tech-grid > .tech-tile,
+#valuation .valuation-model-tiles > .valuation-tech-tile,
+#institutionalTrend .institutional-flow-grid > .institutional-flow-card {
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  box-sizing:border-box!important;
+  padding:var(--sz-blue-card-padding)!important;
+  min-width:0!important;
+  border:1px solid #dfe8f5!important;
+  border-radius:16px!important;
+  background:var(--sz-blue-card-fill)!important;
+  box-shadow:0 8px 20px rgba(17,34,61,.035)!important;
+}
+body.mode-analysis #technical .tech-tile > header,
+#valuation .valuation-model-tiles .valuation-tech-tile > header,
+#institutionalTrend .institutional-flow-card > .institutional-flow-head {
+  box-sizing:border-box!important;
+  height:var(--sz-blue-card-head)!important;
+  min-height:var(--sz-blue-card-head)!important;
+  flex:0 0 var(--sz-blue-card-head)!important;
+  margin:0!important;
+  padding:0!important;
+  align-items:center!important;
+}
+/* Unify the title icon size (not its own icon artwork). */
+body.mode-analysis #technical .tech-tile .tech-title-icon,
+#valuation .valuation-model-tiles .valuation-tech-tile .valuation-tech-icon,
+#institutionalTrend .institutional-flow-card .institutional-mini-icon {
+  width:28px!important;
+  min-width:28px!important;
+  height:28px!important;
+  flex:0 0 28px!important;
+}
+/* Two-line description always starts and ends at the same card-relative coordinate. */
+body.mode-analysis #technical .tech-tile > p,
+#valuation .valuation-model-tiles .valuation-tech-tile > p:not(#valuationMiniEpsLead),
+#institutionalTrend .institutional-flow-card > p {
+  box-sizing:border-box!important;
+  flex:0 0 var(--sz-blue-card-desc-height)!important;
+  min-height:var(--sz-blue-card-desc-height)!important;
+  height:var(--sz-blue-card-desc-height)!important;
+  max-height:var(--sz-blue-card-desc-height)!important;
+  margin:var(--sz-blue-card-head-desc-gap) 0 var(--sz-blue-card-desc-row-gap)!important;
+  padding:0!important;
+  font-size:10px!important;
+  line-height:1.5!important;
+  color:#65788f!important;
+  overflow:hidden!important;
+  overflow-wrap:anywhere!important;
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical!important;
+  -webkit-line-clamp:2!important;
+  line-clamp:2!important;
+}
+/* EPS has a hidden redundant lead; only the actual description should occupy its slot. */
+#valuation .valuation-model-tiles #valuationMiniEpsLead {display:none!important;}
+#valuation .valuation-model-tiles #valuationMiniEpsComment {
+  flex:0 0 var(--sz-blue-card-desc-height)!important;
+  min-height:var(--sz-blue-card-desc-height)!important;
+  height:var(--sz-blue-card-desc-height)!important;
+  max-height:var(--sz-blue-card-desc-height)!important;
+  margin:var(--sz-blue-card-head-desc-gap) 0 var(--sz-blue-card-desc-row-gap)!important;
+  padding:0!important;
+  color:#65788f!important;
+  font-size:10px!important;
+  line-height:1.5!important;
+  overflow:hidden!important;
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical!important;
+  -webkit-line-clamp:2!important;
+}
+/* A single top divider between description and figures, across all three sections. */
+body.mode-analysis #technical .tech-tile > small.tech-metrics,
+#valuation .valuation-model-tiles .valuation-tech-tile > .valuation-rows,
+#valuation .valuation-model-tiles .valuation-tech-tile > .valuation-quarter-row-grid,
+#institutionalTrend .institutional-flow-card > .institutional-flow-rows {
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:0!important;
+  width:100%!important;
+  min-width:0!important;
+  flex:0 0 auto!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-top:1px solid var(--sz-blue-card-divider)!important;
+  align-self:stretch!important;
+}
+/* Identical full-width horizontal separators and row heights. */
+body.mode-analysis #technical .tech-tile .tech-metric,
+#valuation .valuation-model-tiles .valuation-tech-tile .valuation-rows > .valuation-data-row,
+#valuation .valuation-model-tiles .valuation-tech-tile .valuation-quarter-row-grid > .valuation-quarter-chip,
+#institutionalTrend .institutional-flow-card .institutional-flow-rows > div {
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:6px!important;
+  height:var(--sz-blue-card-row-height)!important;
+  min-height:var(--sz-blue-card-row-height)!important;
+  width:100%!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-bottom:1px solid var(--sz-blue-card-divider)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  text-align:left!important;
+}
+body.mode-analysis #technical .tech-tile .tech-metric:last-child,
+#valuation .valuation-model-tiles .valuation-tech-tile .valuation-rows > .valuation-data-row:last-child,
+#valuation .valuation-model-tiles .valuation-tech-tile .valuation-quarter-row-grid > .valuation-quarter-chip:last-child,
+#institutionalTrend .institutional-flow-card .institutional-flow-rows > div:last-child {border-bottom:0!important;}
+/* Reset old EPS tag/grid layout; value columns align with PE / PS / PB. */
+#valuation .valuation-model-tiles .valuation-quarter-row-grid > .valuation-quarter-chip > span,
+#valuation .valuation-model-tiles .valuation-quarter-row-grid > .valuation-quarter-chip > b {
+  grid-area:auto!important;
+  margin:0!important;
+  padding:0!important;
+}
+#valuation .valuation-model-tiles .valuation-quarter-row-grid > .valuation-quarter-chip > b {
+  margin-left:auto!important;
+  text-align:right!important;
+}
+#valuation .valuation-model-tiles .valuation-quarter-row-grid > .valuation-quarter-chip > em {
+  display:none!important;
+}
+/* EPS's peer comparison is a fifth figure row, not a floating flex footer. */
+#valuation .valuation-model-tiles .valuation-tech-tile-eps > .valuation-ttm-direct {
+  box-sizing:border-box!important;
+  height:var(--sz-blue-card-row-height)!important;
+  min-height:var(--sz-blue-card-row-height)!important;
+  margin:0!important;
+  padding:0!important;
+  border-top:1px solid var(--sz-blue-card-divider)!important;
+  align-items:center!important;
+}
+@media(max-width:720px){
+  :root{--sz-blue-card-row-height:35px;}
+  #valuation .valuation-model-tiles .valuation-tech-tile > header b,
+  body.mode-analysis #technical .tech-tile > header b,
+  #institutionalTrend .institutional-flow-title {font-size:13px!important;}
 }
 </style>
 </body>
