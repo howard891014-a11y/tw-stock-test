@@ -5007,7 +5007,7 @@ $("fundflowDetailClose")?.addEventListener("click",fundflowClearSelection);
 
 let marketDynamicData=null,marketDynamicLoading=false,marketDynamicFetchedAt=0,marketDistributionMode="listed";
 let marketIndexQuote=null,marketIndexLoading=false,marketIndexFetchedAt=0,marketIndexFetchedSlot="";
-const MARKET_DYNAMIC_LOCAL_CACHE_KEY="v2683:market-dynamic:60d";
+const MARKET_DYNAMIC_LOCAL_CACHE_KEY="v2698:market-dynamic:60d";
 function marketNum(v){if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null}
 function marketFmtPct(v){const n=marketNum(v);return n===null?"--":`${n>=0?"+":""}${n.toFixed(2)}%`}
 function marketFmtIndex(v){const n=marketNum(v);return n===null?"--":n.toLocaleString("zh-TW",{maximumFractionDigits:2})}
@@ -5173,13 +5173,17 @@ function renderMarketDynamic(){
     breadthCard.classList.toggle("is-safe",breadthValue!==null&&breadthValue>50);
     breadthCard.classList.toggle("is-danger",breadthValue!==null&&breadthValue<50);
   }
-  set("marketForeign",d.institutionalComplete?marketFmtMoney(d.foreignValue):"待更新");
-  set("marketInstitutionDetail",d.institutionalComplete?`投信 ${marketFmtMoney(d.trustValue)}\n自營 ${marketFmtMoney(d.dealerValue)}`:"上市／上櫃法人或股價資料尚未齊全");
-  marketTone($("marketForeign")?.closest(".md-stat"),d.institutionalComplete?d.foreignValue:null);
+  const official=d.officialInstitutional;
+  const officialReady=!!(official?.complete&&official.date===d.date);
+  set("marketForeign",officialReady?marketFmtMoney(official.foreign):"待更新");
+  set("marketInstitutionDetail",officialReady?`投信 ${marketFmtMoney(official.trust)}\n自營 ${marketFmtMoney(official.dealer)}`:"上市／上櫃官方法人金額待更新");
+  const officialTile=$("marketForeign")?.closest(".md-stat");
+  if(officialTile)officialTile.title=officialReady?`上市：外資 ${marketFmtMoney(official.listed.foreign)}、投信 ${marketFmtMoney(official.listed.trust)}、自營 ${marketFmtMoney(official.listed.dealer)}；上櫃：外資 ${marketFmtMoney(official.otc.foreign)}、投信 ${marketFmtMoney(official.otc.trust)}、自營 ${marketFmtMoney(official.otc.dealer)}。資料來源：TWSE BFI82U／TPEx。`:'上市或上櫃官方法人金額尚未完成，絕不以估算金額充當官方數字。';
+  marketTone(officialTile,officialReady?official.foreign:null);
   set("marketCoverage",marketNum(d.coverage)===null?"--":marketNum(d.coverage).toFixed(1)+"%");
   renderMarketDistribution();
   const body=$("marketDynamicHistory");
-  if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.foreignValue)>0?"is-up":marketNum(r.foreignValue)<0?"is-down":""}">${r.institutionalComplete?marketFmtMoney(r.foreignValue):"待更新"}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
+  if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.officialInstitutional?.foreign)>0?"is-up":marketNum(r.officialInstitutional?.foreign)<0?"is-down":""}">${r.officialInstitutional?.complete?marketFmtMoney(r.officialInstitutional.foreign):"待更新"}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
 }
 async function loadMarketDynamic(force=false){
   if(marketDynamicLoading)return;
