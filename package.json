@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.9.5",
+  "version": "2.6.9.7",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -70,6 +70,7 @@
     "validate:w3-blob": "node scripts/validate-w3-blob.js",
     "validate:historical-winrate": "node scripts/validate-v26825-historical-winrate.js",
     "validate:kline-guard": "node scripts/validate-v26826-kline-guard.js",
-    "validate:v4-play": "node scripts/validate-v26831-v43.js"
+    "validate:v4-play": "node scripts/validate-v26831-v43.js",
+    "validate:market-refresh-eod": "node scripts/validate-v2697-market-eod.js"
   }
 }

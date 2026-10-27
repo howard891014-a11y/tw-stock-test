@@ -1,9 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/technical.js": {"regions": ["sin1"], "maxDuration": 60},
+    "api/technical.js": {
+      "regions": [
+        "sin1"
+      ],
+      "maxDuration": 60
+    },
     "api/fundflow.js": {
-      "regions": ["sin1"],
+      "regions": [
+        "sin1"
+      ],
       "maxDuration": 60
     },
     "api/sync-status.js": {
@@ -63,6 +70,22 @@
     {
       "path": "/api/market-dynamic-refresh?paper=stage3",
       "schedule": "15 22 * * 1-5"
+    },
+    {
+      "path": "/api/sync-status",
+      "schedule": "20 10 * * 1-5"
+    },
+    {
+      "path": "/api/sync-status",
+      "schedule": "50 10 * * 1-5"
+    },
+    {
+      "path": "/api/market-dynamic-refresh",
+      "schedule": "20 11 * * 1-5"
+    },
+    {
+      "path": "/api/market-dynamic-refresh",
+      "schedule": "40 12 * * 1-5"
     }
   ],
   "rewrites": [
