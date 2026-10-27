@@ -78,7 +78,11 @@ async function officialCloseResponse(req,res){
 const CRON_ACTIONS = {
   '0 7 * * 1-5': 'price',
   '0 11 * * 1-5': 'twse',
-  '0 14 * * 1-5': 'tpex'
+  '0 14 * * 1-5': 'tpex',
+  // 18:20 / 18:50 Asia/Taipei: market gap first, credit reports second.
+  // Original 22:00 TPEx cron remains a late official-feed retry.
+  '20 10 * * 1-5': 'market-gap',
+  '50 10 * * 1-5': 'credit'
 };
 
 function taipeiDateKey(now=new Date()){
@@ -919,6 +923,14 @@ module.exports=async function handler(req,res){
       }
       else if(action==='twse')result=await runTwseDisposalSync();
       else if(action==='tpex')result=await runTpexDisposalSync();
+      else if(action==='market-gap'){
+        // Run on a restricted Vercel cron, never from an ordinary browser read.
+        if(schedule!=='20 10 * * 1-5'||!String(req.headers?.['user-agent']||'').includes('vercel-cron/1.0'))
+          return res.status(401).json({ok:false,error:'Restricted market-gap cron only'});
+        const gap=await runLatestMarketGapRepair({sql:getSql()});
+        res.setHeader('Cache-Control','no-store');
+        return res.status(gap.ok?200:503).json({...gap,job:'market-close-first-pass',refreshedAt:new Date().toISOString()});
+      }
       else if(action==='credit')result=await runCreditTradingSync();
       else if(action==='institutional')result=await runInstitutionalSync();
       else if(action==='institutional-backfill'){
