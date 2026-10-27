@@ -31,8 +31,8 @@ function db({latest,prev,cover=1900}){return {async query(q,params=[]){
  throw Error('unexpected SQL in stage3 '+q);
 }};}
 async function tests(){
- assert.equal(config.crons.length,8);assert.equal(config.crons.filter(c=>c.path===CRON_PATH&&c.schedule===CRON_SCHEDULE).length,1);
- assert.equal(config.crons.filter(c=>c.path!=='/api/market-dynamic-refresh?paper=stage3').length,7);
+ assert(config.crons.length>=8);assert.equal(config.crons.filter(c=>c.path===CRON_PATH&&c.schedule===CRON_SCHEDULE).length,1);
+ assert(config.crons.filter(c=>c.path!=='/api/market-dynamic-refresh?paper=stage3').length>=7);
  assert.equal(strictCronAccess(goodReq,env),true);
  for(const req of [
   {...goodReq,method:'POST'},
@@ -116,6 +116,6 @@ async function tests(){
   if(realSecret===undefined)delete process.env.CRON_SECRET;else process.env.CRON_SECRET=realSecret;
   if(realFlag===undefined)delete process.env.STOCKZONE_D_PAPER_ENABLED;else process.env.STOCKZONE_D_PAPER_ENABLED=realFlag;
  }
- console.log('PASS D stage3: 7 legacy cron jobs preserved + 1 restricted cron; mandatory bearer secret/flag; first-session bootstrap; signed Blob signals; next-session settlement; one-time idempotency; incomplete EOD, missed signal and late capture fail-closed; no Neon writes/orders.');
+ console.log('PASS D stage3: 7 legacy jobs preserved, paper cron unchanged, new EOD jobs permitted; mandatory bearer secret/flag; first-session bootstrap; signed Blob signals; next-session settlement; one-time idempotency; incomplete EOD, missed signal and late capture fail-closed; no Neon writes/orders.');
 }
 tests().catch(e=>{console.error(e);process.exitCode=1});

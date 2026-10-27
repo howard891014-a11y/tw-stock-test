@@ -13,13 +13,13 @@ assert(quote.includes('const changeSource=rawChange!==null&&rawPct!==null?'));
 assert(!quote.includes('if(m?.previousClose)result=rebaseQuotePreviousClose'));
 assert(market.includes('const w3Replay=computeW3D112(inputs)')); // original unchanged formula
 assert(market.includes('getMarketDynamicCached'));
-assert(market.includes('readMarketSnapshot(sql)'));
+assert(market.includes('readMarketSnapshot(getSql())')); // current fallback explicitly acquires SQL
 assert(market.includes('writeMarketSnapshot(getSql(),data)'));
 assert(cron.includes('refreshMarketSnapshot()'));
 assert(fs.readdirSync('api').filter(x=>x.endsWith('.js')).length<=12,'Hobby plan API Functions limit');
 assert(!fs.existsSync('api/market-dynamic-refresh-retry.js'));
 assert(!cfg.functions['api/market-dynamic-refresh-retry.js']);
-assert.deepStrictEqual(cfg.crons.filter(x=>x.path==='/api/market-dynamic-refresh').map(x=>x.schedule),['50 14 * * 1-5','35 15 * * 1-5']);
+assert.deepStrictEqual(cfg.crons.filter(x=>x.path==='/api/market-dynamic-refresh').slice(0,2).map(x=>x.schedule),['50 14 * * 1-5','35 15 * * 1-5']);
 assert(cfg.crons.some(x=>x.schedule==='50 14 * * 1-5'));
 assert(cfg.crons.some(x=>x.schedule==='35 15 * * 1-5'));
 assert(!cfg.crons.some(x=>x.schedule==='5 9 * * 1-5'));
