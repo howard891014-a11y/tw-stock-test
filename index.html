@@ -2856,6 +2856,20 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
   #overviewResonanceCard .overview-wave-tag-price{font-size:20px!important;}
 }
 </style>
+<style id="stockzone-v2695-fixes">
+/* R8.2 layer legend with mobile wrapping; don't compress the SVG to show four labels. */
+.sz-sr82-levels{display:flex;flex-wrap:wrap;align-items:center;gap:6px 7px;padding:9px 3px 3px;font-size:11px;color:#66788f;line-height:1.45}
+.sz-sr82-levels .sz-sr82-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;background:#edf6ff;border:1px solid #c9e0f6;border-radius:12px;color:#236295;font-weight:750;white-space:normal}
+.sz-sr82-levels .sz-sr82-r1{background:#fff9ec;border-color:#f1ddbc;color:#9c7227}
+.sz-sr82-levels .sz-sr82-r2{background:#f6f2ff;border-color:#e1d6fb;color:#7451a3}
+.sz-sr82-levels .sz-sr82-projected{border-style:dashed;color:#607387;background:#f5f7fa}
+.sz-sr82-levels .sz-sr82-missing{opacity:.72}
+.sz-sr82-levels small{flex-basis:100%;font-size:10px;color:#8998a7}
+/* Keep PE/PS/PB title-to-description spacing consistent with EPS. */
+#valuation .valuation-model-tiles .valuation-tech-tile:not(.valuation-tech-tile-eps)>header{margin-bottom:5px!important}
+#valuation .valuation-model-tiles .valuation-tech-tile:not(.valuation-tech-tile-eps)>p{margin:0 0 8px!important;min-height:0!important;padding:0!important;line-height:1.45!important}
+@media(max-width:720px){#valuation .valuation-model-tiles .valuation-tech-tile:not(.valuation-tech-tile-eps)>header{margin-bottom:4px!important}}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2884,7 +2898,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.8.41</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.5</span></button>
   </aside>
 
   <div class="main-shell">
@@ -2952,7 +2966,8 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
             <div class="metric-up"><span class="metric-title overview-metric-label"><i class="metric-badge metric-badge-up" aria-hidden="true"></i><em>預計上漲空間</em></span><strong class="overview-metric-value" id="overviewGrowthUp">--%</strong><small>主要目標對現價</small></div>
             <div class="metric-down"><span class="metric-title overview-metric-label"><i class="metric-badge metric-badge-down" aria-hidden="true"></i><em>正常下跌空間</em></span><strong class="overview-metric-value" id="overviewGrowthDown">--%</strong><small>最近有效防守位</small></div>
           </div>
-          <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 414" role="img" aria-label="共振價格路徑"></svg></div>
+          <div class="overview-wave-shell"><svg id="overviewResonanceSvg" viewBox="0 0 760 414" role="img" aria-label="共振價格路徑與S1、S2、R1、R2價位區間"></svg></div>
+          <div id="overviewSR8Levels" class="sz-sr82-levels" aria-label="四層支撐壓力參考區間">支撐／壓力：等待有效日K</div>
           <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
           <section class="sz-reslab" aria-label="共振研究室">
             <div class="sz-reslab-header"><b>共振研究室 · R1</b><span>研究模式｜不改正式玩法與共振公式</span></div>
@@ -3830,7 +3845,8 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
   <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
   <script src="./lib/resonance-lab-v1.js?v=2.6.8.41"></script>
-  <script src="./app.js?v=2.6.8.41"></script>
+  <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.5"></script>
+  <script src="./app.js?v=2.6.9.5"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
