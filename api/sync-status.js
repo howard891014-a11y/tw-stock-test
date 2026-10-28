@@ -76,14 +76,16 @@ async function officialCloseResponse(req,res){
 }
 
 const CRON_ACTIONS = {
-  '0 7 * * 1-5': 'price',
-  '0 11 * * 1-5': 'twse',
-  '0 14 * * 1-5': 'tpex',
-  // 18:20 / 18:50 Asia/Taipei: market gap first, credit reports second.
-  // Original 22:00 TPEx cron remains a late official-feed retry.
-  '20 10 * * 1-5': 'market-gap',
-  '50 10 * * 1-5': 'credit'
+  // Vercel UTC = Asia/Taipei minus eight hours.
+  '0 7 * * 1-5': 'price-window',    // 15:00
+  '0 8 * * 1-5': 'price-window',    // 16:00
+  '0 9 * * 1-5': 'price-window',    // 17:00
+  '0 13 * * 1-5': 'chip-institutional', // 21:00
+  '15 13 * * 1-5': 'chip-credit',      // 21:15
+  '30 13 * * 1-5': 'disposal-twse',    // 21:30
+  '45 13 * * 1-5': 'disposal-tpex'     // 21:45
 };
+const schedulePlan=require('../lib/market-daily-schedule');
 
 function taipeiDateKey(now=new Date()){
   try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(now)}catch{return now.toISOString().slice(0,10)}
@@ -756,6 +758,92 @@ module.exports=async function handler(req,res){
     const action=requestedAction(req);
 
     if(schedule && !action)return res.status(400).json({ok:false,error:`未知 Cron schedule：${schedule}`});
+    // Unified EOD timeline: never enter legacy 120D raw backfill / research rebuild
+    // for a price retry. All schedule status uses only existing sync_status rows.
+    if(schedule && action==='price-window'){
+      if(!isCronAuthorized(req)||!String(req.headers?.['user-agent']||'').includes('vercel-cron/1.0'))
+        return res.status(401).json({ok:false,error:'Cron only'});
+      const slot=schedulePlan.PRICE_SLOTS[schedule];
+      const sql=getSql(),today=taipeiDateKey();
+      const prior=await schedulePlan.marketScheduleGate(sql,today);
+      let priceResult=null,repair=null,archive=null,priceSnapshot=null,maintenance=null,error=null;
+      // If 15:00 was already successful, 16:00 and 17:00 are DB-only checks.
+      if(prior.state!=='ready'){
+        try{priceResult=await runPriceSync({cronSchedule:schedule,expectedTradeDate:today});
+          if(priceResult?.httpStatus>=500)error=priceResult?.body?.error||'price-feed-failed';
+        }catch(e){error=String(e?.message||e)}
+        // A partial-market date is not a holiday; retry only the missing exchange.
+        if(!error&&slot!=='15'){
+          try{
+            const first=await require('../lib/market-dynamic-date-gate').readMarketDateGate(sql);
+            if(!first.ok&&Object.values(first.latestByMarket||{}).includes(today))
+              repair=await runLatestMarketGapRepair({sql});
+          }catch(e){repair={ok:false,error:String(e?.message||e)}}
+        }
+      }
+      const current=await schedulePlan.marketScheduleGate(sql,today);
+      const ready=current.gate.ok&&current.gate.sourceDate===today;
+      const dated=Object.values(current.gate.latestByMarket||{});
+      const state=ready?'ready':error?'error':dated.includes(today)?'partial':'no-update';
+      // Publish only if this trading day has never been published successfully.
+      // A previous failed publish remains eligible for the 16:00 / 17:00 retry.
+      const published=Object.values(prior.attempts||{}).some(x=>
+        x?.date===today&&x.snapshotOk===true);
+      if(ready){
+        if(!published){
+          try{priceSnapshot=await require('../lib/market-dynamic').refreshMarketPriceSnapshot({tradeDate:today})}
+          catch(e){priceSnapshot={ok:false,error:String(e?.message||e)}}
+        }else priceSnapshot={ok:true,skipped:true,reason:'already-published-this-trading-day'};
+        // Preserve existing bounded-retention maintenance, once after daily close.
+        // Do not execute on 16/17 after a successful 15:00 price cycle.
+        if(!prior.state || prior.state!=='ready'){
+          try{maintenance=await runStorageMaintenance({sql})}
+          catch(e){maintenance={ok:false,error:String(e?.message||e)}}
+        }
+        // Official index / market turnover is independently rate limited and cached.
+        try{archive=await require('../lib/market-index-eod').getMarketIndexQuote()}
+        catch(e){archive={ok:false,error:String(e?.message||e)}}
+      }
+      await schedulePlan.savePriceAttempt(sql,slot,today,state,{
+        markets:current.gate.latestByMarket||{},error:error||null,
+        snapshotOk:Boolean(published||priceSnapshot?.ok)});
+      const result=await schedulePlan.marketScheduleGate(sql,today);
+      res.setHeader('Cache-Control','no-store');
+      return res.status(error?502:200).json({ok:!error,job:'market-price-window',slot:slot+':00',
+        date:today,priceState:result.state,markets:result.gate.latestByMarket,
+        ready,closed:result.state==='closed',priceSync:priceResult?.body||null,
+        repair,priceSnapshot,maintenance,turnover:archive?{ok:!!archive.ok,date:archive.date||null,
+          complete:!!archive.turnoverComplete,error:archive.error||null}:null,
+        ...(error?{error}:{}),historicalOverwrite:false});
+    }
+    if(schedule && ['chip-institutional','chip-credit','disposal-twse','disposal-tpex'].includes(action)){
+      if(!isCronAuthorized(req)||!String(req.headers?.['user-agent']||'').includes('vercel-cron/1.0'))
+        return res.status(401).json({ok:false,error:'Cron only'});
+      const state=await schedulePlan.marketScheduleGate(getSql(),taipeiDateKey());
+      if(state.state==='closed'||
+         (state.state==='pending'&&!Object.values(state.gate.latestByMarket||{}).includes(state.date)))
+        return res.status(200).json({ok:true,job:action,skipped:true,
+          reason:state.state==='closed'?'three-price-probes-no-trading':'today-price-not-verified',
+          date:state.date,noExternalRequests:true});
+      let result;
+      if(action==='chip-institutional')result=await runInstitutionalSync();
+      else if(action==='chip-credit')result=await runCreditTradingSync();
+      else if(action==='disposal-twse')result=await runTwseDisposalSync();
+      else result=await runTpexDisposalSync();
+      let fundflow=null,marketGap=null;
+      if(action==='disposal-tpex'){
+        // The old 22:00 TPEx cron also appended the immutable 500D research day.
+        // Preserve that business behavior after moving the job to 21:45.
+        try{marketGap=await runLatestMarketGapRepair({sql:getSql()})}
+        catch(e){marketGap={ok:false,error:String(e?.message||e)}}
+        if(marketGap.ok){
+          try{fundflow=await warmCurrentEngineFromStoredDb({sql:getSql(),force:false})}
+          catch(e){fundflow={ok:false,error:String(e?.message||e)}}
+        }
+      }
+      return res.status(result?.httpStatus||200).json({...(result?.body||{}),job:action,
+        ...(action==='disposal-tpex'?{marketGap,fundflow,immutable500D:true}:{}),holidayGate:'passed'});
+    }
     if(schedule&&['price','twse','tpex'].includes(action)){
       const marketDay=await yahooTradingDayProbe();
       if(marketDay.ok&&!marketDay.isTradingDay)return res.status(200).json({ok:true,skipped:true,reason:'holiday-no-market-update',marketDay});
