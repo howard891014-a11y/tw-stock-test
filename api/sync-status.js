@@ -496,9 +496,9 @@ async function readFlowDataHealth(sql){
   const liveReady=allMarkets.length===2&&allMarkets.every(x=>x.liveReady);
   const coreRawReady=allMarkets.length===2&&allMarkets.every(x=>x.coreRawReady);
   const researchDays=Number(researchCompactHistory?.compactDays||0),researchAnchors=Number(researchCompactHistory?.horizonAnchorDays||0);
-  const researchReady250=liveReady&&researchDays>=250&&researchAnchors>0; // compatibility alias for older clients
+  const researchReady250=liveReady&&researchDays>=250&&researchAnchors>0; // independent archived research coverage
   const backtestReady250=researchReady250;
-  const researchReady500=liveReady&&Number(research500Progress?.currentDays||0)>=targets.research&&researchAnchors>0;
+  const researchReady500=liveReady&&Boolean(research500Progress?.complete)&&researchAnchors>0;
   if(Number(storage?.totalMb||0)>=STORAGE_POLICY.softTargetMb)warnings.unshift(`Neon DB ${storage.totalMb} MB 已達 ${STORAGE_POLICY.softTargetMb} MB 軟上限；Retention 會優先阻止 raw 繼續膨脹`);
   return{
     liveReady,coreRawReady,researchReady250,backtestReady250,researchReady500,
@@ -772,6 +772,7 @@ module.exports=async function handler(req,res){
         const result=await syncFinalTaxonomyAndBuildDiagnostic({sql});
         return res.status(result.ok?200:422).json({ok:Boolean(result.ok),stage,summary:result.summary,done:true,readOnly:false});
       }
+      if(stage==='topics')return res.status(409).json({ok:false,error:'已關閉歷史題材回算；產業變動屬正常現象，不覆寫歷史資料',noDataWrites:true});
       if(stage==='topics'){
         const result=await rebuildTopicTaxonomyHistory({sql,targetDays:60,maxDates:5,preserveResearch:true});
         const partialSuccess=Boolean(result.ok||Number(result.processedDates)>0);
@@ -815,6 +816,9 @@ module.exports=async function handler(req,res){
       return res.status(warm.ok?200:503).json({...warm,manual:true});
     }
 
+    if(action==='research-company-action-apply-manual'){
+      return res.status(409).json({ok:false,reason:'research-history-immutable',error:'500D歷史資料已保護，現階段不允許改寫過去日期'});
+    }
     if(action==='research-company-action-scan-manual'||action==='research-company-action-preview-manual'||action==='research-company-action-apply-manual'){
       if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
       if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
@@ -827,31 +831,16 @@ module.exports=async function handler(req,res){
         await mod.processNextDate({sql,apply:action==='research-company-action-apply-manual'});
       return res.status(result.ok?200:422).json(result);
     }
-    if(action==='research-x-gap-repair-manual'){
-      if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
-      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
-      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
-      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
-      const result=await loadResearchXGapRepair().repairResearchXGaps({sql:getSql(),batchDays:3});
-      return res.status(result.ok?200:422).json(result);
-    }
-    if(action==='research-price-label-repair-manual'){
-      if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
-      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
-      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
-      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
-      const result=await loadResearchPriceRepair().repairNext({sql:getSql()});
-      return res.status(result.ok?200:422).json(result);
+    if(['research-x-gap-repair-manual','research-price-label-repair-manual'].includes(action)){
+      return res.status(409).json({ok:false,reason:'research-history-immutable',
+        error:'500D原始歷史禁止覆寫；正常交易日仍繼續新增紀錄。'});
     }
     if(action==='research-500d-backfill-manual'){
-      if(String(req.method||'GET').toUpperCase()!=='POST')return res.status(405).json({ok:false,error:'POST only'});
-      if(String(req.headers?.['x-stockzone-manual-history']||'')!=='1')return res.status(403).json({ok:false,error:'missing manual confirmation'});
-      const fetchSite=String(req.headers?.['sec-fetch-site']||'').toLowerCase();
-      if(fetchSite&&!['same-origin','same-site','none'].includes(fetchSite))return res.status(403).json({ok:false,error:'same-origin only'});
-      if(!manualResearch500OfficialPromise)manualResearch500OfficialPromise=loadOfficialResearch500D().backfillResearch500DOfficial({sql:getSql(),batchDays:3}).finally(()=>{manualResearch500OfficialPromise=null});
-      const result=await manualResearch500OfficialPromise;
-      return res.status(result.ok?200:422).json(result);
+      return res.status(409).json({ok:false,error:'已停用歷史500D回填；不會改寫既有研究資料',noDataWrites:true});
+      return res.status(409).json({ok:false,reason:'research-history-immutable',
+        error:'500D已統一為單一歷史，禁止回填覆蓋既有日期，正常每日新增仍運作。'});
     }
+    if(action==='fundflow-clean-rebuild-manual')return res.status(409).json({ok:false,reason:'historical-topic-restatement-disabled',error:'歷史產業重算已停用；正常分類異動只影響往後交易日',noDataWrites:true});
     if(action==='fundflow-clean-rebuild-manual'){
       // One-time clean XY v2 rebuild from existing raw/reference history. It writes isolated XY2 tables first,
       // verifies clean snapshots/history, then deletes only legacy XY/Path derived rows. Raw histories are never touched.
