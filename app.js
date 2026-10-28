@@ -773,6 +773,7 @@ function technicalDirectionHeadline(d){
 // 五階段 v2 會讀取 /api/technical 已回傳的歷史日 K（history），把「生命週期」與「當下狀態」分開。
 // 原有技術分析 MA/Bollinger/Volume/Momentum 計分完全不改；這裡只新增路徑判讀。
 let latestFiveStageResult=null;
+let latestFiveStagePositionResult=null;
 let latestTechnicalForPlay=null;
 let latestPlayStyleResult=null;
 let latestHistory5Y=null;
@@ -924,7 +925,9 @@ function buildStagePath(t,p,ma5,ma10,ma20,ma60){
   const maVals=[ma5,ma10,ma20].filter(Number.isFinite),maSpreadPct=maVals.length>=2&&ma20?stagePct(Math.max(...maVals),Math.min(...maVals)):null;
   return {rows,ret20,ret60,ret120,high60,low60,high120,low120,fromHigh60:stagePct(p,high60),fromHigh120:stagePct(p,high120),fromLow60:stagePct(p,low60),fromLow120:stagePct(p,low120),ma20Slope10,ma20Slope20,ma60Slope20,maSpreadPct:maSpreadPct===null?null:Math.abs(maSpreadPct),above20Ratio20:stageAboveMaRatio(rows,20,20),above20Ratio60:stageAboveMaRatio(rows,60,20),maxBias20_60:stageMaxRollingBias(rows,60,20),maxRet20_60:stageMaxRollingReturn(rows,60,20)};
 }
-function calculateFiveStage(t,currentPrice){
+// 既有玩法與風險分數相容層：完整保留 v2.7.0.0 的舊判斷，
+// 新五階段只負責總覽位置顯示，不暗中改動既有交易模型結果。
+function calculateLegacyStageForExistingScoring(t,currentPrice){
   const p=[currentPrice,t?.price,t?.last,t?.close,t?.latest?.close].map(stageNum).find(x=>x!==null)??null;
   const ma5=stageNum(t?.ma?.ma5),ma10=stageNum(t?.ma?.ma10),ma20=stageNum(t?.ma?.ma20),ma60=stageNum(t?.ma?.ma60);
   if(p===null||ma20===null)return null;
@@ -979,23 +982,146 @@ function calculateFiveStage(t,currentPrice){
   if(rsi!==null)signals.push(`RSI ${rsi.toFixed(1)}`);
   return {stage,name,substate,summary,signals:signals.slice(0,4),bias20,bias5,price:p,path,flags:{lifecycleReset,priorAcceleration,tangled,extremeHeat,macdBull,bullOrder,above20,above60}};
 }
+
+// v2.7.0.1 — 單一主要波段、五階段十四狀態；僅使用截至判讀日的 K 棒。
+// 階段看 60~120 日價格結構，狀態看近 5~20 日。高 RSI/乖離不會單獨觸發「高檔」。
+function stageAtr(rows,window=14){
+  const subset=rows.slice(-Math.min(window,Math.max(rows.length-1,0)));
+  if(!subset.length)return null;
+  let sum=0,count=0;
+  for(let i=rows.length-subset.length;i<rows.length;i++){
+    const x=rows[i],last=stageNum(rows[i-1]?.close),high=stageNum(x?.high)??stageNum(x?.close),low=stageNum(x?.low)??stageNum(x?.close);
+    if(high===null||low===null)continue;
+    const tr=last===null?high-low:Math.max(high-low,Math.abs(high-last),Math.abs(low-last));
+    if(Number.isFinite(tr)){sum+=tr;count++}
+  }
+  return count?sum/count:null;
+}
+function stageHighAge(rows,window=60){
+  const recent=rows.slice(-window);let idx=-1,high=-Infinity;
+  recent.forEach((x,i)=>{const v=stageNum(x?.high)??stageNum(x?.close);if(v!==null&&v>=high){high=v;idx=i}});
+  return idx<0?null:recent.length-1-idx;
+}
+function stagePriorHigh(rows,lookback=20,exclude=0){return stageHigh(rows.slice(0,Math.max(0,rows.length-exclude)),lookback)}
+function stagePriorLow(rows,lookback=20,exclude=0){return stageLow(rows.slice(0,Math.max(0,rows.length-exclude)),lookback)}
+function stageRecentBreakout(rows,atr){
+  // 回測守穩只能來自曾在當時突破的紀錄，不能拿今天的壓力反推以前的突破。
+  for(let age=1;age<=Math.min(12,rows.length-23);age++){
+    const i=rows.length-1-age,prior=rows.slice(0,i),level=stageHigh(prior,20),c=stageNum(rows[i]?.close);
+    if(level===null||c===null||!(c>level+Math.max(atr??0,level*.005)*.2))continue;
+    const newer=rows.slice(i+1),low=Math.min(...newer.map(x=>stageNum(x?.low)??stageNum(x?.close)).filter(Number.isFinite));
+    const last=stageNum(rows.at(-1)?.close);
+    if(newer.length&&Number.isFinite(low)&&last!==null&&low<=level+(atr??level*.015)*.7&&last>=level-(atr??level*.015)*.45)return {age,level,held:true};
+  }
+  return null;
+}
+function calculateFiveStage(t,currentPrice){
+  const p=[currentPrice,t?.price,t?.last,t?.close,t?.latest?.close].map(stageNum).find(x=>x!==null)??null;
+  const ma5=stageNum(t?.ma?.ma5),ma10=stageNum(t?.ma?.ma10),ma20=stageNum(t?.ma?.ma20),ma60=stageNum(t?.ma?.ma60);
+  if(p===null||ma20===null)return null;
+  const upper=stageNum(t?.bollinger?.upper),rsi=stageNum(t?.momentum?.rsi14),hist=stageNum(t?.momentum?.histogram),macd=stageNum(t?.momentum?.macd),signal=stageNum(t?.momentum?.signal);
+  const ratio20=stageNum(t?.volume?.ratio20),bias20=stageNum(t?.bias?.ma20)??stagePct(p,ma20),bias5=stageNum(t?.bias?.ma5)??stagePct(p,ma5);
+  const path=buildStagePath(t,p,ma5,ma10,ma20,ma60),rows=path.rows,atr=stageAtr(rows),atrPct=atr!==null?atr/p*100:null;
+  const above20=p>=ma20,above60=ma60===null?null:p>=ma60,shortBull=ma5!==null&&ma10!==null&&ma5>=ma10;
+  const bullOrder=shortBull&&ma10>=ma20&&(ma60===null||ma20>=ma60);
+  const macdBull=hist!==null?hist>=0:(macd!==null&&signal!==null?macd>=signal:false);
+  const ret5=stageRet(rows,5,p),ret10=stageRet(rows,10,p),ret20=path.ret20;
+  const prior20High=stagePriorHigh(rows,20,1),prior20Low=stagePriorLow(rows,20,1),prior10Low=stagePriorLow(rows,10,2);
+  const recentHighAge=stageHighAge(rows,60),maxHigh=path.high120??path.high60;
+  const low20=stageLow(rows,20),low10=stageLow(rows,10),low5=stageLow(rows,5);
+  const halfAtr=atr??p*.012;
+  const range120=(path.high120??p)-(path.low120??p);
+  const rangePos=range120>0?(p-(path.low120??p))/range120:.5;
+  const nearHigh=maxHigh!==null&&stagePct(p,maxHigh)>=-Math.max(8,Math.min(18,(atrPct??2)*3));
+  const largePriorAdvance=(path.fromLow120??0)>=22||(path.ret60??0)>=13||(path.ret120??0)>=20;
+  const upperRange=rangePos>=.72||((path.fromHigh60??-100)>=-4&&rangePos>=.60);
+  const ma20Up=(path.ma20Slope10??-99)>.35,ma60Up=(path.ma60Slope20??-99)>0;
+  const ma20Down=(path.ma20Slope10??99)<-.35,ma60Down=(path.ma60Slope20??99)<-1;
+  const confirmedDown=ma20Down&&(above60===false||ma60Down)&&((path.fromHigh120??0)<-19||(path.ret60??0)<-10);
+  const lifecycleReset=confirmedDown&&(path.fromHigh120??0)<=-20&&((path.above20Ratio60??.5)<.43||ma60Down);
+  const stableLow=low5!==null&&prior10Low!==null&&low5>=prior10Low-halfAtr*.45;
+  const holdingLow=low10!==null&&prior20Low!==null&&low10>=prior20Low-halfAtr*.6;
+  const stoppedFalling=(stableLow||holdingLow)&&((ret5??-99)>=-(atrPct??2)*1.3||(path.ma20Slope10??-99)>-1||macdBull);
+  const freshBreakout=prior20High!==null&&p>prior20High+halfAtr*.25;
+  const breakout=stageRecentBreakout(rows,atr),backtestHold=!!(breakout&&p>=breakout.level-halfAtr*.45);
+  const midUp=ma20Up&&(above60!==false||ma60Up),upStructure=above20&&midUp&&((ret20??-99)>0||bullOrder);
+  const priorCloses=rows.length>=21?rows.slice(-21,-5):[],past15Return=priorCloses.length>=2?stagePct(stageNum(priorCloses.at(-1)?.close),stageNum(priorCloses[0]?.close)):null;
+  const priorFivePace=past15Return!==null?past15Return/3:null;
+  const paceLift=ret5!==null&&(ret5>=Math.max(3,(atrPct??2)*1.1))&&(priorFivePace===null?ret5>=5:ret5>=Math.max(1,priorFivePace)*1.55);
+  const longerPaceLift=ret20!==null&&path.ret60!==null&&ret20/4>Math.max(1,path.ret60/12)*1.5&&(ret5??0)>0;
+  const accelerationNow=upStructure&&((path.ret20??0)>=Math.max(5,(atrPct??2)*2))&&(paceLift||longerPaceLift)&&
+    (freshBreakout||(path.fromHigh60??-99)>=-2)&&((ratio20??1)>=1.05||(rsi??60)>=60||((bias20??0)>=7));
+  const recentFast=stageMaxRollingReturn(rows,14,5);
+  const accelerationCooling=upStructure&&!accelerationNow&&(recentFast??0)>=Math.max(5,(atrPct??2)*2.1)&&
+    (recentHighAge??99)<=14&&(path.fromHigh60??-99)>=-Math.max(9,(atrPct??2)*2.2);
+  const slowdown=(ret5??0)<1.5||(ret5??0)<(priorFivePace??0)*.5;
+  const repeatedHighTouches=path.high60!==null&&rows.slice(-20).filter(x=>{
+    const v=stageNum(x?.high)??stageNum(x?.close);return v!==null&&v>=path.high60-Math.max(halfAtr, path.high60*.012);
+  }).length>=2;
+  const stalledNearTop=nearHigh&&upperRange&&(recentHighAge??0)>=4&&
+    (slowdown||((path.ma20Slope10??10)<=.5)||repeatedHighTouches&&Math.abs(ret5??0)<(atrPct??2)*1.5);
+  const lowerHigh=prior20High!==null&&path.high60!==null&&(recentHighAge??0)>=5&&
+    stageHigh(rows,6)<path.high60-Math.max(halfAtr*.5,path.high60*.009)&&
+    ((ret5??0)<-Math.max(1,(atrPct??2)*.65)||(!macdBull&&(ret5??0)<0));
+  const highWarning=nearHigh&&upperRange&&(lowerHigh||((ret5??0)<-Math.max(2,(atrPct??2))&&!macdBull));
+  // 支撐取「跌破之前」的交易日，避免把今天新低自己當成新支撐。
+  const recentSupport=stagePriorLow(rows,12,3);
+  const highBreak=recentSupport!==null&&p<recentSupport-halfAtr*.45&&
+    (ma20Down||p<ma20*.985)&&((recentHighAge??99)<=45);
+  const highStructure=(nearHigh&&upperRange&&(stalledNearTop||highWarning||highBreak))||
+    (largePriorAdvance&&(recentHighAge??99)<=28&&highBreak&&rangePos>=.42);
+  const recentRetreat=(path.fromHigh60??0)<-Math.max(2,(atrPct??2)*1.2);
+  const healthyPullback=upStructure&&recentRetreat&&
+    (above60!==false)&&(p>=ma20-halfAtr*1.4||holdingLow)&&!highBreak;
+  const overheating=upStructure&&!accelerationNow&&
+    ((rsi!==null&&rsi>=76)||(bias20!==null&&bias20>=Math.max(8,(atrPct??2)*3))||(upper!==null&&p>upper&&ret5!==null&&ret5>=3));
+  const repair=above20&&(macdBull||shortBull||ma20Up)||
+    (!lifecycleReset&&stoppedFalling&&(ret5??-99)>0&&ma5!==null&&p>=ma5);
+
+  let stage;
+  if(lifecycleReset&&!repair)stage=1;
+  else if(highStructure)stage=5;
+  else if(accelerationNow||accelerationCooling)stage=4;
+  else if(upStructure)stage=3;
+  else if(repair)stage=2;
+  else stage=1;
+
+  let name,substate,summary;
+  if(stage===1){name='築底';substate=stoppedFalling?'止跌':'尚未止跌';summary=stoppedFalling?'近期低點開始守穩，跌勢趨緩；尚未確認進入上升波段。':'目前下降結構仍在，低點或中期趨勢尚未穩定。';}
+  if(stage===2){name='轉強';substate=backtestHold?'回測守穩':freshBreakout&&above20?'突破確認':'初步轉強';summary=substate==='回測守穩'?'先前突破後回踩壓力轉支撐，仍守住關鍵價位。':substate==='突破確認'?'近期股價突破整理壓力，接下來觀察能否守穩。':'開始出現轉強訊號，但波段上升結構尚未完全建立。';}
+  if(stage===3){name='爬坡';substate=healthyPullback?'健康回檔':overheating?'短期過熱':'正常上漲';summary=substate==='健康回檔'?'短線回落消化漲幅，但主要上升結構仍在。':substate==='短期過熱'?'上升波段延續，短期動能或乖離偏高；不等同高檔反轉。':'高低點與均線整體偏多，波段維持正常上行。';}
+  if(stage===4){name='加速';substate=accelerationCooling?'動能降溫':
+    ((recentFast??0)>=Math.max(6,(atrPct??2)*2.4)&&(ret5??0)>=Math.max(3,(atrPct??2)*1.1))?'強勢延續':'加速啟動';
+    summary=substate==='動能降溫'?'近期漲速開始放緩，但加速段尚未明顯破壞。':substate==='強勢延續'?'股價持續沿加速方向創高，動能仍強。':'近期漲速超過原先波段節奏，開始進入加速區。';}
+  if(stage===5){name='高檔';substate=highBreak?'轉弱確認':highWarning?'轉弱警戒':'高檔震盪';summary=substate==='轉弱確認'?'高位整理後跌破近期支撐，波段結構出現明確破壞。':substate==='轉弱警戒'?'股價仍位於相對高位，但低高點或賣壓已出現轉弱警訊。':'位於近期波段相對高位，漲勢轉為整理；後續方向尚未確認。';}
+  const signals=[];
+  if(path.fromHigh60!==null)signals.push(`距60日高 ${stageFmtPct(path.fromHigh60)}`);
+  if(path.ma20Slope10!==null)signals.push(`20MA斜率 ${stageFmtPct(path.ma20Slope10)}`);
+  if(ret5!==null)signals.push(`近5日 ${stageFmtPct(ret5)}`);
+  if(rsi!==null)signals.push(`RSI ${rsi.toFixed(1)}`);
+  return {stage,name,substate,summary,signals:signals.slice(0,4),bias20,bias5,price:p,path,
+    flags:{lifecycleReset:lifecycleReset&&!repair,priorAcceleration:accelerationNow||accelerationCooling,tangled:!ma20Up&&!ma20Down,
+      extremeHeat:overheating,macdBull,bullOrder,above20,above60},
+    diagnostics:{atr,atrPct,nearHigh,rangePos,highStructure,highBreak,highWarning,accelerationNow,accelerationCooling,recentSupport}};
+}
 function resetFiveStage(note="搜尋股票後判讀"){
   const card=$("stagePositionCard");
   if(card){card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");card.style.setProperty("--stage-progress","0%");card.querySelectorAll("[data-stage]").forEach(x=>x.classList.remove("active","done"));}
   const fill=$("stageProgressFill");if(fill)fill.style.width="0%";
   const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.textContent="--"}
   setText("overviewStageNote","查看目前位置");setText("stageTitle","--");setText("stageSummary",note);setText("stageSignals","--");
-  latestFiveStageResult=null;latestTechnicalForPlay=null;resetPlayStyle(note);
+  latestFiveStageResult=null;latestFiveStagePositionResult=null;latestTechnicalForPlay=null;resetPlayStyle(note);
 }
 function renderFiveStage(t,currentPrice){
   const r=calculateFiveStage(t,currentPrice);if(!r){resetFiveStage("技術資料不足，暫無法判讀");return}
+  const legacy=calculateLegacyStageForExistingScoring(t,currentPrice);
   const pct=`${Math.max(0,Math.min(100,(r.stage-1)*25))}%`,card=$("stagePositionCard");
   if(card){card.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");card.classList.add(`stage-${r.stage}`);card.style.setProperty("--stage-progress",pct);card.querySelectorAll("[data-stage]").forEach(x=>{const n=Number(x.dataset.stage);x.classList.toggle("active",n===r.stage);x.classList.toggle("done",n<=r.stage);});}
   const fill=$("stageProgressFill");if(fill)fill.style.width=pct;
   const ov=$("overviewStageState");if(ov){ov.classList.remove("stage-1","stage-2","stage-3","stage-4","stage-5");ov.classList.add(`stage-${r.stage}`);ov.textContent=r.name;}
   setText("overviewStageNote",`第${r.stage}階段｜${r.substate}`);setText("stageTitle",`${r.stage}. ${r.name}｜${r.substate}`);setText("stageSummary",r.summary);setText("stageSignals",r.signals.join("｜"));
-  latestFiveStageResult=r;latestTechnicalForPlay=t;refreshTechnicalDirectionAfterStage(r);
-  try{renderPlayStyle()}catch(e){console.warn("玩法／長期基本面渲染失敗，不影響技術與五階段",e);resetPlayStyle("玩法計算暫時失敗");latestFiveStageResult=r;latestTechnicalForPlay=t}
+  latestFiveStagePositionResult=r;latestFiveStageResult=legacy??r;latestTechnicalForPlay=t;refreshTechnicalDirectionAfterStage(legacy??r);
+  try{renderPlayStyle()}catch(e){console.warn("玩法／長期基本面渲染失敗，不影響技術與五階段",e);resetPlayStyle("玩法計算暫時失敗");latestFiveStagePositionResult=r;latestFiveStageResult=legacy??r;latestTechnicalForPlay=t}
 }
 
 // 建議玩法 v5：先辨識股性節奏，再用資格制＋短線專屬引擎比較短期／波段。
@@ -4170,7 +4296,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.6.9.29（僅研究資料）',
+    modelVersion:'v2.7.0.1（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},

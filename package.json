@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.9.29",
+  "version": "2.7.0.1",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -99,6 +99,7 @@
     "validate:trade-arbiter926": "node scripts/validate-v26926-trade-arbiter.js",
     "validate:release926": "npm run validate:trade-arbiter926 && npm run validate:holding-plans && npm run validate:historical-winrate && npm run validate:market-refresh-eod && npm run validate:business-tags && npm run validate:layout && npm run validate:app-version && npm run validate:backup916",
     "validate:release928": "node scripts/validate-v26928-research-only.js && npm run validate:historical-winrate && npm run validate:market-refresh-eod && npm run validate:business-tags && npm run validate:layout && npm run validate:app-version && npm run validate:backup916",
-    "validate:release929": "node scripts/validate-v26929-ui-cleanup.js && npm run validate:historical-winrate && npm run validate:layout && npm run validate:app-version"
+    "validate:release929": "node scripts/validate-v26929-ui-cleanup.js && npm run validate:historical-winrate && npm run validate:layout && npm run validate:app-version",
+    "validate:five-stage": "node scripts/validate-v2701-five-stage.js"
   }
 }

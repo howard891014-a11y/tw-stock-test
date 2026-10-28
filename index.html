@@ -2988,7 +2988,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.29</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.1</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3045,6 +3045,19 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
       </nav>
 
       <section class="overview-outline" data-view-panel="overview">
+    <article class="card stage-card" id="stagePositionCard">
+          <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-stage" aria-hidden="true"></i><span>五階段位置</span></span></div>
+          <div class="stage-progress" id="stageSteps">
+            <div class="stage-progress-line" aria-hidden="true"><span class="stage-progress-fill" id="stageProgressFill"></span></div>
+            <div class="stage-step" data-stage="1"><i>1</i><span>築底</span></div><div class="stage-step" data-stage="2"><i>2</i><span>轉強</span></div>
+            <div class="stage-step" data-stage="3"><i>3</i><span>爬坡</span></div><div class="stage-step" data-stage="4"><i>4</i><span>加速</span></div><div class="stage-step" data-stage="5"><i>5</i><span>高檔</span></div>
+          </div>
+          <div class="stage-summary" id="stageSummaryBox">
+            <strong id="stageTitle">--</strong>
+            <p id="stageSummary">搜尋股票後判讀。</p>
+            <small id="stageSignals">--</small>
+          </div>
+        </article>
         <article class="card overview-resonance-card" id="overviewResonanceCard">
           <header class="overview-resonance-head">
             <div><span>總覽最終路徑</span><h2 class="overview-section-title theme-white-card-title"><i class="theme-title-icon theme-icon-resonance" aria-hidden="true"></i><span>共振分析</span></h2><small>價格看共振，技術／五階段決定路徑與達成條件</small></div>
@@ -3100,19 +3113,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 
         </article>
 
-    <article class="card stage-card detail-panel" data-view-panel="analysis" id="stagePositionCard">
-          <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-stage" aria-hidden="true"></i><span>五階段位置</span></span></div>
-          <div class="stage-progress" id="stageSteps">
-            <div class="stage-progress-line" aria-hidden="true"><span class="stage-progress-fill" id="stageProgressFill"></span></div>
-            <div class="stage-step" data-stage="1"><i>1</i><span>築底</span></div><div class="stage-step" data-stage="2"><i>2</i><span>轉強</span></div>
-            <div class="stage-step" data-stage="3"><i>3</i><span>爬坡</span></div><div class="stage-step" data-stage="4"><i>4</i><span>加速</span></div><div class="stage-step" data-stage="5"><i>5</i><span>高檔</span></div>
-          </div>
-          <div class="stage-summary" id="stageSummaryBox">
-            <strong id="stageTitle">--</strong>
-            <p id="stageSummary">搜尋股票後判讀。</p>
-            <small id="stageSignals">--</small>
-          </div>
-        </article>
+
 
         <article class="detail-panel" id="fundamentalPanel" data-view-panel="valuation">
           <section class="fundamental-overview-card" aria-label="基本面">
@@ -3918,12 +3919,12 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
   <script src="./capital-flow.js?v=2.6.8.29"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
   <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.6.9.29"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.1"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.6.9.29"></script>
+  <script src="./app.js?v=2.7.0.1"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
