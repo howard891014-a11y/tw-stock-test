@@ -2870,6 +2870,19 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
 
 
 
+<style id="stockzone-v26911-recent-play">
+#playStyleCard .sz-recent-play{margin:14px 0 17px;padding:15px;border:1px solid #dce6f1;border-radius:16px;background:linear-gradient(180deg,#f9fcff,#fff)}
+#playStyleCard .sz-recent-play header{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+#playStyleCard .sz-recent-play header strong{font-size:15px;font-weight:850;color:#1c3753}
+#playStyleCard .sz-recent-play header small{font-size:10px;line-height:1.55;color:#7f91a4}
+#playStyleCard .sz-recent-play-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#playStyleCard .sz-recent-play-grid>div{min-width:0;padding:11px 12px;background:#fff;border:1px solid #e9eef4;border-radius:12px}
+#playStyleCard .sz-recent-play-grid span{display:block;font-size:10px;color:#72869b;line-height:1.5;margin-bottom:5px}
+#playStyleCard .sz-recent-play-grid b{display:block;font-size:12px;line-height:1.6;color:#253e59;overflow-wrap:anywhere}
+#playStyleCard .sz-recent-play-evidence{font-size:10px;line-height:1.65;color:#75889d;margin:11px 0 0}
+@media(max-width:600px){#playStyleCard .sz-recent-play-grid{grid-template-columns:1fr}#playStyleCard .sz-recent-play{padding:12px}}
+#expectedUpsideCard .expected-target-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2898,7 +2911,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.10</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.11</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3228,6 +3241,18 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <div class="sz-play-version-control"><label for="szPlayEngineSelector">使用玩法版本</label><select id="szPlayEngineSelector" aria-label="使用玩法版本"><option value="v43" selected>V4.3.1 新版（預設）</option><option value="legacy">原版（備用）</option></select><small id="szPlayEngineStatus">V4.3.1 主引擎；原版保留可切回</small></div>
         <aside class="sz-v4-candidate" aria-label="V4.3研究與舊版玩法對照"><div class="sz-v4-head"><span>V4.3.1｜多年股性與長期基本面</span><em>目前主引擎・原版可切回</em></div><b id="szV4Candidate">等待股性及營運資料</b><small id="szV4CandidateDetail">長期EPS／營收同比可查證才確認；以已完成的低高低高循環衡量保留漲幅；近期訊號只管進出場。</small></aside>
       </div>
+      <section class="sz-recent-play" id="recentPlayCard" aria-label="近期玩法與交易時機">
+        <header><strong>近期玩法｜進出場時機</strong><small>只用均線、近5／20日漲跌、波動與布林、MACD、RSI/KD、量價、法人與融資；不改已建立交易的固定玩法與共振高點</small></header>
+        <div class="sz-recent-play-grid">
+          <div><span>近期適合模式</span><b id="recentPlayMode">資料不足</b></div>
+          <div><span>是否適合試單</span><b id="recentPlayTrial">資料不足</b></div>
+          <div><span>試單比例（佔預計單筆部位）</span><b id="recentPlayPct">資料不足</b></div>
+          <div><span>試單時機</span><b id="recentPlayEntry">資料不足</b></div>
+          <div><span>補倉時機</span><b id="recentPlayAdd">資料不足</b></div>
+          <div><span>停損條件</span><b id="recentPlayStop">資料不足</b></div>
+        </div>
+        <p class="sz-recent-play-evidence" id="recentPlayEvidence">等待最新技術與籌碼資料；試單比例尚未經回測校準。</p>
+      </section>
       <section class="playstyle-short-analysis" id="playShortAnalysis" hidden>
         <div class="playstyle-short-head">
           <div>
@@ -3300,9 +3325,9 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <span>目前損益 <b id="expectedCurrentPnl">--</b></span>
       </div>
       <div class="expected-target-grid">
-        <div class="expected-target" id="expectedTarget1"><span id="expectedT1Label">第一目標</span><strong id="expectedT1Price">--</strong><small id="expectedT1Return">--</small><em id="expectedT1Profit"></em></div>
-        <div class="expected-target" id="expectedTarget2"><span id="expectedT2Label">主要目標</span><strong id="expectedT2Price">--</strong><small id="expectedT2Return">--</small><em id="expectedT2Profit"></em></div>
-        <div class="expected-target" id="expectedTarget3"><span id="expectedT3Label">樂觀目標</span><strong id="expectedT3Price">--</strong><small id="expectedT3Return">--</small><em id="expectedT3Profit"></em></div>
+        <div class="expected-target" id="expectedTarget1"><span id="expectedT1Label">主要共振（預估高點）</span><strong id="expectedT1Price">--</strong><small id="expectedT1Return">--</small><em id="expectedT1Profit"></em></div>
+        <div class="expected-target" id="expectedTarget2"><span id="expectedT2Label">次要共振（延伸高點）</span><strong id="expectedT2Price">--</strong><small id="expectedT2Return">--</small><em id="expectedT2Profit"></em></div>
+
       </div>
       <small class="expected-foot" id="expectedFoot">持股會改用均價計算報酬與預估損益；觀察股維持現價基準。</small>
     </article>
@@ -3847,7 +3872,8 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
   <script src="./lib/resonance-lab-v1.js?v=2.6.9.10"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.10"></script>
-  <script src="./app.js?v=2.6.9.10"></script>
+  <script src="./lib/recent-play-advice.js?v=2.6.9.11"></script>
+  <script src="./app.js?v=2.6.9.11"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -7008,3 +7034,4 @@ body.mode-screening .cf-page .cf-row-grid strong{
  body.mode-screening .cf-page .cf-row-grid strong{font-size:11px!important}
 }
 </style>
+
