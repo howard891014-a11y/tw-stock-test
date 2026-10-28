@@ -61,7 +61,7 @@ assert(html.includes('補倉觀察（雙模式）</span><strong class="overview-
 assert(html.includes('單一決策'));
 assert(html.includes('lib/unified-trade-decision.js?v='+pkg.version));
 assert(html.indexOf('lib/unified-trade-decision.js?v='+pkg.version)<html.indexOf('app.js?v='+pkg.version));
-assert.match(pkg.version,/^2\.6\.9\.2[01234]$/);
+assert.match(pkg.version,/^2\.6\.9\.2[012345]$/);
 // Exact up/down historical target test uses historical method unchanged except removing the invalid clipping.
 const begin=src.indexOf('function historicalSimilarWinRate('),end=src.indexOf('\nfunction ',begin+40);
 const rows=[];for(let i=0;i<320;i++)rows.push({date:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),close:100,high:i>60?140:100,low:100});

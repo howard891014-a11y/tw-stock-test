@@ -7,7 +7,7 @@ const decision=require('../lib/unified-trade-decision.js').decision;
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'2.6.9.24');
+assert.equal(pkg.version,'2.6.9.25');
 const recent={valid:true,signalStrength:'strong',trialPct:10,
   data:{vol20:2.5},support:{value:1329,lower:1320,upper:1388},
   resistance:{value:1405,lower:1405,upper:1454},
@@ -58,5 +58,5 @@ assert.equal(ctx.szTrimDefenseText(warning,true),'現價 1,300（已觸發）');
 assert.equal(ctx.szTrimDefenseText(noRisk,true),'未形成（依⑥防守）');
 assert.equal(ctx.szTrimDefenseText(exitRisk),'已觸發出場警戒（看⑥）');
 assert.match(ctx.szTrimDefenseText(withRealSupport),/^BAND:/);
-assert(html.includes('v2.6.9.24')&&html.includes('app.js?v=2.6.9.24'));
+assert(html.includes('v2.6.9.25')&&html.includes('app.js?v=2.6.9.25'));
 console.log('PASS v2.6.9.24: no independent trim -> clear current triggered marker; no invented stop; original full stop preserved; UI formatter and regression tests checked.');

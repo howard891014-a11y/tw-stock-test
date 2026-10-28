@@ -8,7 +8,7 @@ const recent=require('../lib/recent-play-advice.js'),engine=require('../lib/unif
 const repo=path.resolve(__dirname,'..');
 const app=fs.readFileSync(path.join(repo,'app.js'),'utf8'),html=fs.readFileSync(path.join(repo,'index.html'),'utf8');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'2.6.9.24');
+assert.equal(pkg.version,'2.6.9.25');
 const history=Array.from({length:65},(_,i)=>({date:new Date(Date.UTC(2026,6,1+i)).toISOString().slice(0,10),close:96+i*.06}));
 const technical={ma:{ma5:99,ma10:98.5,ma20:97,ma60:92},momentum:{rsi14:55,histogram:1},
  bollinger:{lower:91,upper:105},volume:{ratio20:1.3},history};
