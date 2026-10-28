@@ -19,14 +19,15 @@ ctx.stockzoneW3Regime=()=> 'on';ctx.marketDynamicData={w3:{warning:true,stale:fa
 ctx.renderCurrentExtremeRisk(null);assert.equal(out.expectedExtremeRisk,'資料不足');
 const segment=src.slice(src.indexOf('function renderExpectedUpside('),src.indexOf('\n// v2.6.0.1',src.indexOf('function renderExpectedUpside(')));
 assert(segment.includes('sz918ExpectedSpaces(price,plan,downside)'));
-assert(segment.includes('historicalSimilarWinRate(play,price,Number.isFinite(firstUp)?firstUp:fallbackUp,Number.isFinite(nearestDown)?nearestDown:fallbackDown)'));
+assert(segment.includes('historicalSimilarWinRate(play,price,firstUp,nearestDown)'),'v.20 must check actual target and current defense');
 assert(!segment.includes('histUpPrices'));
 assert(!segment.includes('wr.upNear'));
 assert(!segment.includes('wr.downNear'));
 assert(!segment.includes('extremeMarketRisk'));
 assert(!src.includes('function extremeMarketRisk('));
 assert(!src.includes('winRate?.extreme'));
-assert(src.includes('renderCurrentExtremeRisk(risk);renderRecentPlayAdvice();'));
+assert(src.includes('renderCurrentExtremeRisk(risk);'),'v.20 current risk still rendered');
+assert(src.includes('renderRecentPlayAdvice();'),'v.20 current recent logic still rendered');
 assert(html.includes('歷史相似達標率'));
 assert(html.includes('極端市場風險（風險分）'));
 const histCtx={latestHistory5Y:{history:[]},latestFiveStageResult:null,positionNumber:ctx.positionNumber,seasonality5Y:()=>({valid:false}),playRowClose:r=>r.close,
@@ -36,8 +37,8 @@ const histCtx={latestHistory5Y:{history:[]},latestFiveStageResult:null,positionN
 for(let i=0;i<300;i++){histCtx.latestHistory5Y.history.push({date:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),close:100,high:i>60?110:100,low:100})}
 vm.createContext(histCtx);vm.runInContext(pull('historicalSimilarWinRate'),histCtx);
 let w=histCtx.historicalSimilarWinRate({key:'short'},100,5,-5);assert(w.valid);assert.equal(w.rate,100);
-w=histCtx.historicalSimilarWinRate({key:'short'},100,35,-5);assert(w.valid);assert.equal(w.up,14);assert.equal(w.rate,0);
+w=histCtx.historicalSimilarWinRate({key:'short'},100,35,-5);assert(w.valid);assert.equal(w.up,35);assert.equal(w.rate,0);
 w=histCtx.historicalSimilarWinRate({key:'short'},100,null,-5);assert(!w.valid);
 w=histCtx.historicalSimilarWinRate({key:'short'},100,5,null);assert(!w.valid);
 assert(!('extreme' in w));
-console.log('PASS v2.6.9.18: one unchanged historical-comparable metric/stop behavior; current resonance upside, structure downside; live risk grade+W3; no old extreme-crash % feeding output.');
+console.log('PASS forecast v2.6.9.20: exact current target and defense, current resonance upside, structure downside, current risk+W3, no historical downside override.');

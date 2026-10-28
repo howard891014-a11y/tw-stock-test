@@ -49,5 +49,5 @@ const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8'),lab=fs.readFi
 for(const marker of ['data-cancel-holding','data-save-holding','建立計畫','修改計畫','是否取消這筆交易計畫？','holdingPlanSnapshot','refreshHoldingTradePlan'])assert.ok(app.includes(marker),`缺少UI功能 ${marker}`);
 assert.match(app,/type==="holdings"&&!holdingPlanCancel\(code\)/,'移除前必須先確認取消');
 assert.match(lab,/function syncRecord\(\)\{[\s\S]{0,175}return;/,'停止自動建單');
-assert.match(html,/lib\/holding-trade-plans\.js\?v=2\.6\.9\.16/,'新模型必須先於 app 載入');
+assert.match(html,/lib\/holding-trade-plans\.js\?v=2\.6\.9\.19/,'新模型必須先於 app 載入');
 console.log('PASS v2.6.9.12 backward-compatible holding trade plan: explicit create, validation, immutable original, micro updates, fixed play, revise, cancel, new round, legacy, UI wiring');

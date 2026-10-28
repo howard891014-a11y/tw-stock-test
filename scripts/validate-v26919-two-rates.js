@@ -43,11 +43,11 @@ assert(html.includes('<small>歷史相似達標率</small>')&&html.includes('<sm
 assert(html.includes('id="expectedProfitRate"')&&html.includes('id="expectedProfitRateNote"'));
 assert(js.includes('setText("expectedProfitRate",wr.valid?`${wr.profitRate}%`:"--")'));
 assert(js.includes('setText("expectedProfitRate","--")'));
-assert(js.includes('renderCurrentExtremeRisk(risk);renderRecentPlayAdvice();'));
+assert(js.includes('renderCurrentExtremeRisk(risk);')&&js.includes('renderRecentPlayAdvice();'));
 assert(!js.includes('function extremeMarketRisk('));
 assert(!js.includes('const historicSecondRate='));
-assert.equal(pkg.version,'2.6.9.19');
-assert(html.includes('v2.6.9.19'));
+assert.equal(pkg.version,'2.6.9.20');
+assert(html.includes('v2.6.9.20'));
 assert.deepEqual(t.up,p.up);
 assert.deepEqual(t.down,p.down);
-console.log('PASS 2.6.9.19 — one historical sample engine, target-first rate preserved; terminal-profit secondary rate; stop-first, intraday ambiguity, no goal, take-profit, 5-card UI and .18 risk preservation.');
+console.log('PASS v2.6.9.20 historical rates: shared sample engine, target-first and positive exit secondary rate, stop-first, intraday ambiguity and unchanged two-rate semantics.');

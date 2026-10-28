@@ -5,8 +5,7 @@ const api=fs.readFileSync('api/sync-status.js','utf8');
 const app=fs.readFileSync('app.js','utf8');
 assert.match(app,/function holdingPlanLockedSnapshot\(/);
 assert.match(app,/buildExpectedPlan\(locked,price\)/);
-assert.match(app,/buildDecisionPlan\(locked,price,expected\)/);
-assert.match(app,/buildAdaptiveStopModel\(locked,expected,base,risk,price,holding\)/);
+assert.match(app,/unifiedDecisionForPlay\(locked,expected,risk,latestRecentPlayAdvice,holding\)/,'locked holdings must use one modern decision, never legacy plan or duplicate stop');
 assert.match(app,/api\.live\(localStorage,String\(code\),locked\)/);
 assert.match(api,/research500Progress\?\.complete/);
 const source={playKey:'swing',allocation:{core:55,tactical:45}};
@@ -38,6 +37,8 @@ const ctx={window:{StockZoneHoldingPlans:P},currentStockCode:()=>"1234",
   buildDecisionPlan:play=>({mode:play.key,trial:[100,103],entryCandidate:[125,130],trim:[160,163],exit:[180,185]}),
   buildAdaptiveStopModel:()=>({mode:'holding'}),
   applyDecisionRisk:d=>({...d,trimStop:[95,97],fullStop:[90,92]}),
+  unifiedDecisionForPlay:play=>({valid:true,mode:play.key,action:'已鎖定波段玩法；同一份正式建議',trial:[100,100],entryCandidate:null,trim:[160,160],exit:[180,180],trimStop:[95,95],fullStop:[90,90]}),
+  latestRecentPlayAdvice:{valid:true,trialPct:10},
 };
 vm.createContext(ctx);vm.runInContext(app.slice(start,end),ctx);
 const plan=P.active(st,'1234');
