@@ -1,5 +1,6 @@
 import mopsEps from '../lib/mops-quarterly-eps.js';
 import {validTradingBars} from '../lib/valid-trading-bars.js';
+import officialDaily from '../lib/technical-official-daily.js';
 const UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36';
 const HEADERS={'user-agent':UA,'accept':'application/json,text/plain,*/*'};
 
@@ -50,6 +51,16 @@ async function fetchChart(symbol,period1,period2){
 }
 async function firstChart(symbols,period1,period2){let last=null;for(const s of symbols){try{return await fetchChart(s,period1,period2)}catch(e){last=e}}throw last||Error('Yahoo 歷史資料取得失敗')}
 
+async function withLatestOfficialClose(rows,code,market){
+  // Yahoo can lag a finished TWSE/TPEx session by a trading day. Read at most
+  // ten already-imported official bars from Neon; never force an extra update.
+  try{
+    const {default:db}=await import('../lib/db.js');
+    const sql=db.getSql();
+    const result=await officialDaily.mergeOfficialDailyBars(rows,{code,market,sql});
+    return {...result,rows:validTradingBars(result.rows)};
+  }catch{return {rows,added:0,source:'Yahoo Finance'};}
+}
 async function handleHistory(req,res){
   const code=codeOf(req.query.q||req.query.code||req.query.symbol),market=String(req.query.market||'');
   if(!/^\d{4,6}$/.test(code))return res.status(400).json({ok:false,error:'股票代碼格式錯誤'});
@@ -60,14 +71,16 @@ async function handleHistory(req,res){
     const benchmarkPromise=firstChart(benchmarkSymbols,period1,period2).catch(()=>null);
     const [stock,benchmark]=await Promise.all([stockPromise,benchmarkPromise]);
     const cutoff=now-Math.round(5*365.25*86400);
-    const stockRows=validTradingBars(stock.rows.filter(x=>Number(x.timestamp)>=cutoff));
+    const yahooStockRows=validTradingBars(stock.rows.filter(x=>Number(x.timestamp)>=cutoff));
+    const official=await withLatestOfficialClose(yahooStockRows,code,market);
+    const stockRows=official.rows;
     // An index may legitimately omit volume, so match it to confirmed stock sessions
     // instead of classifying a 0-volume index row as a traded session.
     const stockTradingDates=new Set(stockRows.map(x=>x.date));
     const benchmarkRows=benchmark?validTradingBars((benchmark.rows||[]).filter(x=>Number(x.timestamp)>=cutoff),{requireVolume:false})
       .filter(x=>stockTradingDates.has(x.date)):[];
     res.setHeader('Cache-Control',String(req.query?.refresh||'')==='1'?'no-store':'public, s-maxage=21600, stale-while-revalidate=86400');
-    return res.status(200).json({ok:true,source:'Yahoo Finance',code,market,symbol:stock.symbol,windowYears:5,updatedAt:new Date().toISOString(),history:stockRows,benchmark:benchmark?{symbol:benchmark.symbol,history:benchmarkRows}:null});
+    return res.status(200).json({ok:true,source:official.source,officialBarsAdded:official.added,code,market,symbol:stock.symbol,windowYears:5,updatedAt:new Date().toISOString(),history:stockRows,benchmark:benchmark?{symbol:benchmark.symbol,history:benchmarkRows}:null});
   }catch(e){
     return res.status(502).json({ok:false,error:e?.message||'五年歷史資料取得失敗'});
   }
@@ -184,7 +197,9 @@ async function handleTechnical(req,res){
   const q=req.query?.q,market=req.query?.market||'';
   if(!q)return res.status(400).json({ok:false,error:'缺少股票代碼'});
   const symbol=yahooSymbol(q,market),r=await chart(symbol),ts=r.timestamp||[],z=r.indicators?.quote?.[0]||{};
-  const rows=validTradingBars(ts.map((t,i)=>({date:yahooTradeDate(t,r.meta||{}),open:num(z.open?.[i]),high:num(z.high?.[i]),low:num(z.low?.[i]),close:num(z.close?.[i]),volume:num(z.volume?.[i])})));
+  const yahooRows=validTradingBars(ts.map((t,i)=>({date:yahooTradeDate(t,r.meta||{}),open:num(z.open?.[i]),high:num(z.high?.[i]),low:num(z.low?.[i]),close:num(z.close?.[i]),volume:num(z.volume?.[i])})));
+  const official=await withLatestOfficialClose(yahooRows,codeOf(q),market);
+  const rows=official.rows;
   // Keep all calculation inputs anchored to the last *actually traded* daily bar;
   // do not allow holiday/placeholder Yahoo bars to shift MA, MACD, Bollinger or volume. 
   if(rows.length<60)throw new Error('Yahoo 歷史資料不足 60 個交易日');
@@ -209,7 +224,7 @@ async function handleTechnical(req,res){
   const score=Math.round(maScore*.30+bollScore*.25+volScore*.25+momScore*.20);let overallState='整理',overallTone='watch';if(score>=80){overallState='強勢';overallTone='good'}else if(score>=65){overallState='偏多';overallTone='good'}else if(score<35){overallState='弱勢';overallTone='bad'}else if(score<50){overallState='偏空';overallTone='bad'}
   const headline=`${maState==='偏多'||maState==='強勢'?'均線有支撐':'均線仍需確認'}，${volConclusion}，${trendConclusion}`;const summary=`目前技術面${overallState}；${maConclusion}，${bollConclusion}，${volConclusion}。${trendConclusion}，動能${momState}。`;
   res.setHeader('Cache-Control',String(req.query?.refresh||'')==='1'?'no-store':'public, s-maxage=300, stale-while-revalidate=600');
-  return res.status(200).json({ok:true,source:'Yahoo Finance',symbol,updatedAt:rows.at(-1).date,count:rows.length,latest:rows.at(-1),ma:{ma5:round(ma5),ma10:round(ma10),ma20:round(ma20),ma60:round(ma60),order:maOrder,bias20:round(bias20)},bias:{ma5:round(bias5),ma10:round(bias10),ma20:round(bias20),ma60:round(bias60)},bollinger:{middle:round(ma20),upper:round(upper),lower:round(lower),bandwidth:round(bw),position:bollPos},volume:{current:round(v.at(-1),0),avg5:round(vol5,0),avg20:round(vol20,0),ratio20:round(volRatio)},trend:{high60:round(high60),low60:round(low60),fromHigh60Pct:round(pct(last,high60)),fromLow60Pct:round(pct(last,low60))},momentum:{rsi14:round(rv),macd:round(difLast),signal:round(sigLast),histogram:round(hist)},analysis:{overall:{state:overallState,tone:overallTone,score,headline,summary},ma:{state:maState,tone:maTone,conclusion:maConclusion},bollinger:{state:bollState,tone:bollTone,conclusion:bollConclusion},bias:{state:biasState,tone:biasTone,conclusion:biasConclusion},volume:{state:volState,tone:volTone,conclusion:volConclusion},trend:{state:trendState,tone:trendTone,conclusion:trendConclusion},momentum:{state:momState,tone:momTone,conclusion:momConclusion}},history:rows.slice(-120)});
+  return res.status(200).json({ok:true,source:official.source,officialBarsAdded:official.added,symbol,updatedAt:rows.at(-1).date,count:rows.length,latest:rows.at(-1),ma:{ma5:round(ma5),ma10:round(ma10),ma20:round(ma20),ma60:round(ma60),order:maOrder,bias20:round(bias20)},bias:{ma5:round(bias5),ma10:round(bias10),ma20:round(bias20),ma60:round(bias60)},bollinger:{middle:round(ma20),upper:round(upper),lower:round(lower),bandwidth:round(bw),position:bollPos},volume:{current:round(v.at(-1),0),avg5:round(vol5,0),avg20:round(vol20,0),ratio20:round(volRatio)},trend:{high60:round(high60),low60:round(low60),fromHigh60Pct:round(pct(last,high60)),fromLow60Pct:round(pct(last,low60))},momentum:{rsi14:round(rv),macd:round(difLast),signal:round(sigLast),histogram:round(hist)},analysis:{overall:{state:overallState,tone:overallTone,score,headline,summary},ma:{state:maState,tone:maTone,conclusion:maConclusion},bollinger:{state:bollState,tone:bollTone,conclusion:bollConclusion},bias:{state:biasState,tone:biasTone,conclusion:biasConclusion},volume:{state:volState,tone:volTone,conclusion:volConclusion},trend:{state:trendState,tone:trendTone,conclusion:trendConclusion},momentum:{state:momState,tone:momTone,conclusion:momConclusion}},history:rows.slice(-120)});
 }
 
 export default async function handler(req,res){
