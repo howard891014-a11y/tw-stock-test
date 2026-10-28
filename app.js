@@ -4296,7 +4296,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.1（僅研究資料）',
+    modelVersion:'v2.7.0.2（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5815,6 +5815,13 @@ async function runManualFundflowWarm(){
     if(!data)throw new Error(`更新階段持續逾時（HTTP ${lastGatewayStatus||504}）；資料已採可續跑設計，請稍後再按一次`);
     if(data?.followupRequired)throw new Error("分類遷移已保存，但快照尚未完成；請再按一次即可續跑");
     const state=data?.after||data?.before||{},asOf=state?.asOf?String(state.asOf):"--",mode=data?.mode||data?.reason||"compact";
+    // A successful XY rebuild alone is not the end of a manual capital-flow update.
+    // getSummary lazily materializes the original money formula when the day is ready.
+    // Check its explicit readiness instead of silently claiming that both cards updated.
+    const moneyRes=await fetch('/api/capital-flow?view=summary',{cache:'no-store'});
+    const money=await readJson(moneyRes,'資金流向法人金額更新');
+    if(money?.asOf!==asOf||!money?.capitalMoney?.ready||money?.capitalMoney?.asOf!==asOf)
+      throw new Error(`XY 已更新 ${asOf}，但法人資金金額快照尚未完成；請重試，避免頁面日期不一致`);
     const gapNote=gap?.repaired?`先補齊 ${gap.market||"市場"} ${gap.targetDate||"最新交易日"}｜`:"";
     if(status){status.classList.remove("is-warn","is-error");status.classList.add("is-ok");status.textContent=data?.skipped?`${gapNote}已是最新，cheap no-op｜${data.featureVersion||"feature"}｜資料 ${asOf}`:`${gapNote}更新完成｜${mode}｜資料 ${asOf}`;}
     fundflowXyFetchedAt=0;fundflowBrowserFetchedAt=0;fundflowDetailData=null;fundflowDetailCache.clear();

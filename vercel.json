@@ -76,16 +76,40 @@
       "schedule": "35 15 * * 1-5"
     },
     {
-      "path": "/api/capital-flow",
-      "schedule": "8 8 * * 1-5"
-    },
-    {
       "path": "/api/fundflow?view=industry-changes&action=scan",
       "schedule": "30 9 * * 1-5"
     },
     {
       "path": "/api/market-dynamic-refresh?paper=stage3",
       "schedule": "15 22 * * 1-5"
+    },
+    {
+      "path": "/api/capital-flow",
+      "schedule": "15 13 * * 1-5"
+    },
+    {
+      "path": "/api/capital-flow",
+      "schedule": "30 13 * * 1-5"
+    },
+    {
+      "path": "/api/capital-flow",
+      "schedule": "35 13 * * 1-5"
+    },
+    {
+      "path": "/api/capital-flow",
+      "schedule": "50 13 * * 1-5"
+    },
+    {
+      "path": "/api/capital-flow",
+      "schedule": "55 13 * * 1-5"
+    },
+    {
+      "path": "/api/capital-flow",
+      "schedule": "20 14 * * 1-5"
+    },
+    {
+      "path": "/api/capital-flow",
+      "schedule": "45 14 * * 1-5"
     }
   ],
   "rewrites": [
