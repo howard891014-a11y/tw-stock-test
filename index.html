@@ -1436,7 +1436,9 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 @media(max-width:720px){.playstyle-position-mode{grid-template-columns:auto 1fr;gap:5px 8px;padding:8px}.playstyle-position-mode>small{grid-column:1/-1;font-size:9px}.playstyle-long-analysis{padding:12px 10px}.playstyle-long-head>div strong{font-size:15px}.long-engine-grid{grid-template-columns:1fr}.long-engine-grid b{font-size:11px}}
 
 .expected-growth-hero{gap:8px}.expected-growth-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin:4px 0 2px}.expected-growth-grid>div{min-width:0;padding:10px 8px;border:1px solid #29445c;border-radius:10px;background:#091725;text-align:center}.expected-growth-grid small{display:block;color:#8297aa;font-size:10px;margin-bottom:5px}.expected-growth-grid strong{display:block;font-size:18px;line-height:1.2}.expected-growth-grid .risk{color:#ff9b8f}.expected-growth-grid .win{color:#64e7b5}.expected-growth-grid .extreme-risk{color:#ffbe73}.expected-seasonality{display:block;color:#71899d;font-size:9px;line-height:1.4}.expected-growth-grid em{display:block;margin-top:4px;color:#8194a5;font-size:9px;font-style:normal;line-height:1.35}.playstyle-fit-head b{max-width:58%;text-align:right;white-space:normal;line-height:1.25}
-@media(max-width:720px){.expected-growth-grid{grid-template-columns:1fr 1fr}.expected-growth-grid strong{font-size:16px}.playstyle-fit-head b{max-width:62%;font-size:9px}}
+.expected-growth-grid{grid-template-columns:repeat(5,minmax(0,1fr));}
+@media(max-width:900px){.expected-growth-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.expected-growth-grid{grid-template-columns:1fr 1fr}.expected-growth-grid>div:last-child{grid-column:1/-1}.expected-growth-grid strong{font-size:16px}.playstyle-fit-head b{max-width:62%;font-size:9px}}
 </style>
 <style id="v2601-risk-decision">.decision-risk-badge{margin-left:5px;border-color:#365064!important;color:#a9bbc9!important}.decision-risk-badge.risk-low{border-color:#2e765e!important;color:#72e6b0!important;background:#0b2a22!important}.decision-risk-badge.risk-medium{border-color:#866c36!important;color:#ffd07a!important;background:#2b2412!important}.decision-risk-badge.risk-high,.decision-risk-badge.risk-extreme{border-color:#8a4653!important;color:#ff929f!important;background:#321821!important}.decision-risk-badge.risk-extreme{box-shadow:0 0 0 1px rgba(255,95,120,.12),0 0 18px rgba(255,73,106,.08)}
 </style>
@@ -2963,7 +2965,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.17</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.19</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3366,7 +3368,8 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
           <div><small>上漲空間</small><strong class="blue" id="expectedRange">--%</strong></div>
           <div><small>下跌空間</small><strong class="risk" id="expectedDownsideRange">--%</strong></div>
           <div><small>歷史相似達標率</small><strong class="win" id="expectedWinRate">--</strong><em id="expectedWinRateNote">樣本不足</em></div>
-          <div><small>極端市場風險</small><strong class="extreme-risk" id="expectedExtremeRisk">--%</strong><em id="expectedExtremeRiskNote">系統性崩壞壓力測試</em></div>
+          <div><small>歷史相似勝率</small><strong class="win" id="expectedProfitRate">--</strong><em id="expectedProfitRateNote">樣本不足</em></div>
+          <div><small>極端市場風險（風險分）</small><strong class="extreme-risk" id="expectedExtremeRisk">--</strong><em id="expectedExtremeRiskNote">當日W3與結構風險待確認</em></div>
         </div>
         <small id="expectedBasisNote">等待玩法與目標／支撐資料</small>
         <small class="expected-seasonality" id="expectedSeasonalityNote">季節性：等待五年資料</small>
@@ -3949,11 +3952,11 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
   <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
   <script src="./lib/resonance-lab-v1.js?v=2.6.9.10"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
-  <script src="./lib/holding-trade-plans.js?v=2.6.9.17"></script>
-<script src="./lib/trade-backup.js?v=2.6.9.17"></script>
-  <script src="./lib/holding-trade-review.js?v=2.6.9.17"></script>
+  <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
+<script src="./lib/trade-backup.js?v=2.6.9.19"></script>
+  <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
   <script src="./lib/recent-play-advice.js?v=2.6.9.11"></script>
-  <script src="./app.js?v=2.6.9.17"></script>
+  <script src="./app.js?v=2.6.9.19"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5466,7 +5469,8 @@ body.mode-analysis #expectedUpsideCard .expected-growth-grid>div{
 body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(1){background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important}
 body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(2){background:linear-gradient(180deg,#fff3f5,#ffedf0)!important}
 body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(3){background:linear-gradient(180deg,#effaf5,#e7f7ee)!important}
-body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(4){background:linear-gradient(180deg,#fff8eb,#fff2da)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(4){background:linear-gradient(180deg,#effaf5,#e7f7ee)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(5){background:linear-gradient(180deg,#fff8eb,#fff2da)!important}
 body.mode-analysis #expectedUpsideCard .expected-growth-grid small,
 body.mode-analysis #expectedUpsideCard .expected-growth-grid em{color:#7c8da2!important}
 body.mode-analysis #expectedUpsideCard .expected-position{

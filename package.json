@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.9.17",
+  "version": "2.6.9.19",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -79,6 +79,10 @@
     "validate:backup916": "node scripts/validate-v26916-backup-acceptance.js",
     "validate:release916": "npm run validate:backup916 && npm run validate:release915",
     "validate:schedule917": "node scripts/validate-v26917-market-schedule.js",
-    "validate:release917": "npm run validate:schedule917 && npm run validate:backup916 && npm run validate:batch3 && npm run validate:market-refresh-eod && npm run validate:api-slim && npm run validate:history-progress && npm run validate:capital-flow && npm run validate:featured-neon"
+    "validate:release917": "npm run validate:schedule917 && npm run validate:backup916 && npm run validate:batch3 && npm run validate:market-refresh-eod && npm run validate:api-slim && npm run validate:history-progress && npm run validate:capital-flow && npm run validate:featured-neon",
+    "validate:forecast918": "node scripts/validate-v26918-forecast-unification.js",
+    "validate:release918": "npm run validate:forecast918 && npm run validate:historical-winrate && npm run validate:release917",
+    "validate:two-rates919": "node scripts/validate-v26919-two-rates.js",
+    "validate:release919": "npm run validate:two-rates919 && npm run validate:release918"
   }
 }
