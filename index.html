@@ -2926,6 +2926,15 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
 #szSimulationLedgerPage td small{color:#8899aa}
 @media(min-width:670px){#szSimulationLedgerPage .sz-sim-summary{grid-template-columns:repeat(4,minmax(0,1fr))}}
 </style>
+
+<style id="sz-v26916-backup">
+#szSimulationLedgerPage .sz-sim-backup-status{padding:10px 12px;border-radius:10px;background:#eff7f1;color:#29694a;border:1px solid #cae7d3;font-size:12px;line-height:1.65;margin:12px 0}
+#szSimulationLedgerPage .sz-sim-backup-status.is-warning{background:#fff5e8;color:#985c24;border-color:#f1d4a8}
+#szSimJsonImportFile{display:none!important}
+.sz-holding-backup-alert{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#f3f8ff;border:1px solid #dbe8fa;padding:11px 12px;border-radius:10px;margin:12px 0;color:#365c8c;font-size:12px;line-height:1.6}
+.sz-holding-backup-alert:has(.is-warning){background:#fff5e8;border-color:#f1d4a8;color:#985c24}
+.sz-holding-backup-alert button{margin-left:auto;border:1px solid #bed2ed;background:#e9f4ff;color:#2b66ab;padding:7px 14px;border-radius:9px;cursor:pointer;font-weight:700}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2954,7 +2963,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.15</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.16</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3475,7 +3484,9 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
       <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-simulation" aria-hidden="true"></i><span>模擬交易</span></span><span class="badge">本機人工成交紀錄</span></div>
       <p class="sz-sim-note">交易績效由持股計畫的手動試單、加碼、減碼與出清紀錄計算；不會自行下單，也不會將智慧選股推薦當作已成交。原始玩法保持鎖定，費稅僅扣除使用者自行輸入的金額。</p>
       <div id="szSimulationSummary" class="sz-sim-summary"><span>讀取交易紀錄中…</span></div>
-      <div class="sz-sim-actions"><button type="button" id="szSimManageHoldings">去持股清單記錄交易</button><button type="button" id="szSimCsvExport">匯出成交CSV</button><button type="button" id="szSimJsonExport">備份全部JSON</button></div>
+      <div class="sz-sim-actions"><button type="button" id="szSimManageHoldings">去持股清單記錄交易</button><button type="button" id="szSimCsvExport">匯出成交CSV</button><button type="button" id="szSimJsonExport">下載完整備份JSON</button><button type="button" id="szSimJsonImport">還原備份JSON</button><input type="file" accept=".json,application/json" id="szSimJsonImportFile" hidden></div>
+      <div class="sz-sim-backup-status" id="szSimBackupStatus" role="status">檢查交易備份狀態…</div>
+      <p class="sz-sim-note">完整備份包括交易計畫、持股／觀察清單和共振研究快照。下載後請另存到雲端硬碟或其他裝置；<strong>本機不會自動雲端同步</strong>，清除瀏覽器資料會讓未另存的紀錄遺失。還原是整份取代，不會自動合併，會先驗證 SHA-256 並要求確認。檔案含個人持股資訊，請妥善保存。</p>
       <div id="szSimulationRows" class="sz-sim-rows">讀取交易紀錄中…</div>
       <p class="sz-sim-note">已實現損益以平均成本法計算；期初庫存為人工輸入成本基準，不是系統驗證成交。未實現損益需有效即時價格，本頁不以過期報價假算。回測驗證請在持股計畫按「用實際日K驗證」，只能驗證已保存目標的事後觸及，不冒充完整歷史公式回測。</p>
     </article>
@@ -3696,6 +3707,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
           <div class="card-title theme-white-card-title manage-theme-title">
             <span class="theme-title-group"><i class="manage-title-icon manage-title-icon-holdings" aria-hidden="true"></i><span>持股清單</span></span>
           </div>
+          <div class="sz-holding-backup-alert"><span id="szHoldingBackupStatus">交易備份提醒：請定期另存完整JSON。</span><button id="szHoldingBackupBtn" type="button">完整備份</button></div>
           <div id="holdingsCards" class="manage-list"></div>
           <details class="holding-archive" id="holdingTradeArchive"><summary>歷史交易紀錄</summary><div class="holding-archive-content">尚無結束的計畫</div></details>
         </article>
@@ -3922,10 +3934,11 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
   <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
   <script src="./lib/resonance-lab-v1.js?v=2.6.9.10"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
-  <script src="./lib/holding-trade-plans.js?v=2.6.9.15"></script>
-  <script src="./lib/holding-trade-review.js?v=2.6.9.15"></script>
+  <script src="./lib/holding-trade-plans.js?v=2.6.9.16"></script>
+<script src="./lib/trade-backup.js?v=2.6.9.16"></script>
+  <script src="./lib/holding-trade-review.js?v=2.6.9.16"></script>
   <script src="./lib/recent-play-advice.js?v=2.6.9.11"></script>
-  <script src="./app.js?v=2.6.9.15"></script>
+  <script src="./app.js?v=2.6.9.16"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

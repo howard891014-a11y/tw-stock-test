@@ -4570,7 +4570,7 @@ function holdingTradeLedgerDetail(code,plan){
       </div>
       <p class="holding-ledger-warning">所有成交會保留原始玩法及當時分析快照。出清後計畫自動封存；不會替你對券商下單。成交日期不可早於建檔或晚於今天，且必須依日期順序新增。</p>
       ${hasTx?`<div class="holding-ledger-table-wrap"><table><thead><tr><th>日期</th><th>動作</th><th>股數</th><th>倉別</th><th>價格</th><th>費稅</th></tr></thead><tbody>${history}</tbody></table></div>`:''}
-      <div class="holding-ledger-review-actions"><button type="button" data-trade-verify="${holdingPlanEscape(code)}">用實際日K驗證原始共振／成交時機</button><button type="button" data-trade-baseline="${holdingPlanEscape(code)}">五年價格基準回測</button><button type="button" data-trade-export="${holdingPlanEscape(code)}">匯出此計畫JSON備份</button></div>
+      <div class="holding-ledger-review-actions"><button type="button" data-trade-verify="${holdingPlanEscape(code)}">用實際日K驗證原始共振／成交時機</button><button type="button" data-trade-baseline="${holdingPlanEscape(code)}">五年價格基準回測</button><button type="button" data-trade-export="${holdingPlanEscape(code)}">匯出單筆JSON（不供一鍵還原）</button></div>
       <div class="holding-ledger-review" data-trade-review-result="${holdingPlanEscape(code)}">待驗證：需要建立後的日K，尚無未來交易日只能標示觀察中。現有五年價格基準回測不是歷史共振回放。</div>
     </div>
   </details>`;
@@ -4607,7 +4607,7 @@ function holdingSimulationCsv(){
 }
 function renderSimulationLedger(){
   const summary=$('szSimulationSummary'),host=$('szSimulationRows');if(!summary||!host)return;
-  const report=holdingSimulationRows();
+  const report=holdingSimulationRows();szTradeRecoveryStatus();
   summary.innerHTML=`<div><small>活動計畫</small><b>${report.open}</b></div><div><small>完成出清</small><b>${report.closed}</b></div><div><small>已記錄成交</small><b>${report.entries.length}</b></div><div><small>已實現損益（僅扣已填費稅）</small><b>${report.realized>=0?'+':''}${holdingTradeMoney(report.realized)} 元</b></div>`;
   host.innerHTML=report.entries.length?`<div class="sz-sim-table-wrap"><table><thead><tr><th>股票</th><th>日期</th><th>動作</th><th>股數</th><th>價格</th><th>已實現損益</th></tr></thead><tbody>${report.entries.slice(0,80).map(t=>`<tr><td>${holdingPlanEscape(t.name)}<br><small>${holdingPlanEscape(t.code)}</small></td><td>${holdingPlanEscape(t.tradeDate)}</td><td>${holdingPlanEscape(window.StockZoneHoldingPlans.TRADE_TYPES[t.type]||t.type)}</td><td>${holdingTradeMoney(t.shares)}</td><td>${holdingTradeMoney(t.price)}</td><td>${t.kind==='sell'?`${t.realizedNet>=0?'+':''}${holdingTradeMoney(t.realizedNet)}`:'—'}</td></tr>`).join('')}</tbody></table></div>`:'<p>目前沒有手動記錄的模擬成交。請先在「持股清單」建立交易計畫，再登記試單／加碼／減碼／出清。</p>';
 }
@@ -4619,7 +4619,59 @@ function holdingTradeArchiveView(){
     const m=api.metrics(plan),name=holdingPlanEscape(plan.initial?.name||plan.code),code=holdingPlanEscape(plan.code);
     return `<div class="holding-archive-row"><strong>${name} ${code}</strong><small>${holdingPlanEscape(plan.initial?.play||'—')}｜${holdingPlanEscape(plan.startDate||'—')}～${holdingPlanEscape(plan.closedAt?.slice(0,10)||'未結算')}｜${plan.status==='closed'?'已出清':'計畫已取消（非出清）'}</small><b>已實現 ${m.realizedNet>=0?'+':''}${holdingTradeMoney(m.realizedNet)} 元｜${m.realizedReturnPct===null?'—':m.realizedReturnPct+'%'}</b><span>${m.tradeCount} 筆人工成交｜剩餘 ${m.shares} 股</span></div>`;
   }).join('');
-  return `<details class="holding-archive" id="holdingTradeArchive"><summary>歷史交易紀錄｜${completed.length} 筆已封存計畫</summary><div class="holding-archive-content">${body||'<p>尚無已封存的成交紀錄</p>'}<button type="button" id="szExportAllHoldingTrades">匯出全部交易歷史JSON備份</button><small>本機資料不會自動同步至其他瀏覽器／裝置。取消計畫不是實際出清。</small></div></details>`;
+  return `<details class="holding-archive" id="holdingTradeArchive"><summary>歷史交易紀錄｜${completed.length} 筆已封存計畫</summary><div class="holding-archive-content">${body||'<p>尚無已封存的成交紀錄</p>'}<button type="button" id="szExportAllHoldingTrades">匯出全部交易與共振備份</button><small>本機資料不會自動同步至其他瀏覽器／裝置；請把下載的完整JSON另存到安全位置。取消計畫不是實際出清。</small></div></details>`;
+}
+// v2.6.9.16 — Downloadable off-browser backups and CHECKED restore; never server-side.
+function szTradeRecoveryStatus(){
+  const box=$('szSimBackupStatus'),api=window.StockZoneTradeBackup;
+  if(!box||!api)return;
+  try{
+    const s=api.status(localStorage);
+    const date=s.lastDate?new Date(s.lastDate).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'尚未啟動備份下載';
+    box.textContent=`${s.remind?'⚠ 建議現在下載並另存備份':'備份提醒'}｜${date}｜計畫 ${s.originalPlans} 筆、交易 ${s.trades} 筆${s.newTrades?'｜新增成交 '+s.newTrades+' 筆':''}。請確認檔案已存到裝置以外的位置。`;
+    box.classList.toggle('is-warning',s.remind);
+    const holdingBox=$('szHoldingBackupStatus');
+    if(holdingBox){holdingBox.textContent=s.remind?`⚠ ${s.originalPlans}筆計畫已有待備份紀錄，請下載完整備份並另存。`:
+      `本機記錄 ${s.originalPlans} 筆計畫／${s.trades} 筆成交；定期另存JSON。`;
+      holdingBox.classList.toggle('is-warning',s.remind)}
+  }catch(e){box.textContent='交易資料可能異常：'+String(e.message||e)+'。請先停止新增交易並保留目前資料。';box.classList.add('is-warning');
+    const holdingBox=$('szHoldingBackupStatus');if(holdingBox){holdingBox.textContent='交易記錄格式異常，請停止新增並備份目前資料';holdingBox.classList.add('is-warning')}}
+}
+function szTradeDownloadJson(data,name){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  try{a.href=url;a.download=name;a.click();}finally{setTimeout(()=>URL.revokeObjectURL(url),3000);}
+}
+async function szTradeExportBackup(){
+  const backup=window.StockZoneTradeBackup;
+  if(!backup)throw Error('完整備份模組尚未載入');
+  const result=await backup.build(localStorage);
+  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei'}).format(new Date());
+  szTradeDownloadJson(result,`StockZone_交易研究完整備份_${today}.json`);
+  backup.markExport(localStorage,result.sha256,result.summary);
+  szTradeRecoveryStatus();
+  setStatus('已啟動完整備份下載。請確認 JSON 已實際儲存到雲端硬碟／其他裝置；本機備份無法防止清除瀏覽器資料。');
+  return result;
+}
+async function szTradeImportBackup(file){
+  const api=window.StockZoneTradeBackup;
+  if(!api)throw Error('完整備份模組尚未載入');
+  if(!file||file.size>22_000_000)throw Error('請選擇小於22MB的StockZone完整JSON備份');
+  const verified=await api.verify(await file.text()),incoming=verified.summary,current=api.auditCurrent(localStorage);
+  const currentCount=current.originalPlans+current.holdings+current.labStocks;
+  const label=`備份建立於 ${verified.createdAt.slice(0,19)}｜${incoming.originalPlans} 筆計畫／${incoming.trades} 筆成交／${incoming.holdings} 筆持股／${incoming.labStocks} 檔研究快照`;
+  // Restore is a destructive replacement, not a merge. Never silently replace another device's ledger.
+  if(!window.confirm(`檔案SHA-256已驗證。\n${label}\n\n此動作會【整份取代】目前瀏覽器的交易計畫、持股／觀察清單、共振研究紀錄。不會改動 Neon。是否進入還原確認？`))return false;
+  if(currentCount){
+    if(!window.confirm(`目前瀏覽器還有 ${current.originalPlans} 筆計畫、${current.trades} 筆成交、${current.holdings} 筆持股、${current.labStocks} 檔共振研究。\n\n還原將整份覆蓋它們，不會自動合併。請先備份現有內容。是否要繼續？`))return false;
+    const typed=window.prompt('再次確認：請輸入「覆蓋還原」才能取代現有紀錄。');
+    if(typed!=='覆蓋還原')return false;
+  }
+  api.restore(localStorage,verified);
+  // The original snapshot remains unchanged; clear volatile UI analysis and reload
+  // so all stock/list/resonance views rebind from the newly restored storage.
+  window.alert('已完成資料還原並通過本機驗證。頁面會重新載入，請確認交易紀錄與原始共振。');
+  window.location.reload();
+  return true;
 }
 function holdingTradeExport(code=null){
   const api=window.StockZoneHoldingPlans;const data=api.read(localStorage),selected=code===null?data:{[code]:data[code]};
@@ -4639,11 +4691,15 @@ function holdingTradeRecord(code,host){
   if(!window.confirm(`確定記錄 ${code} ${name}｜${t.shares} 股 × ${t.price} 元（${t.tradeDate}）？\n這是人工模擬成交，不能當成券商真實成交。`))return false;
   const result=api.record(localStorage,code,t);
   const rows=readList('holdings'),idx=rows.findIndex(x=>stockKey(x)===String(code));
-  if(result.closed){if(idx>=0){rows.splice(idx,1);writeList('holdings',rows)}}
-  else if(idx>=0){rows[idx]={...rows[idx],avgCost:result.metrics.avgCost,shares:result.metrics.shares,positionUpdatedAt:result.trade.recordedAt};writeList('holdings',rows)}
+  let listError=null;
+  try{
+    if(result.closed){if(idx>=0){rows.splice(idx,1);writeList('holdings',rows)}}
+    else if(idx>=0){rows[idx]={...rows[idx],avgCost:result.metrics.avgCost,shares:result.metrics.shares,positionUpdatedAt:result.trade.recordedAt};writeList('holdings',rows)}
+  }catch(e){listError=e;}
   renderLists();updateListButtons();
   if(String(code)===currentStockCode())renderTradeOutputs();
-  setStatus(result.closed?'已記錄全部出清：計畫與成交歷史已封存':`已記錄${name}，剩餘 ${result.metrics.shares} 股；原始玩法／目標保留`);
+  setStatus(listError?'成交已保存，但持股清單同步失敗：'+String(listError.message||listError)+'。請勿重複登記。':
+    result.closed?'已記錄全部出清：計畫與成交歷史已封存':`已記錄${name}，剩餘 ${result.metrics.shares} 股；原始玩法／目標保留`,Boolean(listError));
   return true;
 }
 async function holdingTradeVerify(code,host){
@@ -4743,7 +4799,8 @@ function renderOneList(type,hostId){
 function renderLists(){
   renderOneList("holdings","holdingsCards");renderOneList("watchlist","watchlistCards");renderSimulationLedger();
   const archive=$('holdingTradeArchive');if(archive){const opened=archive.open;archive.outerHTML=holdingTradeArchiveView();const fresh=$('holdingTradeArchive');if(fresh)fresh.open=opened;}
-  $('szExportAllHoldingTrades')?.addEventListener('click',()=>{try{holdingTradeExport()}catch(e){setStatus(e.message,true)}});
+  $('szExportAllHoldingTrades')?.addEventListener('click',()=>{void szTradeExportBackup().catch(e=>setStatus(e.message,true))});
+  $('szHoldingBackupBtn')?.addEventListener('click',()=>{void szTradeExportBackup().catch(e=>setStatus(e.message,true))});
   setText("holdingsCount",readList("holdings").length);setText("watchlistCount",readList("watchlist").length);
 }
 function updateListButtons(){
@@ -4754,7 +4811,9 @@ function updateListButtons(){
   if(w)w.textContent=currentStock&&inList("watchlist",currentStock)?"★ 已觀察":"☆ 觀察";
 }
 $('szSimCsvExport')?.addEventListener('click',()=>{try{holdingSimulationCsv()}catch(e){setStatus('交易CSV匯出失敗：'+e.message,true)}});
-$('szSimJsonExport')?.addEventListener('click',()=>{try{holdingTradeExport()}catch(e){setStatus('交易JSON匯出失敗：'+e.message,true)}});
+$('szSimJsonExport')?.addEventListener('click',()=>{void szTradeExportBackup().catch(e=>setStatus('完整備份失敗：'+e.message,true))});
+$('szSimJsonImport')?.addEventListener('click',()=>{const el=$('szSimJsonImportFile');if(el){el.value='';el.click()}});
+$('szSimJsonImportFile')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;void szTradeImportBackup(file).catch(err=>setStatus('還原未執行：'+(err.message||err),true))});
 $('szSimManageHoldings')?.addEventListener('click',()=>{setManagementTab('holdings');setView('management')});
 $("addHoldingBtn")?.addEventListener("click",()=>addToList("holdings"));
 $("addWatchBtn")?.addEventListener("click",()=>addToList("watchlist"));
