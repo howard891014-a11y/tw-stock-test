@@ -82,10 +82,17 @@ function capture(code,play='swing'){
   for(const token of ['szTradeRecoveryStatus','szTradeExportBackup','szTradeImportBackup','szSimJsonImportFile','szTradeDownloadJson',
     'StockZoneTradeBackup','window.location.reload()','api.restore(localStorage,verified)','szTradeRecoveryStatus();'])assert(app.includes(token),token);
   const packageJson=require('../package.json');const appVersion=packageJson.version;
-  for(const token of ['lib/trade-backup.js?v=2.6.9.19','app.js?v='+appVersion,'id="szSimJsonImport"','id="szSimJsonImportFile"',
-    'id="szSimBackupStatus"','id="szHoldingBackupStatus"','id="szHoldingBackupBtn"','v'+appVersion])assert(html.includes(token),token);
+  for(const token of ['lib/trade-backup.js?v=2.6.9.19','app.js?v='+appVersion,
+    'id="szHoldingBackupStatus"','id="szHoldingBackupBtn"','v'+appVersion])assert(html.includes(token),token);
+  if(appVersion==='2.6.9.29'){
+    // .29 intentionally removes the manual-simulation page content but leaves
+    // the holdings-page backup and the round-trip data safety implementation.
+    for(const obsolete of ['id="szSimJsonImport"','id="szSimJsonImportFile"','id="szSimBackupStatus"'])assert(!html.includes(obsolete),obsolete+' must not remain');
+  } else {
+    for(const token of ['id="szSimJsonImport"','id="szSimJsonImportFile"','id="szSimBackupStatus"'])assert(html.includes(token),token);
+  }
   assert(html.indexOf('lib/trade-backup.js?v=2.6.9.19')<html.indexOf('app.js?v='+appVersion));
   for(const forbidden of ['fetch(','getSql(','@neondatabase/serverless','supabase','@vercel/blob'])assert(!module.includes(forbidden),'client backup must not use network '+forbidden);
-  assert.match(packageJson.version,/^2\.6\.9\.2(?:[0-6]|8)$/);
+  assert.match(packageJson.version,/^2\.6\.9\.2(?:[0-6]|8|9)$/);
   console.log('PASS v2.6.9.19 backup: sha256 export/import, after-backup change, overwrite prevention UI, tamper, incomplete JSON, rollback on quota error, old original play, closed history, holdings/watchlist/analysis snapshot roundtrip');
 })().catch(e=>{console.error(e);process.exitCode=1});
