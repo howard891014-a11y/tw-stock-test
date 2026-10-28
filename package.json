@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.9.11",
+  "version": "2.6.9.14",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -19,7 +19,7 @@
     "validate:blind-coverage": "node scripts/validate-blind-coverage.js",
     "validate:layout": "node scripts/validate-project-layout.js",
     "validate:storage-cleanup": "node scripts/validate-storage-cleanup.js",
-    "validate:all": "npm run validate:w3-blob && npm run validate:d-policy && npm run validate:d-paper && npm run validate:d-stage3 && npm run validate:api-slim && npm run validate:capital-flow && npm run validate:v26718 && npm run validate:v26717 && npm run validate:v26716 && npm run validate:v26715 && npm run validate:research500-price-repair && npm run validate:research500-official && npm run validate:research-x-gap && npm run validate:price-path && npm run validate:dw4-probability && npm run validate:dw4 && npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:taxonomy-membership-fixes && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-path-classification && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification && npm run validate:taxonomy-final-freeze && npm run validate:taxonomy-203 && npm run validate:v2668 && npm run validate:v26613 && npm run validate:v26614 && npm run validate:v2675 && npm run validate:v2676 && npm run validate:v2677 && npm run validate:v2678 && npm run validate:v2679",
+    "validate:all": "npm run validate:w3-blob && npm run validate:d-policy && npm run validate:d-paper && npm run validate:d-stage3 && npm run validate:api-slim && npm run validate:capital-flow && npm run validate:v26718 && npm run validate:v26717 && npm run validate:v26716 && npm run validate:v26715 && npm run validate:research500-price-repair && npm run validate:research500-official && npm run validate:research-x-gap && npm run validate:layout && npm run validate:app-version && npm run validate:fast-search && npm run validate:intraday-quote && npm run validate:browser-storage && npm run validate:history-foundation && npm run validate:history-progress && npm run validate:credit-trading && npm run validate:institutional-history && npm run validate:flow-data-health && npm run validate:tags && npm run validate:market-topics && npm run validate:topic-membership && npm run validate:taxonomy-membership-fixes && npm run validate:latest-market-gap && npm run validate:neon-egress && npm run validate:blind-coverage && npm run validate:x-v2 && npm run validate:future-path && npm run validate:fundflow-path-classification && npm run validate:fundflow-evidence && npm run validate:fundflow-xy && npm run validate:fundflow-browser && npm run validate:fundflow-ui && npm run validate:business-enrichment && npm run validate:storage-cleanup && npm run validate:write-amplification && npm run validate:taxonomy-final-freeze && npm run validate:taxonomy-203 && npm run validate:v2668 && npm run validate:v26613 && npm run validate:v26614 && npm run validate:v2676 && npm run validate:v2677 && npm run validate:v2679",
     "validate:market-topics": "node scripts/validate-market-topics.js",
     "validate:fundflow-browser": "node scripts/validate-fundflow-browser.js",
     "validate:fundflow-ui": "node scripts/validate-capital-flow.js",
@@ -44,15 +44,10 @@
     "validate:taxonomy-final-freeze": "node scripts/validate-final-taxonomy-freeze.js",
     "validate:v26613": "node scripts/validate-v26613-retired-company.js",
     "validate:v26614": "node scripts/validate-v26614.js",
-    "validate:dw4": "node scripts/validate-dw4.js",
-    "validate:v2675": "node scripts/validate-v2675-dw4-audit.js",
     "validate:v2676": "node scripts/validate-v2676-snapshot-contract.js",
     "validate:v2677": "node scripts/validate-v2677-x-contribution.js",
-    "validate:v2678": "node scripts/validate-v2678-research500.js",
     "validate:v2679": "node scripts/validate-v2679-progress-isolation.js",
-    "validate:price-path": "node scripts/validate-price-path.js",
     "validate:research-x-gap": "node scripts/validate-research-x-gap-repair.js",
-    "validate:dw4-probability": "node scripts/validate-dw4-probability.js && node scripts/smoke-dw4-probability.js",
     "validate:research500-official": "node scripts/validate-research500-official-manual.js",
     "validate:research500-price-repair": "node scripts/validate-research500-price-repair.js",
     "validate:v26715": "node scripts/validate-v26715-safety.js",
@@ -75,6 +70,9 @@
     "validate:market-refresh-eod": "node scripts/validate-v2697-market-eod.js",
     "validate:official-archive": "node scripts/validate-v2699-archive.js",
     "validate:holding-plans": "node scripts/validate-v26910-holding-plans.js",
-    "validate:batch1": "node scripts/validate-v26911-batch1.js"
+    "validate:batch1": "node scripts/validate-v26911-batch1.js",
+    "validate:batch2": "node scripts/validate-v26912-batch2.js",
+    "validate:batch4": "node scripts/validate-v26914-asof-safety.js",
+    "validate:release914": "npm run validate:batch4 && npm run validate:batch2 && npm run validate:batch1 && npm run validate:holding-plans && npm run validate:app-version && npm run validate:capital-flow && npm run validate:featured-neon && npm run validate:history-progress && npm run validate:v2679 && npm run validate:layout"
   }
 }

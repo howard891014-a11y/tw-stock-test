@@ -94,10 +94,6 @@
       "destination": "/api/quote?sz_route=stock"
     },
     {
-      "source": "/api/dw4",
-      "destination": "/api/fundflow?sz_route=dw4"
-    },
-    {
       "source": "/api/w3-d111-shadow",
       "destination": "/api/market-dynamic?sz_shadow=d111"
     },

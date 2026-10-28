@@ -4406,7 +4406,7 @@ function holdingPlanSnapshot(code){
   const signal=String($("overviewFinalNext")?.textContent||"").trim();
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
-    capturedAt:new Date().toISOString(),source:"原始 V4／共振／買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.11（v2.6.9.9 價格家族公式保留；主次選取修正）",
+    capturedAt:new Date().toISOString(),source:"原始 V4／共振／買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.12（原版價格家族＋鎖定玩法持股微調）",
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
     targets:{main:positionNumber(v.main),secondary:positionNumber(v.secondary),pullback:positionNumber(v.pullback),defense:positionNumber(v.defense)},
@@ -4418,13 +4418,63 @@ function holdingPlanSnapshot(code){
     signal:signal||"資料不足",risk:{level:risk?.level?.label||"資料不足",score:Number.isFinite(risk?.score)?risk.score:null,summary:risk?.summary||null}
   };
 }
+// 第二批：已持股計畫以最初確立的交易玩法重新算原共振與買賣建議。
+// 不呼叫會修改當前股票分析畫面的 render*，不覆寫 initial，不把異玩法的價位改名冒充。
+function holdingPlanW3Snapshot(){
+  const regime=stockzoneW3Regime(),model=marketDynamicData?.w3||{};
+  return {regime,warning:model.warning===true,verified:!!regime&&model.stale!==true&&model.isLiveModel!==false};
+}
+function holdingPlanLockedSnapshot(code,plan,screen){
+  const key=plan?.initial?.playKey,api=window.StockZoneHoldingPlans,observed=latestPlayStyleResult,
+    price=positionNumber(screen?.referencePrice),original=plan?.initial;
+  if(!key||!api||!observed||price===null||currentStockCode()!==String(code))return null;
+  const band=api.STYLE_BOUNDS[key];if(!band)return null;
+  const originalCore=Number(original?.allocation?.core),profile=observed.operationProfile||{};
+  // The current stock's market structure is fresh; only the strategy key and
+  // its allocation boundaries are fixed to the purchase-time transaction.
+  const core=Number.isFinite(originalCore)&&originalCore>0?Math.max(band[0],Math.min(band[1],originalCore)):band[0];
+  const locked={...observed,key,period:original.play,operationProfile:{...profile,key,period:original.play,basePct:core,tacticalPct:100-core}};
+  const planNow=buildExpectedPlan(locked,price),downside=buildDownsidePlan(locked,price);
+  const freshMain=planNow?.resonance?.valid&&planNow.levels?.length>0;
+  const previousTargets=plan?.last?.targets||original.targets||{};
+  // A missing above-price peak is not a reason to suppress RiskOff/stop advice.
+  // Preserve the previous displayed target explicitly; never invent a new high.
+  const pos=holdingPlanActive(code)?.position||currentHoldingPosition(code),holding=pos?{avgCost:pos.avgCost,shares:pos.shares}:currentHoldingPosition(code);
+  const expected={price,position:holding,plan:planNow,downside};
+  const risk=buildDecisionRisk(locked,price,expected),base=buildDecisionPlan(locked,price,expected);
+  if(!base)return null;
+  const stops=buildAdaptiveStopModel(locked,expected,base,risk,price,holding),decision=applyDecisionRisk(base,risk,price,stops);
+  const zone=x=>Array.isArray(x)?x.map(n=>Number.isFinite(n)?n:null):null;
+  const w3=holdingPlanW3Snapshot(),assessment=api.recommendAllocation(original,{risk:{score:risk?.score}},{w3});
+  if(!assessment?.valid)return null;
+  const changed=observed.key!==key;
+  return {...screen,play:original.play,playKey:key,analysisPlayKey:key,modeChangeObserved:changed?observed.key:null,
+    source:'原始交易玩法鎖定＋最新原版共振／支撐／買賣引擎（不改原始快照）',
+    targets:{main:freshMain?positionNumber(planNow.levels[0]?.value):positionNumber(previousTargets.main),
+      secondary:freshMain?positionNumber(planNow.levels[1]?.value):positionNumber(previousTargets.secondary),
+      pullback:positionNumber(downside.levels?.[0]?.value)??positionNumber(previousTargets.pullback),
+      defense:positionNumber(downside.levels?.[1]?.value)??positionNumber(previousTargets.defense)},
+    targetsStatus:freshMain?'updated-from-current-resonance':'retained-previous-no-confirmed-peak',
+    decision:{mode:decision.mode,trial:zone(decision.trial),entry:zone(decision.entryCandidate||decision.entry),
+      trim:zone(decision.trim),exit:zone(decision.exit),trimStop:zone(decision.trimStop),fullStop:zone(decision.fullStop),
+      trialNote:decision.trialNote||null,entryNote:decision.entryNote||null,
+      trimNote:decision.trimNote||null,exitNote:decision.exitNote||null,
+      trimStopNote:decision.trimStopNote||null,fullStopNote:decision.fullStopNote||null},
+    allocation:{core:assessment.core,tactical:assessment.tactical},holdingAction:assessment.action,
+    w3Advisory:{regime:w3.verified?w3.regime:null,warning:w3.verified?w3.warning:null,verified:w3.verified},
+    signal:`${changed?`目前新開倉模式 ${observed.period||observed.key}，本交易仍依 ${original.play} 管理｜`:''}${freshMain?'':'目前無高於現價的有效新共振，保留原目標不當成新預測｜'}${assessment.action}｜${risk?.summary||'風險待確認'}`, 
+    risk:{level:risk?.level?.label||'資料不足',score:Number.isFinite(risk?.score)?risk.score:null,summary:risk?.summary||null}};
+}
 function refreshHoldingTradePlan(code){
-  const api=window.StockZoneHoldingPlans,plan=holdingPlanActive(code),snap=holdingPlanSnapshot(code);
-  if(!api||!plan||!snap)return;
+  const api=window.StockZoneHoldingPlans,plan=holdingPlanActive(code),screen=holdingPlanSnapshot(code);
+  if(!api||!plan||!screen)return;
   try{
-    const result=api.live(localStorage,String(code),snap);
+    const locked=holdingPlanLockedSnapshot(code,plan,screen);
+    if(!locked)return;
+    const result=api.live(localStorage,String(code),locked);
+    if(result.blocked)console.warn('持股計畫防止跨玩法覆蓋',result.reason);
     if(result.changed&&!$("holdingsCards")?.contains(document.activeElement))renderLists();
-  }catch(e){console.warn("交易計畫微動態建議保存失敗",e)}
+  }catch(e){console.warn('交易計畫微動態建議保存失敗',e)}
 }
 function holdingPlanCancel(code){
   const api=window.StockZoneHoldingPlans;
@@ -4506,8 +4556,10 @@ function holdingPlanSummary(plan){
     <div class="holding-plan-subtitle">原始買賣計畫</div><p>${holdingPlanEscape(action(od))}</p>
     <div class="holding-plan-subtitle">目前買賣建議（微動態，未重新確認成交）</div><p>${holdingPlanEscape(action(ld))}</p>
     <p>目前訊號：${holdingPlanEscape(live.signal||'資料不足')}｜風險：${holdingPlanEscape(live.risk?.level||'資料不足')}</p>
+    <div class="holding-plan-subtitle">核心／機動倉（原始 → 目前建議，僅調整比例不改股數）</div><p>${holdingPlanEscape(`${original.allocation?.core??'--'}% / ${original.allocation?.tactical??'--'}% → ${live.allocation?.core??'--'}% / ${live.allocation?.tactical??'--'}%`)}</p>
+    <div class="holding-plan-subtitle">持有管理建議（非自動交易）</div><p>${holdingPlanEscape(live.holdingAction||'待更新')}</p>
     <small>主要／次要目標是既有共振引擎當下的參考價；微調幅度仍待回測校準，不代表已自動修訂原始計畫。</small>
-    <small>玩法 ${holdingPlanEscape(original.play||'—')} 固定｜當前建議來源：${holdingPlanEscape(live.source||'原版共振分析')}｜更新 ${holdingPlanEscape(holdingPlanTime(live.capturedAt))}｜股數／均價修改 ${plan.revisions?.length||0} 次</small>
+    <small>玩法 ${holdingPlanEscape(original.play||'—')} 固定｜當前建議來源：${holdingPlanEscape(live.source||'原版共振分析')}｜更新 ${holdingPlanEscape(holdingPlanTime(live.capturedAt))}｜股數／均價修改 ${plan.revisions?.length||0} 次｜分析微調 ${plan.updates?.length||0} 次${live.modeChangeObserved?'｜另有新建倉玩法，不影響本筆交易':''}</small>
     </div></details>`;
 }
 function renderOneList(type,hostId){
@@ -4836,48 +4888,6 @@ function fundflowDirectionProbabilityLabel(p,brief=false){
   const dir=Number(p?.priceReturnPct)<0?'看跌':'看漲';
   return `${dir} ${Math.round(Number(v))}%${brief?'*':'（研究試算，尚未充分驗證）'}`;
 }
-function fundflowForecastProjection(group,dw4){
-  if(!group||!dw4?.ok)return null;
-  const x=Number(group.x),y=group.priceY===null||group.priceY===undefined?NaN:Number(group.priceY);
-  if(![x,y].every(Number.isFinite))return null;
-  const points=[];
-  for(const horizon of [5,10,15,20]){
-    const block=dw4.horizonResults?.[String(horizon)]||dw4.horizonResults?.[horizon];
-    const prediction=(block?.predictions||[]).find(p=>String(p.tagId)===String(group.tagId));if(!prediction)continue;
-    const dx=Number(prediction.predDx),logReturn=prediction.predLogReturn===null||prediction.predLogReturn===undefined?NaN:Number(prediction.predLogReturn);
-    if(![dx,logReturn].every(Number.isFinite))continue;
-    const px=x+dx,centerLog=fundflowLogY(y)+logReturn,py=fundflowRawY(centerLog);
-    const ux=prediction.uncertaintyX===null?NaN:Math.abs(Number(prediction.uncertaintyX));
-    const uy=prediction.uncertaintyY===null?NaN:Math.abs(Number(prediction.uncertaintyY));
-    const xBand=prediction.provisionalXBand||null;
-    const xHalf=Number.isFinite(Number(xBand?.halfWidth))?Number(xBand.halfWidth):(Number.isFinite(ux)?ux:0);
-    const yHalf=Number.isFinite(uy)?uy:0; // exploratory error band, NOT a 70/80/95% coverage claim.
-    const ordinary=100*Math.expm1(logReturn/100);
-    points.push({horizon,x:px,y:py,dx,dy:py-y,predLogReturn:logReturn,priceReturnPct:ordinary,
-      confidence:prediction.confidence??null,confidenceN:Number(prediction.confidenceN)||0,
-      upProbability:prediction.upProbability??null,directionProbability:prediction.directionProbability??null,confidenceStatus:prediction.confidenceStatus||'insufficient',confidenceDates:Number(prediction.confidenceDates)||0,
-      lowX:px-xHalf,highX:px+xHalf,lowY:fundflowRawY(centerLog-yHalf),highY:fundflowRawY(centerLog+yHalf),
-      direction:prediction.direction||'',uncertaintyNote:'樣本外 MAE 示意範圍，非機率區間'});
-  }
-  if(!points.length)return null;
-  return {model:'price-log-candidate',predictionDate:dw4.predictionDate||'',direction:points[0]?.direction||'',
-    scenarios:[{id:'forecast',direction:points[0]?.direction||'',points}]};
-}
-function fundflowApplyDw4(data,dw4){
-  // Hard date gate: a 10/08 snapshot cannot be paired with 10/12 forecast values.
-  fundflowDw4Data=dw4?.ok&&dw4?.units?.yTarget==='future-cumulative-log-return-percent'&&String(data?.asOf||'')===String(dw4.predictionDate||'')?dw4:null;
-  for(const g of data?.groups||[]){
-    const d=fundflowPriceDiagnostic(g.tagId),lookup=new Map((d?.points||[]).map(p=>[p.date,p]));
-    g.priceY=d?.priceY??null;g.priceLogY=d?.priceLogY??null;g.priceAnchor=d?.anchorDate||null;
-    g.dy3Roll=d?.dy3Roll??null;g.dy3Turn=d?.dy3Turn??null;
-    for(const p of g.trajectory||[]){const v=lookup.get(p.date);p.priceY=v?.priceY??null;p.priceLogY=v?.priceLogY??null;}
-    g.legacyProjection=g.projection||null;g.projection=fundflowForecastProjection(g,fundflowDw4Data);
-  }
-  data.forecast={ok:Boolean(fundflowDw4Data),predictionDate:fundflowDw4Data?.predictionDate||'',horizons:[5,10,15,20],
-    mode:'log-cumulative-price',reference:'as-of minus 20 sessions'};
-  return data;
-}
-async function loadFundflowDw4(asOfDate=null){try{const dateArg=asOfDate?`&date=${encodeURIComponent(asOfDate)}`:"";const res=await fetch(`/api/dw4?horizons=5,10,15,20${dateArg}&_=${Date.now()}`,{cache:'no-store'});return await readJson(res,'未來 5/10/15/20D 預測');}catch(e){console.warn('dW4 讀取失敗',e);return null;}}
 const FUND_FLOW_CLIENT_REV="2.6.8.24";
 const FUND_FLOW_VALIDATION_STORAGE_KEY=`stockzone:fundflow-validation:${FUND_FLOW_CLIENT_REV}`;
 const FUND_FLOW_LOCAL_CACHE_MS=6*60*60*1000,FUND_FLOW_BROWSER_LOCAL_CACHE_MS=12*60*60*1000;
@@ -5002,7 +5012,7 @@ function renderFundflowChart(){
   if(!fundflowXyData){if(loading){loading.classList.remove("hidden");loading.textContent="等待 XY 資料"}return}if(loading)loading.classList.add("hidden");
   const W=760,H=510,L=60,R=24,T=28,B=58,pw=W-L-R,ph=H-T-B;
   const allGroups=fundflowEligibleGroups().sort((a,b)=>fundflowPathPriority(b)-fundflowPathPriority(a)),selected=allGroups.find(g=>g.tagId===fundflowSelectedTagId)||null,groups=selected?[selected]:allGroups;
-  const selectedProjection=selected?fundflowForecastProjection(selected,fundflowDw4Data):null,anim=selected?fundflowFocusAnimationState():{history:1,future:1,hold:true};
+  const selectedProjection=null,anim=selected?fundflowFocusAnimationState():{history:1,future:1,hold:true};
   if(!groups.length){if(loading){loading.classList.remove("hidden");loading.textContent="價格路徑不可用：需至少 21 個完整交易日、更新後的預測 API，且 XY 與預測日期必須一致。";}return;}
   const zoomX=[],zoomY=[],rawY=[];
   const addY=v=>{const ly=fundflowLogY(v);if(Number.isFinite(ly)){zoomY.push(ly);rawY.push(ly)}};
@@ -5123,9 +5133,9 @@ async function loadFundflowXy(force=false,serverRefresh=false){
   if(fundflowXyLoading)return;if(!force&&fundflowXyFetchedAt&&Date.now()-fundflowXyFetchedAt<2*60*1000){renderFundflowXy();return}fundflowXyLoading=true;const loading=$("fundflowChartLoading");if(loading){loading.classList.remove("hidden");loading.textContent="讀取共用 XY snapshot…"}
   let local=null;
   try{
-    if(!force&&!serverRefresh){local=await readFundflowLocalCache("overview",fundflowTrajectoryDays,FUND_FLOW_LOCAL_CACHE_MS);if(local?.data){fundflowXyData=local.data;const dw4=await loadFundflowDw4(fundflowXyData?.asOf);fundflowApplyDw4(fundflowXyData,dw4);fundflowXyFetchedAt=Number(local.savedAt||Date.now());renderFundflowXy();if(local.fresh){if(loading)loading.classList.add("hidden");return}}}
+    if(!force&&!serverRefresh){local=await readFundflowLocalCache("overview",fundflowTrajectoryDays,FUND_FLOW_LOCAL_CACHE_MS);if(local?.data){fundflowXyData=local.data;fundflowXyFetchedAt=Number(local.savedAt||Date.now());renderFundflowXy();if(local.fresh){if(loading)loading.classList.add("hidden");return}}}
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
-    try{const res=await fetch(`/api/fundflow?view=overview&days=${fundflowTrajectoryDays}&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}${serverRefresh?"&refresh=1":""}`,{cache:serverRefresh?"no-store":"default",signal:controller.signal});fundflowXyData=await readJson(res,"資金輪動");const dw4=await loadFundflowDw4(fundflowXyData?.asOf);fundflowApplyDw4(fundflowXyData,dw4);fundflowXyFetchedAt=Date.now();void writeFundflowLocalCache("overview",fundflowTrajectoryDays,fundflowXyData);renderFundflowXy()}finally{clearTimeout(timer)}
+    try{const res=await fetch(`/api/fundflow?view=overview&days=${fundflowTrajectoryDays}&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}${serverRefresh?"&refresh=1":""}`,{cache:serverRefresh?"no-store":"default",signal:controller.signal});fundflowXyData=await readJson(res,"資金輪動");fundflowXyFetchedAt=Date.now();void writeFundflowLocalCache("overview",fundflowTrajectoryDays,fundflowXyData);renderFundflowXy()}finally{clearTimeout(timer)}
   }catch(e){console.warn("XY 資金輪動讀取失敗",e);if(!local?.data&&loading){loading.classList.remove("hidden");loading.textContent=`XY 讀取失敗：${e?.message||e}`}}finally{fundflowXyLoading=false}
 }
 document.querySelectorAll("[data-fundflow-scope]").forEach(btn=>btn.addEventListener("click",()=>{const key=btn.dataset.fundflowScope;if(!key)return;if(fundflowScopes.has(key)){if(fundflowScopes.size===1)return;fundflowScopes.delete(key)}else fundflowScopes.add(key);saveFundflowSession();const selected=(fundflowXyData?.groups||[]).find(g=>g.tagId===fundflowSelectedTagId);if(selected&&(!fundflowAllowed(selected)||!fundflowPathAllowed(selected)))fundflowClearSelection();renderFundflowXy()}));
@@ -5380,8 +5390,8 @@ function renderCompactHistoryStatus(history){
   const h=history||{},days=Number(h.compactDays||0),usable=Number(h.xUsableDays||0),anchors=Number(h.horizonAnchorDays||0),target=Number(h.targetDays||60),ready=Boolean(h.historyReady&&anchors>0);
   status.classList.remove("is-ok","is-error","is-warn");status.classList.add(ready?"is-ok":"is-warn");
   const legacy=Number(h.legacyDerivedRows||0);
-  status.textContent=ready?`乾淨 XY 歷史已就緒：${days}/${target}D｜X20 usable ${usable}D｜5D anchors ${anchors}D｜舊衍生 ${legacy} rows｜已鎖定，不再 full rebuild`:`乾淨 XY 歷史：${days}/${target}D｜X20 usable ${usable}D｜5D anchors ${anchors}D｜舊衍生 ${legacy} rows`;
-  const rebuild=$("manualFundflowHistory");if(rebuild&&ready&&!manualFundflowHistoryLoading){rebuild.disabled=true;rebuild.textContent="Clean XY 已完成";}else if(rebuild&&!manualFundflowHistoryLoading){rebuild.disabled=false;rebuild.textContent="重建乾淨 XY";}
+  status.textContent=ready?`近期產業歷史已就緒：${days}/${target}D｜X20 有效 ${usable}D｜5D 樣本 ${anchors}D（不同交易日的成員差異屬正常）`:`近期產業歷史：${days}/${target}D｜X20 有效 ${usable}D｜5D 樣本 ${anchors}D`;
+  const rebuild=$("manualFundflowHistory");if(rebuild&&!manualFundflowHistoryLoading){rebuild.disabled=true;rebuild.textContent="歷史重算已停用";rebuild.title="產業成員自然變動不需要重算歷史；500D原有資料保持不動";}
 }
 function renderHistoryProgress(data){
   const markets=data?.markets||{},names=["上市","上櫃"],targets=data?.targets||{};
@@ -5395,8 +5405,8 @@ function renderHistoryProgress(data){
   if(research&&bar)bar.style.width=`${researchPct.toFixed(1)}%`;
   if(research&&rv)rv.textContent=research?.error?"資料讀取失敗":`${researchDays} / ${researchTarget}D`;
   if(research)research500TaxonomyReady=Boolean(research.taxonomyReady);
-  if(research&&rd)rd.textContent=research?.error?`進度查詢失敗：${research.error}`:!research500TaxonomyReady?`研究 ${researchDays}D 仍在，203 產業成員表需恢復；請先按「安全恢復 203 產業／XY」`:`新版 ${research.categoryCount||203} 類｜X 有效 ${research.xUsableDays||0}D｜${research.minDate||"尚未建立"} ～ ${research.maxDate||"--"}｜舊版 ${research.allVersionDays||0}D（不直接計入）`;
-  const researchButton=$("manualResearch500Backfill");if(researchButton&&!manualResearch500Busy)researchButton.disabled=Boolean(research?.error)||!research500TaxonomyReady||researchDays>=researchTarget;
+  if(research&&rd)rd.textContent=research?.error?`進度查詢失敗：${research.error}`:!research500TaxonomyReady?`研究 ${researchDays}D 仍在，203 產業成員表需恢復；請先按「安全恢復 203 產業／XY」`:`203 類｜資料涵蓋 ${research.currentDays||0}D、X ${research.xUsableDays||0}D｜${research.minDate||"--"} ～ ${research.maxDate||"--"}｜歷史資料按當日保存`;
+  const researchButton=$("manualResearch500Backfill");if(researchButton&&!manualResearch500Busy)researchButton.disabled=true;
   const completeRaw=["price","institutional","credit"].every(k=>["上市","上櫃"].every(m=>Number(markets?.[m]?.[k]?.tradingDays||0)>=Number(targetMap[k])));
   const ready=[[$("historyLiveReady"),["price","institutional"].every(k=>["上市","上櫃"].every(m=>Number(markets?.[m]?.[k]?.tradingDays||0)>=20)),"20D Live"],[$("historyBacktestReady"),completeRaw,"近期 Raw"]];ready.forEach(([el,ok,label])=>{if(!el)return;el.classList.toggle("is-ready",ok);el.textContent=`${label} ${ok?"✓":""}`.trim()});
   const updated=$("historyProgressUpdated");if(updated){const d=data?.generatedAt?new Date(data.generatedAt):null;updated.textContent=d&&!Number.isNaN(d.getTime())?`更新 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`:"已更新";}
@@ -5425,9 +5435,9 @@ async function loadHistoryProgress(force=false){
         if(bar)bar.style.width=`${Math.min(100,Math.max(0,100*count/target)).toFixed(1)}%`;
         if(rv)rv.textContent=`${count} / ${target}D`;
         research500TaxonomyReady=Boolean(x.taxonomyReady);
-        if(rd)rd.textContent=research500TaxonomyReady?`新版 ${x.categoryCount||203} 類｜X 有效 ${x.xUsableDays||0}D｜${x.minDate||'尚未建立'} ～ ${x.maxDate||'--'}｜舊版 ${x.allVersionDays||0}D（不直接計入）`:`研究 ${count}D 仍在，請先按「安全恢復 203 產業／XY」再補 500D`;
-        if(btn&&!manualResearch500Busy)btn.disabled=!research500TaxonomyReady||count>=target;
-        const ready=$("historyResearchReady");if(ready){ready.classList.toggle('is-ready',count>=target);ready.textContent=`${target}D Research ${count>=target?'✓':''}`.trim()}
+        if(rd)rd.textContent=research500TaxonomyReady?`203 類｜資料涵蓋 ${x.currentDays||0}D、X ${x.xUsableDays||0}D｜${x.minDate||'--'} ～ ${x.maxDate||'--'}｜歷史資料按當日保存`:`研究 ${count}D 仍在，但產業成員資料需先確認；不會重算500D`;
+        if(btn&&!manualResearch500Busy)btn.disabled=true;
+        const ready=$("historyResearchReady");if(ready){ready.classList.toggle('is-ready',Boolean(x.complete));ready.textContent=`${target}D Research ${count>=target?(x.complete?'✓':''):''}`.trim()}
       }
       return data;
     });
@@ -5448,38 +5458,6 @@ async function loadHistoryProgress(force=false){
 }
 let research500TaxonomyReady=false;
 let manualResearch500Busy=false;
-async function runManualResearch500Backfill(){
-  if(manualResearch500Busy)return;manualResearch500Busy=true;
-  const btn=$("manualResearch500Backfill"),status=$("manualResearch500Status");
-  if(btn){btn.disabled=true;btn.textContent="檢查／補齊中…";}
-  if(status)status.textContent="手動抓取 TWSE／TPEx 舊日期，累積 45D 暖機，驗證後才寫入研究資料…";
-  try{
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),55000);let result;
-    try{
-      const response=await fetch(`/api/sync-status?action=research-500d-backfill-manual&_=${Date.now()}`,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-StockZone-Manual-History":"1"},signal:controller.signal});
-      const body=await response.text();
-      try{result=JSON.parse(body)}catch{throw new Error(`官方補算回應異常（HTTP ${response.status}）`)}
-      if(!result || typeof result!=="object")throw new Error("官方補算回應格式不正確");
-    }finally{clearTimeout(timer);}
-    if(status)status.textContent=!result.ok?`研究未寫入：${result.reason||"品質檢查未通過"}${result.failedDate?`（${result.failedDate}）`:""}；本次暫存 ${result.stored??result.officialStagedRows??0} 筆`:result.skipped?`本次暫存 ${result.officialStagedRows??0} 筆，研究未新增：${result.reason||"等待足夠暖機資料"}｜暫存有效日期 ${result.stageSourceDays??"--"} 日`:
-      `本批官方抓取 ${result.officialFetchedDays||0} 日，新增研究 ${result.processedDates||0} 日、${result.insertedOrReplacedRows||0} 筆；研究 ${result.after?.currentDays||0}/500D`;
-    historyProgressFetchedAt=0;await loadHistoryProgress(true);
-    // New verified Neon releases are discovered dynamically; no new deploy
-    // after SZ-鐵證 publishing. Only candidate inbox is scanned/refreshed.
-    try{
-      const actionCheck=await szIndustryRequest('scan-actions','POST');
-      await szIndustryRefresh();
-      if(!actionCheck.complete&&status){status.classList.add('is-warn');status.classList.remove('is-ok');
-        status.textContent+='｜公司行動來源未全數成功，暫存仍保留，可稍後重新偵測';}
-    }catch(actionError){
-      try{await szIndustryRefresh();}catch{}
-      if(status){status.classList.add('is-warn');status.classList.remove('is-ok');
-        status.textContent+=`｜公司行動偵測未完成：${actionError?.message||actionError}`;}
-    }
-  }catch(e){if(status)status.textContent=`本批未確認完成：${e?.message||e}；可再按一次續補，已暫存資料不會重複寫入。`;}
-  finally{manualResearch500Busy=false;if(btn){const v=$("historyResearchValue")?.textContent||"",n=Number(v.split("/")[0]);btn.disabled=!research500TaxonomyReady||!/^\s*\d+\s*\//.test(v)||n>=500;btn.textContent="手動補齊 500D（每次最多 3 個官方日期）";}}
-}
-$("manualResearch500Backfill")?.addEventListener("click",runManualResearch500Backfill);
 
 let actionRepairBusy=false;
 async function actionRequest(action,timeout=58000){
@@ -5814,58 +5792,29 @@ function clearFundflowValidation(){try{localStorage.removeItem(FUND_FLOW_VALIDAT
 function restoreFundflowValidation(){try{const raw=localStorage.getItem(FUND_FLOW_VALIDATION_STORAGE_KEY);if(!raw)return false;const parsed=JSON.parse(raw);if(!parsed?.data)return false;renderFundflowValidation(parsed.data);const status=$("fundflowValidationStatus");if(status&&parsed.savedAt){const d=new Date(parsed.savedAt);status.textContent+=`｜上次 ${d.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false})}`}return true}catch{return false}}
 function renderFundflowValidation(data){
   const status=$("fundflowValidationStatus"),details=$("fundflowValidationDetails");
-  const r=data?.regression||{},gate=data?.releaseGate||{},h=data?.compactHistory||{};
-  const inst=data?.institutional?.markets||{},bench=(data?.benchmarks||[]).filter(x=>x.available);
-  const dw4=data?.dw4Audit||null,xyOK=Boolean(gate.readyToFinalize),dw4OK=Boolean(dw4?.ok),both=xyOK&&dw4OK;
-  const coverage=dw4?.horizonResults?.[5]?.coveragePct;
-  const parts=[`分類 ${r.taxonomyDefinitions??"--"}`,`XY ${r.withXY??"--"} (${r.xyCoveragePct??"--"}%)`,
-    `dW4 5/10/15/20D ${dw4?dw4OK?"OK":"需檢查":"未取得"}`,
-    `模型覆蓋 ${Number.isFinite(Number(coverage))?coverage+"%":"--"}`,`資料 ${data?.latestDate||"--"}`];
-  if(status){status.classList.remove("is-ok","is-error","is-warn");status.classList.add(both?"is-ok":"is-warn");
-    status.textContent=(both?"XY／dW4 驗證通過：":"XY／dW4 部分尚未通過：")+parts.join("｜");}
-  if(details){
-    const mark=v=>v?"✓":"✗";
-    const benchLines=bench.flatMap(x=>{const head=`${x.name}: rawX ${fundflowSigned(x.rawX,3)}% → X ${fundflowSigned(x.x,1)} / Y ${fundflowSigned(x.y,2)}% / sign ${x.signLockPass?"PASS":"FAIL"} / snapshot ${x.snapshotMatch?"MATCH":"CHECK"}`;
-      const comps=(x.companies||[]).slice(0,3).map(c=>`  ↳ ${c.code} ${c.name||""}: raw20 ${fundflowSigned(c.rawFlow20,3)}% / stockX ${fundflowSigned(c.stockX,1)} / w ${fundflowFmt(c.weight,2)}`);return [head,...comps]});
-    const gateLines=Object.entries(gate).filter(([k])=>k!=="readyToFinalize").map(([k,v])=>`${mark(v)} ${k}`);
-    const hLines=[5,10,15,20].map(days=>{const v=dw4?.horizonResults?.[days]||{};
-      return `${mark(v.ready)} ${days}D：有效 ${v.validEligible??0}/${v.eligibleCount??dw4?.eligibleTags??"--"}（${v.coveragePct??"--"}%）｜訓練 X ${v.trainingX??0} / Y ${v.trainingY??0}｜無效 ${v.invalid??0}｜重複 ${v.duplicates??0}｜舊標籤 ${v.unmatchedHistoryTags??0}｜歷史方向命中 ${v.historicalDirectionHitPct??"--"}%（n=${v.historicalFoldN??0}）${v.error?"｜"+v.error:""}`;});
-    details.textContent=[
-      `XY／分類資料驗證（${data?.latestDate||"--"}）：${xyOK?"PASS":"CHECK"}`,
-      `分類定義 ${r.taxonomyDefinitions??"--"}｜可畫 XY ${r.withXY??"--"}｜尚缺 X ${r.pendingX??"--"}`,
-      `Clean compact ${h.compactDays??0}/${h.targetDays??60}D｜X20 usable ${h.xUsableDays??0}D｜5D anchors ${h.horizonAnchorDays??0}D｜舊衍生 ${h.legacyDerivedRows??0} rows`,
-      `上市法人完整日 ${inst?.["上市"]?.completeDays??0}/${data?.institutional?.targetDays??60}｜上櫃 ${inst?.["上櫃"]?.completeDays??0}/${data?.institutional?.targetDays??60}`,
-      "",...benchLines,"",...gateLines,"",
-      `dW4 模型驗證：${dw4?.modelVersion||"無資料"}｜預測日 ${dw4?.predictionDate||"--"}｜對照 XY ${dw4?.expectedDate||data?.latestDate||"--"}｜日期 ${dw4?.dateAligned?"MATCH":"MISMATCH"}`,
-      ...hLines,"",
-      dw4?.note||"dW4 未取得驗證回應；不能宣稱模型已通過。",
-      data?.dw4Error?`dW4 錯誤：${data.dw4Error}`:"",
-      "不使用舊 Path Top1／Top2 60% 門檻；這是技術驗收，不代表模型預測準確率。"
-    ].filter(Boolean).join("\n");
-    details.hidden=false;
-  }
+  const r=data?.regression||{},gate=data?.releaseGate||{},h=data?.compactHistory||{},ok=Boolean(gate.readyToFinalize);
+  if(status){status.classList.remove('is-ok','is-warn','is-error');status.classList.add(ok?'is-ok':'is-warn');
+    status.textContent=`產業資金 X／Y 資料核對：${ok?'通過':'需檢查'}｜分類 ${r.taxonomyDefinitions??'--'}｜X可用 ${r.withXY??'--'}｜日期 ${data?.latestDate||'--'}`;}
+  if(details){details.textContent=[
+    `產業資金 X／Y 資料核對：${ok?'PASS':'CHECK'}`,
+    `203類 ${r.taxonomyDefinitions??'--'}｜有效 X ${r.withXY??'--'}｜缺少 X ${r.pendingX??'--'}`,
+    `近期產業資料 ${h.compactDays??0}/${h.targetDays??60}D｜X20有效 ${h.xUsableDays??0}D`,
+    ...Object.entries(gate).map(([key,v])=>`${v?'✓':'✗'} ${key}`),
+    '此處不包含已淘汰的 dW4 預測模型，也不代表預測準確率。'
+  ].join('\n');details.hidden=false;}
   renderCompactHistoryStatus(h);renderNeonStorageAudit(data?.storage);
 }
 async function runFundflowValidation(){
   if(fundflowValidationLoading)return;fundflowValidationLoading=true;
   const btn=$("runFundflowValidation"),status=$("fundflowValidationStatus");
-  if(btn){btn.disabled=true;btn.textContent="驗證中…";}
-  if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="唯讀核對 203 分類／XY 與正式 dW4 四個期限；不重建 Path、不寫預測資料…";}
-  try{
-    const [xyRes,dw4Res]=await Promise.allSettled([
-      fetch(`/api/sync-status?view=fundflow-audit&target=60&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:"no-store"}),
-      fetch(`/api/dw4?view=audit&_=${Date.now()}`,{cache:"no-store"})
-    ]);
-    if(xyRes.status!=="fulfilled")throw xyRes.reason;
-    const data=await readJson(xyRes.value,"XY／分類驗證");
-    if(dw4Res.status==="fulfilled"){
-      try{data.dw4Audit=await readJson(dw4Res.value,"dW4 驗證");}
-      catch(e){data.dw4Error=String(e?.message||e);}
-    }else data.dw4Error=String(dw4Res.reason?.message||dw4Res.reason||"無法取得 dW4 驗證");
-    renderFundflowValidation(data);saveFundflowValidation(data);
-  }catch(e){console.warn("XY／dW4 驗證失敗",e);if(status){status.classList.add("is-error");status.textContent=`驗證失敗：${e?.message||e}`;}}
-  finally{fundflowValidationLoading=false;if(btn){btn.disabled=false;btn.textContent="執行 XY／dW4 驗證";}}
+  if(btn){btn.disabled=true;btn.textContent='驗證中…';}
+  if(status)status.textContent='唯讀核對203分類及X／Y資料；不運行舊路徑預測…';
+  try{const res=await fetch(`/api/sync-status?view=fundflow-audit&target=60&client=${encodeURIComponent(FUND_FLOW_CLIENT_REV)}&_=${Date.now()}`,{cache:'no-store'});
+    const data=await readJson(res,'分類／資金驗證');renderFundflowValidation(data);saveFundflowValidation(data);
+  }catch(e){console.warn('X／Y 資料驗證失敗',e);if(status){status.classList.add('is-error');status.textContent=`驗證失敗：${e?.message||e}`;}}
+  finally{fundflowValidationLoading=false;if(btn){btn.disabled=false;btn.textContent='驗證產業 X／Y 資料';}}
 }
+
 async function runManualInstitutionalRepair(){
   if(manualInstitutionalRepairLoading)return;manualInstitutionalRepairLoading=true;
   const btn=$("manualInstitutionalRepair"),status=$("manualInstitutionalRepairStatus");if(btn){btn.disabled=true;btn.textContent="補齊中…"}if(status){status.classList.remove("is-ok","is-error","is-warn");status.textContent="檢查最近60D缺日／半套日期…"}
@@ -6039,3 +5988,7 @@ $('szLabExport')?.addEventListener('click',()=>{
 });
 // 保留最新一筆畫面計算輸出供按鈕事件使用，不從外部重算正式演算法。
 let szLabCachedExpected=null,szLabCachedRisk=null,szLabCachedDecision=null;
+
+// v2.6.9.14: legacy research is immutable; repairs would mix taxonomy generations.
+(()=>{const b=document.getElementById("manualResearchXGapRepair");if(b){b.disabled=true;b.title="500D歷史紀錄已保護，禁止覆寫";}})();
+(()=>{const b=document.getElementById("manualResearchPriceLabelRepair");if(b){b.disabled=true;b.title="500D歷史紀錄已保護，禁止覆寫";}})();
