@@ -2898,7 +2898,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.9</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.10</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3844,9 +3844,10 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
   <script src="./capital-flow.js?v=2.6.8.29"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
   <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.6.8.41"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.6.9.10"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
-  <script src="./app.js?v=2.6.9.9"></script>
+  <script src="./lib/holding-trade-plans.js?v=2.6.9.10"></script>
+  <script src="./app.js?v=2.6.9.10"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -6426,6 +6427,32 @@ body.mode-management #managementHeading{display:none!important;}
   #stockManagement .list-price{font-size:15px!important;}
   #stockManagement .holding-profile{grid-template-columns:1fr 1fr 58px!important;gap:6px!important;}
   #stockManagement .holding-profile input,#stockManagement .holding-profile button{height:34px!important;}
+}
+
+/* v2.6.9.10 — 持股清單：建立／取消／修改計畫與原始／目前建議對照 */
+#stockManagement .holding-profile{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;align-items:end!important;}
+#stockManagement .holding-plan-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+#stockManagement .holding-plan-actions button{width:100%;min-width:0;white-space:nowrap;font-size:12px!important;}
+#stockManagement .holding-plan-actions button:only-child{grid-column:1/-1;}
+#stockManagement .holding-plan-actions button[data-cancel-holding]{color:#a14f5c!important;background:#fff6f7!important;border-color:#edc5cc!important;}
+#stockManagement .holding-profile-note{grid-column:1/-1!important;font-size:10px!important;line-height:1.5!important;}
+#stockManagement .holding-trade-detail{grid-column:1/-1;min-width:0;border:1px solid #dce7f5;border-radius:11px;background:#fff;color:#405577;overflow:hidden;}
+#stockManagement .holding-trade-detail summary{cursor:pointer;display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:5px;padding:10px 11px;font-size:11px;}
+#stockManagement .holding-trade-detail summary strong{font-size:12px;color:#326db6;}
+#stockManagement .holding-trade-detail summary span{color:#8a99ad;font-size:10px;}
+#stockManagement .holding-trade-body{padding:10px 11px;border-top:1px solid #edf2f9;font-size:11px;line-height:1.6;}
+#stockManagement .holding-trade-body small{color:#8897ac;font-size:10px;overflow-wrap:anywhere;}
+#stockManagement .holding-plan-subtitle{font-weight:800;color:#324c72;margin-top:10px;}
+#stockManagement .holding-plan-compare{display:grid;grid-template-columns:65px minmax(0,1fr) 15px minmax(0,1fr);gap:6px;margin-top:5px;align-items:center;}
+#stockManagement .holding-plan-compare span{color:#7184a0;}
+#stockManagement .holding-plan-compare strong{font-weight:700;color:#7a8ba1;}
+#stockManagement .holding-plan-compare em{font-style:normal;color:#8d9db3;}
+#stockManagement .holding-plan-compare b{color:#306cba;}
+#stockManagement .holding-trade-body p{overflow-wrap:anywhere;white-space:normal;margin:5px 0 8px;color:#4f6482;}
+@media(max-width:720px){
+  #stockManagement .holding-profile{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;}
+  #stockManagement .holding-profile input{height:36px!important;}
+  #stockManagement .holding-plan-actions button{height:36px!important;}
 }
 
 /* Taiwan market color convention: bullish/positive = red, bearish/negative = green. */
