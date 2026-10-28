@@ -29,9 +29,17 @@ module.exports=async function handler(req,res){
     // last trading day, and each must contain a meaningful stock universe.
     const gate=await readMarketDateGate(getSql());
     if(!gate.ok){
+      // Official CASH data is a separate 250D archive: collect it even when
+      // daily stock prices/W3 source coverage are temporarily misaligned.
+      let independentArchive=null;
+      try{
+        const archive=require('../lib/official-institutional-archive');
+        independentArchive=await archive.saveOnGateFailure(archive.todayTaipei());
+      }catch(e){console.warn('Independent official 250D archive failed',String(e?.message||e))}
       res.setHeader('Cache-Control','no-store');
       return res.status(503).json({ok:false,code:'MARKET_SOURCE_NOT_ALIGNED',reason:gate.reason,
         latestByMarket:gate.latestByMarket,countsByMarket:gate.countsByMarket,
+        officialArchive:independentArchive?.ok?{ok:true,stored:independentArchive.recorded}:null,
         preservedLastGood:true,refreshedAt:new Date().toISOString()});
     }
     const data=await refreshMarketSnapshot();
@@ -40,6 +48,9 @@ module.exports=async function handler(req,res){
       w3Valid:!!data?.w3?.isLiveModel,w3Error:data?.w3?.error||null,sourceAligned:true,latestByMarket:gate.latestByMarket,refreshedAt:new Date().toISOString()});
   }catch(e){
     console.error('scheduled W3-D.1.2 market snapshot update failed',e);
+    // Keep the official cash collector independent even if W3 snapshot throws.
+    try{const a=require('../lib/official-institutional-archive');await a.saveOnGateFailure(a.todayTaipei())}
+    catch(x){console.warn('Independent official archive failure retry failed',String(x?.message||x))}
     res.setHeader('Cache-Control','no-store');
     return res.status(500).json({ok:false,error:String(e?.message||e)});
   }
