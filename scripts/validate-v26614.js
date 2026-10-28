@@ -21,7 +21,7 @@ assert.equal(STORAGE_POLICY.compact.topicOperational,250);
 assert.equal(STORAGE_POLICY.compact.topicResearch,500);
 assert.equal(STORAGE_POLICY.compact.wResearch,500);
 assert(status.includes('readResearchCompactHistoryStatus'));
-assert(status.includes('researchReady500=liveReady&&Number(research500Progress?.currentDays||0)>=targets.research&&researchAnchors>0'), '500D must require raw-ready + compact days + positive validated anchor count');
+assert(status.includes('researchReady500=liveReady&&Boolean(research500Progress?.complete)&&researchAnchors>0'),'500D requires 500 days within a single approved generation, plus validated anchors');
 assert(xy.includes("storageLayer:'research-daily-numeric'"));
 assert(html.includes('500D Research'));
 assert(app.includes('technical-v26614:'),'technical cache namespace must invalidate stale .13 entries');

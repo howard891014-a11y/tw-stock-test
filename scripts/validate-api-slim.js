@@ -10,7 +10,6 @@ assert.equal(names.length,8,'Expected eight serverless entrypoints');
 assert(names.length<=12,'Vercel Hobby ceiling');
 const routes={
  '/api/stock':'/api/quote?sz_route=stock',
- '/api/dw4':'/api/fundflow?sz_route=dw4',
  '/api/w3-d111-shadow':'/api/market-dynamic?sz_shadow=d111',
  '/api/w3-d112-shadow':'/api/market-dynamic?sz_shadow=d112',
 };
@@ -22,10 +21,10 @@ for(const [source,destination] of Object.entries(routes)){
 }
 const q=fs.readFileSync(path.join(apiDir,'quote.js'),'utf8'), f=fs.readFileSync(path.join(apiDir,'fundflow.js'),'utf8'), m=fs.readFileSync(path.join(apiDir,'market-dynamic.js'),'utf8');
 assert(q.includes('async function szStockActionHandler')&&q.includes('stockRoute')===false);
-assert(f.includes('async function szDw4Handler')&&f.includes('persist:false'));
+assert(!f.includes('szDw4Handler'),'retired forecast route must not exist');
 assert(m.includes("require('../lib/api-routes/w3-shadow').d111")&&m.includes("require('../lib/api-routes/w3-shadow').d112"));
 assert(fs.existsSync(path.join(root,'lib/api-routes/w3-shadow.js')));
-assert.equal((config.crons||[]).length,8,'Seven existing scheduled jobs plus private D study cron must be preserved');
+assert.equal((config.crons||[]).length,12,'Keep all 12 currently scheduled jobs');
 assert.equal((config.crons||[]).filter(x=>x.path==='/api/fundflow?view=industry-changes&action=scan').length,1);
 assert(!Object.keys(config.functions||{}).some(x=>!fs.existsSync(path.join(root,x))));
 
@@ -37,8 +36,6 @@ Module._load=function(id,parent,isMain){
  if(src.endsWith('/api/quote.js')&&id==='../lib/db')return {getSql:()=>{throw Error('Unexpected DB request')}};
  if(src.endsWith('/api/quote.js')&&id.startsWith('../lib/api-routes/'))return async(req,res)=>{calls.push('stock:'+req.query.action);return res.status(200).json({stockRoute:req.query.action})};
  if(src.endsWith('/api/fundflow.js')&&id==='../lib/fundflow-xy')return {SNAPSHOT_SCHEMA_VERSION:'schema-test',getFundflowSnapshot:async()=>({flowRoute:true}),getFundflowBusinessBrowser:async()=>({}),getFundflowDetail:async()=>({})};
- if(src.endsWith('/api/fundflow.js')&&id==='../lib/dw4')return {DW4_VERSION:'test',predictDw4:async(args)=>{calls.push('dw4:'+String(args.persist));return {dw4Route:true}}};
- if(src.endsWith('/api/fundflow.js')&&id==='../lib/dw4-audit')return {summarizeDw4Audit:()=>({auditRoute:true})};
  if(src.endsWith('/api/fundflow.js')&&id==='../lib/db')return {getSql:()=>({query:async()=>[]})};
  if(src.endsWith('/api/market-dynamic.js')&&id==='../lib/market-dynamic')return {getMarketDynamicCached:async()=>({marketRoute:true})};
  if(src.endsWith('/api/market-dynamic.js')&&id==='../lib/market-index-eod')return {getMarketIndexQuote:async()=>({indexRoute:true})};
@@ -53,13 +50,11 @@ async function run(){
  try{
   const quote=require('../api/quote'),fundflow=require('../api/fundflow'),market=require('../api/market-dynamic');
   const res1=mkres();await quote({method:'GET',query:{sz_route:'stock',action:'targets'}},res1);assert.equal(res1.body.stockRoute,'targets');
-  const res2=mkres();await fundflow({query:{sz_route:'dw4',horizon:5}},res2);assert.equal(res2.body.dw4Route,true);
-  const res3=mkres();await fundflow({query:{sz_route:'dw4',view:'audit'}},res3);assert.equal(res3.body.auditRoute,true);
   const res4=mkres();await fundflow({query:{view:'overview'}},res4);assert.equal(res4.body.flowRoute,true);
   for(const v of ['d111','d112']){const res=mkres();await market({method:'GET',query:{sz_shadow:v}},res);assert.equal(res.body.shadow,v)}
   const res5=mkres();await market({method:'GET',query:{days:'5'}},res5);assert.equal(res5.body.marketRoute,true);
  }finally{Module._load=originalLoad;}
- assert.deepEqual(calls,['stock:targets','dw4:false','dw4:false','w3-d111','w3-d112']);
- console.log('PASS API slimming: 8/12 functions, 4 unchanged public URLs, cron, actual delegated handlers');
+ assert.deepEqual(calls,['stock:targets','w3-d111','w3-d112']);
+ console.log('PASS API slimming: 8/12 functions, 3 retained public URLs, cron, actual delegated handlers');
 }
 run().catch(err=>{console.error(err);process.exitCode=1;Module._load=originalLoad});

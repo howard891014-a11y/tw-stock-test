@@ -21,9 +21,12 @@ assert.equal(P.live(st,'6187',snap('6187','波段','swing',1490)).changed,true);
 let active=P.active(st,'6187');assert.equal(active.initial.targets.main,1483);assert.equal(active.last.targets.main,1490);
 assert.equal(active.updates.length,1);assert.equal(active.events.at(-1).type,'resonance-advice-updated');
 // 若既有玩法突然改為短期，不可偷換當初固定的波段目標。
-P.live(st,'6187',snap('6187','短期','short',1050));active=P.active(st,'6187');
+const blocked=P.live(st,'6187',snap('6187','短期','short',1050));assert.equal(blocked.blocked,true);active=P.active(st,'6187');
 assert.equal(active.initial.play,'波段');assert.equal(active.last.play,'波段');assert.equal(active.last.targets.main,1490);
-assert.match(active.last.signal,/暫停跨玩法/);
+assert.equal(active.last.signal,'先看主要目標','被拒絕的跨玩法價位不得寫入 last');
+const locked={...snap('6187','波段','swing',1520),analysisPlayKey:'swing',modeChangeObserved:'short',holdingAction:'鎖定原玩法',allocation:{core:50,tactical:50}};
+assert.equal(P.live(st,'6187',locked).changed,true);
+active=P.active(st,'6187');assert.equal(active.last.targets.main,1520);assert.equal(active.initial.targets.main,1483);assert.equal(active.last.playKey,'swing');
 const res=P.revise(st,'6187',1300,800);assert.equal(res.changed,true);
 active=P.active(st,'6187');assert.equal(active.position.avgCost,1300);assert.equal(active.position.shares,800);
 assert.equal(active.initial.holdingCost,1250,'初始成本不得因修改計畫被覆寫');
@@ -46,5 +49,5 @@ const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8'),lab=fs.readFi
 for(const marker of ['data-cancel-holding','data-save-holding','建立計畫','修改計畫','是否取消計畫？','holdingPlanSnapshot','refreshHoldingTradePlan'])assert.ok(app.includes(marker),`缺少UI功能 ${marker}`);
 assert.match(app,/type==="holdings"&&!holdingPlanCancel\(code\)/,'移除前必須先確認取消');
 assert.match(lab,/function syncRecord\(\)\{[\s\S]{0,175}return;/,'停止自動建單');
-assert.match(html,/lib\/holding-trade-plans\.js\?v=2\.6\.9\.10/,'新模型必須先於 app 載入');
-console.log('PASS v2.6.9.10 holding trade plan: explicit create, validation, immutable original, micro updates, fixed play, revise, cancel, new round, legacy, UI wiring');
+assert.match(html,/lib\/holding-trade-plans\.js\?v=2\.6\.9\.12/,'新模型必須先於 app 載入');
+console.log('PASS v2.6.9.12 backward-compatible holding trade plan: explicit create, validation, immutable original, micro updates, fixed play, revise, cancel, new round, legacy, UI wiring');

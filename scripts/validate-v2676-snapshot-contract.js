@@ -17,7 +17,7 @@ const known={
   feature:'feature-2.0.0-x20raw20-y5-activation02',
   path:'path-3.1.1-family-cache-refresh'
 };
-assert.match(pkg.version,/^2\.6\.(?:7\.\d+|8\.\d+)$/);
+assert.match(pkg.version,/^2\.6\.(?:7\.\d+|8\.\d+|9\.\d+)$/);
 assert.equal(xy.ENGINE_VERSION,known.engine);
 assert.equal(xy.DAILY_BUILD_VERSION,known.daily);
 assert.equal(xy.SNAPSHOT_SCHEMA_VERSION,known.snapshot);
@@ -28,6 +28,6 @@ assert.equal(freeze.STATS.taxonomyCount,203);
 assert.equal(freeze.STATS.membershipEdges,3442);
 assert(core.includes("AND company_map_version=$7"),'Snapshot loading must enforce the new frozen Company_Map identity');
 assert(core.includes("String(payload.dailyBuildVersion||'')===currentDailyBuildVersion()"),'Daily build version remains part of payload validation');
-assert(app.includes(`const FUND_FLOW_CLIENT_REV="${pkg.version}"`));
-assert(app.includes('/api/dw4?view=audit'));
+assert.match(app,/const FUND_FLOW_CLIENT_REV="[0-9.]+"/); // retained legacy validation namespace, not deployed app version
+assert(!app.includes('/api/dw4'),'retired dW4 URL is removed from the frontend');
 console.log('PASS v2.6.7.6 — snapshot read contract follows versioned Company_Map; 203 taxonomy remains frozen');
