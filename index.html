@@ -2963,7 +2963,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.16</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.17</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3743,6 +3743,21 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
 <div class="modal-backdrop hidden" id="settingsModal"><div class="modal-card settings-card">
 <div class="modal-head"><strong>設定</strong><button id="closeSettings" type="button">×</button></div>
 <details class="sz-settings-fold" id="szDataSources"><summary>資料來源</summary><div class="sz-fold-body"><div class="settings-row"><span>市場資料</span><strong>盤中 TWSE／TPEx 官方 MIS<br>盤後 Neon DB-first</strong></div><div class="settings-row"><span>基本面來源</span><strong>TWSE／TPEx 官方 OpenAPI<br>MOPS 備援</strong></div></div></details>
+<details class="sz-settings-fold" id="szMarketDailySchedule"><summary>每日自動更新時程（台灣時間）</summary><div class="sz-fold-body sz-schedule-body">
+  <div class="settings-row"><span>15:00</span><strong>價格資料第一次更新</strong></div>
+  <small>上市／上櫃成交億元、漲跌分佈、當日／近5日廣度、近期市場軌跡。兩市資料齊全才發布；W3不提前重算。</small>
+  <div class="settings-row"><span>16:00</span><strong>價格資料第二次檢查</strong></div>
+  <small>15:00已更新完成就跳過，不重複下載與寫入。</small>
+  <div class="settings-row"><span>17:00</span><strong>價格資料最後檢查／休市判定</strong></div>
+  <small>15／16／17三次都確認兩市沒有當日報價，才推定休市並取消晚間更新；單邊延遲或來源錯誤不當成休市。</small>
+  <div class="settings-row"><span>21:00 起</span><strong>法人／信用等籌碼資料</strong></div>
+  <small>21:00同步法人、21:15同步信用；21:30／21:45處理上市／上櫃處置資訊。</small>
+  <div class="settings-row"><span>22:00</span><strong>W3-D.1.2正式運算</strong></div>
+  <small>只使用已取得的當日完整輸入；資料未齊保留上次有效結果。</small>
+  <div class="settings-row"><span>23:35</span><strong>缺資料才補算W3</strong></div>
+  <small>當日W3已完成直接略過；缺必要籌碼則補查後重算，不更動W3公式。</small>
+  <p class="sz-schedule-note">休市推定日：21:00籌碼、22:00 W3及23:35補算均跳過。若資料來源故障或兩市日期不同，不會誤判為休市；官方資料延遲時不保證上述時間一定完成。</p>
+</div></details>
 <section class="settings-history" aria-label="歷史資料進度">
   <div class="settings-history-head"><span>歷史資料進度</span><small id="historyProgressUpdated">讀取中</small></div>
   <div class="settings-history-row"><span>股價</span><div class="settings-progress-track"><i id="historyPriceBar"></i></div><strong id="historyPriceValue">-- / 120D</strong><small id="historyPriceDetail">上市 --｜上櫃 --</small></div>
@@ -3934,11 +3949,11 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
   <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
   <script src="./lib/resonance-lab-v1.js?v=2.6.9.10"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
-  <script src="./lib/holding-trade-plans.js?v=2.6.9.16"></script>
-<script src="./lib/trade-backup.js?v=2.6.9.16"></script>
-  <script src="./lib/holding-trade-review.js?v=2.6.9.16"></script>
+  <script src="./lib/holding-trade-plans.js?v=2.6.9.17"></script>
+<script src="./lib/trade-backup.js?v=2.6.9.17"></script>
+  <script src="./lib/holding-trade-review.js?v=2.6.9.17"></script>
   <script src="./lib/recent-play-advice.js?v=2.6.9.11"></script>
-  <script src="./app.js?v=2.6.9.16"></script>
+  <script src="./app.js?v=2.6.9.17"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

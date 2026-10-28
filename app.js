@@ -4621,7 +4621,7 @@ function holdingTradeArchiveView(){
   }).join('');
   return `<details class="holding-archive" id="holdingTradeArchive"><summary>歷史交易紀錄｜${completed.length} 筆已封存計畫</summary><div class="holding-archive-content">${body||'<p>尚無已封存的成交紀錄</p>'}<button type="button" id="szExportAllHoldingTrades">匯出全部交易與共振備份</button><small>本機資料不會自動同步至其他瀏覽器／裝置；請把下載的完整JSON另存到安全位置。取消計畫不是實際出清。</small></div></details>`;
 }
-// v2.6.9.16 — Downloadable off-browser backups and CHECKED restore; never server-side.
+// v2.6.9.17 — Downloadable off-browser backups and CHECKED restore; never server-side.
 function szTradeRecoveryStatus(){
   const box=$('szSimBackupStatus'),api=window.StockZoneTradeBackup;
   if(!box||!api)return;

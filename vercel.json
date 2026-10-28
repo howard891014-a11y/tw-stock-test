@@ -45,15 +45,31 @@
     },
     {
       "path": "/api/sync-status",
-      "schedule": "0 11 * * 1-5"
+      "schedule": "0 8 * * 1-5"
     },
     {
       "path": "/api/sync-status",
-      "schedule": "0 14 * * 1-5"
+      "schedule": "0 9 * * 1-5"
+    },
+    {
+      "path": "/api/sync-status",
+      "schedule": "0 13 * * 1-5"
+    },
+    {
+      "path": "/api/sync-status",
+      "schedule": "15 13 * * 1-5"
+    },
+    {
+      "path": "/api/sync-status",
+      "schedule": "30 13 * * 1-5"
+    },
+    {
+      "path": "/api/sync-status",
+      "schedule": "45 13 * * 1-5"
     },
     {
       "path": "/api/market-dynamic-refresh",
-      "schedule": "50 14 * * 1-5"
+      "schedule": "0 14 * * 1-5"
     },
     {
       "path": "/api/market-dynamic-refresh",
@@ -70,22 +86,6 @@
     {
       "path": "/api/market-dynamic-refresh?paper=stage3",
       "schedule": "15 22 * * 1-5"
-    },
-    {
-      "path": "/api/sync-status",
-      "schedule": "20 10 * * 1-5"
-    },
-    {
-      "path": "/api/sync-status",
-      "schedule": "50 10 * * 1-5"
-    },
-    {
-      "path": "/api/market-dynamic-refresh",
-      "schedule": "20 11 * * 1-5"
-    },
-    {
-      "path": "/api/market-dynamic-refresh",
-      "schedule": "40 12 * * 1-5"
     }
   ],
   "rewrites": [

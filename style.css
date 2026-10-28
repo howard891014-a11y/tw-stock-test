@@ -536,3 +536,10 @@ body.view-overview .overview-only{display:block}
 .fundflow-typhoon-trail.is-focus{stroke-opacity:.94!important}.fundflow-point-old.is-focus{opacity:.86!important}.fundflow-future-path{fill:none;stroke-opacity:.34!important;stroke-width:2.2;stroke-dasharray:6 5;pointer-events:none;vector-effect:non-scaling-stroke}.fundflow-future-point{opacity:.52!important}.fundflow-future-label{opacity:.68!important}
 
 .fundflow-probability-caption{font-size:9px;font-weight:650;fill:#6c7d90;stroke:#fff;stroke-width:2px;opacity:.95}
+
+/* v2.6.9.17 — Settings > market daily update timeline */
+.sz-schedule-body .settings-row{margin-top:8px;padding:9px 0;border-bottom:1px solid #edf1f5;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.sz-schedule-body .settings-row span{white-space:nowrap;font-weight:700;min-width:74px;color:#314767}
+.sz-schedule-body .settings-row strong{font-size:13px;text-align:right}
+.sz-schedule-body>small{display:block;margin:4px 0 10px;color:#687789;font-size:12px;line-height:1.6}
+.sz-schedule-note{margin:12px 0 0;padding:10px 12px;background:#f6f9fc;border-radius:8px;font-size:12px;line-height:1.7;color:#4a607a}
