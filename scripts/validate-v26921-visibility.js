@@ -40,5 +40,5 @@ assert(src.includes('decision?.trial??decision?.trialCandidate'), 'overview read
 assert(src.includes('d.trial??d.trialCandidate'), 'decision card reads visible candidate');
 assert(src.includes('decision.holding?null:(decision.trial??decision.trialCandidate)'), 'holding plan suppresses first-entry trial after holding');
 assert(src.includes('trialEligible:!!decision.trialEligible'), 'holding plans preserve difference between reference and permission');
-assert(html.includes('v2.6.9.23')&&html.includes('unified-trade-decision.js?v=2.6.9.23'));
+assert(html.includes('v2.6.9.24')&&html.includes('unified-trade-decision.js?v=2.6.9.24'));
 console.log('PASS v2.6.9.22 compatibility: available trial/add prices remain visible through market and risk veto; permissions unchanged, no fabricated price; overview, detail, holdings consistent.');

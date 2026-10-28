@@ -86,6 +86,6 @@ function capture(code,play='swing'){
     'id="szSimBackupStatus"','id="szHoldingBackupStatus"','id="szHoldingBackupBtn"','v'+appVersion])assert(html.includes(token),token);
   assert(html.indexOf('lib/trade-backup.js?v=2.6.9.19')<html.indexOf('app.js?v='+appVersion));
   for(const forbidden of ['fetch(','getSql(','@neondatabase/serverless','supabase','@vercel/blob'])assert(!module.includes(forbidden),'client backup must not use network '+forbidden);
-  assert.match(packageJson.version,/^2\.6\.9\.2[0123]$/);
+  assert.match(packageJson.version,/^2\.6\.9\.2[01234]$/);
   console.log('PASS v2.6.9.19 backup: sha256 export/import, after-backup change, overwrite prevention UI, tamper, incomplete JSON, rollback on quota error, old original play, closed history, holdings/watchlist/analysis snapshot roundtrip');
 })().catch(e=>{console.error(e);process.exitCode=1});

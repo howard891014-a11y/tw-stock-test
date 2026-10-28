@@ -28,7 +28,7 @@ for(const marker of ['function resonanceContinuousPeaks(','resonanceDistanceDeca
 assert.ok(!h.includes('id="expectedTarget3"'),'第三個樂觀目標不得再顯示');
 assert.match(h,/id="expectedTarget1"[^>]*>\s*<span id="expectedT1Label">主要共振/);
 assert.match(h,/id="expectedTarget2"[^>]*>\s*<span id="expectedT2Label">次要共振/);
-assert.match(h,/\.\/lib\/recent-play-advice\.js\?v=2\.6\.9\.23/);
+assert.match(h,/\.\/lib\/recent-play-advice\.js\?v=2\.6\.9\.24/);
 for(const id of ['recentPlayMode','recentPlayTrial','recentPlayPct','recentPlayEntry','recentPlayAdd','recentPlayPullback','recentPlayChase','recentPlayStop','recentPlayEvidence'])assert.ok(h.includes(`id="${id}"`),`近期操作缺少 ${id}`);
 assert.ok(!app.includes('??latestValuationScenario?.F);\n  const mainTitle'),'圖表不能拿估值代替次要共振');
 const code=app.slice(app.indexOf('function buildResonanceTargets('),app.indexOf('function uniqueDownsideTargets('));

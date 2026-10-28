@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.resolve(__dirname,'..'),recent=require('../lib/recent-play-advice.js');
 const engine=require('../lib/unified-trade-decision.js'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),pkg=require('../package.json');
-assert.equal(pkg.version,'2.6.9.23');
+assert.equal(pkg.version,'2.6.9.24');
 const close=(a,b)=>Math.abs(a-b)<1e-7;
 const band=(v,center,label)=>{
  assert(Array.isArray(v)&&v.length===2&&v[0]>0&&v[1]>v[0],`${label}: required real interval`);
@@ -66,5 +66,5 @@ assert(app.includes('const trim=positionNumber(d?.trimStopCenter),full=positionN
  'risk rate must not silently move from center to range lower edge');
 assert(app.includes('overviewZoneIntText(decision?.entry??decision?.entryCandidate)'));
 assert(app.includes('targetZoneText(d.entry??d.entryCandidate)'));
-assert(html.includes('v2.6.9.23')&&html.includes('app.js?v=2.6.9.23'));
-console.log('PASS v2.6.9.23: non-degenerate trial/stop bands, exact SR8 R1, resonance target spreads, stable centers, vol adaptation, off/holding gates, real SR8 bounds, risk panel alignment.');
+assert(html.includes('v2.6.9.24')&&html.includes('app.js?v=2.6.9.24'));
+console.log('PASS v2.6.9.24: non-degenerate trial/stop bands, exact SR8 R1, resonance target spreads, stable centers, vol adaptation, off/holding gates, real SR8 bounds, risk panel alignment.');
