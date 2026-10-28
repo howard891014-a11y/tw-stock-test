@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.9.20",
+  "version": "2.6.9.22",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -85,6 +85,10 @@
     "validate:two-rates919": "node scripts/validate-v26919-two-rates.js",
     "validate:release919": "npm run validate:two-rates919 && npm run validate:release918",
     "validate:unify920": "node scripts/validate-v26920-unified-trade.js",
+    "validate:risk-trial922": "node scripts/validate-v26922-risk-trial-dual-add.js",
+    "validate:release922": "npm run validate:risk-trial922 && npm run validate:release921",
+    "validate:release921": "npm run validate:visibility921 && npm run validate:release920",
+    "validate:visibility921": "node scripts/validate-v26921-visibility.js",
     "validate:release920": "npm run validate:unify920 && npm run validate:two-rates919 && npm run validate:forecast918 && npm run validate:schedule917 && npm run validate:backup916 && npm run validate:batch3 && npm run validate:batch2 && npm run validate:holding-plans && npm run validate:app-version && npm run validate:historical-winrate && npm run validate:batch1"
   }
 }

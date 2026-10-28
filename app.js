@@ -2152,7 +2152,7 @@ function resetPlayStyle(note="搜尋股票後判讀"){
   for(const k of ["Short","Swing","Long"]){setText(`play${k}Label`,"--");setText(`play${k}Score`,"--");const bar=$(`play${k}Bar`);if(bar)bar.style.width="0%";}
   document.querySelectorAll("#playStyleCard .playstyle-fit-row").forEach(x=>x.classList.remove("is-main"));
   latestPlayStyleResult=null;latestLegacyPlayResult=null;latestV4PlayCandidate=null;latestV4CandidateCode='';updatePlayEngineSelector(null);resetShortAnalysis();resetSwingWave();resetLongAnalysis();resetTradeOutputs(note);
-  for(const id of ['recentPlayMode','recentPlayTrial','recentPlayPct','recentPlayEntry','recentPlayAdd','recentPlayStop','recentPlayEvidence'])setText(id,'等待最新資料');
+  for(const id of ['recentPlayMode','recentPlayTrial','recentPlayPct','recentPlayEntry','recentPlayAdd','recentPlayPullback','recentPlayChase','recentPlayStop','recentPlayEvidence'])setText(id,'等待最新資料');
   // 股票切換不得留存上一檔的試單判讀。
 }
 
@@ -2916,7 +2916,7 @@ function renderOverviewResonance(play,expected,decision,risk=null){
   if(szResonanceIsLoading())setText("overviewResonanceStrength","正在計算…");
   const main=expected?.plan?.levels?.[0]?.value,up=main?positionReturn(main,expected.price):null,down=expected?.downside?.levels?.[0]?.value?positionReturn(expected.downside.levels[0].value,expected.price):null;
   setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?overviewIntFmt(main):"--"));
-  setText("overviewTrialPrice",overviewZoneIntText(decision?.trial));setText("overviewEntryPrice",overviewZoneIntText(decision?.entryCandidate??decision?.entry));setText("overviewTrimPrice",overviewZoneIntText(decision?.trim));setText("overviewExitPrice",overviewZoneIntText(decision?.exit));setText("overviewTrimStopPrice",overviewZoneIntText(decision?.trimStop));setText("overviewFullStopPrice",overviewZoneIntText(decision?.fullStop));
+  setText("overviewTrialPrice",decision?.holding?'--':overviewZoneIntText(decision?.trial??decision?.trialCandidate));setText("overviewEntryPrice",overviewZoneIntText(decision?.entry??decision?.entryCandidate));setText("overviewTrimPrice",overviewZoneIntText(decision?.trim));setText("overviewExitPrice",overviewZoneIntText(decision?.exit));setText("overviewTrimStopPrice",overviewZoneIntText(decision?.trimStop));setText("overviewFullStopPrice",overviewZoneIntText(decision?.fullStop));
   setText("overviewFinalDirection",`${play.period||"--"}｜${play.action||"等待訊號"}`);setText("overviewFinalStrategy",`${decision?.mode||play.period||"--"}｜買進看近期玩法，獲利看共振，防守看結構`);
   const setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",risk?.valid?riskText:setRisk);setText("overviewFinalNext",decision?.action||"等待近期玩法與風控結果");
   const host=$("overviewResonanceSources");if(host){host.replaceChildren();const pts=mainCluster?.points||[];const families=new Map();for(const x of pts){if(!families.has(x.family))families.set(x.family,[]);families.get(x.family).push(x)}for(const [family,a] of families){const chip=document.createElement("span");const name={swing:"波段倍率",broker:"券商目標",valuation:"內部估值",shortwave:"短波倍率",pressure:"前高／壓力"}[family]||family;chip.textContent=`${name}｜${a.map(x=>x.label).join("・")}`;host.append(chip)}const ba=res?.basicAssessment;if(ba){for(const txt of [`營運確認｜${ba.companyLabel} ${ba.companyQuality}/100`,`延續性｜${ba.continuationLabel} ${ba.continuation}/100`,`估值壓力｜${ba.valuation.pressureLabel}`]){const chip=document.createElement("span");chip.textContent=txt;host.append(chip)}}if(expected?.winRate?.valid){const chip=document.createElement("span");chip.textContent=`5年相似訊號｜達標 ${expected.winRate.rate}%／獲利 ${expected.winRate.profitRate}%・${expected.winRate.sample}次`;host.append(chip)}if(!families.size){const chip=document.createElement("span");chip.textContent="等待可用價格來源";host.append(chip)}}
@@ -3197,7 +3197,8 @@ function currentW3DecisionSnapshot(){
 function unifiedDecisionForPlay(play,expected,risk,recent,holding){
   const engine=window.StockZoneUnifiedTrade;
   if(!engine?.decision)return {valid:false,reason:'新版決策引擎尚未載入'};
-  return engine.decision({price:expected?.price,play,expected,risk,recent,holding:!!holding,market:currentW3DecisionSnapshot()});
+  return engine.decision({price:expected?.price,play,expected,risk,recent,
+    holding:!!(holding===true||Number(holding?.avgCost)>0),market:currentW3DecisionSnapshot()});
 }
 function renderUnifiedStopPanel(d,price,position,expected){
   const holding=!!position?.avgCost;
@@ -3220,11 +3221,13 @@ function renderUnifiedStopPanel(d,price,position,expected){
 function renderUnifiedRecentPlay(d,recent){
   if(!d?.valid)return;
   setText('recentPlayTrial',d.action);
-  setText('recentPlayPct',`${d.trialPct}%（試算，待回測）`);
+  setText('recentPlayPct',d.holding?'已持股：首次試單不適用':`${d.trialPct}%（${d.trialEligible?'可小量試單・非績效最佳化':'目前暫停試單'}）`);
   setText('recentPlayEntry',d.trialNote);
   setText('recentPlayAdd',d.entryNote);
+  setText('recentPlayPullback',d.pullbackNote);
+  setText('recentPlayChase',d.chaseNote);
   setText('recentPlayStop',d.fullStopNote);
-  setText('recentPlayEvidence',`${recent?.reason||'近期資訊待補'}｜同一份正式決策同步至總覽、買賣決策及持股計畫；玩法在建立交易後固定。`);
+  setText('recentPlayEvidence',`${recent?.reason||'近期資訊待補'}｜試單5%/10%為政策試算，補倉必須已持股且確認剩餘額度；單一決策同步至總覽、買賣決策及持股計畫，交易玩法固定。`);
 }
 function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
   const price=positionNumber(currentStock?.last??currentStock?.price??latestFiveStageResult?.price);
@@ -3245,8 +3248,8 @@ function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
   setText('decisionPositionNote',position?.avgCost?
     `持股均價 ${technicalFmt(position.avgCost)}｜${position.shares||'--'} 股｜玩法 ${d.mode}（已建交易由原始玩法鎖定）｜核心 ${profile.basePct??'--'}%／機動 ${profile.tacticalPct??'--'}%`:
     `尚未建立持股計畫｜${d.mode}｜核心 ${profile.basePct??'--'}%／機動 ${profile.tacticalPct??'--'}%`);
-  setText('decisionTrialPrice',targetZoneText(d.trial));
-  setText('decisionEntryPrice',targetZoneText(d.entryCandidate));
+  setText('decisionTrialPrice',d.holding?'--':targetZoneText(d.trial??d.trialCandidate));
+  setText('decisionEntryPrice',targetZoneText(d.entry??d.entryCandidate));
   setText('decisionTrimPrice',targetZoneText(d.trim));
   setText('decisionExitPrice',targetZoneText(d.exit));
   setText('decisionTrimStopPrice',targetZoneText(d.trimStop));
@@ -3256,7 +3259,7 @@ function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
   renderUnifiedStopPanel(d,price,position,expected);
   renderUnifiedRecentPlay(d,latestRecentPlayAdvice);
   renderV4TacticalPanel(play,price,expected,d,risk);
-  setText('decisionFoot',`${d.source}｜近期試單比例尚未經樣本外驗證，非自動下單；持股核心／機動由原交易玩法管理。${d.offExit?' 短線／短波遇已驗證RiskOff優先全出清。':''}`);
+  setText('decisionFoot',`${d.source}｜首次試單5%/10%為保守政策、尚未經樣本外驗證；補倉需實際持股、確認訊號與剩餘額度；非自動下單。${d.offExit?' 短線／短波遇已驗證RiskOff優先全出清。':''}`);
   return d;
 }
 // 第一批：近期技術操作提示只以均線、漲跌幅、波動／布林、MACD、RSI/KD、量價、法人與融資判讀。
@@ -3266,7 +3269,7 @@ function renderRecentPlayAdvice(){
   const api=window.StockZoneRecentPlay, t=latestTechnicalForPlay, play=latestPlayStyleResult,
     price=positionNumber(currentStock?.last??currentStock?.price??latestFiveStageResult?.price),
     se=play?.shortEngine||play?.diagnostics?.shortEngine||{},w=play?.swingWave||{},inst=latestInstitutionalData||{};
-  if(!api||!t||!price){latestRecentPlayAdvice=null;for(const id of ['recentPlayMode','recentPlayTrial','recentPlayPct','recentPlayEntry','recentPlayAdd','recentPlayStop','recentPlayEvidence'])setText(id,'資料不足');return null}
+  if(!api||!t||!price){latestRecentPlayAdvice=null;for(const id of ['recentPlayMode','recentPlayTrial','recentPlayPct','recentPlayEntry','recentPlayAdd','recentPlayPullback','recentPlayChase','recentPlayStop','recentPlayEvidence'])setText(id,'資料不足');return null}
   const sr=szChartPriceZones(),levels=sr?.valid?sr.levels||{}:{};
   const validSR=key=>levels[key]?.confidence==='projected'?null:levels[key]?.center;
   const supportItems=[['S1 支撐',validSR('S1')],['S2 支撐',validSR('S2')],['波段防守',w.activeDefenseLow],['次波回測',w.secondPullbackLow],['短線支撐',se.support],['MA10',t?.ma?.ma10],['MA20',t?.ma?.ma20],['MA60',t?.ma?.ma60],['布林下軌',t?.bollinger?.lower]].map(([label,value])=>({label,value}));
@@ -3282,6 +3285,8 @@ function renderRecentPlayAdvice(){
   setText('recentPlayMode',output.mode||'資料不足');setText('recentPlayTrial',output.status||output.reason||'資料不足');
   setText('recentPlayPct',output.trialPct===null||output.trialPct===undefined?'資料不足':`${output.trialPct}%（試算）`);
   setText('recentPlayEntry',output.trial||output.reason||'資料不足');setText('recentPlayAdd',output.add||'資料不足');
+  setText('recentPlayPullback',output.entrySignals?.pullNote||'資料不足');
+  setText('recentPlayChase',output.entrySignals?.chaseNote||'資料不足');
   setText('recentPlayStop',output.stop||'資料不足');setText('recentPlayEvidence',output.valid?`${output.reason}｜此比例尚未獨立回測，不是自動下單或正式倉位限制。`:(output.reason||'資料不足'));
   return output;
 }
@@ -4460,11 +4465,13 @@ function holdingPlanSnapshot(code){
   const signal=String($("overviewFinalNext")?.textContent||"").trim();
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
-    capturedAt:new Date().toISOString(),source:"V4鎖定玩法／共振／新版單一買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.20（近期玩法＋結構風控統一）",
+    capturedAt:new Date().toISOString(),source:"V4鎖定玩法／共振／新版單一買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.22（風險試單與雙補倉分流）",
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
     targets:{main:positionNumber(v.main),secondary:positionNumber(v.secondary),pullback:positionNumber(v.pullback),defense:positionNumber(v.defense)},
-    decision:{mode:d.mode||null,trial:zone(d.trial),entry:zone(d.entryCandidate||d.entry),trim:zone(d.trim),exit:zone(d.exit),
+    decision:{mode:d.mode||null,trial:zone(d.holding?null:(d.trial??d.trialCandidate)),trialEligible:!!d.trialEligible,
+      entry:zone(d.entry??d.entryCandidate),entryReady:!!d.entryReady,addType:d.addType||null,
+      pullbackReady:!!d.pullbackReady,chaseReady:!!d.chaseReady,trim:zone(d.trim),exit:zone(d.exit),
       trimStop:zone(d.trimStop),fullStop:zone(d.fullStop),trialNote:d.trialNote||null,entryNote:d.entryNote||null,
       trimNote:d.trimNote||null,exitNote:d.exitNote||null,trimStopNote:d.trimStopNote||null,fullStopNote:d.fullStopNote||null},
     recent:latestRecentPlayAdvice?.valid?{mode:latestRecentPlayAdvice.mode,status:latestRecentPlayAdvice.status,trialPct:latestRecentPlayAdvice.trialPct,
@@ -4508,7 +4515,9 @@ function holdingPlanLockedSnapshot(code,plan,screen){
       pullback:positionNumber(downside.levels?.[0]?.value)??positionNumber(previousTargets.pullback),
       defense:positionNumber(downside.levels?.[1]?.value)??positionNumber(previousTargets.defense)},
     targetsStatus:freshMain?'updated-from-current-resonance':'retained-previous-no-confirmed-peak',
-    decision:{mode:decision.mode,trial:zone(decision.trial),entry:zone(decision.entryCandidate||decision.entry),
+    decision:{mode:decision.mode,trial:zone(decision.holding?null:(decision.trial??decision.trialCandidate)),trialEligible:!!decision.trialEligible,
+      entry:zone(decision.entry??decision.entryCandidate),entryReady:!!decision.entryReady,addType:decision.addType||null,
+      pullbackReady:!!decision.pullbackReady,chaseReady:!!decision.chaseReady,
       trim:zone(decision.trim),exit:zone(decision.exit),trimStop:zone(decision.trimStop),fullStop:zone(decision.fullStop),
       trialNote:decision.trialNote||null,entryNote:decision.entryNote||null,
       trimNote:decision.trimNote||null,exitNote:decision.exitNote||null,
