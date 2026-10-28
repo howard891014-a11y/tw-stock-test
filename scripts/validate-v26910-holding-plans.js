@@ -46,8 +46,8 @@ assert.equal(P.read(legacy)['2330'].archived[0].status,'superseded-legacy-auto')
 const corrupt=store({[P.KEY]:'broken-json'});assert.throws(()=>P.create(corrupt,'6187',1200,100,snap()),/JSON/);
 assert.equal(corrupt.getItem(P.KEY),'broken-json','資料損毀應停止操作，不可覆寫');
 const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8'),lab=fs.readFileSync(path.join(__dirname,'../lib/resonance-lab-v1.js'),'utf8'),html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
-for(const marker of ['data-cancel-holding','data-save-holding','建立計畫','修改計畫','是否取消計畫？','holdingPlanSnapshot','refreshHoldingTradePlan'])assert.ok(app.includes(marker),`缺少UI功能 ${marker}`);
+for(const marker of ['data-cancel-holding','data-save-holding','建立計畫','修改計畫','是否取消這筆交易計畫？','holdingPlanSnapshot','refreshHoldingTradePlan'])assert.ok(app.includes(marker),`缺少UI功能 ${marker}`);
 assert.match(app,/type==="holdings"&&!holdingPlanCancel\(code\)/,'移除前必須先確認取消');
 assert.match(lab,/function syncRecord\(\)\{[\s\S]{0,175}return;/,'停止自動建單');
-assert.match(html,/lib\/holding-trade-plans\.js\?v=2\.6\.9\.12/,'新模型必須先於 app 載入');
+assert.match(html,/lib\/holding-trade-plans\.js\?v=2\.6\.9\.15/,'新模型必須先於 app 載入');
 console.log('PASS v2.6.9.12 backward-compatible holding trade plan: explicit create, validation, immutable original, micro updates, fixed play, revise, cancel, new round, legacy, UI wiring');
