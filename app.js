@@ -632,7 +632,7 @@ function markSystemStress(data){
 }
 function technicalFmt(n,suffix=""){const x=Number(n);return Number.isFinite(x)?`${x.toLocaleString("zh-TW",{maximumFractionDigits:2})}${suffix}`:"--"}
 function overviewIntFmt(n,suffix=""){const x=Number(n);if(!Number.isFinite(x))return "--";const v=x<0?Math.ceil(x):Math.floor(x);return `${v.toLocaleString("zh-TW")}${suffix}`;}
-function overviewZoneIntText(zone){return Array.isArray(zone)&&zone.length===2?`${overviewIntFmt(zone[0])} ～ ${overviewIntFmt(zone[1])}`:"--"}
+function overviewZoneIntText(zone){if(!Array.isArray(zone)||zone.length!==2)return "--";const a=overviewIntFmt(zone[0]),b=overviewIntFmt(zone[1]);return a===b?a:`${a} ～ ${b}`}
 function technicalVolumeFmt(n){const x=Number(n);if(!Number.isFinite(x))return "--";if(Math.abs(x)>=10000){const w=x/10000;return `${w.toLocaleString("zh-TW",{maximumFractionDigits:w>=100?0:1})}萬`;}return x.toLocaleString("zh-TW",{maximumFractionDigits:0});}
 function technicalMetrics(id,items){const el=$(id);if(!el)return;el.classList.add("tech-metrics");el.style.setProperty("--cols",String(items.length));el.innerHTML=items.map(([label,value])=>`<span class="tech-metric"><span>${label}</span><b>${value}</b></span>`).join("")}
 function techTone(el,tone){if(!el)return;el.classList.remove("tone-good","tone-watch","tone-bad","tone-neutral","tone-info","tone-cyan");el.classList.add(`tone-${tone||"neutral"}`)}
@@ -2296,7 +2296,7 @@ function signedPercent(v){const n=Number(v);return Number.isFinite(n)?`${n>=0?"+
 function signedMoney(v){const n=Number(v);return Number.isFinite(n)?`${n>=0?"+":"-"}${Math.abs(Math.round(n)).toLocaleString("zh-TW")} 元`:"--"}
 function positionReturn(target,base){const t=positionNumber(target),b=positionNumber(base);return t!==null&&b!==null?(t/b-1)*100:null}
 function targetZone(center,lo=.99,hi=1.01){const c=positionNumber(center);if(c===null)return null;return [c*lo,c*hi].sort((a,b)=>a-b)}
-function targetZoneText(zone){return Array.isArray(zone)&&zone.length===2?`${technicalFmt(zone[0])} ～ ${technicalFmt(zone[1])}`:"--"}
+function targetZoneText(zone){if(!Array.isArray(zone)||zone.length!==2)return "--";const a=technicalFmt(zone[0]),b=technicalFmt(zone[1]);return a===b?a:`${a} ～ ${b}`}
 function decisionEntryText(d){return targetZoneText(d?.entryCandidate??d?.entry)}
 function uniqueFutureTargets(items,price){
   const p=positionNumber(price),out=[];
@@ -3209,7 +3209,7 @@ function renderUnifiedStopPanel(d,price,position,expected){
   setText('adaptiveStopCurrentEntry',technicalFmt(price));
   setText('adaptiveStopCurrentTrim',targetZoneText(d?.trimStop));
   setText('adaptiveStopCurrentFull',targetZoneText(d?.fullStop));
-  const trim=Array.isArray(d?.trimStop)?d.trimStop[0]:null,full=Array.isArray(d?.fullStop)?d.fullStop[0]:null;
+  const trim=positionNumber(d?.trimStopCenter),full=positionNumber(d?.fullStopCenter);
   setText('adaptiveStopCurrentRisk',
     `對現價：減碼 ${trim? signedPercent(positionReturn(trim,price)):'未形成'}｜全部 ${full?signedPercent(positionReturn(full,price)):'未形成'}`);
   const pull=$('adaptiveStopPullbackCard');if(pull)pull.hidden=true;
@@ -3272,8 +3272,17 @@ function renderRecentPlayAdvice(){
   if(!api||!t||!price){latestRecentPlayAdvice=null;for(const id of ['recentPlayMode','recentPlayTrial','recentPlayPct','recentPlayEntry','recentPlayAdd','recentPlayPullback','recentPlayChase','recentPlayStop','recentPlayEvidence'])setText(id,'資料不足');return null}
   const sr=szChartPriceZones(),levels=sr?.valid?sr.levels||{}:{};
   const validSR=key=>levels[key]?.confidence==='projected'?null:levels[key]?.center;
-  const supportItems=[['S1 支撐',validSR('S1')],['S2 支撐',validSR('S2')],['波段防守',w.activeDefenseLow],['次波回測',w.secondPullbackLow],['短線支撐',se.support],['MA10',t?.ma?.ma10],['MA20',t?.ma?.ma20],['MA60',t?.ma?.ma60],['布林下軌',t?.bollinger?.lower]].map(([label,value])=>({label,value}));
-  const pressureItems=[['R1 壓力',validSR('R1')],['R2 壓力',validSR('R2')],['短線壓力',se?.resistance?.value],['60日高',t?.trend?.high60],['前波高點',w?.referenceHigh],['布林上軌',t?.bollinger?.upper]].map(([label,value])=>({label,value}));
+  // SR8.2 上下緣是既有實際結構區；不能只傳中心值，造成買賣六卡全部變成 x～x。
+  const srItem=(label,key)=>({label,value:validSR(key),lower:levels[key]?.confidence==='projected'?null:levels[key]?.lower,
+    upper:levels[key]?.confidence==='projected'?null:levels[key]?.upper});
+  const supportItems=[srItem('S1 支撐','S1'),srItem('S2 支撐','S2'),
+    ...[['波段防守',w.activeDefenseLow],['次波回測',w.secondPullbackLow],['短線支撐',se.support],
+      ['MA10',t?.ma?.ma10],['MA20',t?.ma?.ma20],['MA60',t?.ma?.ma60],['布林下軌',t?.bollinger?.lower]]
+      .map(([label,value])=>({label,value}))];
+  const pressureItems=[srItem('R1 壓力','R1'),srItem('R2 壓力','R2'),
+    ...[['短線壓力',se?.resistance?.value],['60日高',t?.trend?.high60],
+      ['前波高點',w?.referenceHigh],['布林上軌',t?.bollinger?.upper]]
+      .map(([label,value])=>({label,value}))];
   const credit=inst?.creditTrading?.signal||{};
   // 有效日期相差超過 10 個日曆日的籌碼不參與近期評估；不使用未確認資料代替。
   const technicalDay=String(t?.latest?.date||t?.updatedAt||'').slice(0,10);
@@ -4454,7 +4463,7 @@ function holdingPlanPrice(v){return Number.isFinite(v)&&v>0?targetFmt(v):"資料
 function holdingPlanZone(a){
   if(!Array.isArray(a))return holdingPlanPrice(a);
   const prices=a.filter(x=>Number.isFinite(x)&&x>0).map(targetFmt);
-  return prices.length?prices.join(" ～ "):"資料不足";
+  return prices.length?(prices.length===2&&prices[0]===prices[1]?prices[0]:prices.join(" ～ ")):"資料不足";
 }
 function holdingPlanTime(value){const d=new Date(value||'');return Number.isNaN(d.getTime())?'—':d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
 function holdingPlanSnapshot(code){
@@ -4465,7 +4474,7 @@ function holdingPlanSnapshot(code){
   const signal=String($("overviewFinalNext")?.textContent||"").trim();
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
-    capturedAt:new Date().toISOString(),source:"V4鎖定玩法／共振／新版單一買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.22（風險試單與雙補倉分流）",
+    capturedAt:new Date().toISOString(),source:"V4鎖定玩法／共振／新版單一買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.23（觀察區間顯示修復）",
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
     targets:{main:positionNumber(v.main),secondary:positionNumber(v.secondary),pullback:positionNumber(v.pullback),defense:positionNumber(v.defense)},
