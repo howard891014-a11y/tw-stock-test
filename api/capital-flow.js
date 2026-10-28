@@ -1,7 +1,7 @@
 'use strict';
 const {getSummary,getDetail,searchStockSectors}=require('../lib/capital-flow');
 const {isCronAuthorized}=require('../lib/sync-common');
-const CAPITAL_CRON_SCHEDULE='8 8 * * 1-5';
+const {CRON_STAGES,runScheduledFundflow}=require('../lib/market-fundflow-schedule');
 module.exports=async (req,res)=>{
   if(req.method&&req.method!=='GET')return res.status(405).json({ok:false,error:'僅支援查詢'});
   try{
@@ -9,14 +9,10 @@ module.exports=async (req,res)=>{
     // thirteenth api/*.js function on Vercel Hobby.
     const schedule=String(req.headers?.['x-vercel-cron-schedule']||'');
     if(schedule){
-      if(schedule!==CAPITAL_CRON_SCHEDULE || !isCronAuthorized(req) ||
+      if(!CRON_STAGES[schedule] || !isCronAuthorized(req) ||
          !String(req.headers?.['user-agent']||'').includes('vercel-cron/1.0'))
         return res.status(401).json({ok:false,error:'Cron only'});
-      const sql=require('../lib/db').getSql();
-      const [latest]=await sql.query('SELECT MAX(trade_date) AS latest FROM market_business_xy2_topic_daily');
-      const value=latest?.latest;
-      const asOf=value instanceof Date?value.toISOString().slice(0,10):String(value||'').slice(0,10);
-      const result=await require('../lib/capital-flow-money').refreshMoney(asOf,sql);
+      const result=await runScheduledFundflow({schedule,sql:require('../lib/db').getSql()});
       res.setHeader('Cache-Control','no-store');
       return res.status(result.ok?200:503).json(result);
     }
