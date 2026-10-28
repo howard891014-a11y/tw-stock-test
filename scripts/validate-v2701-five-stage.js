@@ -25,7 +25,8 @@ for(const [name,values,expect] of patterns){const r=scope.calculateFiveStage(dat
 assert(html.indexOf('id="stagePositionCard"')>html.indexOf('class="overview-outline"')&&html.indexOf('id="stagePositionCard"')<html.indexOf('id="overviewResonanceCard"'),'stage card needs to be above overview resonance');
 assert.strictEqual((html.match(/id="stagePositionCard"/g)||[]).length,1,'stage id duplicate');
 assert(!html.includes('id="stagePositionCard" data-view-panel="analysis"'),'stage should not stay in analysis');
-assert(/v2\.7\.0\.2/.test(html)&&/app\.js\?v=2\.7\.0\.2/.test(html));
+const current=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+assert(html.includes(`v${current}`)&&html.includes(`app.js?v=${current}`),'current app version must be consistent');
 const src=app.slice(app.indexOf('function calculateLegacyStageForExistingScoring(t,currentPrice){'),app.indexOf('\n// v2.7.0.1 — 單一主要波段'))
   .trimEnd().replace('calculateLegacyStageForExistingScoring','calculateFiveStage');
 const legacyHash=crypto.createHash('sha256').update(src).digest('hex');

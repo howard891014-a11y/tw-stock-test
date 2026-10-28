@@ -32,8 +32,8 @@ async function main(){
  assert.equal(holiday.ok,true);assert.equal(holiday.reason,'closed-market');
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert.ok(html.includes('21:15／21:30／21:50'));assert.ok(html.includes('21:35／21:55'));assert.ok(html.includes('Hobby 排程'));
- assert.ok(html.includes('v2.7.0.2'));
- assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.7.0.2');
+ const current=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version;
+ assert.ok(html.includes(`v${current}`));
  console.log('PASS v2.7.0.2: scheduled slots, no 16:08, protected crons, XY historical gate, idempotent money, holiday, settings, version');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});

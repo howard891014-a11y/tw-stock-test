@@ -73,9 +73,9 @@ const path=require('node:path');
 
     assert(fetchHits.length>0);
     const app=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
-    assert(app.includes('technical-v26826:'),'old technical caches must be invalidated');
-    assert(app.includes('history5y-v26826:'),'old history caches must be invalidated');
-    assert.equal((app.match(/v:"26826"/g)||[]).length,2,'both technical APIs must bypass stale CDN entries');
+    assert(app.includes('technical-v2703:'),'technical cache must use current release namespace');
+    assert(app.includes('history5y-v2703:'),'history cache must use current release namespace');
+    assert.equal((app.match(/v:"2703"/g)||[]).length,2,'both technical APIs must bypass stale CDN entries');
     assert(!app.slice(app.indexOf('async function history5Y('),app.indexOf('const FUNDAMENTALS_CACHE_KEY=')).includes('void stockzoneIdbPut("marketCache",key,legacy)'), 'legacy historical cache must not reintroduce synthetic days');
   }finally{globalThis.fetch=fetchOld}
   console.log('PASS v2.6.8.26: rejects 0/missing-volume holidays, preserves 2884 volume, 5/20D averages, MA/MACD/Bollinger, five-year history and cache isolation.');
