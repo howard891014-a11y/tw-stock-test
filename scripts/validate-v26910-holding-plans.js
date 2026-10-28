@@ -1,0 +1,50 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const P=require('../lib/holding-trade-plans');
+function store(initial={}){const map=new Map(Object.entries(initial));return {getItem:key=>map.has(key)?map.get(key):null,setItem:(key,value)=>map.set(key,String(value)),get:key=>map.get(key)};}
+const snap=(code='6187',play='波段',playKey='swing',main=1483)=>({code,name:'萬潤',capturedAt:new Date().toISOString(),source:'原版共振',play,playKey,modelVersion:'v2.6.9.9',referencePrice:1335,
+ allocation:{core:55,tactical:45},targets:{main,secondary:1580},decision:{mode:'波段',trim:[1450,1460],exit:[1580,1600],fullStop:[1190,1200]},signal:'先看主要目標',risk:{level:'一般',score:23}});
+const st=store();
+assert.equal(P.active(st,'6187'),null,'加入持股本身不得存在活動計畫');
+assert.throws(()=>P.create(st,'6187','',1000,snap()),/均價/);
+assert.throws(()=>P.create(st,'6187',1200,'2.5',snap()),/整數/);
+assert.throws(()=>P.create(st,'6187',1200,1000,snap('2330')),/開啟該股票/);
+assert.equal(st.getItem(P.KEY),null,'驗證失敗不得寫入計畫');
+const first=P.create(st,'6187',1250,1000,snap());
+assert.equal(first.explicitPlan,true);assert.equal(first.initial.holdingCost,1250);assert.equal(first.initial.holdingShares,1000);
+assert.equal(first.initial.targets.main,1483);assert.equal(first.initial.playKey,'swing');
+assert.throws(()=>P.create(st,'6187',1200,1000,snap()),/已有交易計畫/);
+assert.deepEqual(P.live(st,'6187',snap()),{changed:false},'同一份公式建議不得重複寫入');
+assert.equal(P.live(st,'6187',snap('6187','波段','swing',1490)).changed,true);
+let active=P.active(st,'6187');assert.equal(active.initial.targets.main,1483);assert.equal(active.last.targets.main,1490);
+assert.equal(active.updates.length,1);assert.equal(active.events.at(-1).type,'resonance-advice-updated');
+// 若既有玩法突然改為短期，不可偷換當初固定的波段目標。
+P.live(st,'6187',snap('6187','短期','short',1050));active=P.active(st,'6187');
+assert.equal(active.initial.play,'波段');assert.equal(active.last.play,'波段');assert.equal(active.last.targets.main,1490);
+assert.match(active.last.signal,/暫停跨玩法/);
+const res=P.revise(st,'6187',1300,800);assert.equal(res.changed,true);
+active=P.active(st,'6187');assert.equal(active.position.avgCost,1300);assert.equal(active.position.shares,800);
+assert.equal(active.initial.holdingCost,1250,'初始成本不得因修改計畫被覆寫');
+assert.equal(active.initial.holdingShares,1000);assert.equal(active.initial.targets.main,1483);
+assert.equal(active.revisions.length,1);assert.equal(active.revisions[0].before.avgCost,1250);
+assert.equal(P.revise(st,'6187',1300,800).changed,false,'重複修改不該增加事件');
+assert.equal(P.cancel(st,'6187'),true);assert.equal(P.active(st,'6187'),null);
+let historic=P.read(st)['6187'].archived;assert.equal(historic.length,1);assert.equal(historic[0].status,'cancelled');
+assert.equal(historic[0].events.at(-1).type,'plan-cancelled');
+const next=P.create(st,'6187',1400,500,snap('6187','波段','swing',1520));
+assert.notEqual(next.id,first.id);assert.equal(P.read(st)['6187'].archived.length,1);
+// 舊版「加入清單即自動建單」應保留歷史，但不當成已確認交易。
+const legacy=store({[P.KEY]:JSON.stringify({2330:{active:{id:'old-auto',origin:'added-from-stock-page',initial:{play:'波段'}},archived:[]}})});
+assert.equal(P.active(legacy,'2330'),null);
+P.create(legacy,'2330',900,100,snap('2330'));
+assert.equal(P.read(legacy)['2330'].archived[0].status,'superseded-legacy-auto');
+const corrupt=store({[P.KEY]:'broken-json'});assert.throws(()=>P.create(corrupt,'6187',1200,100,snap()),/JSON/);
+assert.equal(corrupt.getItem(P.KEY),'broken-json','資料損毀應停止操作，不可覆寫');
+const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8'),lab=fs.readFileSync(path.join(__dirname,'../lib/resonance-lab-v1.js'),'utf8'),html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+for(const marker of ['data-cancel-holding','data-save-holding','建立計畫','修改計畫','是否取消計畫？','holdingPlanSnapshot','refreshHoldingTradePlan'])assert.ok(app.includes(marker),`缺少UI功能 ${marker}`);
+assert.match(app,/type==="holdings"&&!holdingPlanCancel\(code\)/,'移除前必須先確認取消');
+assert.match(lab,/function syncRecord\(\)\{[\s\S]{0,175}return;/,'停止自動建單');
+assert.match(html,/lib\/holding-trade-plans\.js\?v=2\.6\.9\.10/,'新模型必須先於 app 載入');
+console.log('PASS v2.6.9.10 holding trade plan: explicit create, validation, immutable original, micro updates, fixed play, revise, cancel, new round, legacy, UI wiring');
