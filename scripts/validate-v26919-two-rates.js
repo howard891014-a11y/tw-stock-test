@@ -46,7 +46,7 @@ assert(js.includes('setText("expectedProfitRate","--")'));
 assert(js.includes('renderCurrentExtremeRisk(risk);')&&js.includes('renderRecentPlayAdvice();'));
 assert(!js.includes('function extremeMarketRisk('));
 assert(!js.includes('const historicSecondRate='));
-assert.match(pkg.version,/^2\.6\.9\.2[012]$/);
+assert.match(pkg.version,/^2\.6\.9\.2[0123]$/);
 assert(html.includes('v'+pkg.version));
 assert.deepEqual(t.up,p.up);
 assert.deepEqual(t.down,p.down);

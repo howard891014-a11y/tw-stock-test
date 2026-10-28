@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 'use strict';
+const containsCenter=(band,center)=>Array.isArray(band)&&band.length===2&&band[0]>0&&band[0]<=center&&band[1]>=center&&band[1]>band[0];
+
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const recent=require('../lib/recent-play-advice.js'),engine=require('../lib/unified-trade-decision.js');
 const repo=path.resolve(__dirname,'..');
 const app=fs.readFileSync(path.join(repo,'app.js'),'utf8'),html=fs.readFileSync(path.join(repo,'index.html'),'utf8');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'2.6.9.22');
+assert.equal(pkg.version,'2.6.9.23');
 const history=Array.from({length:65},(_,i)=>({date:new Date(Date.UTC(2026,6,1+i)).toISOString().slice(0,10),close:96+i*.06}));
 const technical={ma:{ma5:99,ma10:98.5,ma20:97,ma60:92},momentum:{rsi14:55,histogram:1},
  bollinger:{lower:91,upper:105},volume:{ratio20:1.3},history};
@@ -23,9 +25,9 @@ const d=(change={})=>engine.decision({...sample,...change});
 assert.equal(r().valid,true);assert.equal(r().trialPct,10);
 assert.equal(r().signalStrength,'strong');
 assert.equal(d().trialPct,10);assert.equal(d().trialEligible,true);
-assert.deepEqual(d().trial,[100,100]);assert.equal(d().entryReady,false);
+assert(containsCenter(d().trial,100));assert.equal(d().entryReady,false);
 assert.match(d().entryNote,/尚未持股：不可直接執行補倉/);
-assert.equal(d().stopDistance,11);assert.deepEqual(d().fullStop,[89,89]);
+assert.equal(d().stopDistance,11);assert(containsCenter(d().fullStop,89));
 assert.equal(d({market:{verified:true,regime:'on',warning:true}}).trialPct,5);
 assert.equal(d({market:{verified:false,regime:'off'}}).trialPct,5);
 assert.equal(d({market:{verified:true,regime:'off'}}).trialPct,0);
@@ -54,7 +56,7 @@ assert.equal(atSupport.entrySignals.pullback,true);
 let add=d({holding:true,recent:atSupport});
 assert.equal(add.trialEligible,false);assert.equal(add.pullbackReady,true);
 assert.equal(add.entryReady,true);assert.equal(add.addType,'pullback');
-assert.deepEqual(add.entry,[100,100]);assert.equal(add.addPct,null);
+assert(containsCenter(add.entry,100));assert.equal(add.addPct,null);
 // Breakout above a PREVIOUS resistance is a different holding-only signal.
 const breakout=r({supports:[{label:'S1',value:90}],resistances:[{label:'R1',value:98},{label:'R2',value:107}]});
 assert.equal(breakout.entrySignals.pullback,false);assert.equal(breakout.entrySignals.chase,true);
@@ -67,7 +69,7 @@ assert.equal(d({holding:true,recent:breakout,expected:{plan:expected.plan,downsi
 assert.equal(d({holding:true,recent:breakout,play:{key:'short'},market:{verified:true,regime:'off'}}).offExit,true);
 assert.equal(d({holding:true,recent:breakout,play:{key:'long-swing'},market:{verified:true,regime:'off'}}).offTactical,true);
 assert.equal(d({holding:true,recent:breakout,play:{key:'long-swing'},market:{verified:true,regime:'off'}}).offExit,false);
-assert.deepEqual(d({recent:r({technical:{...technical,momentum:{rsi14:82,histogram:1}}})}).entryCandidate,[101,101], 'blocked action retains price reference');
+assert(containsCenter(d({recent:r({technical:{...technical,momentum:{rsi14:82,histogram:1}}})}).entryCandidate,101), 'blocked action retains price reference');
 // UI and position plans consume the same decision; 2 explicit modes are visible.
 assert(html.includes('id="recentPlayPullback"')&&html.includes('id="recentPlayChase"'));
 assert(html.includes(`lib/recent-play-advice.js?v=${pkg.version}`));

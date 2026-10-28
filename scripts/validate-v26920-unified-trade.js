@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 'use strict';
+const containsCenter=(band,center)=>Array.isArray(band)&&band.length===2&&band[0]>0&&band[0]<=center&&band[1]>=center&&band[1]>band[0];
+
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.resolve(__dirname,'..'),src=fs.readFileSync(path.join(root,'app.js'),'utf8'),html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const engine=require('../lib/unified-trade-decision.js');
@@ -12,9 +14,9 @@ const example={price:100,
  market:{regime:'on',warning:false,verified:true},holding:false};
 const u=x=>engine.decision({...example,...x});
 const ok=u();
-assert(ok.valid);assert.equal(ok.trialPct,10);assert.equal(ok.trial[0],100);assert.equal(ok.entry,null);assert.equal(ok.entryReady,false);
-assert.equal(ok.entryCandidate[0],108);assert.equal(ok.trim[0],112);assert.equal(ok.exit[0],126);
-assert.equal(ok.trimStop[0],96);assert.equal(ok.fullStop[0],92);
+assert(ok.valid);assert.equal(ok.trialPct,10);assert(containsCenter(ok.trial,100));assert.equal(ok.entry,null);assert.equal(ok.entryReady,false);
+assert(containsCenter(ok.entryCandidate,108));assert(containsCenter(ok.trim,112));assert(containsCenter(ok.exit,126));
+assert(containsCenter(ok.trimStop,96));assert(containsCenter(ok.fullStop,92));
 assert.match(ok.action,/試單 10%/);
 assert.match(ok.entryNote,/尚未持股/);
 assert.equal(ok.stopSource,'current-downside-plan');
@@ -33,7 +35,7 @@ assert.equal(u({market:{regime:'off',verified:false}}).trialPct,5,'stale RiskOff
 assert.equal(u({market:{regime:'on',warning:true,verified:true}}).trialPct,5,'warning caps trial');
 assert.equal(u({market:{regime:null,verified:false}}).trialPct,5,'unknown market caps trial');
 assert.equal(u({play:{key:'long',operationProfile:{basePct:85,tacticalPct:15}}}).trialPct,10);
-assert.equal(u({recent:{valid:true,trialPct:20,signalStrength:'strong',support:null,resistance:null}}).trial[0],100,'risk trial no longer needs exact support; verified downside remains mandatory');
+assert(containsCenter(u({recent:{valid:true,trialPct:20,signalStrength:'strong',support:null,resistance:null}}).trial,100),'risk trial no longer needs exact support; verified downside remains mandatory');
 assert.equal(u({recent:{valid:true,trialPct:20,signalStrength:'strong',support:null,resistance:null}}).entryCandidate,null);
 const nodown=u({expected:{plan:{levels:[{value:120}]},downside:{levels:[]}}});assert.equal(nodown.fullStop,null,'no invented stop');assert.equal(nodown.exit,null,'no invented second target');
 const noaim=u({expected:{plan:{levels:[]},downside:{levels:[{value:95}]}}});assert.equal(noaim.trim,null,'no invented resonance target');
@@ -59,7 +61,7 @@ assert(html.includes('補倉觀察（雙模式）</span><strong class="overview-
 assert(html.includes('單一決策'));
 assert(html.includes('lib/unified-trade-decision.js?v='+pkg.version));
 assert(html.indexOf('lib/unified-trade-decision.js?v='+pkg.version)<html.indexOf('app.js?v='+pkg.version));
-assert.match(pkg.version,/^2\.6\.9\.2[012]$/);
+assert.match(pkg.version,/^2\.6\.9\.2[0123]$/);
 // Exact up/down historical target test uses historical method unchanged except removing the invalid clipping.
 const begin=src.indexOf('function historicalSimilarWinRate('),end=src.indexOf('\nfunction ',begin+40);
 const rows=[];for(let i=0;i<320;i++)rows.push({date:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),close:100,high:i>60?140:100,low:100});

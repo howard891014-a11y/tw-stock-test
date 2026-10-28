@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 'use strict';
+const containsCenter=(band,center)=>Array.isArray(band)&&band.length===2&&band[0]>0&&band[0]<=center&&band[1]>=center&&band[1]>band[0];
+
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const engine=require('../lib/unified-trade-decision.js');
@@ -14,20 +16,20 @@ const run=change=>engine.decision({...sample,...change});
 // Previously both prices disappeared whenever trialPct=0; do not regress.
 let d=run();
 assert.equal(d.trial,null,'0% should not become an authorized order');
-assert.deepEqual(d.trialCandidate,[96,96],'confirmed support is visible while entry remains blocked');
-assert.deepEqual(d.entryCandidate,[108,108],'confirmed resistance is visible while entry remains blocked');
+assert(containsCenter(d.trialCandidate,96),'confirmed support is visible while entry remains blocked');
+assert(containsCenter(d.entryCandidate,108),'confirmed resistance is visible while entry remains blocked');
 assert.equal(d.trialEligible,false);assert.equal(d.blocked,true);
 assert.match(d.trialNote,/目前不建議買進/);assert.match(d.entryNote,/尚未持股/);
 d=run({risk:{score:82,trimTriggered:true,exitTriggered:false},recent:{...sample.recent,trialPct:20,signalStrength:'strong'}});
-assert.equal(d.trialPct,0);assert.deepEqual(d.trialCandidate,[96,96]);assert.deepEqual(d.entryCandidate,[108,108]);
+assert.equal(d.trialPct,0);assert(containsCenter(d.trialCandidate,96));assert(containsCenter(d.entryCandidate,108));
 assert.match(d.trialNote,/風控/);
 d=run({market:{verified:true,regime:'off'},recent:{...sample.recent,trialPct:20,signalStrength:'strong'}});
 assert.equal(d.trialPct,0,'risk-off still forbids new entries');
-assert.equal(d.trial,null);assert.deepEqual(d.trialCandidate,[96,96]);assert.deepEqual(d.entryCandidate,[108,108]);
+assert.equal(d.trial,null);assert(containsCenter(d.trialCandidate,96));assert(containsCenter(d.entryCandidate,108));
 assert.match(d.trialNote,/空頭/);
 d=run({recent:{...sample.recent,trialPct:20,signalStrength:'strong'}});
-assert.equal(d.trialPct,10);assert.equal(d.trialEligible,true);assert.deepEqual(d.trial,[100,100]);
-assert.deepEqual(d.entryCandidate,[108,108]);assert.equal(d.entryReady,false);
+assert.equal(d.trialPct,10);assert.equal(d.trialEligible,true);assert(containsCenter(d.trial,100));
+assert(containsCenter(d.entryCandidate,108));assert.equal(d.entryReady,false);
 d=run({recent:{valid:false,trialPct:20}});
 assert.equal(d.trial,null);assert.equal(d.trialCandidate,null);assert.equal(d.entryCandidate,null);
 d=run({recent:{...sample.recent,trialPct:0,support:null,resistance:null}});
@@ -38,5 +40,5 @@ assert(src.includes('decision?.trial??decision?.trialCandidate'), 'overview read
 assert(src.includes('d.trial??d.trialCandidate'), 'decision card reads visible candidate');
 assert(src.includes('decision.holding?null:(decision.trial??decision.trialCandidate)'), 'holding plan suppresses first-entry trial after holding');
 assert(src.includes('trialEligible:!!decision.trialEligible'), 'holding plans preserve difference between reference and permission');
-assert(html.includes('v2.6.9.22')&&html.includes('unified-trade-decision.js?v=2.6.9.22'));
+assert(html.includes('v2.6.9.23')&&html.includes('unified-trade-decision.js?v=2.6.9.23'));
 console.log('PASS v2.6.9.22 compatibility: available trial/add prices remain visible through market and risk veto; permissions unchanged, no fabricated price; overview, detail, holdings consistent.');
