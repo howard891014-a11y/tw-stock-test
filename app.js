@@ -2502,6 +2502,7 @@ function overviewZoneText(cluster){
 function resetOverviewResonance(note="等待分析資料"){
   setText("overviewResonancePlay","等待資料");setText("overviewPlayMetric","等待資料");setText("overviewStrengthMini",szResonanceIsLoading()?"共振強度：正在計算…":"共振強度：--/100");setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength","--");setText("overviewResonanceStrengthNote",note);setText("overviewGrowthUp","--%");setText("overviewGrowthDown","--%");setText("overviewTargetZone","--");
   for(const id of ["overviewTrialPrice","overviewEntryPrice","overviewTrimPrice","overviewExitPrice","overviewTrimStopPrice","overviewFullStopPrice"])setText(id,"--");
+  szRenderEntryVerdict(null,null,'overview');szRenderDecisionLabels(null,'overview');
   setText("overviewFinalDirection","--");setText("overviewFinalStrategy",note);setText("overviewFinalRisk","--");setText("overviewFinalNext","--");setText("overviewTrimStopLabel","⑤ 減碼止損");setText("overviewFullStopLabel","⑥ 全部止損");
   const svg=$("overviewResonanceSvg");if(svg)svg.replaceChildren();const src=$("overviewResonanceSources");if(src)src.replaceChildren();
 }
@@ -2903,6 +2904,19 @@ function drawOverviewResonance(play,expected){
   const forecastLabels=overviewWavePlaceForecastLabels(labels.filter(n=>n.side==='right'));
   [...historyLabels,...forecastLabels].forEach(n=>overviewWaveDrawBubble(svg,n));
 }
+// v2.6.9.25：不以補倉候選價格重算買進訊號，只讀單一決策的試單／補倉權限。
+function szRenderEntryVerdict(d,price,prefix){
+  const guidance=window.StockZoneUnifiedTrade?.entryGuidance?.(d,price)||
+    {status:'wait',title:'資料尚不足以判斷是否進場',detail:'補倉觀察價不能直接作首次進場依據'};
+  const panel=$(prefix+'EntryVerdict');if(panel)panel.dataset.state=guidance.status;
+  setText(prefix+'EntryVerdictTitle',guidance.title);
+  setText(prefix+'EntryVerdictDetail',guidance.detail);
+}
+function szRenderDecisionLabels(d,prefix){
+  if(!d?.valid){setText(prefix+'TrialLabel','小量試單（待確認）');setText(prefix+'EntryLabel','補倉觀察（待確認）');return;}
+  setText(prefix+'TrialLabel',d.holding?'首次試單（持股不適用）':d.trialEligible?`現價試單 ${d.trialPct}%（空倉）`:'試單參考價（目前不買）');
+  setText(prefix+'EntryLabel',d.holding?'補倉觀察（需確認）':'補倉候選價（空倉不適用）');
+}
 function renderOverviewResonance(play,expected,decision,risk=null){
   if(!play||!expected){resetOverviewResonance();return}const res=expected?.plan?.resonance||{},mainCluster=res?.main||null,familyCount=mainCluster?.familyCount||0,resonanceStrength=res.adjustedStrength??res.strength??0;
   setText("overviewResonancePlay",`${play.period||"--"}｜${play.action||"等待訊號"}`);
@@ -2916,6 +2930,7 @@ function renderOverviewResonance(play,expected,decision,risk=null){
   if(szResonanceIsLoading())setText("overviewResonanceStrength","正在計算…");
   const main=expected?.plan?.levels?.[0]?.value,up=main?positionReturn(main,expected.price):null,down=expected?.downside?.levels?.[0]?.value?positionReturn(expected.downside.levels[0].value,expected.price):null;
   setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?overviewIntFmt(main):"--"));
+  szRenderEntryVerdict(decision,expected.price,'overview');szRenderDecisionLabels(decision,'overview');
   setText("overviewTrialPrice",decision?.holding?'--':overviewZoneIntText(decision?.trial??decision?.trialCandidate));setText("overviewEntryPrice",overviewZoneIntText(decision?.entry??decision?.entryCandidate));setText("overviewTrimPrice",overviewZoneIntText(decision?.trim));setText("overviewExitPrice",overviewZoneIntText(decision?.exit));setText("overviewTrimStopPrice",szTrimDefenseText(decision,true));setText("overviewFullStopPrice",overviewZoneIntText(decision?.fullStop));
   setText("overviewFinalDirection",`${play.period||"--"}｜${play.action||"等待訊號"}`);setText("overviewFinalStrategy",`${decision?.mode||play.period||"--"}｜買進看近期玩法，獲利看共振，防守看結構`);
   const setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",risk?.valid?riskText:setRisk);setText("overviewFinalNext",decision?.action||"等待近期玩法與風控結果");
@@ -2927,6 +2942,7 @@ function resetTradeOutputs(note="等待分析資料"){
   setText("overviewExpectedUpside","--%");setText("overviewExpectedUpsideNote",note);setText("expectedModeBadge","依玩法");setText("expectedBasisLabel","現價基準");setText("expectedRange","--%");setText("expectedDownsideRange","--%");setText("expectedWinRate","--");setText("expectedWinRateNote","樣本不足");setText("expectedProfitRate","--");setText("expectedProfitRateNote","樣本不足");setText("expectedExtremeRisk","--");setText("expectedExtremeRiskNote","當日W3與最新結構風險待確認");setText("expectedSeasonalityNote","季節性：等待五年資料");setText("expectedBasisNote",note);setText("expectedFoot","上漲以共振目標估算、下跌以結構防守估算。歷史相似達標率及勝率是同一批樣本的兩種成果，非未來機率。");
   const pos=$("expectedPositionSummary");if(pos)pos.hidden=true;
   for(let i=1;i<=3;i++){const box=$(`expectedTarget${i}`);if(box)box.hidden=i>2;setText(`expectedT${i}Label`,i===1?"主要共振（預估高點）":i===2?"次要共振（延伸高點）":"不使用");setText(`expectedT${i}Price`,i===2?"暫無延伸目標":"--");setText(`expectedT${i}Return`,"--");setText(`expectedT${i}Profit`,"")}
+  szRenderEntryVerdict(null,null,'decision');szRenderDecisionLabels(null,'decision');
   setText("decisionModeBadge","依玩法");setText("decisionRiskBadge","風險 --");const rb=$("decisionRiskBadge");if(rb)rb.classList.remove("risk-low","risk-medium","risk-high","risk-extreme");setText("decisionPositionNote",note);for(const id of ["decisionTrialPrice","decisionEntryPrice","decisionTrimPrice","decisionExitPrice","decisionTrimStopPrice","decisionFullStopPrice","overviewTrialPrice","overviewEntryPrice","overviewTrimPrice","overviewExitPrice","overviewTrimStopPrice","overviewFullStopPrice"])setText(id,"--");for(const id of ["decisionTrialNote","decisionEntryNote","decisionTrimNote","decisionExitNote","decisionTrimStopNote","decisionFullStopNote"])setText(id,"--");
   setText("decisionTrimStopLabel","減碼止損");setText("decisionFullStopLabel","全部止損");setText("adaptiveStopMode","等待資料");setText("adaptiveStopStats","--");setText("adaptiveStopCurrentTitle","現價買");setText("adaptiveStopCurrentEntry","--");setText("adaptiveStopCurrentTrim","--");setText("adaptiveStopCurrentFull","--");setText("adaptiveStopCurrentRisk","--");setText("adaptiveStopPullbackEntry","--");setText("adaptiveStopPullbackTrim","--");setText("adaptiveStopPullbackFull","--");setText("adaptiveStopPullbackRisk","--");setText("adaptiveStopNote",note);const pb=$("adaptiveStopPullbackCard");if(pb)pb.hidden=false;
 }
@@ -3259,6 +3275,7 @@ function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
   setText('decisionPositionNote',position?.avgCost?
     `持股均價 ${technicalFmt(position.avgCost)}｜${position.shares||'--'} 股｜玩法 ${d.mode}（已建交易由原始玩法鎖定）｜核心 ${profile.basePct??'--'}%／機動 ${profile.tacticalPct??'--'}%`:
     `尚未建立持股計畫｜${d.mode}｜核心 ${profile.basePct??'--'}%／機動 ${profile.tacticalPct??'--'}%`);
+  szRenderEntryVerdict(d,price,'decision');szRenderDecisionLabels(d,'decision');
   setText('decisionTrialPrice',d.holding?'--':targetZoneText(d.trial??d.trialCandidate));
   setText('decisionEntryPrice',targetZoneText(d.entry??d.entryCandidate));
   setText('decisionTrimPrice',targetZoneText(d.trim));
@@ -4485,7 +4502,7 @@ function holdingPlanSnapshot(code){
   const signal=String($("overviewFinalNext")?.textContent||"").trim();
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
-    capturedAt:new Date().toISOString(),source:"V4鎖定玩法／共振／新版單一買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.24（減碼防守漏顯修復）",
+    capturedAt:new Date().toISOString(),source:"V4鎖定玩法／共振／新版單一買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.25（空倉首次進場狀態明確化）",
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
     targets:{main:positionNumber(v.main),secondary:positionNumber(v.secondary),pullback:positionNumber(v.pullback),defense:positionNumber(v.defense)},

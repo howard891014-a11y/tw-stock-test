@@ -2937,6 +2937,19 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
 .sz-holding-backup-alert:has(.is-warning){background:#fff5e8;border-color:#f1d4a8;color:#985c24}
 .sz-holding-backup-alert button{margin-left:auto;border:1px solid #bed2ed;background:#e9f4ff;color:#2b66ab;padding:7px 14px;border-radius:9px;cursor:pointer;font-weight:700}
 </style>
+<style id="stockzone-v26925-entry-verdict">
+.sz-entry-verdict{display:flex;flex-direction:column;gap:5px;margin:10px 0 15px;padding:12px 14px;border:1px solid #dce4ef;border-radius:15px;background:#f4f7fb;color:#34445c;line-height:1.45}
+.sz-entry-verdict strong{font-weight:750;font-size:15px;color:inherit}
+.sz-entry-verdict span{font-size:12px;color:#54677f}
+.sz-entry-verdict[data-state="trial"]{background:#eaf7ef;border-color:#b7e4c8;color:#14774b}
+.sz-entry-verdict[data-state="trial"] span{color:#346852}
+.sz-entry-verdict[data-state="block"]{background:#fff0f1;border-color:#f3c9ce;color:#b63a45}
+.sz-entry-verdict[data-state="block"] span{color:#87525a}
+.sz-entry-verdict[data-state="add"]{background:#e9f4ff;border-color:#c3daef;color:#246b9e}
+.sz-entry-verdict[data-state="add"] span{color:#456b86}
+body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
+@media(max-width:520px){.sz-entry-verdict{padding:12px;margin:8px 0 13px}.sz-entry-verdict strong{font-size:14px}.sz-entry-verdict span{font-size:12px}}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -2965,7 +2978,7 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.24</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.6.9.25</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3060,9 +3073,10 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
           <header class="overview-resonance-head overview-decision-head">
             <div><h2 class="overview-section-title theme-white-card-title"><i class="theme-title-icon theme-icon-decision" aria-hidden="true"></i><span>買賣決策</span></h2></div>
           </header>
+          <div class="sz-entry-verdict" id="overviewEntryVerdict" data-state="wait" role="status" aria-live="polite"><strong id="overviewEntryVerdictTitle">現價是否可首次進場：資料待確認</strong><span id="overviewEntryVerdictDetail">先看是否持股與現價風控；補倉候選價不代表可直接買進。</span></div>
           <div class="overview-decision-row">
-            <div><span class="overview-metric-label">小量試單（空倉）</span><strong class="overview-metric-value" id="overviewTrialPrice">--</strong></div>
-            <div><span class="overview-metric-label">補倉觀察（雙模式）</span><strong class="overview-metric-value" id="overviewEntryPrice">--</strong></div>
+            <div><span class="overview-metric-label" id="overviewTrialLabel">小量試單（空倉）</span><strong class="overview-metric-value" id="overviewTrialPrice">--</strong></div>
+            <div><span class="overview-metric-label" id="overviewEntryLabel">補倉觀察（雙模式）</span><strong class="overview-metric-value" id="overviewEntryPrice">--</strong></div>
             <div><span class="overview-metric-label">減碼／止盈</span><strong class="overview-metric-value" id="overviewTrimPrice">--</strong></div>
             <div><span class="overview-metric-label">出場／獲利</span><strong class="overview-metric-value" id="overviewExitPrice">--</strong></div>
             <div><span class="overview-metric-label" id="overviewTrimStopLabel">現價買減碼止損</span><strong class="overview-metric-value" id="overviewTrimStopPrice">--</strong></div>
@@ -3500,15 +3514,16 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
         <article class="card decision-card detail-panel" id="decision" data-view-panel="analysis">
           <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-decision" aria-hidden="true"></i><span>買賣決策</span></span><span class="card-title-actions"><span class="badge" id="decisionModeBadge">依玩法</span> <span class="badge decision-risk-badge" id="decisionRiskBadge">風險 --</span></span></div>
           <div class="decision-position-note" id="decisionPositionNote">等待玩法與持股資料</div>
+          <div class="sz-entry-verdict" id="decisionEntryVerdict" data-state="wait" role="status" aria-live="polite"><strong id="decisionEntryVerdictTitle">現價是否可進場：資料待確認</strong><span id="decisionEntryVerdictDetail">候選價格不代表買進許可。</span></div>
           <div class="decision-grid decision-grid-v2 decision-grid-v3">
-            <div class="buy"><span>小量試單（空倉）</span><strong id="decisionTrialPrice">--</strong><small id="decisionTrialNote">--</small></div>
-            <div class="buy"><span>補倉觀察（回測／追價）</span><strong id="decisionEntryPrice">--</strong><small id="decisionEntryNote">--</small></div>
+            <div class="buy"><span id="decisionTrialLabel">小量試單（空倉）</span><strong id="decisionTrialPrice">--</strong><small id="decisionTrialNote">--</small></div>
+            <div class="buy"><span id="decisionEntryLabel">補倉觀察（回測／追價）</span><strong id="decisionEntryPrice">--</strong><small id="decisionEntryNote">--</small></div>
             <div class="trim"><span>減碼／止盈</span><strong id="decisionTrimPrice">--</strong><small id="decisionTrimNote">--</small></div>
             <div class="sell"><span>出場／獲利</span><strong id="decisionExitPrice">--</strong><small id="decisionExitNote">--</small></div>
             <div class="trim stop"><span id="decisionTrimStopLabel">減碼止損</span><strong id="decisionTrimStopPrice">--</strong><small id="decisionTrimStopNote">--</small></div>
             <div class="sell stop"><span id="decisionFullStopLabel">全部止損</span><strong id="decisionFullStopPrice">--</strong><small id="decisionFullStopNote">--</small></div>
           </div>
-          <section class="sz-v4-tactical" aria-label="機動倉波段倍率觀察"><div class="sz-v4-head"><span>歷史波段倍率（研究）</span><em>不另產生買賣訊號</em></div><div id="szV4WaveGrid" class="sz-v4-wave-grid"><div>等待波段資料</div></div><small id="szV4WaveNote">原版倍率只作研究觀察；正式買賣統一使用新版近期玩法與共振。</small><div id="szV4DecisionResearch" class="sz-v4-orchestrator">研究整合提示：等待大盤／共振／玩法資料</div><div id="szV33ResearchCard" class="sz-v33-research" data-state="loading" aria-label="正式決策來源及研究資訊"><div class="sz-v4-head"><span>正式決策同步｜v2.6.9.24</span><em>同一組操作建議・不送單</em></div><strong id="szV33Summary">等待大盤／候選玩法／共振</strong><div class="sz-v33-grid"><div><span>W3 風向</span><b id="szV33W3">--</b></div><div><span>目前使用玩法</span><b id="szV33Profile">--</b></div><div><span>共振可信度</span><b id="szV33Resonance">--</b></div></div><div class="sz-v33-detail" id="szV33Budget">待建立核心／機動研究配置</div><div class="sz-v33-detail" id="szV33Levels">等待原版波段倍率</div><small id="szV33Reason">正式買賣決策與上方六個價位完全同步；不另產生操作指令，不自動下單。</small></div></section>
+          <section class="sz-v4-tactical" aria-label="機動倉波段倍率觀察"><div class="sz-v4-head"><span>歷史波段倍率（研究）</span><em>不另產生買賣訊號</em></div><div id="szV4WaveGrid" class="sz-v4-wave-grid"><div>等待波段資料</div></div><small id="szV4WaveNote">原版倍率只作研究觀察；正式買賣統一使用新版近期玩法與共振。</small><div id="szV4DecisionResearch" class="sz-v4-orchestrator">研究整合提示：等待大盤／共振／玩法資料</div><div id="szV33ResearchCard" class="sz-v33-research" data-state="loading" aria-label="正式決策來源及研究資訊"><div class="sz-v4-head"><span>正式決策同步｜v2.6.9.25</span><em>同一組操作建議・不送單</em></div><strong id="szV33Summary">等待大盤／候選玩法／共振</strong><div class="sz-v33-grid"><div><span>W3 風向</span><b id="szV33W3">--</b></div><div><span>目前使用玩法</span><b id="szV33Profile">--</b></div><div><span>共振可信度</span><b id="szV33Resonance">--</b></div></div><div class="sz-v33-detail" id="szV33Budget">待建立核心／機動研究配置</div><div class="sz-v33-detail" id="szV33Levels">等待原版波段倍率</div><small id="szV33Reason">正式買賣決策與上方六個價位完全同步；不另產生操作指令，不自動下單。</small></div></section>
           <section class="adaptive-stop-panel" id="adaptiveStopPanel">
             <div class="adaptive-stop-head"><div><span>目前結構防守（單一決策）</span><b id="adaptiveStopMode">等待資料</b></div><small id="adaptiveStopStats">--</small></div>
             <div class="adaptive-stop-grid">
@@ -3958,9 +3973,9 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./lib/recent-play-advice.js?v=2.6.9.24"></script>
-  <script src="./lib/unified-trade-decision.js?v=2.6.9.24"></script>
-  <script src="./app.js?v=2.6.9.24"></script>
+  <script src="./lib/recent-play-advice.js?v=2.6.9.25"></script>
+  <script src="./lib/unified-trade-decision.js?v=2.6.9.25"></script>
+  <script src="./app.js?v=2.6.9.25"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
