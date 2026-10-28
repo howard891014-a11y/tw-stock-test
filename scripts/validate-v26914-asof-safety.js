@@ -20,7 +20,7 @@ for(const s of [research,xy,status,db,client,html]) {
 assert(!fs.existsSync(path.join(root,'lib/research-500d-parallel.js')));
 assert(!html.includes('research500LegacyRow'),'only one 500D progress row');
 assert.match(html,/研究 500D（逐日保存）/);
-assert.equal(pkg.version,'2.6.9.15');
+assert.equal(pkg.version,'2.6.9.16');
 assert.match(batch,/StockZoneHoldingPlans/); // .12 batch preserved, more exhaustive in batch2
 // Append-only research records; existing dates are NEVER upserted.
 const ar=xy.slice(xy.indexOf('async function persistCompactResearchRows('),xy.indexOf('function memberPayloadFromCompanyMap('));
