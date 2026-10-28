@@ -29,18 +29,18 @@ assert(!manualGap.includes('warmCurrentEngineFromStoredDb'),'manual gap-repair r
 assert(manualWarm.includes('warmCurrentEngineFromStoredDb({sql:getSql(),force:false})'),'manual stage 2 must warm XY from stored DB');
 assert(!manualWarm.includes('runLatestMarketGapRepair'),'manual warm request must remain DB-only');
 
-const auto=status.slice(status.indexOf("if(action==='tpex'){\n          try{result.body.latestMarketGapRepair"),status.indexOf('try{result.body.flowDataHealth'));
-assert(auto.includes('runLatestMarketGapRepair({sql:getSql()})'),'22:00 cron must repair latest market gap');
-assert(auto.indexOf('runLatestMarketGapRepair') < auto.indexOf('warmCurrentEngineFromStoredDb'),'22:00 gap repair must precede XY warm');
+const auto=status.slice(status.indexOf("if(action==='disposal-tpex'){"),status.indexOf("return res.status(result?.httpStatus||200)",status.indexOf("if(action==='disposal-tpex'){")));
+assert(auto.includes('runLatestMarketGapRepair({sql:getSql()})'),'21:45 TPEx cron must repair latest market gap');
+assert(auto.indexOf('runLatestMarketGapRepair') < auto.indexOf('warmCurrentEngineFromStoredDb'),'21:45 gap repair must precede XY warm');
 assert(app.includes('若只缺一邊就補該日'),'manual UI must explain targeted latest-date repair');
 
 const existingCrons=(vercel.crons||[]).filter(x=>x.path==='/api/sync-status');
-assert(existingCrons.length>=3,'existing price/institutional/credit jobs must stay unchanged');
-assert.deepStrictEqual(existingCrons.slice(0,3).map(x=>x.schedule),['0 7 * * 1-5','0 11 * * 1-5','0 14 * * 1-5']);
-assert.deepStrictEqual((vercel.crons||[]).filter(x=>x.path==='/api/market-dynamic-refresh').slice(0,2).map(x=>x.schedule),['50 14 * * 1-5','35 15 * * 1-5']);
+assert(existingCrons.length>=7,'new price 15/16/17, chip 21:00+, disposal updates');
+assert.deepStrictEqual(existingCrons.slice(0,3).map(x=>x.schedule),['0 7 * * 1-5','0 8 * * 1-5','0 9 * * 1-5']);
+assert.deepStrictEqual((vercel.crons||[]).filter(x=>x.path==='/api/market-dynamic-refresh').slice(0,2).map(x=>x.schedule),['0 14 * * 1-5','35 15 * * 1-5']);
 assert(!(vercel.crons||[]).some(x=>x.path==='/api/market-dynamic-refresh-retry'));
 assert(fs.readdirSync('api').filter(x=>x.endsWith('.js')).length<=12,'Hobby plan may deploy at most 12 API Functions');
-console.log('Latest market gap validation PASS — three original sync jobs and two original W3 jobs preserved, plus EOD early/retry schedules');
+console.log('Latest market gap validation PASS — new price/chip/market schedules keep targeted gap repair and 500D append');
 
 assert(syncService.includes("const TPEX_HISTORY_URL = 'https://www.tpex.org.tw/www/zh-tw/afterTrading/otc';"),'TPEx historical primary must use current afterTrading/otc route');
 assert(syncService.includes('date=${encodeURIComponent(roc)}&type=EW&order=0&sort=asc'),'TPEx historical primary must use ROC date and EW scope');
