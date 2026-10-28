@@ -2915,7 +2915,7 @@ function szRenderEntryVerdict(d,price,prefix){
 function szRenderDecisionLabels(d,prefix){
   if(!d?.valid){setText(prefix+'TrialLabel','小量試單（待確認）');setText(prefix+'EntryLabel','補倉觀察（待確認）');return;}
   setText(prefix+'TrialLabel',d.holding?'首次試單（持股不適用）':d.trialEligible?`現價試單 ${d.trialPct}%（空倉）`:'試單參考價（目前不買）');
-  setText(prefix+'EntryLabel',d.holding?'補倉觀察（需確認）':'補倉候選價（空倉不適用）');
+  setText(prefix+'EntryLabel',d.holding?(['exit-warning','trim-warning','plan-missing'].includes(d.tradeState)?'補倉候選（已暫停）':'補倉觀察（額度待確認）'):'補倉候選價（空倉不適用）');
 }
 function renderOverviewResonance(play,expected,decision,risk=null){
   if(!play||!expected){resetOverviewResonance();return}const res=expected?.plan?.resonance||{},mainCluster=res?.main||null,familyCount=mainCluster?.familyCount||0,resonanceStrength=res.adjustedStrength??res.strength??0;
@@ -2931,7 +2931,11 @@ function renderOverviewResonance(play,expected,decision,risk=null){
   const main=expected?.plan?.levels?.[0]?.value,up=main?positionReturn(main,expected.price):null,down=expected?.downside?.levels?.[0]?.value?positionReturn(expected.downside.levels[0].value,expected.price):null;
   setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?overviewIntFmt(main):"--"));
   szRenderEntryVerdict(decision,expected.price,'overview');szRenderDecisionLabels(decision,'overview');
-  setText("overviewTrialPrice",decision?.holding?'--':overviewZoneIntText(decision?.trial??decision?.trialCandidate));setText("overviewEntryPrice",overviewZoneIntText(decision?.entry??decision?.entryCandidate));setText("overviewTrimPrice",overviewZoneIntText(decision?.trim));setText("overviewExitPrice",overviewZoneIntText(decision?.exit));setText("overviewTrimStopPrice",szTrimDefenseText(decision,true));setText("overviewFullStopPrice",overviewZoneIntText(decision?.fullStop));
+  setText('overviewTrialPrice',decision?.holding?'--':overviewZoneIntText(decision?.trial??decision?.trialCandidate));
+  setText('overviewEntryPrice',['trim-warning','exit-warning','plan-missing'].includes(decision?.tradeState)?'暫停':overviewZoneIntText(decision?.entry??decision?.entryCandidate));
+  setText('overviewTrimPrice',overviewZoneIntText(decision?.trim));setText('overviewExitPrice',overviewZoneIntText(decision?.exit));
+  setText('overviewTrimStopPrice',szTrimDefenseText(decision,true));
+  setText('overviewFullStopPrice',decision?.holding&&!decision?.planLocked?'未鎖定':overviewZoneIntText(decision?.fullStop));
   setText("overviewFinalDirection",`${play.period||"--"}｜${play.action||"等待訊號"}`);setText("overviewFinalStrategy",`${decision?.mode||play.period||"--"}｜買進看近期玩法，獲利看共振，防守看結構`);
   const setRisk=expected?.downRange&&expected.downRange!=="--%"?`正常回撤 ${expected.downRange}`:Number.isFinite(down)?`正常防守 ${signedPercent(down)}`:"正常防守待確認",riskText=risk?.valid?`${risk.level.label} ${risk.score}/100｜${risk.summary}`:setRisk;setText("overviewFinalRisk",risk?.valid?riskText:setRisk);setText("overviewFinalNext",decision?.action||"等待近期玩法與風控結果");
   const host=$("overviewResonanceSources");if(host){host.replaceChildren();const pts=mainCluster?.points||[];const families=new Map();for(const x of pts){if(!families.has(x.family))families.set(x.family,[]);families.get(x.family).push(x)}for(const [family,a] of families){const chip=document.createElement("span");const name={swing:"波段倍率",broker:"券商目標",valuation:"內部估值",shortwave:"短波倍率",pressure:"前高／壓力"}[family]||family;chip.textContent=`${name}｜${a.map(x=>x.label).join("・")}`;host.append(chip)}const ba=res?.basicAssessment;if(ba){for(const txt of [`營運確認｜${ba.companyLabel} ${ba.companyQuality}/100`,`延續性｜${ba.continuationLabel} ${ba.continuation}/100`,`估值壓力｜${ba.valuation.pressureLabel}`]){const chip=document.createElement("span");chip.textContent=txt;host.append(chip)}}if(expected?.winRate?.valid){const chip=document.createElement("span");chip.textContent=`5年相似訊號｜達標 ${expected.winRate.rate}%／獲利 ${expected.winRate.profitRate}%・${expected.winRate.sample}次`;host.append(chip)}if(!families.size){const chip=document.createElement("span");chip.textContent="等待可用價格來源";host.append(chip)}}
@@ -2943,6 +2947,7 @@ function resetTradeOutputs(note="等待分析資料"){
   const pos=$("expectedPositionSummary");if(pos)pos.hidden=true;
   for(let i=1;i<=3;i++){const box=$(`expectedTarget${i}`);if(box)box.hidden=i>2;setText(`expectedT${i}Label`,i===1?"主要共振（預估高點）":i===2?"次要共振（延伸高點）":"不使用");setText(`expectedT${i}Price`,i===2?"暫無延伸目標":"--");setText(`expectedT${i}Return`,"--");setText(`expectedT${i}Profit`,"")}
   szRenderEntryVerdict(null,null,'decision');szRenderDecisionLabels(null,'decision');
+  setText('decisionPlanSummary','等待交易計畫資料');setText('decisionPlanDetail',note);
   setText("decisionModeBadge","依玩法");setText("decisionRiskBadge","風險 --");const rb=$("decisionRiskBadge");if(rb)rb.classList.remove("risk-low","risk-medium","risk-high","risk-extreme");setText("decisionPositionNote",note);for(const id of ["decisionTrialPrice","decisionEntryPrice","decisionTrimPrice","decisionExitPrice","decisionTrimStopPrice","decisionFullStopPrice","overviewTrialPrice","overviewEntryPrice","overviewTrimPrice","overviewExitPrice","overviewTrimStopPrice","overviewFullStopPrice"])setText(id,"--");for(const id of ["decisionTrialNote","decisionEntryNote","decisionTrimNote","decisionExitNote","decisionTrimStopNote","decisionFullStopNote"])setText(id,"--");
   setText("decisionTrimStopLabel","減碼止損");setText("decisionFullStopLabel","全部止損");setText("adaptiveStopMode","等待資料");setText("adaptiveStopStats","--");setText("adaptiveStopCurrentTitle","現價買");setText("adaptiveStopCurrentEntry","--");setText("adaptiveStopCurrentTrim","--");setText("adaptiveStopCurrentFull","--");setText("adaptiveStopCurrentRisk","--");setText("adaptiveStopPullbackEntry","--");setText("adaptiveStopPullbackTrim","--");setText("adaptiveStopPullbackFull","--");setText("adaptiveStopPullbackRisk","--");setText("adaptiveStopNote",note);const pb=$("adaptiveStopPullbackCard");if(pb)pb.hidden=false;
 }
@@ -3212,36 +3217,39 @@ function currentW3DecisionSnapshot(){
 }
 function unifiedDecisionForPlay(play,expected,risk,recent,holding){
   const engine=window.StockZoneUnifiedTrade;
-  if(!engine?.decision)return {valid:false,reason:'新版決策引擎尚未載入'};
-  return engine.decision({price:expected?.price,play,expected,risk,recent,
-    holding:!!(holding===true||Number(holding?.avgCost)>0),market:currentW3DecisionSnapshot()});
+  if(!engine?.decision)return {valid:false,reason:'交易決策引擎尚未載入'};
+  // 同筆交易讀取 localStorage 中已建立的 initial，不再假裝今日支撐就是原始停損。
+  // 缺計畫時也明確傳入空值，不能偷用市場候選價當固定出場線。
+  const plan=holdingPlanActive(currentStockCode());
+  return engine.decision({price:expected?.price,play,expected,risk,recent,plan,
+    holding:!!(plan||holding===true||Number(holding?.avgCost)>0),market:currentW3DecisionSnapshot()});
 }
 // v2.6.9.24：⑤沒有獨立結構價時，區分「已觸發警戒」與「尚未形成」；
 // 顯示現價不等於創造止損線，不可寫成 [現價, 現價] 的假區間。
 function szTrimDefenseText(d,compact=false){
   if(Array.isArray(d?.trimStop))return compact?overviewZoneIntText(d.trimStop):targetZoneText(d.trimStop);
-  if(d?.trimStopStatus==='risk-already-triggered'&&Number.isFinite(d?.trimStopAlert?.price)){
-    return `現價 ${overviewIntFmt(d.trimStopAlert.price)}（已觸發）`;
-  }
+  if(d?.trimStopStatus==='technical-risk-only')return '技術減碼警戒（無獨立價位）';
+  if(d?.trimStopStatus==='price-already-breached')return compact?overviewZoneIntText(d?.trimStop):targetZoneText(d?.trimStop);
   if(d?.trimStopStatus==='exit-priority')return '已觸發出場警戒（看⑥）';
-  if(d?.trimStopStatus==='not-formed')return '未形成（依⑥防守）';
+  if(d?.trimStopStatus==='not-formed')return '未設定原交易減碼價';
+  if(d?.trimStopStatus==='pre-entry-proposal')return '未持股｜參考候選';
   return '--';
 }
 function renderUnifiedStopPanel(d,price,position,expected){
   const holding=!!position?.avgCost;
-  setText('adaptiveStopMode',holding?'持股｜現行防守':'現價｜現行防守');
+  setText('adaptiveStopMode',holding?'持股｜現行防守':'空倉｜候選防守（未鎖定）');
   setText('adaptiveStopStats',expected?.winRate?.valid?
     `歷史相似勝率 ${expected.winRate.profitRate}%・${expected.winRate.sample}次（僅輔助）`:'歷史相似勝率：樣本不足');
   setText('adaptiveStopCurrentTitle',holding?'持股防守':'現價買進防守');
   setText('adaptiveStopCurrentEntry',technicalFmt(price));
   setText('adaptiveStopCurrentTrim',szTrimDefenseText(d));
-  setText('adaptiveStopCurrentFull',targetZoneText(d?.fullStop));
+  setText('adaptiveStopCurrentFull',d?.holding&&!d?.planLocked?'未鎖定':targetZoneText(d?.fullStop));
   const trim=positionNumber(d?.trimStopCenter),full=positionNumber(d?.fullStopCenter);
   setText('adaptiveStopCurrentRisk',
     `對現價：減碼 ${trim? signedPercent(positionReturn(trim,price)):d?.trimStopAlert?'警戒已觸發':'未形成'}｜全部 ${full?signedPercent(positionReturn(full,price)):'未形成'}`);
   const pull=$('adaptiveStopPullbackCard');if(pull)pull.hidden=true;
   setText('adaptiveStopNote',
-    `正式減碼與出場價位與上方「買賣決策」完全一致；近期技術判斷觸發時機，結構防守決定價位。`+
+    `持股防守優先讀取建單時 initial 原始設定；今日結構支撐只作研究，沒有初始價就明示未鎖定。`+
     `歷史相似勝率與 MAE 只作研究參考，不再擅自產生另一組止損價。`+
     `${d?.offTactical?' W3空頭環境：長波／長期優先縮減機動倉，不強制清空核心。':''}`);
 }
@@ -3261,27 +3269,29 @@ function renderDecision(play=latestPlayStyleResult,expected=null,risk=null){
   if(price===null)return null;
   expected=expected||{price,position:currentHoldingPosition(),plan:buildExpectedPlan(play,price),downside:buildDownsidePlan(play,price)};
   risk=risk||buildDecisionRisk(play,price,expected);
-  const position=expected.position||currentHoldingPosition(),profile=play?.operationProfile||{};
+  const position=expected.position||currentHoldingPosition()||holdingPlanActive(currentStockCode())?.position||null,profile=play?.operationProfile||{};
   const d=unifiedDecisionForPlay(play,expected,risk,latestRecentPlayAdvice,position);
   if(!d.valid){resetTradeOutputs(d.reason);return null}
   setText('decisionModeBadge',`${position?.avgCost?'持股｜':''}${d.mode}`);
   setText('decisionRiskBadge',risk?.valid?`風險 ${risk.level.label} ${risk.score}`:'風險 --');
   const badge=$('decisionRiskBadge');if(badge){badge.classList.remove('risk-low','risk-medium','risk-high','risk-extreme');if(risk?.valid)badge.classList.add(`risk-${risk.level.key}`)}
-  const holdingStop=!!position?.avgCost;
-  setText('decisionTrimStopLabel',holdingStop?'持股減碼防守':'現價減碼防守');
-  setText('decisionFullStopLabel',holdingStop?'持股出場防守':'現價出場防守');
-  setText('overviewTrimStopLabel',holdingStop?'⑤ 持股減碼防守':'⑤ 現價減碼防守');
-  setText('overviewFullStopLabel',holdingStop?'⑥ 持股出場防守':'⑥ 現價出場防守');
-  setText('decisionPositionNote',position?.avgCost?
-    `持股均價 ${technicalFmt(position.avgCost)}｜${position.shares||'--'} 股｜玩法 ${d.mode}（已建交易由原始玩法鎖定）｜核心 ${profile.basePct??'--'}%／機動 ${profile.tacticalPct??'--'}%`:
-    `尚未建立持股計畫｜${d.mode}｜核心 ${profile.basePct??'--'}%／機動 ${profile.tacticalPct??'--'}%`);
+  const holdingStop=!!d.holding;
+  setText('decisionTrimStopLabel',holdingStop?'原交易減碼防守':'建單前減碼參考');
+  setText('decisionFullStopLabel',holdingStop?'原交易出場防守':'建單前出場參考');
+  setText('overviewTrimStopLabel',holdingStop?'⑤ 原交易減碼防守':'⑤ 減碼候選（研究）');
+  setText('overviewFullStopLabel',holdingStop?'⑥ 原交易出場防守':'⑥ 出場候選（研究）');
+  setText('decisionPositionNote',d.holding?
+    `持股均價 ${technicalFmt(position?.avgCost)}｜${position?.shares||'--'} 股｜${d.planLocked?'已讀取原交易防守':'尚無可靠原交易防守'}｜玩法 ${d.mode}｜核心 ${profile.basePct??'--'}%／機動 ${profile.tacticalPct??'--'}%`:
+    `系統未登記持股｜候選玩法 ${d.mode}｜核心 ${profile.basePct??'--'}%／機動 ${profile.tacticalPct??'--'}%`);
   szRenderEntryVerdict(d,price,'decision');szRenderDecisionLabels(d,'decision');
   setText('decisionTrialPrice',d.holding?'--':targetZoneText(d.trial??d.trialCandidate));
-  setText('decisionEntryPrice',targetZoneText(d.entry??d.entryCandidate));
+  setText('decisionEntryPrice',d.tradeState==='trim-warning'||d.tradeState==='exit-warning'||d.tradeState==='plan-missing'?'暫停補倉（價位僅研究）':targetZoneText(d.entry??d.entryCandidate));
   setText('decisionTrimPrice',targetZoneText(d.trim));
   setText('decisionExitPrice',targetZoneText(d.exit));
   setText('decisionTrimStopPrice',szTrimDefenseText(d));
-  setText('decisionFullStopPrice',targetZoneText(d.fullStop));
+  setText('decisionFullStopPrice',d.holding&&!d.planLocked?'未鎖定':targetZoneText(d.fullStop));
+  setText('decisionPlanSummary',d.planSummary||'待確認原始計畫');
+  setText('decisionPlanDetail',d.planDetail||'');
   for(const [id,value] of [['decisionTrialNote',d.trialNote],['decisionEntryNote',d.entryNote],['decisionTrimNote',d.trimNote],
     ['decisionExitNote',d.exitNote],['decisionTrimStopNote',d.trimStopNote],['decisionFullStopNote',d.fullStopNote]])setText(id,value);
   renderUnifiedStopPanel(d,price,position,expected);
@@ -3332,11 +3342,19 @@ function renderTradeOutputs(){
   renderRecentPlayAdvice();
   const expected=renderExpectedUpside(latestPlayStyleResult);
   if(!expected)return;
-  const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price),risk=buildDecisionRisk(latestPlayStyleResult,price,expected);
+  const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price);
+  const activePlan=holdingPlanActive(currentStockCode()),origKey=activePlan?.initial?.playKey;
+  const currentPlay=latestPlayStyleResult,lockedPlay=origKey&&origKey!==currentPlay?.key?
+    {...currentPlay,key:origKey,period:activePlan.initial.play||currentPlay.period,
+      operationProfile:{...(currentPlay?.operationProfile||{}),key:origKey,period:activePlan.initial.play||currentPlay.period,
+        basePct:activePlan.initial.allocation?.core,tacticalPct:activePlan.initial.allocation?.tactical}}:currentPlay;
+  const effectiveExpected=lockedPlay!==currentPlay?{...expected,position:currentHoldingPosition()||activePlan.position,
+    plan:buildExpectedPlan(lockedPlay,price),downside:buildDownsidePlan(lockedPlay,price)}:expected;
+  const risk=buildDecisionRisk(lockedPlay,price,effectiveExpected);
   renderCurrentExtremeRisk(risk);
-  const decision=renderDecision(latestPlayStyleResult,expected,risk);
-  renderOverviewResonance(latestPlayStyleResult,expected,decision,risk);
-  renderResonanceLab(latestPlayStyleResult,expected,risk,decision);
+  const decision=renderDecision(lockedPlay,effectiveExpected,risk);
+  renderOverviewResonance(lockedPlay,effectiveExpected,decision,risk);
+  renderResonanceLab(currentPlay,effectiveExpected,risk,decision);
   refreshHoldingTradePlan(currentStockCode());
 }
 
@@ -4502,14 +4520,16 @@ function holdingPlanSnapshot(code){
   const signal=String($("overviewFinalNext")?.textContent||"").trim();
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
-    capturedAt:new Date().toISOString(),source:"V4鎖定玩法／共振／新版單一買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.25（空倉首次進場狀態明確化）",
+    capturedAt:new Date().toISOString(),source:"V4鎖定玩法／共振／新版單一買賣決策畫面輸出（不重新計算）",modelVersion:"v2.6.9.26（原交易鎖定＋單一操作）",
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
     targets:{main:positionNumber(v.main),secondary:positionNumber(v.secondary),pullback:positionNumber(v.pullback),defense:positionNumber(v.defense)},
     decision:{mode:d.mode||null,trial:zone(d.holding?null:(d.trial??d.trialCandidate)),trialEligible:!!d.trialEligible,
       entry:zone(d.entry??d.entryCandidate),entryReady:!!d.entryReady,addType:d.addType||null,
       pullbackReady:!!d.pullbackReady,chaseReady:!!d.chaseReady,trim:zone(d.trim),exit:zone(d.exit),
-      trimStop:zone(d.trimStop),fullStop:zone(d.fullStop),trialNote:d.trialNote||null,entryNote:d.entryNote||null,
+      trimStop:zone(d.trimStop),fullStop:zone(d.fullStop),trimStopCenter:positionNumber(d.trimStopCenter),
+      fullStopCenter:positionNumber(d.fullStopCenter),tradeState:d.tradeState||null,stopSource:d.stopSource||null,
+      trialNote:d.trialNote||null,entryNote:d.entryNote||null,
       trimNote:d.trimNote||null,exitNote:d.exitNote||null,trimStopNote:d.trimStopNote||null,fullStopNote:d.fullStopNote||null},
     recent:latestRecentPlayAdvice?.valid?{mode:latestRecentPlayAdvice.mode,status:latestRecentPlayAdvice.status,trialPct:latestRecentPlayAdvice.trialPct,
       trial:latestRecentPlayAdvice.trial,add:latestRecentPlayAdvice.add,stop:latestRecentPlayAdvice.stop,provisional:true}:null,
@@ -4556,6 +4576,8 @@ function holdingPlanLockedSnapshot(code,plan,screen){
       entry:zone(decision.entry??decision.entryCandidate),entryReady:!!decision.entryReady,addType:decision.addType||null,
       pullbackReady:!!decision.pullbackReady,chaseReady:!!decision.chaseReady,
       trim:zone(decision.trim),exit:zone(decision.exit),trimStop:zone(decision.trimStop),fullStop:zone(decision.fullStop),
+      trimStopCenter:positionNumber(decision.trimStopCenter),fullStopCenter:positionNumber(decision.fullStopCenter),
+      tradeState:decision.tradeState||null,stopSource:decision.stopSource||null,
       trialNote:decision.trialNote||null,entryNote:decision.entryNote||null,
       trimNote:decision.trimNote||null,exitNote:decision.exitNote||null,
       trimStopNote:decision.trimStopNote||null,fullStopNote:decision.fullStopNote||null},
@@ -6204,7 +6226,9 @@ function szLabBars(){return (latestHistory5Y?.history?.length?latestHistory5Y.hi
 function szLabActive(code){const data=szLabRead()[code]||{};return (data.plans||[]).find(x=>x.id===data.activeId)||null}
 function szLabValues(play,expected,risk,decision){
  const res=expected?.plan?.resonance||{},levels=expected?.plan?.levels||[],down=expected?.downside?.levels||[];
- return {price:positionNumber(expected?.price),main:positionNumber(res?.main?.center??levels[0]?.value),secondary:positionNumber(res?.secondary?.center??levels[1]?.value),pullback:positionNumber(down[0]?.value),defense:positionNumber(Array.isArray(decision?.fullStop)?(decision.fullStop[0]+decision.fullStop[1])/2:null),
+ return {price:positionNumber(expected?.price),main:positionNumber(res?.main?.center??levels[0]?.value),secondary:positionNumber(res?.secondary?.center??levels[1]?.value),pullback:positionNumber(down[0]?.value),
+   // 建立新交易時由使用者明確確認本日候選防守；舊交易不以本日候選覆寫 initial。
+   defense:positionNumber(decision?.fullStopCenter)??positionNumber(decision?.researchDefense?.full),
    play:play?.key||'swing',corePct:play?.operationProfile?.basePct??50,date:szLabCurrentDate(),capturedAt:new Date().toISOString()};
 }
 function szLabFmt(v){return Number.isFinite(v)&&v>0?technicalFmt(v):'--'}

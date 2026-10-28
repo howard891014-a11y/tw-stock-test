@@ -543,3 +543,13 @@ body.view-overview .overview-only{display:block}
 .sz-schedule-body .settings-row strong{font-size:13px;text-align:right}
 .sz-schedule-body>small{display:block;margin:4px 0 10px;color:#687789;font-size:12px;line-height:1.6}
 .sz-schedule-note{margin:12px 0 0;padding:10px 12px;background:#f6f9fc;border-radius:8px;font-size:12px;line-height:1.7;color:#4a607a}
+
+/* v2.6.9.26: 一個主決策預設可見，研究候選價預設收起，避免和風控當成相反指令 */
+.sz-action-plan-summary{display:flex;flex-direction:column;gap:5px;margin:10px 0 12px;padding:12px 14px;border:1px solid #d8e5ef;border-radius:12px;background:#f5f9fd;color:#203d59}
+.sz-action-plan-summary strong{font-size:14px;line-height:1.5}
+.sz-action-plan-summary small{font-size:12px;line-height:1.6;color:#52697d}
+.sz-research-prices{margin:10px 0 12px;border:1px solid #dbe4ee;border-radius:12px;overflow:hidden}
+.sz-research-prices>summary{cursor:pointer;padding:12px 14px;list-style:revert;font-weight:600;color:#47627b;background:#f7fafc}
+.sz-research-prices>summary:hover{background:#eff5fb}
+.sz-research-prices[open]>summary{border-bottom:1px solid #dbe4ee}
+.sz-research-prices>.decision-grid,.sz-research-prices>.overview-decision-row{margin:12px}
