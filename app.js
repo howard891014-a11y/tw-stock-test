@@ -4479,7 +4479,7 @@ function refreshHoldingTradePlan(code){
 function holdingPlanCancel(code){
   const api=window.StockZoneHoldingPlans;
   if(!holdingPlanActive(code))return true;
-  if(!window.confirm("是否取消計畫？"))return false;
+  if(!window.confirm("是否取消這筆交易計畫？\n取消≠出清，不會建立賣出績效；已有交易流水會封存為未結清紀錄。\n如果是實際全數售出，請使用『出清』紀錄。"))return false;
   try{api.cancel(localStorage,code);return true}
   catch(e){setStatus("取消計畫失敗："+e.message,true);return false}
 }
@@ -4544,6 +4544,130 @@ function saveHoldingProfile(code,host){
     setStatus(previous?"計畫已修改：均價／股數已更新，原始玩法與目標保留":"交易計畫已建立：原始玩法／目標已鎖定，之後的共振僅更新目前建議");
   }catch(e){setStatus(e.message||"交易計畫儲存失敗",true)}
 }
+// v2.6.9.15 — 第三批：人工模擬成交流水，僅本機計畫，不自動交易／不讀寫 Neon。
+function holdingTradeMoney(v){return Number.isFinite(Number(v))?Number(v).toLocaleString('zh-TW',{minimumFractionDigits:0,maximumFractionDigits:2}):'—'}
+function holdingTradeLedgerDetail(code,plan){
+  if(!plan)return '';
+  const api=window.StockZoneHoldingPlans,done=api?.metrics(plan);if(!done)return '';
+  const tx=plan.ledger?.trades||[],hasTx=tx.length>0;
+  const history=tx.slice(-12).map(t=>`<tr><td>${holdingPlanEscape(t.tradeDate)}</td><td>${holdingPlanEscape(api.TRADE_TYPES[t.type]||t.type)}</td><td>${holdingTradeMoney(t.shares)}</td><td>${holdingPlanEscape(({core:'核心',tactical:'機動',unspecified:'未指定'})[t.bucket]||'未指定')}</td><td>${holdingTradeMoney(t.price)}</td><td>${holdingTradeMoney((t.fee||0)+(t.tax||0))}</td></tr>`).join('');
+  const qty=done.shares;
+  return `<details class="holding-trade-ledger" data-ledger-code="${holdingPlanEscape(code)}" data-ledger-count="${tx.length}">
+    <summary><strong>③ 交易紀錄</strong><span>${tx.length} 筆｜剩餘 ${holdingTradeMoney(qty)} 股｜已實現 ${done.realizedNet>=0?'+':''}${holdingTradeMoney(done.realizedNet)} 元</span></summary>
+    <div class="holding-ledger-content">
+      <p class="holding-ledger-warning">本計畫建立時輸入的 ${holdingTradeMoney(done.opening.shares)} 股／均價 ${holdingTradeMoney(done.opening.avgCost)} 元，是期初持倉基準，<b>不是系統驗證過的成交</b>。以下交易須由你手動輸入實際模擬成交資料；預設費稅0，不會推估手續費。</p>
+      <div class="holding-ledger-summary"><span>剩餘持倉 <b>${holdingTradeMoney(done.shares)} 股</b></span><span>平均成本 <b>${holdingTradeMoney(done.avgCost)}</b></span><span>累計已實現損益（僅扣已填費稅） <b>${done.realizedNet>=0?'+':''}${holdingTradeMoney(done.realizedNet)}</b></span><span>已實現報酬 <b>${done.realizedReturnPct===null?'—':done.realizedReturnPct+'%'}</b></span></div>
+      <div class="holding-ledger-form" data-trade-form="${holdingPlanEscape(code)}">
+        <label>交易動作<select data-trade-type="${holdingPlanEscape(code)}"><option value="trial">試單買進</option><option value="add">加碼買進</option><option value="reduce">部分減碼</option><option value="exit">全部出清</option></select></label>
+        <label>倉別（記錄用途）<select data-trade-bucket="${holdingPlanEscape(code)}"><option value="unspecified">未指定</option><option value="tactical">機動倉</option><option value="core">核心倉</option></select></label>
+        <label>成交日期<input type="date" data-trade-date="${holdingPlanEscape(code)}" value="${new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}"></label>
+        <label>股數<input type="number" min="1" step="1" inputmode="numeric" data-trade-shares="${holdingPlanEscape(code)}" placeholder="實際成交股數"></label>
+        <label>成交單價<input type="number" min="0.01" step="any" inputmode="decimal" data-trade-price="${holdingPlanEscape(code)}" placeholder="實際成交價格"></label>
+        <label>手續費（元，可不填）<input type="number" min="0" step="any" inputmode="decimal" data-trade-fee="${holdingPlanEscape(code)}" placeholder="0"></label>
+        <label>交易稅（元，可不填）<input type="number" min="0" step="any" inputmode="decimal" data-trade-tax="${holdingPlanEscape(code)}" placeholder="0"></label>
+        <label class="holding-ledger-wide">記錄備註<input type="text" maxlength="250" data-trade-note="${holdingPlanEscape(code)}" placeholder="原因／手動模擬成交"></label>
+        <button type="button" data-trade-record="${holdingPlanEscape(code)}">確認新增成交記錄</button>
+      </div>
+      <p class="holding-ledger-warning">所有成交會保留原始玩法及當時分析快照。出清後計畫自動封存；不會替你對券商下單。成交日期不可早於建檔或晚於今天，且必須依日期順序新增。</p>
+      ${hasTx?`<div class="holding-ledger-table-wrap"><table><thead><tr><th>日期</th><th>動作</th><th>股數</th><th>倉別</th><th>價格</th><th>費稅</th></tr></thead><tbody>${history}</tbody></table></div>`:''}
+      <div class="holding-ledger-review-actions"><button type="button" data-trade-verify="${holdingPlanEscape(code)}">用實際日K驗證原始共振／成交時機</button><button type="button" data-trade-baseline="${holdingPlanEscape(code)}">五年價格基準回測</button><button type="button" data-trade-export="${holdingPlanEscape(code)}">匯出此計畫JSON備份</button></div>
+      <div class="holding-ledger-review" data-trade-review-result="${holdingPlanEscape(code)}">待驗證：需要建立後的日K，尚無未來交易日只能標示觀察中。現有五年價格基準回測不是歷史共振回放。</div>
+    </div>
+  </details>`;
+}
+// 模擬交易主頁：使用同一份已記錄流水做唯讀整合，不創造額外成交。
+function holdingSimulationRows(){
+  const api=window.StockZoneHoldingPlans;
+  if(!api)return {plans:[],entries:[],realized:0,open:0,closed:0,cancelled:0};
+  const data=api.read(localStorage),plans=[];
+  for(const [code,rec] of Object.entries(data)){
+    if(rec.active?.explicitPlan===true&&rec.active.status==='open')plans.push({code,plan:rec.active});
+    for(const p of rec.archived||[])if(p.ledger?.trades?.length)plans.push({code,plan:p});
+  }
+  let realized=0,open=0,closed=0,cancelled=0;
+  const entries=[];
+  for(const {code,plan} of plans){
+    const m=api.metrics(plan);
+    realized+=m.realizedNet;
+    if(plan.status==='open')open++;
+    else if(plan.status==='closed')closed++;
+    else cancelled++;
+    for(const tx of m.lines)entries.push({code,name:plan.initial?.name||code,planId:plan.id,play:plan.initial?.play||'—',...tx});
+  }
+  entries.sort((a,b)=>b.tradeDate.localeCompare(a.tradeDate)||b.recordedAt.localeCompare(a.recordedAt));
+  return {plans,entries,realized:Math.round(realized*100)/100,open,closed,cancelled};
+}
+function holdingSimulationCsv(){
+  const all=holdingSimulationRows(),quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const headings=['股票代號','股票名稱','計畫ID','鎖定玩法','成交日期','交易種類','倉別','股數','成交價格','手續費','交易稅','已實現毛損益','已實現損益（已填費稅）','成交時原始保存訊號','輸入時間','備註'];
+  const lines=all.entries.map(e=>[e.code,e.name,e.planId,e.play,e.tradeDate,e.type,e.bucket,e.shares,e.price,e.fee,e.tax,e.realizedGross,e.realizedNet,e.signalAtRecord?.signal,e.recordedAt,e.note]);
+  const csv='\ufeff'+[headings,...lines].map(xs=>xs.map(quote).join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');
+  a.href=url;a.download=`stockzone-sim-ledger-${new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei'}).format(new Date())}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1800);
+}
+function renderSimulationLedger(){
+  const summary=$('szSimulationSummary'),host=$('szSimulationRows');if(!summary||!host)return;
+  const report=holdingSimulationRows();
+  summary.innerHTML=`<div><small>活動計畫</small><b>${report.open}</b></div><div><small>完成出清</small><b>${report.closed}</b></div><div><small>已記錄成交</small><b>${report.entries.length}</b></div><div><small>已實現損益（僅扣已填費稅）</small><b>${report.realized>=0?'+':''}${holdingTradeMoney(report.realized)} 元</b></div>`;
+  host.innerHTML=report.entries.length?`<div class="sz-sim-table-wrap"><table><thead><tr><th>股票</th><th>日期</th><th>動作</th><th>股數</th><th>價格</th><th>已實現損益</th></tr></thead><tbody>${report.entries.slice(0,80).map(t=>`<tr><td>${holdingPlanEscape(t.name)}<br><small>${holdingPlanEscape(t.code)}</small></td><td>${holdingPlanEscape(t.tradeDate)}</td><td>${holdingPlanEscape(window.StockZoneHoldingPlans.TRADE_TYPES[t.type]||t.type)}</td><td>${holdingTradeMoney(t.shares)}</td><td>${holdingTradeMoney(t.price)}</td><td>${t.kind==='sell'?`${t.realizedNet>=0?'+':''}${holdingTradeMoney(t.realizedNet)}`:'—'}</td></tr>`).join('')}</tbody></table></div>`:'<p>目前沒有手動記錄的模擬成交。請先在「持股清單」建立交易計畫，再登記試單／加碼／減碼／出清。</p>';
+}
+function holdingTradeArchiveView(){
+  const api=window.StockZoneHoldingPlans;
+  if(!api)return '';
+  const completed=api.history(localStorage).filter(p=>p.ledger?.trades?.length);
+  const body=completed.slice(-25).reverse().map(plan=>{
+    const m=api.metrics(plan),name=holdingPlanEscape(plan.initial?.name||plan.code),code=holdingPlanEscape(plan.code);
+    return `<div class="holding-archive-row"><strong>${name} ${code}</strong><small>${holdingPlanEscape(plan.initial?.play||'—')}｜${holdingPlanEscape(plan.startDate||'—')}～${holdingPlanEscape(plan.closedAt?.slice(0,10)||'未結算')}｜${plan.status==='closed'?'已出清':'計畫已取消（非出清）'}</small><b>已實現 ${m.realizedNet>=0?'+':''}${holdingTradeMoney(m.realizedNet)} 元｜${m.realizedReturnPct===null?'—':m.realizedReturnPct+'%'}</b><span>${m.tradeCount} 筆人工成交｜剩餘 ${m.shares} 股</span></div>`;
+  }).join('');
+  return `<details class="holding-archive" id="holdingTradeArchive"><summary>歷史交易紀錄｜${completed.length} 筆已封存計畫</summary><div class="holding-archive-content">${body||'<p>尚無已封存的成交紀錄</p>'}<button type="button" id="szExportAllHoldingTrades">匯出全部交易歷史JSON備份</button><small>本機資料不會自動同步至其他瀏覽器／裝置。取消計畫不是實際出清。</small></div></details>`;
+}
+function holdingTradeExport(code=null){
+  const api=window.StockZoneHoldingPlans;const data=api.read(localStorage),selected=code===null?data:{[code]:data[code]};
+  const json={exportedAt:new Date().toISOString(),version:'v2.6.9.15',kind:'StockZone-manually-recorded-holding-trades',
+    disclaimer:'記錄為使用者輸入的手動模擬交易，不是券商真實成交；歷史已保存的分析不得當成正式回測公式重現。',plans:selected};
+  const blob=new Blob([JSON.stringify(json,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`stockzone-trades-${code||'all'}-${new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei'}).format(new Date())}.json`;
+  a.click();setTimeout(()=>URL.revokeObjectURL(url),1800);
+}
+function holdingTradeRecord(code,host){
+  const api=window.StockZoneHoldingPlans,row=host.querySelector(`[data-trade-form="${code}"]`);
+  if(!api||!row)throw Error('交易紀錄尚未載入');
+  const val=(attr)=>String(row.querySelector(`[${attr}="${code}"]`)?.value??'').trim();
+  const t={type:val('data-trade-type'),tradeDate:val('data-trade-date'),shares:val('data-trade-shares'),
+    price:val('data-trade-price'),bucket:val('data-trade-bucket'),fee:val('data-trade-fee'),tax:val('data-trade-tax'),note:val('data-trade-note')};
+  const name=api.TRADE_TYPES[t.type]||t.type;
+  if(!window.confirm(`確定記錄 ${code} ${name}｜${t.shares} 股 × ${t.price} 元（${t.tradeDate}）？\n這是人工模擬成交，不能當成券商真實成交。`))return false;
+  const result=api.record(localStorage,code,t);
+  const rows=readList('holdings'),idx=rows.findIndex(x=>stockKey(x)===String(code));
+  if(result.closed){if(idx>=0){rows.splice(idx,1);writeList('holdings',rows)}}
+  else if(idx>=0){rows[idx]={...rows[idx],avgCost:result.metrics.avgCost,shares:result.metrics.shares,positionUpdatedAt:result.trade.recordedAt};writeList('holdings',rows)}
+  renderLists();updateListButtons();
+  if(String(code)===currentStockCode())renderTradeOutputs();
+  setStatus(result.closed?'已記錄全部出清：計畫與成交歷史已封存':`已記錄${name}，剩餘 ${result.metrics.shares} 股；原始玩法／目標保留`);
+  return true;
+}
+async function holdingTradeVerify(code,host){
+  const api=window.StockZoneHoldingPlans,review=window.StockZoneTradeReview;
+  const resultBox=host.querySelector(`[data-trade-review-result="${code}"]`);
+  if(!api||!review||!resultBox)return;
+  const plan=holdingPlanActive(code);if(!plan)return;
+  resultBox.textContent='驗證日K資料讀取中…';
+  try{
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+    let data;try{const res=await fetch(`/api/technical?mode=history&range=5y&q=${encodeURIComponent(code)}`,{signal:controller.signal,cache:'default'});
+      data=await readJson(res,'交易事後驗證日K');}finally{clearTimeout(timer)}
+    if(!data?.ok||!Array.isArray(data.history))throw Error('沒有可用的五年OHLC資料');
+    const verdict=review.evaluate(plan,data.history),audit=review.auditTransactions(plan,data.history);
+    if(!verdict.valid){resultBox.textContent='暫停驗證：'+verdict.reason;return}
+    const o=verdict.initial,l=verdict.latest;
+    const line=(what,v)=>`${what} ${holdingPlanPrice(v.target)}｜第 ${v.firstDay||'—'} 交易日觸及｜${v.horizons.map(h=>`${h.days}D ${h.status==='hit'?'達標':h.status==='miss'?'未達':'待觀察'}`).join(' · ')||'無有效目標'}`;
+    const ambiguity=o.sameBarAmbiguous?'｜注意：首日主要目標與停損同時觸及，無法判定順序':'';
+    const cal=verdict.revisions?.at(-1)?.byH?.find(x=>x.days===10);
+    const compare=cal?.status==='mature'?`｜最新已保存目標與原始目標：其後10日最高價相對誤差 ${cal.originalErrorPct}% → ${cal.updatedErrorPct}%（差 ${cal.differencePctPoints>0?'+':''}${cal.differencePctPoints}百分點，純描述不代表策略進步）`:'｜更新準確度比較：尚未累積足夠的10個交易日或無預存新目標';
+    const tradeAudit=audit.valid?`｜${audit.plausible}筆成交價落在當日高低區間、${audit.uncertain}筆需核對（無法證明實際成交）`:'｜成交價檢查暫停';
+    resultBox.textContent=`原始計畫 ${o.asOf}｜其後 ${o.observedSessions} 個交易日${ambiguity}\n${line('主要目標',o.main)}\n${line('次要目標',o.secondary)}\n${line('防守位',o.defense)}\n已確認更新價位 ${verdict.updatesWithConfirmedNewTarget} 次；最新更新 ${l.asOf}${l!==o?'｜'+line('最新主要目標',l.main):''}${compare}${tradeAudit}\n僅對原始及真正預先保存的更新價位做事後觸及檢驗，非歷史完整公式回測；更新效果不能當因果績效。`;
+  }catch(e){resultBox.textContent='驗證失敗：'+String(e?.message||e)}
+}
 function holdingPlanSummary(plan){
   if(!plan)return '';
   const original=plan.initial||{},live=plan.last||original,ot=original.targets||{},lt=live.targets||{},od=original.decision||{},ld=live.decision||{};
@@ -4565,6 +4689,12 @@ function holdingPlanSummary(plan){
 function renderOneList(type,hostId){
   const host=$(hostId),rows=readList(type);
   if(!host)return;
+  const openTradeForms=new Map();
+  if(type==='holdings')for(const details of host.querySelectorAll('[data-ledger-code]')){
+    const key=details.dataset.ledgerCode,forms=[...details.querySelectorAll('[data-trade-form] input,[data-trade-form] select')];
+    openTradeForms.set(key,{open:details.open,count:details.dataset.ledgerCount,
+      values:forms.map(el=>({field:el.getAttributeNames().find(k=>k.startsWith('data-trade-')),value:el.value}))});
+  }
   host.innerHTML=rows.length?rows.map(x=>{const holding=type==="holdings",plan=holding?holdingPlanActive(x.code):null;
     const name=holdingPlanEscape(x.name||"—"),code=holdingPlanEscape(x.code||""),market=holdingPlanEscape(x.market||"台股");
     return `<div class="manage-stock ${holding?"holding-row":""}">
@@ -4573,23 +4703,47 @@ function renderOneList(type,hostId){
     <strong class="list-price">${targetFmt(x.last)}</strong>
     <button class="remove-list" type="button" data-remove-type="${type}" data-remove-code="${code}" aria-label="刪除">×</button>
     ${holding?`<div class="holding-profile">
-      <label>持股均價<input type="number" min="0" step="0.01" inputmode="decimal" data-holding-avg="${code}" value="${positionNumber(x.avgCost)??""}" placeholder="例如 1250"></label>
-      <label>持股股數<input type="number" min="1" step="1" inputmode="numeric" data-holding-shares="${code}" value="${positionNumber(x.shares)??""}" placeholder="例如 1000"></label>
-      <div class="holding-plan-actions">${plan?`<button type="button" data-cancel-holding="${code}">取消計畫</button><button type="button" data-save-holding="${code}">修改計畫</button>`:`<button type="button" data-save-holding="${code}">建立計畫</button>`}</div>
-      <small class="holding-profile-note">${plan?'修改計畫僅更新均價與股數；原始玩法／目標不覆寫。取消計畫會先確認，再移除持股。':'未建立計畫可直接移除；請填完整均價與股數後按建立計畫。'}</small>
+      <label>持股均價<input type="number" min="0" step="0.01" inputmode="decimal" data-holding-avg="${code}" value="${positionNumber(plan?.position?.avgCost??x.avgCost)??""}" ${plan?.ledger?.trades?.length?'readonly title="已有成交紀錄，請用下方交易流水更新"':''} placeholder="例如 1250"></label>
+      <label>持股股數<input type="number" min="1" step="1" inputmode="numeric" data-holding-shares="${code}" value="${positionNumber(plan?.position?.shares??x.shares)??""}" ${plan?.ledger?.trades?.length?'readonly title="已有成交紀錄，請用下方交易流水更新"':''} placeholder="例如 1000"></label>
+      <div class="holding-plan-actions">${plan?`<button type="button" data-cancel-holding="${code}">取消計畫</button>${plan?.ledger?.trades?.length?'':`<button type="button" data-save-holding="${code}">修改計畫</button>`}`:`<button type="button" data-save-holding="${code}">建立計畫</button>`}</div>
+      <small class="holding-profile-note">${plan?(plan.ledger?.trades?.length?'已有成交紀錄，均價與股數由交易流水自動計算；原始玩法／目標固定。取消不代表全部出清。':'修改計畫僅更新均價與股數；原始玩法／目標不覆寫。取消計畫會先確認，再移除持股。'):'未建立計畫可直接移除；請填完整均價與股數後按建立計畫。'}</small>
       ${holdingPlanSummary(plan)}
+      ${holdingTradeLedgerDetail(x.code,plan)}
     </div>`:""}
   </div>`}).join(""):`<div class="manage-empty">${type==="holdings"?"尚無持股":"尚無觀察股票"}</div>`;
+  if(type==='holdings')for(const details of host.querySelectorAll('[data-ledger-code]')){
+    const previous=openTradeForms.get(details.dataset.ledgerCode);
+    if(!previous)continue;details.open=previous.open;
+    if(previous.count!==details.dataset.ledgerCount)continue; // recorded, start a fresh form
+    for(const item of previous.values){if(!item.field)continue;
+      const field=details.querySelector(`[${item.field}]`);if(field&&item.value!==null)field.value=item.value;
+    }
+  }
   host.querySelectorAll("[data-search-stock]").forEach(el=>el.addEventListener("click",()=>{
     $("stockCode").value=el.dataset.searchStock; search(); window.scrollTo({top:0,behavior:"smooth"});
   }));
   host.querySelectorAll("[data-remove-type]").forEach(btn=>btn.addEventListener("click",()=>removeFromList(btn.dataset.removeType,btn.dataset.removeCode)));
   host.querySelectorAll("[data-save-holding]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();saveHoldingProfile(btn.dataset.saveHolding,host)}));
   host.querySelectorAll("[data-cancel-holding]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();removeFromList("holdings",btn.dataset.cancelHolding)}));
-  host.querySelectorAll(".holding-profile input").forEach(el=>el.addEventListener("click",e=>e.stopPropagation()));
+  host.querySelectorAll('[data-trade-record]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();try{holdingTradeRecord(btn.dataset.tradeRecord,host)}catch(err){setStatus('成交記錄未保存：'+(err?.message||err),true)}}));
+  host.querySelectorAll('[data-trade-verify]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();void holdingTradeVerify(btn.dataset.tradeVerify,host)}));
+  host.querySelectorAll('[data-trade-baseline]').forEach(btn=>btn.addEventListener('click',e=>{
+    e.stopPropagation();const code=btn.dataset.tradeBaseline;
+    if(currentStockCode()!==code)return setStatus('請先點選並完成這檔股票的分析，再執行五年價格基準回測',true);
+    if(!$('szLabRunBacktest'))return setStatus('未找到原本五年價格基準回測',true);
+    setView('overview');$('szLabRunBacktest').click();$('overviewResonanceCard')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+  host.querySelectorAll('[data-trade-export]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();try{holdingTradeExport(btn.dataset.tradeExport)}catch(err){setStatus(err.message,true)}}));
+  host.querySelectorAll('[data-trade-type]').forEach(sel=>sel.addEventListener('change',()=>{const code=sel.dataset.tradeType,form=sel.closest('[data-trade-form]');if(sel.value==='exit'){
+    const p=holdingPlanActive(code),remaining=p?window.StockZoneHoldingPlans.metrics(p).shares:0;
+    const qty=form?.querySelector(`[data-trade-shares="${code}"]`);if(qty&&remaining>0)qty.value=String(remaining);
+  }}));
+  host.querySelectorAll(".holding-profile input, .holding-profile select").forEach(el=>el.addEventListener("click",e=>e.stopPropagation()));
 }
 function renderLists(){
-  renderOneList("holdings","holdingsCards");renderOneList("watchlist","watchlistCards");
+  renderOneList("holdings","holdingsCards");renderOneList("watchlist","watchlistCards");renderSimulationLedger();
+  const archive=$('holdingTradeArchive');if(archive){const opened=archive.open;archive.outerHTML=holdingTradeArchiveView();const fresh=$('holdingTradeArchive');if(fresh)fresh.open=opened;}
+  $('szExportAllHoldingTrades')?.addEventListener('click',()=>{try{holdingTradeExport()}catch(e){setStatus(e.message,true)}});
   setText("holdingsCount",readList("holdings").length);setText("watchlistCount",readList("watchlist").length);
 }
 function updateListButtons(){
@@ -4599,6 +4753,9 @@ function updateListButtons(){
   if(h)h.textContent=currentStock&&inList("holdings",currentStock)?"✓ 已在持股":"＋ 持股";
   if(w)w.textContent=currentStock&&inList("watchlist",currentStock)?"★ 已觀察":"☆ 觀察";
 }
+$('szSimCsvExport')?.addEventListener('click',()=>{try{holdingSimulationCsv()}catch(e){setStatus('交易CSV匯出失敗：'+e.message,true)}});
+$('szSimJsonExport')?.addEventListener('click',()=>{try{holdingTradeExport()}catch(e){setStatus('交易JSON匯出失敗：'+e.message,true)}});
+$('szSimManageHoldings')?.addEventListener('click',()=>{setManagementTab('holdings');setView('management')});
 $("addHoldingBtn")?.addEventListener("click",()=>addToList("holdings"));
 $("addWatchBtn")?.addEventListener("click",()=>addToList("watchlist"));
 document.querySelectorAll("[data-manage-tab]").forEach(btn=>btn.addEventListener("click",()=>{
@@ -5362,6 +5519,7 @@ function setView(view){
   if(view==="screening")view="market-dynamic";
   if(screeningViews.has(view)){loadMarketIndexQuick(false);loadMarketDynamic(false);}
   if(view==="fundflow"){window.StockZoneCapital?.load(false);}
+  if(view==="simulation")renderSimulationLedger();
   if(view==="featured"){window.StockZoneFeatured?.load();}
   document.body.classList.toggle("view-overview",view==="overview");
   document.querySelectorAll("[data-view-panel]").forEach(p=>p.classList.toggle("active-view",p.dataset.viewPanel===view));

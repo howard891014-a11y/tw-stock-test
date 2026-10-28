@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.6.9.14",
+  "version": "2.6.9.15",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -73,6 +73,8 @@
     "validate:batch1": "node scripts/validate-v26911-batch1.js",
     "validate:batch2": "node scripts/validate-v26912-batch2.js",
     "validate:batch4": "node scripts/validate-v26914-asof-safety.js",
-    "validate:release914": "npm run validate:batch4 && npm run validate:batch2 && npm run validate:batch1 && npm run validate:holding-plans && npm run validate:app-version && npm run validate:capital-flow && npm run validate:featured-neon && npm run validate:history-progress && npm run validate:v2679 && npm run validate:layout"
+    "validate:release914": "npm run validate:batch4 && npm run validate:batch2 && npm run validate:batch1 && npm run validate:holding-plans && npm run validate:app-version && npm run validate:capital-flow && npm run validate:featured-neon && npm run validate:history-progress && npm run validate:v2679 && npm run validate:layout",
+    "validate:batch3": "node scripts/validate-v26915-batch3.js",
+    "validate:release915": "npm run validate:batch3 && npm run validate:release914"
   }
 }
