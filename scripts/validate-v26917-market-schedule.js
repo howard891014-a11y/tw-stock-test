@@ -13,7 +13,7 @@ const schedule=require('../lib/market-daily-schedule');
 const {marketDateGate}=require('../lib/market-dynamic-date-gate');
 const {parseTpexMarketTotal,normalizeRow}=require('../lib/market-index-eod');
 const ms=[...cfg.crons].map(x=>x.path+'|'+x.schedule);
-assert.equal(ms.length,12);assert.equal(new Set(ms).size,12);
+assert.equal(ms.length,18);assert.equal(new Set(ms).size,18);
 for(const [route,time] of [
  ['/api/sync-status','0 7 * * 1-5'],['/api/sync-status','0 8 * * 1-5'],
  ['/api/sync-status','0 9 * * 1-5'],['/api/sync-status','0 13 * * 1-5'],
@@ -21,7 +21,13 @@ for(const [route,time] of [
  ['/api/sync-status','45 13 * * 1-5'],
  ['/api/market-dynamic-refresh','0 14 * * 1-5'],
  ['/api/market-dynamic-refresh','35 15 * * 1-5'],
- ['/api/capital-flow','8 8 * * 1-5'],
+ ['/api/capital-flow','15 13 * * 1-5'],
+ ['/api/capital-flow','30 13 * * 1-5'],
+ ['/api/capital-flow','35 13 * * 1-5'],
+ ['/api/capital-flow','50 13 * * 1-5'],
+ ['/api/capital-flow','55 13 * * 1-5'],
+ ['/api/capital-flow','20 14 * * 1-5'],
+ ['/api/capital-flow','45 14 * * 1-5'],
  ['/api/fundflow?view=industry-changes&action=scan','30 9 * * 1-5'],
  ['/api/market-dynamic-refresh?paper=stage3','15 22 * * 1-5'],
 ])assert(ms.includes(route+'|'+time),`missing cron ${route} ${time}`);
