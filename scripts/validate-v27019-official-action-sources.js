@@ -1,0 +1,48 @@
+'use strict';
+const assert=require('node:assert/strict');
+const Module=require('node:module'),saved=Module._load;
+Module._load=function(id,parent,isMain){if(id==='@neondatabase/serverless')return{neon:()=>{throw Error('Database access forbidden in this unit test')}};return saved.call(this,id,parent,isMain)};
+const api=require('../lib/research-corporate-actions');Module._load=saved;
+const {fetchOfficialMonth,parseTpex,normalizeOfficialAction,OFFICIAL_SOURCE_NAMES}=api;
+const twseFields=['恢復買賣日期','股票代號','名稱','停止買賣前收盤價格','恢復買賣參考價','漲停價格','跌停價格','開盤競價基準','除權參考價','減資原因'];
+const tpexReductionFields=['恢復買賣日期','股票代號','名稱','最後交易日之收盤價格','減資恢復買賣開始日參考價格','漲停價格','跌停價格','開始交易基準價','除權參考價','減資原因','詳細資料'];
+const tpexExFields=['除權息日期','代號','名稱','除權息前收盤價','除權息參考價','權值','息值','權值+息值','權/息','漲停價','跌停價','開始交易基準價','減除股利參考價','現金股利','每仟股無償配股','現金增資股數','現金增資認購價','公開承銷股數','員工認購股數','原股東認購股數','按持股比例仟股認購'];
+const tpexRev={stat:'ok',date:'20260901~20260930',tables:[{totalCount:1,fields:tpexReductionFields,data:[['1150909','6461','益得','16.65','26.92','29.60','24.25','26.90','0','彌補虧損','<table>...</table>']]}]};
+const tpexEx={stat:'ok',date:'20260901~20260930',tables:[{totalCount:2,fields:tpexExFields,data:[['115/09/01','00966B','ETF','13.54','13.47','0','0.068','0.068','除息','--','--','13.47','13.47','0.068','0','0','0','0','0','0','0'],['115/09/14','6488','環球晶','420','408','12','0','12','除權','450','380','408','408','0','23','0','0','0','0','0','0']]}]};
+const listed={stat:'OK',fields:twseFields,data:[['115/09/21','2321','東訊','15.10','27.61','30.35','24.85','27.60','--','彌補虧損']]};
+const split={stat:'OK',fields:twseFields.slice(0,8),data:[['115/09/08','2330','台積電','100','10','11','9','10']]};
+const ex={stat:'OK',fields:['除權息日期','股票代號','名稱','除權息前收盤價','除權息參考價','權/息'],data:[['115/09/08','2330','台積電','100','95','息']]};
+const responses={'TWSE TWT49U':ex,'TWSE TWTAUU':listed,'TWSE TWTB8U':split,'TPEx exDailyQ':tpexEx,'TPEx revivt':tpexRev};
+(async()=>{
+ const urls=[];
+ const fetcher=async url=>{
+  urls.push(url);const name=url.includes('TWT49U')?'TWSE TWT49U':url.includes('TWTAUU')?'TWSE TWTAUU':url.includes('TWTB8U')?'TWSE TWTB8U':url.includes('/exDailyQ')?'TPEx exDailyQ':url.includes('/revivt')?'TPEx revivt':null;
+  assert(name,`unexpected official source ${url}`);
+  return{ok:true,json:async()=>responses[name]};
+ };
+ const report=await fetchOfficialMonth('2026-09',{fetcher,eventEnd:'2026-10-29'});
+ assert.equal(report.ok,true,JSON.stringify(report.errors));
+ assert.deepEqual(report.sourceReports.map(x=>x.name),OFFICIAL_SOURCE_NAMES);
+ assert.equal(report.actions.length,5);
+ const rev=report.actions.find(x=>x.source==='TPEx revivt');assert(rev);
+ assert.equal(rev.trade_date,'2026-09-09');assert.equal(rev.old_close,16.65);assert.equal(rev.reference_close,26.92);assert.equal(rev.requires_review,true);
+ assert(!report.actions.some(x=>x.stock_code==='00966B'),'ETF ignored');
+ assert(urls.find(u=>u.includes('TWTAUU')).includes('startDate=20260901'));
+ assert(urls.find(u=>u.includes('TWTB8U')).includes('startDate=20260901'));
+ assert(urls.find(u=>u.includes('/revivt')).includes('startDate=2026%2F09%2F01'));
+ assert(urls.find(u=>u.includes('/exDailyQ')).includes('endDate=2026%2F09%2F30'));
+ const name='TPEx revivt';
+ assert.throws(()=>parseTpex({...tpexRev,date:'20261001~20261031'},'reduction',name,'20260901~20260930'),/range-mismatch/);
+ assert.throws(()=>parseTpex({stat:'參數錯誤'},'reduction',name,'20260901~20260930'),/status-invalid/);
+ assert.throws(()=>parseTpex({...tpexRev,tables:[]},'reduction',name,'20260901~20260930'),/schema-invalid/);
+ assert.throws(()=>parseTpex({...tpexRev,tables:[{fields:tpexReductionFields,data:[['1150909','6461']]}]},'reduction',name,'20260901~20260930'),/schema-invalid/);
+ assert.throws(()=>parseTpex({...tpexRev,tables:[{fields:tpexReductionFields,data:[['1150909','6461','益得','--','26.92','29','24','26','0','彌補虧損','x']]}]},'reduction',name,'20260901~20260930'),/rejected/);
+ const future=await fetchOfficialMonth('2026-10',{fetcher:async url=>{
+  if(url.includes('tpex.org.tw'))return {ok:true,json:async()=>({stat:'ok',date:'20261001~20261029',tables:[{fields:url.includes('revivt')?tpexReductionFields:tpexExFields,data:[]}]})};
+  return{ok:true,json:async()=>({stat:'OK',fields:twseFields,data:[]})};
+ },eventEnd:'2026-10-29'});
+ assert(future.ok,JSON.stringify(future.errors));
+ const bad=await fetchOfficialMonth('2026-09',{onlySources:['TPEx revivt'],fetcher:async()=>({ok:true,json:async()=>{throw SyntaxError('Unexpected token < in HTML')}}),eventEnd:'2026-10-29'});
+ assert(!bad.ok&&bad.errors.length===1&&!bad.sourceReports.length);
+ console.log('PASS v2.7.0.19: official source paths, genuine 2026-09 response schemas, exclusion of ETF, strict rows/months/invalid statuses, no silent certifications');
+})().catch(e=>{console.error(e);process.exitCode=1});

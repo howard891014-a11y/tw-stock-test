@@ -30,7 +30,9 @@ assert.equal(plan.size,5);assert(plan.has('2026-09-01'));assert(!plan.has('2026-
  const noFetch=async()=>({ok:false});
  const result=await mod.fetchOfficialMonth('2026-08',{fetcher:noFetch});
  assert.equal(result.ok,false);assert(result.errors.length>0);
- const mock=async url=>({ok:true,json:async()=>url.includes('tpex.org.tw')?{aaData:[]}:{stat:'OK',fields:cols,data:[]}});
+ const mock=async url=>({ok:true,json:async()=>url.includes('tpex.org.tw')?
+  {stat:'ok',date:'20260801~20260831',tables:[{fields:url.includes('/revivt')?['恢復買賣日期','股票代號','最後交易日之收盤價格','減資恢復買賣開始日參考價格']:['除權息日期','代號','除權息前收盤價','除權息參考價'],data:[]}]}:
+  {stat:'OK',fields:cols,data:[]}});
  const yes=await mod.fetchOfficialMonth('2026-08',{fetcher:mock});
  assert.equal(yes.ok,true);assert.equal(yes.sources.length,5);
  console.log('PASS v2.6.7.17: official action parsers, split/reduction/rights guards, 5D window, price adjustment, source fail-closed');

@@ -49,11 +49,11 @@ const fetchMonth=async(month,{onlySources}={})=>{
  assert(novPending.scannedMonths.includes('2026-11'),'November provisional data finalized in December');
  const dates=[];
  const {fetchOfficialMonth}=require('../lib/research-corporate-actions');
- const official=async url=>{dates.push(url);return {ok:true,json:async()=>url.includes('tpex.org.tw')?{aaData:[]}:{stat:'OK',fields:['資料日期','股票代號','名稱','停止買賣前收盤價','恢復買賣參考價'],data:[]}}};
+ const official=async url=>{dates.push(url);return {ok:true,json:async()=>url.includes('tpex.org.tw')?{stat:'ok',date:'20261001~20261029',tables:[{fields:url.includes('/revivt')?['恢復買賣日期','股票代號','最後交易日之收盤價格','減資恢復買賣開始日參考價格']:['除權息日期','代號','名稱','除權息前收盤價','除權息參考價'],data:[]}]}:{stat:'OK',fields:['資料日期','股票代號','名稱','停止買賣前收盤價','恢復買賣參考價'],data:[]}}};
  const check=await fetchOfficialMonth('2026-10',{fetcher:official,eventEnd:'2026-10-29'});
  assert(check.ok);
  assert(dates.filter(u=>u.includes('twse.com.tw')).every(u=>u.includes('20261029')||u.includes('TWT49U')),'TWSE current month must stop at scan date');
- assert(dates.filter(u=>u.includes('tpex.org.tw')).every(u=>u.includes('115%2F10%2F29')),'TPEx current month must stop at scan date');
+ assert(dates.filter(u=>u.includes('tpex.org.tw')).every(u=>u.includes('2026%2F10%2F29')),'TPEx current month must stop at scan date');
  const html=await fetchOfficialMonth('2026-09',{onlySources:['TPEx revivt'],fetcher:async()=>({ok:true,json:async()=>{throw new SyntaxError('Unexpected token \'<\'')}}),eventEnd:'2026-10-29'});
  assert(!html.ok&&html.errors.some(e=>e.includes('Unexpected token')),'HTML must never certify a month');
  assert.equal(pending.size,1,'no duplicate candidate insertion');

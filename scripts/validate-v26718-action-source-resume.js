@@ -42,7 +42,7 @@ const m=require('../lib/research-corporate-actions');Module._load=originalLoad;
   assert.deepEqual(seen[1],['TPEx revivt'],'must NOT re-download already validated sources');
   assert.equal(sourceCache.size,5);assert.equal(monthCache.length,1);
   assert.equal(r.status.completedMonths,1);
-  const fakeHttp=async url=>({ok:url.includes('revivt'),status:422,json:async()=>({aaData:[]})});
+  const fakeHttp=async url=>({ok:url.includes('revivt'),status:422,json:async()=>({stat:'ok',date:'20250201~20250228',tables:[{fields:['恢復買賣日期','股票代號','最後交易日之收盤價格','減資恢復買賣開始日參考價格'],data:[]}]})});
   const fail=await m.fetchOfficialMonth('2025-02',{fetcher:fakeHttp,onlySources:['TWSE TWT49U','TPEx revivt']});
   assert.equal(fail.ok,false);assert(fail.errors[0].includes('TWSE TWT49U'));
   assert.equal(fail.sourceReports.length,1);
