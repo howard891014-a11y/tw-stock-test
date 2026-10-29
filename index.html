@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.4">
+  <meta name="stockzone-version" content="2.7.0.5">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -2989,7 +2989,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.4</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.5</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3303,11 +3303,8 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <div class="sz-play-version-control"><label for="szPlayEngineSelector">使用玩法版本</label><select id="szPlayEngineSelector" aria-label="使用玩法版本"><option value="v43" selected>V4.3.1 新版（預設）</option><option value="legacy">原版（備用）</option></select><small id="szPlayEngineStatus">V4.3.1 主引擎；原版保留可切回</small></div>
         <aside class="sz-v4-candidate" aria-label="V4.3研究與舊版玩法對照"><div class="sz-v4-head"><span>V4.3.1｜多年股性與長期基本面</span><em>目前主引擎・原版可切回</em></div><b id="szV4Candidate">等待股性及營運資料</b><small id="szV4CandidateDetail">長期EPS／營收同比可查證才確認；以已完成的低高低高循環衡量保留漲幅；近期訊號只管進出場。</small></aside>
       </div>
-      <section class="sz-v4-tactical" id="szV4WaveResearch" aria-label="五年股性歷史波段倍率">
-        <div class="sz-v4-head"><span>歷史波段倍率（研究）</span><em>歷史價格參考・不產生買賣指令</em></div>
-        <div id="szV4WaveGrid" class="sz-v4-wave-grid"><div>等待波段資料</div></div>
-        <small id="szV4WaveNote">沿用原版 V4 波段資料，僅作歷史股性觀察。</small>
-      </section>
+      <!-- 歷史波段倍率保留原始計算與 DOM 供研究使用，不再顯示獨立小卡。 -->
+      <div id="szV4WaveResearch" hidden aria-hidden="true" style="display:none!important"><div id="szV4WaveGrid"></div><small id="szV4WaveNote"></small></div>
       <section class="playstyle-short-analysis" id="playShortAnalysis" hidden>
         <div class="playstyle-short-head">
           <div>
@@ -3924,12 +3921,12 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
   <script src="./capital-flow.js?v=2.6.8.29"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
   <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.4"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.5"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.4"></script>
+  <script src="./app.js?v=2.7.0.5"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
