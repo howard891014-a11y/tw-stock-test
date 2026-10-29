@@ -3145,30 +3145,18 @@ function renderTradeOutputs(){
     {...currentPlay,key:origKey,period:activePlan.initial.play||currentPlay.period,
       operationProfile:{...(currentPlay?.operationProfile||{}),key:origKey,period:activePlan.initial.play||currentPlay.period,
         basePct:activePlan.initial.allocation?.core,tacticalPct:activePlan.initial.allocation?.tactical}}:currentPlay;
-  // 只有「已確認」的研究配置才能調節共振輸入；原目標公式、歷史快照均不修改。
-  const approved=window.StockZoneResonanceLab?.approvedAllocationForCode?.(currentStockCode())||null;
-  // 共振原版公式以持股內核心/機動占比合計100%為前提；現金不參與共振權重。
-  const investedPct=approved?(approved.corePct+approved.tacticalPct):0;
-  const coreMixPct=investedPct>0?approved.corePct/investedPct*100:null;
-  const calibrated=approved?{...lockedPlay,operationProfile:{...(lockedPlay.operationProfile||{}),
-      // 65/5/30 表示持有部位內核心92.86%/機動7.14%，不是把30%現金當成機動倉。
-      basePct:coreMixPct??lockedPlay?.operationProfile?.basePct,
-      tacticalPct:coreMixPct===null?lockedPlay?.operationProfile?.tacticalPct:100-coreMixPct,
-      actualCorePct:approved.corePct,actualTacticalPct:approved.tacticalPct,cashPct:approved.cashPct,
-      allocationStudyDate:approved.date}}:lockedPlay;
-  // 未確認研究配置時保留舊版完整畫面管線，確保原有共振數字不被重算。
-  const expected=renderExpectedUpside(approved?calibrated:currentPlay);
+  // v2.7.0.13：動態倉位配置改為獨立研究，不再回寫或校正共振分析輸入。
+  const expected=renderExpectedUpside(lockedPlay);
   if(!expected)return;
   const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price);
-  const effectiveExpected=!approved&&lockedPlay!==currentPlay?{...expected,
+  const effectiveExpected=lockedPlay!==currentPlay?{...expected,
     position:currentHoldingPosition()||activePlan.position,
     plan:buildExpectedPlan(lockedPlay,price),downside:buildDownsidePlan(lockedPlay,price)}:expected;
-  const risk=buildDecisionRisk(calibrated,price,effectiveExpected);
+  const risk=buildDecisionRisk(lockedPlay,price,effectiveExpected);
   renderCurrentExtremeRisk(risk);
-  renderOverviewResonance(calibrated,effectiveExpected,risk);
-  renderV4TacticalPanel(calibrated,price,effectiveExpected);
-  renderResonanceLab(currentPlay,effectiveExpected,risk,null);
-  // 已確認研究配置僅作用於後續分析輸入，不修改交易計畫 initial、實際持股或下單。
+  renderOverviewResonance(lockedPlay,effectiveExpected,risk);
+  renderV4TacticalPanel(lockedPlay,price,effectiveExpected);
+  renderResonanceLab(lockedPlay,effectiveExpected,risk,null);
 }
 window.addEventListener?.('stockzone:allocation-study-approved',event=>{
   if(event?.detail?.code!==currentStockCode()||!latestPlayStyleResult)return;
@@ -4336,7 +4324,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.12（僅研究資料）',
+    modelVersion:'v2.7.0.13（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5430,7 +5418,7 @@ async function loadMarketDynamic(force=false){
     if(!marketDynamicData){const b=$("marketCoverage");if(b){b.textContent="讀取失敗";b.title=String(e?.message||e)}}
   }finally{marketDynamicLoading=false}
 }
-// v2.7.0.12: stock analysis reuses the SAME cached official W3 snapshot loader.
+// v2.7.0.13: stock analysis keeps W3 cache, while allocation study no longer alters resonance inputs.
 // One request per app open; existing pending request guard applies.
 window.StockZoneEnsureW3=()=>loadMarketDynamic(false);
 function setView(view){
