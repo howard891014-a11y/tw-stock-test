@@ -1,0 +1,13 @@
+const fs=require('fs');
+const assert=require('assert');
+const root=process.cwd();
+const pkg=JSON.parse(fs.readFileSync(root+'/package.json','utf8'));
+const html=fs.readFileSync(root+'/index.html','utf8');
+const app=fs.readFileSync(root+'/app.js','utf8');
+const lab=fs.readFileSync(root+'/lib/resonance-lab-v1.js','utf8');
+assert.equal(pkg.version,'2.7.0.13');
+for (const s of ['stockzone-version" content="2.7.0.13','v2.7.0.13</span>','resonance-lab-v1.js?v=2.7.0.13','app.js?v=2.7.0.13']) assert(html.includes(s),s);
+assert(app.includes('動態倉位配置改為獨立研究，不再回寫或校正共振分析輸入'),'allocation/resonance decouple comment missing');
+assert(!app.includes('const approved=window.StockZoneResonanceLab?.approvedAllocationForCode?.(currentStockCode())||null;'),'old approved coupling still present');
+for (const s of ['持股基準：','不自動成交，也不會修改共振分析、原始交易計畫或模擬交易。','歷史價格研究對照','五年回測績效','#szR1BacktestCard']) assert(lab.includes(s),s);
+console.log('PASS v2.7.0.13: allocation card layout, history/backtest stacked cards, and resonance decoupling');
