@@ -2413,9 +2413,16 @@ function renderPlayStyle(){
 function positionNumber(v){const n=Number(v);return Number.isFinite(n)&&n>0?n:null}
 function currentStockCode(){return String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"")}
 function currentHoldingPosition(code=currentStockCode()){
-  const row=readList("holdings").find(x=>stockKey(x)===String(code));if(!row)return null;
-  const avgCost=positionNumber(row.avgCost),rawShares=positionNumber(row.shares),shares=rawShares===null?null:Math.max(1,Math.floor(rawShares));
-  return {...row,avgCost,shares};
+  // Only an active, matching transaction plan may provide cost/shares to any stock analysis.
+  // The holdings list can retain stale input fields after a plan is cancelled; never treat them as an open position.
+  const key=String(code||'').replace(/\.(?:TW|TWO)$/i,'');
+  if(!key||key!==currentStockCode())return null;
+  const plan=holdingPlanActive(key);
+  if(!plan||plan.status!=='open'||plan.explicitPlan!==true||String(plan.initial?.code||'')!==key)return null;
+  const row=readList('holdings').find(x=>stockKey(x)===key);if(!row)return null;
+  const avgCost=positionNumber(plan.position?.avgCost),rawShares=positionNumber(plan.position?.shares);
+  const shares=rawShares===null?null:Math.floor(rawShares);
+  return avgCost!==null&&Number.isSafeInteger(shares)&&shares>0?{...row,code:key,avgCost,shares}:null;
 }
 function signedPercent(v){const n=Number(v);return Number.isFinite(n)?`${n>=0?"+":""}${n.toLocaleString("zh-TW",{maximumFractionDigits:1,minimumFractionDigits:0})}%`:"--"}
 function signedMoney(v){const n=Number(v);return Number.isFinite(n)?`${n>=0?"+":"-"}${Math.abs(Math.round(n)).toLocaleString("zh-TW")} 元`:"--"}
@@ -3044,7 +3051,8 @@ function renderOverviewResonance(play,expected,risk=null){
 function resetTradeOutputs(note="等待分析資料"){
   resetOverviewResonance(note);
   setText("overviewExpectedUpside","--%");setText("overviewExpectedUpsideNote",note);setText("expectedModeBadge","依玩法");setText("expectedBasisLabel","現價基準");setText("expectedRange","--%");setText("expectedDownsideRange","--%");setText("expectedWinRate","--");setText("expectedWinRateNote","樣本不足");setText("expectedProfitRate","--");setText("expectedProfitRateNote","樣本不足");setText("expectedExtremeRisk","--");setText("expectedExtremeRiskNote","當日W3與最新結構風險待確認");setText("expectedSeasonalityNote","季節性：等待五年資料");
-  const pos=$("expectedPositionSummary");if(pos)pos.hidden=true;
+  const pos=$("expectedPositionSummary");if(pos){pos.hidden=true;pos.dataset.stockCode='';}
+  setText('expectedAvgCost','--');setText('expectedShares','--');setText('expectedCurrentPnl','--');
   for(let i=1;i<=3;i++){const box=$(`expectedTarget${i}`);if(box)box.hidden=i>2;setText(`expectedT${i}Label`,i===1?"主要共振（預估高點）":i===2?"次要共振（延伸高點）":"不使用");setText(`expectedT${i}Price`,i===2?"暫無延伸目標":"--");setText(`expectedT${i}Return`,"--");setText(`expectedT${i}Profit`,"")}
 
 }
@@ -3082,7 +3090,15 @@ function renderExpectedUpside(play=latestPlayStyleResult){
   // Extreme-market status is rendered from the current W3 + the live technical risk model, not old historical crash percentiles.
   setText("expectedExtremeRisk","待確認");setText("expectedExtremeRiskNote","最新結構風險與當日W3待確認");
   const season=wr.seasonality||seasonality5Y(latestHistory5Y?.history||[]);setText("expectedSeasonalityNote",`季節性：${season?.label||"五年樣本不足"}`);
-  const posBox=$("expectedPositionSummary");if(posBox){posBox.hidden=!position;if(position){setText("expectedAvgCost",position.avgCost?technicalFmt(position.avgCost):"未填");setText("expectedShares",position.shares?`${position.shares.toLocaleString("zh-TW")} 股`:"未填");const pnl=position.avgCost&&position.shares?(price-position.avgCost)*position.shares:null,pct=position.avgCost?positionReturn(price,position.avgCost):null;setText("expectedCurrentPnl",pnl===null?"待補資料":`${signedMoney(pnl)}${pct===null?"":`（${signedPercent(pct)}）`}`)}}
+  const posBox=$("expectedPositionSummary");if(posBox){
+    const code=currentStockCode();
+    const matched=!!position&&position.code===code&&holdingPlanActive(code)?.initial?.code===code;
+    posBox.hidden=!matched;posBox.dataset.stockCode=matched?code:'';
+    setText('expectedAvgCost',matched?technicalFmt(position.avgCost):'--');
+    setText('expectedShares',matched?`${position.shares.toLocaleString('zh-TW')} 股`:'--');
+    const pnl=matched?(price-position.avgCost)*position.shares:null,pct=matched?positionReturn(price,position.avgCost):null;
+    setText('expectedCurrentPnl',matched?`${signedMoney(pnl)}${pct===null?'':`（${signedPercent(pct)}）`}`:'--');
+  }
   for(let i=1;i<=3;i++){const item=plan.levels[i-1],box=$(`expectedTarget${i}`);if(box)box.hidden=i>2;if(!item){if(i===2){setText('expectedT2Label','次要共振（延伸高點）');setText('expectedT2Price','暫無延伸目標');setText('expectedT2Return','尚無更高的獨立共振峰');setText('expectedT2Profit','')}continue}setText(`expectedT${i}Label`,item.label);setText(`expectedT${i}Price`,technicalFmt(item.value));const ret=positionReturn(item.value,base);setText(`expectedT${i}Return`,`${position?.avgCost?"對均價":"對現價"} ${signedPercent(ret)}`);const profit=position?.avgCost&&position?.shares?(item.value-position.avgCost)*position.shares:null;setText(`expectedT${i}Profit`,profit===null?"":`預估損益 ${signedMoney(profit)}`)}
   return {price,position,base,plan,downside,winRate:wr,upRange:range,downRange,spaces};
 }
@@ -4322,7 +4338,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.15（僅研究資料）',
+    modelVersion:'v2.7.0.16（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
