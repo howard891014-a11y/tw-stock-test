@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.10",
+  "version": "2.7.0.11",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -108,6 +108,7 @@
     "validate:v2707": "node scripts/validate-v2707-playstyle-alignment.js",
     "validate:v2708": "node scripts/validate-v2708-settings.js",
     "validate:v2709": "node scripts/validate-v2709-three-engines.js",
-    "validate:v27010": "node scripts/validate-v27010-allocation-priority.js"
+    "validate:v27010": "node scripts/validate-v27010-allocation-priority.js",
+    "validate:v27011": "node scripts/validate-v27011-playstyle-flat.js"
   }
 }

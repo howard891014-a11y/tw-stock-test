@@ -4336,7 +4336,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.10（僅研究資料）',
+    modelVersion:'v2.7.0.11（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5430,6 +5430,9 @@ async function loadMarketDynamic(force=false){
     if(!marketDynamicData){const b=$("marketCoverage");if(b){b.textContent="讀取失敗";b.title=String(e?.message||e)}}
   }finally{marketDynamicLoading=false}
 }
+// v2.7.0.11: stock analysis reuses the SAME cached official W3 snapshot loader.
+// One request per app open; existing pending request guard applies.
+window.StockZoneEnsureW3=()=>loadMarketDynamic(false);
 function setView(view){
   const screeningViews=new Set(["screening","market-dynamic","fundflow","featured","simulation"]),management=view==="management";
   writeSessionJson(UI_SESSION_KEY,{view});
