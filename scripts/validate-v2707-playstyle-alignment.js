@@ -6,8 +6,8 @@ const root=path.join(__dirname,'..');
 const lab=fs.readFileSync(path.join(root,'lib/resonance-lab-v1.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const pkg=require(path.join(root,'package.json'));
-assert.equal(pkg.version,'2.7.0.7');
-for (const v of ['stockzone-version" content="2.7.0.7','v2.7.0.7</span></button>','resonance-lab-v1.js?v=2.7.0.7','app.js?v=2.7.0.7']) assert(html.includes(v),v);
+assert.equal(pkg.version,'2.7.0.8');
+for (const v of ['stockzone-version" content="2.7.0.8','v2.7.0.8</span></button>','resonance-lab-v1.js?v=2.7.0.8','app.js?v=2.7.0.8']) assert(html.includes(v),v);
 const start=lab.indexOf('    function render(){\n      const card='),end=lab.indexOf('    function ensurePanel(card){',start);
 assert(start>0&&end>start);
 const render=lab.slice(start,end);
@@ -30,4 +30,4 @@ for(const rule of [
 ]) assert(css.includes(rule),`missing CSS uniformity: ${rule}`);
 assert(!css.includes('.szs-pair .szs-allocation{padding:2px'),'old offset no longer applies');
 require('./validate-v2706-playstyle-auto');
-console.log('v2.7.0.7 PASS: paired typography and baseline, centered target cells, wider table description column');
+console.log('v2.7.0.8 PASS: paired typography and baseline, centered target cells, wider table description column');
