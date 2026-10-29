@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.13",
+  "version": "2.7.0.14",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -111,6 +111,6 @@
     "validate:v27010": "node scripts/validate-v27010-allocation-priority.js",
     "validate:v27011": "node scripts/validate-v27011-playstyle-flat.js",
     "validate:v27012": "node scripts/validate-v27012-allocation-and-table.js",
-    "validate:v27013": "node scripts/validate-v27013-allocation-layout.js"
+    "validate:v27014": "node scripts/validate-v27014-recovery.js"
   }
 }
