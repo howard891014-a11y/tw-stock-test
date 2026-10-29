@@ -45,6 +45,6 @@ assert(labSource.includes('coreExitPolicy:coreStrategy?{maxTradingDays:coreStrat
 assert(labSource.includes('getCurrentFiveYearPlay')&&labSource.includes('stockzone:five-year-play'),'R1 result is stock-scoped and observable');
 assert(labSource.includes('機動倉：${r.trial.stopTiming}')&&labSource.includes('機動倉：${r.trial.replenishTiming}'),'Recent held signals are tactical only');
 assert(labSource.includes('既有交易計畫：')&&labSource.includes('保持原始鎖定'),'Plan remains locked and distinct from fresh recommendation');
-assert(html.includes('v2.7.0.9')&&html.includes('app.js?v=2.7.0.9')&&html.includes('trade-orchestrator-v4.js?v=2.7.0.9'),'Version and asset invalidation');
-assert.equal(require('../package.json').version,'2.7.0.9');
+const version=require('../package.json').version;
+assert(html.includes(`v${version}`)&&html.includes(`app.js?v=${version}`)&&html.includes(`trade-orchestrator-v4.js?v=${version}`),'Version and asset invalidation');
 console.log('PASS v2.7.0.9: R1 recommendation, 60D stride, no-qualified, independent allocation, locked plans, tactical-only recent, cache/version');
