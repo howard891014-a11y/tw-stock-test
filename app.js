@@ -4336,7 +4336,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.11（僅研究資料）',
+    modelVersion:'v2.7.0.12（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5430,7 +5430,7 @@ async function loadMarketDynamic(force=false){
     if(!marketDynamicData){const b=$("marketCoverage");if(b){b.textContent="讀取失敗";b.title=String(e?.message||e)}}
   }finally{marketDynamicLoading=false}
 }
-// v2.7.0.11: stock analysis reuses the SAME cached official W3 snapshot loader.
+// v2.7.0.12: stock analysis reuses the SAME cached official W3 snapshot loader.
 // One request per app open; existing pending request guard applies.
 window.StockZoneEnsureW3=()=>loadMarketDynamic(false);
 function setView(view){
@@ -6066,7 +6066,7 @@ $('szLabRunBacktest')?.addEventListener('click',()=>{
   const rows=report.results.map((r)=>`<tr><td>${esc(r.strategy.label)}（${r.strategy.days}日）</td><td>${r.stats.count}</td><td>${r.stats.winPct}%</td><td>${r.stats.avgPct}%</td><td>${r.stats.medianPct}%</td><td>${r.stats.worstMaePct}%</td></tr>`);
   const cmp=report.policyComparison||{},later=cmp.later||{},whole=cmp.whole||{};
   const lift=v=>Number.isFinite(v)?`${v>0?'+':''}${v}%`:'--';
-  el.innerHTML=`<b>真實歷史價格基準｜${esc(report.coverage.from)}～${esc(report.coverage.to)}</b><br>同一批 ${report.coverage.signals} 個入場訊號（每60交易日一筆）；T+1開盤、成本0.5%、同日雙觸及先停損。<br>研究候選對比固定波段：全樣本平均淨報酬差 ${lift(whole.meanNetLiftPct)}；後30%時序保留區差 ${lift(later.meanNetLiftPct)}（${later.candidate?.count??0}筆；樣本小，不可視為驗證成功）。<table><thead><tr><th>策略／期限</th><th>筆數</th><th>勝率</th><th>平均淨報酬</th><th>淨報酬中位</th><th>最差MAE</th></tr></thead><tbody>${rows.join('')}</tbody></table><small>此為預先固定停利／止損的價格基準，不使用現行共振預測，因此<strong>不可拿來宣稱 V4.3.1 已通過歷史回測</strong>。資料來源 Yahoo 五年日K；跳變超過35%會暫停並要求校正。</small>`;
+  el.innerHTML=`<b>真實歷史價格基準｜${esc(report.coverage.from)}～${esc(report.coverage.to)}</b><br>同一批 ${report.coverage.signals} 個入場訊號（每60交易日一筆）；T+1開盤、成本0.5%、同日雙觸及先停損。<br>研究候選對比固定波段：全樣本平均淨報酬差 ${lift(whole.meanNetLiftPct)}；後30%時序保留區差 ${lift(later.meanNetLiftPct)}（${later.candidate?.count??0}筆；樣本小，不可視為驗證成功）。<table><thead><tr><th>策略／期限</th><th>筆數</th><th>勝率</th><th>平均淨報酬</th><th>淨報酬中位</th><th>最大浮虧</th></tr></thead><tbody>${rows.join('')}</tbody></table><small>此為預先固定停利／止損的價格基準，不使用現行共振預測，因此<strong>不可拿來宣稱 V4.3.1 已通過歷史回測</strong>。資料來源 Yahoo 五年日K；跳變超過35%會暫停並要求校正。</small>`;
  }catch(e){szLabSetMessage('價格基準回測失敗：'+e.message,true)}
 });
 $('szLabExport')?.addEventListener('click',()=>{
