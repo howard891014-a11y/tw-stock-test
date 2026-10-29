@@ -2941,11 +2941,12 @@ function drawOverviewResonance(play,expected){
   const main=positionNumber(res?.main?.center??expected?.plan?.levels?.[0]?.value);
   // 沒有第二個更高的獨立峰值時，不再以估值價冒充延伸目標。
   const alt=positionNumber(res?.secondary?.center??expected?.plan?.levels?.[1]?.value);
+  const pullback=positionNumber(expected?.downside?.levels?.[0]?.value); // Same price as historical reach '回測'.
   const mainTitle='主要共振';
   const altTitle='次要共振';
 
   // 圖面比例直接貼近參考：上方圖例、整體放大的歷史線、右側三條平滑預測線。
-  const left=72,historyRight=565,divider=571,rightGrid=703,top=47,bottom=431,futureX=671;
+  const left=72,historyRight=582,divider=588,rightGrid=703,top=47,bottom=431,futureXMax=650;
   const lastIndex=history.length-1;
   history.forEach((p,i)=>p.x=left+(historyRight-left)*i/lastIndex);
   const sr8=szChartPriceZones();szRenderSR8Legend(sr8);
@@ -2953,8 +2954,14 @@ function drawOverviewResonance(play,expected){
   if(main!==null&&main>price*1.002)targetNodes.push({title:mainTitle,value:main,color:'#8150e7',kind:'main'});
   if(alt!==null&&alt>price*1.002&&!targetNodes.some(n=>Math.abs(n.value/alt-1)<.003))
     targetNodes.push({title:altTitle,value:alt,color:'#f5b63e',kind:'alternate'});
+  const retestNode=pullback!==null&&pullback>0?{title:'回測',value:pullback,color:'#d96e88',kind:'retest'}:null;
+  // Reserve each label's full width to keep the forecast endpoint outside the label box.
+  const labelWidth=n=>Math.min(122,Math.max(86,Math.max(String(n.title).length*15+20,
+    String(n.kind==='retest'?technicalFmt(n.value):overviewIntFmt(n.value)).length*12+18)));
+  const widestLabel=Math.max(86,...[...targetNodes,...(retestNode?[retestNode]:[])].map(labelWidth));
+  const futureX=Math.min(futureXMax,760-widestLabel-14);
   const zoneEdges=sr8.valid?Object.values(sr8.levels||{}).filter(Boolean).flatMap(z=>[z.lower,z.upper]):[];
-  const numbers=[...history.map(h=>h.value),...targetNodes.map(n=>n.value),...zoneEdges];
+  const numbers=[...history.map(h=>h.value),...targetNodes.map(n=>n.value),...(retestNode?[retestNode.value]:[]),...zoneEdges];
   const minValue=Math.min(...numbers),maxValue=Math.max(...numbers),range=Math.max(1,maxValue-minValue);
   const step=overviewNiceStep(range*1.12/4);
   let lo=Math.floor((minValue-range*.07)/step)*step;
@@ -3008,6 +3015,13 @@ function drawOverviewResonance(play,expected){
   };
   // 依各目標的實際價格畫線；線條高低由價格決定，與主要／次要身份無關。
   targetNodes.forEach(drawForecast);
+  // 回測是歷史觸及率使用的下探價格，僅畫水平參考標記，不當作第三條預測路徑。
+  if(retestNode){
+    const ry=y(retestNode.value);
+    svg.append(swingWaveSvg('path',{d:`M ${divider+7} ${ry} L ${futureX} ${ry}`,
+      class:'overview-wave-retest-level',fill:'none',stroke:retestNode.color,'stroke-width':1.9,
+      'stroke-dasharray':'3 5',opacity:'.75','aria-label':'回測價格參考線'}));
+  }
   const point=(x,value,color,r=5.5)=>{
     const py=y(value);
     svg.append(swingWaveSvg('circle',{cx:x,cy:py,r:r+2.3,fill:'#fff',opacity:'.98'}));
@@ -3018,14 +3032,15 @@ function drawOverviewResonance(play,expected){
   const labels=[];
   const add=(node,px,py,prefer,side)=>labels.push({
     pointX:px,pointY:py,x:px,y:py,prefer,side,color:node.color,
-    title:node.title,value:overviewIntFmt(node.value),textColor:node.textColor
+    title:node.title,value:node.kind==='retest'?technicalFmt(node.value):overviewIntFmt(node.value),textColor:node.textColor
   });
   point(historyRight,price,'#8798ad',6); // 現價只留圓點，不畫數字標籤。
   const altNode=targetNodes.find(n=>n.kind==='alternate');
   const mainNode=targetNodes.find(n=>n.kind==='main');
   if(altNode)add({...altNode,textColor:'#c78316'},futureX,point(futureX,altNode.value,altNode.color,5.7),'center','right');
   if(mainNode)add({...mainNode,textColor:'#6832cf'},futureX,point(futureX,mainNode.value,mainNode.color,5.7),'center','right');
-  // 歷史標籤保留原邏輯，右側三個目標一律貼近各自實際終點。
+  if(retestNode)add({...retestNode,textColor:'#b44460'},futureX,point(futureX,retestNode.value,retestNode.color,5.7),'center','right');
+  // 上漲共振與下探回測均對齊自身價格點；回測標記不是預測趨勢。
   const historyLabels=overviewWavePlaceLabels(labels.filter(n=>n.side!=='right'));
   const forecastLabels=overviewWavePlaceForecastLabels(labels.filter(n=>n.side==='right'));
   [...historyLabels,...forecastLabels].forEach(n=>overviewWaveDrawBubble(svg,n));
@@ -4338,7 +4353,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.16（僅研究資料）',
+    modelVersion:'v2.7.0.17（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
