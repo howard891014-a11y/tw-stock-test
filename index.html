@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.7">
+  <meta name="stockzone-version" content="2.7.0.8">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -2734,6 +2734,16 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 }
 </style>
 <style id="sz-2673-css">
+
+/* v2.7.0.8: two-column, mobile-readable data schedule (times are Taiwan local). */
+#szMarketDailySchedule .sz-settings-schedule-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;color:#293d57}
+#szMarketDailySchedule .sz-settings-schedule-table th,#szMarketDailySchedule .sz-settings-schedule-table td{padding:11px 10px;border-bottom:1px solid #e8edf4;text-align:left;vertical-align:top;line-height:1.55}
+#szMarketDailySchedule .sz-settings-schedule-table th{background:#f2f6fc;font-weight:700}
+#szMarketDailySchedule .sz-settings-schedule-table th:first-child,#szMarketDailySchedule .sz-settings-schedule-table td:first-child{width:72px;white-space:nowrap;color:#6c7f98;font-variant-numeric:tabular-nums}
+#szMarketDailySchedule .sz-settings-schedule-table tr:last-child td{border-bottom:0}
+#szDeveloperMode>.sz-fold-body>.settings-history{margin:4px 0 18px;padding:12px 0 4px;border-top:0}
+#szDeveloperMode>.sz-fold-body>#szW3Records{margin:14px 0}
+@media(max-width:380px){#szMarketDailySchedule .sz-settings-schedule-table{font-size:12px}#szMarketDailySchedule .sz-settings-schedule-table th,#szMarketDailySchedule .sz-settings-schedule-table td{padding:10px 6px}#szMarketDailySchedule .sz-settings-schedule-table th:first-child,#szMarketDailySchedule .sz-settings-schedule-table td:first-child{width:61px}}
 .sz-settings-fold{border:1px solid #e3e8ee;border-radius:16px;margin:14px 0;background:#fff;overflow:hidden}.sz-settings-fold>summary{cursor:pointer;padding:18px 16px;font-size:16px;font-weight:700;color:#243349;list-style:none;display:flex;align-items:center;justify-content:space-between}.sz-settings-fold>summary::-webkit-details-marker{display:none}.sz-settings-fold>summary:after{content:'⌄';font-size:22px;color:#8493a6}.sz-settings-fold[open]>summary:after{content:'⌃'}.sz-fold-body{padding:0 14px 16px}.sz-fold-body .settings-manual-update{margin:12px 0}.sz-w3-health{margin-top:8px;font-weight:700;font-size:13px;color:#66788a}.sz-w3-health.is-updated{color:#178359}.sz-w3-health.is-error{color:#bc4646}.sz-w3-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.sz-w3-facts>div{min-width:0}.sz-w3-facts span{display:block;font-size:11px;color:#8290a1;margin-bottom:4px}.sz-w3-facts strong{font-size:12px;color:#253449;overflow-wrap:anywhere}.sz-w3-table-wrap{overflow-x:auto;max-height:360px}.sz-w3-table{width:100%;font-size:12px;border-collapse:collapse}.sz-w3-table th,.sz-w3-table td{padding:8px 5px;text-align:left;border-bottom:1px solid #e9edf2;white-space:nowrap}.sz-w3-record-meta{font-size:12px;color:#64748b;margin-bottom:12px}#szW3Download{margin-top:12px}
 </style><style id="stockzone-v2674-market-layout">
 .market-dynamic-page .market-dynamic-master-card{padding:24px 28px!important}.market-dynamic-page .market-dynamic-grid{display:flex!important;flex-direction:column;gap:26px}.market-dynamic-page .md-main-row{display:grid;grid-template-columns:2fr 1fr 1fr}.market-dynamic-page .md-secondary-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.market-dynamic-page .md-stat{min-width:0;padding:8px 20px;border:0;background:none;box-shadow:none;display:flex;flex-direction:column;justify-content:flex-start}.market-dynamic-page .md-main-row>*+*,.market-dynamic-page .md-secondary-row>*+*{border-left:1px solid #e4e9ef}.market-dynamic-page .md-main-row>*:first-child,.market-dynamic-page .md-secondary-row>*:first-child{padding-left:8px}.market-dynamic-page .market-dynamic-kicker{font-size:14px;letter-spacing:0;font-weight:750;color:#71819a}.market-dynamic-page .md-stat strong{font-size:clamp(21px,2.5vw,31px);line-height:1.25;margin:9px 0 7px;color:#12223e}.market-dynamic-page .md-lead strong{font-size:clamp(32px,4vw,54px);white-space:nowrap}.market-dynamic-page .md-stat small{font-size:13px;line-height:1.7;color:#71819a}.market-dynamic-page .md-stat.is-up strong{color:#e14949}.market-dynamic-page .md-stat.is-down strong{color:#18a66a}.market-dynamic-page .md-w3-value{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.market-dynamic-page .md-w3-value strong{color:#18a66a}.market-dynamic-page .md-w3-value .sz-w3-health{font-size:11px;margin:0;padding:4px 9px;border-radius:9px;background:#e9f8ef}.market-dynamic-page .market-dynamic-history-card .card-title{font-size:19px;font-weight:800}
@@ -2989,7 +2999,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.7</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.8</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3709,36 +3719,39 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 <div class="modal-backdrop hidden" id="settingsModal"><div class="modal-card settings-card">
 <div class="modal-head"><strong>設定</strong><button id="closeSettings" type="button">×</button></div>
 <details class="sz-settings-fold" id="szDataSources"><summary>資料來源</summary><div class="sz-fold-body"><div class="settings-row"><span>市場資料</span><strong>盤中 TWSE／TPEx 官方 MIS<br>盤後 Neon DB-first</strong></div><div class="settings-row"><span>基本面來源</span><strong>TWSE／TPEx 官方 OpenAPI<br>MOPS 備援</strong></div></div></details>
-<details class="sz-settings-fold" id="szMarketDailySchedule"><summary>每日自動更新時程（台灣時間）</summary><div class="sz-fold-body sz-schedule-body">
-  <div class="settings-row"><span>15:00</span><strong>價格資料第一次更新</strong></div>
-  <small>上市／上櫃成交億元、漲跌分佈、當日／近5日廣度、近期市場軌跡。兩市資料齊全才發布；W3不提前重算。</small>
-  <div class="settings-row"><span>16:00</span><strong>價格資料第二次檢查</strong></div>
-  <small>15:00已更新完成就跳過，不重複下載與寫入。</small>
-  <div class="settings-row"><span>17:00</span><strong>價格資料最後檢查／休市判定</strong></div>
-  <small>15／16／17三次都確認兩市沒有當日報價，才推定休市並取消晚間更新；單邊延遲或來源錯誤不當成休市。</small>
-  <div class="settings-row"><span>21:00 起</span><strong>法人／信用等籌碼資料</strong></div>
-  <small>21:00同步法人、21:15同步信用；21:30／21:45處理上市／上櫃處置資訊。</small>
-  <div class="settings-row"><span>21:15／21:30／21:50</span><strong>產業資金觀察（XY）更新／補算</strong></div>
-  <small>上市／上櫃價格及法人資料齊全後增量計算；已完成則跳過。22:20 額外補查晚到資料。</small>
-  <div class="settings-row"><span>21:35／21:55</span><strong>資金流向（近5日／今日）更新／補算</strong></div>
-  <small>確認同日 XY／產業快照已完成才更新法人資金金額；22:45 額外補查，失敗記錄於 Neon。</small>
-  <div class="settings-row"><span>22:00</span><strong>W3-D.1.2正式運算</strong></div>
-  <small>只使用已取得的當日完整輸入；資料未齊保留上次有效結果。</small>
-  <div class="settings-row"><span>23:35</span><strong>缺資料才補算W3</strong></div>
-  <small>當日W3已完成直接略過；缺必要籌碼則補查後重算，不更動W3公式。</small>
-  <p class="sz-schedule-note">休市推定日：晚間籌碼、資金／產業計算、W3及補算會跳過。若資料來源故障或兩市日期不同，不會誤判休市。以上為預定啟動時間；Vercel Hobby 排程可在當小時內延遲執行，官方資料晚到也可能推遲更新，不保證準點。</p>
+<details class="sz-settings-fold" id="szMarketDailySchedule"><summary>資料更新排程</summary><div class="sz-fold-body sz-schedule-body">
+  <table class="sz-settings-schedule-table" aria-label="資料更新排程（台灣時間）">
+    <thead><tr><th scope="col">時間</th><th scope="col">更新項目</th></tr></thead>
+    <tbody>
+    <tr><td>15:00</td><td>價格資料第一次更新</td></tr>
+    <tr><td>16:00</td><td>價格資料第二次檢查</td></tr>
+    <tr><td>17:00</td><td>價格資料最後檢查／休市判定</td></tr>
+    <tr><td>21:00</td><td>法人資料同步</td></tr>
+    <tr><td>21:15</td><td>信用資料同步／產業資金觀察（XY）更新</td></tr>
+    <tr><td>21:30</td><td>處置資訊同步／產業資金觀察（XY）補算</td></tr>
+    <tr><td>21:35</td><td>資金流向更新</td></tr>
+    <tr><td>21:45</td><td>處置資訊同步</td></tr>
+    <tr><td>21:50</td><td>產業資金觀察（XY）補算</td></tr>
+    <tr><td>21:55</td><td>資金流向補算</td></tr>
+    <tr><td>22:00</td><td>大盤環境運算</td></tr>
+    <tr><td>22:20</td><td>產業資金觀察（XY）補算</td></tr>
+    <tr><td>22:45</td><td>資金流向補算</td></tr>
+    <tr><td>23:35</td><td>大盤環境補算</td></tr>
+    </tbody>
+  </table>
 </div></details>
+<details class="sz-settings-fold" id="szDeveloperMode"><summary>開發者模式</summary><div class="sz-fold-body">
 <section class="settings-history" aria-label="歷史資料進度">
   <div class="settings-history-head"><span>歷史資料進度</span><small id="historyProgressUpdated">讀取中</small></div>
   <div class="settings-history-row"><span>股價</span><div class="settings-progress-track"><i id="historyPriceBar"></i></div><strong id="historyPriceValue">-- / 120D</strong><small id="historyPriceDetail">上市 --｜上櫃 --</small></div>
   <div class="settings-history-row"><span>法人</span><div class="settings-progress-track"><i id="historyInstitutionalBar"></i></div><strong id="historyInstitutionalValue">-- / 120D</strong><small id="historyInstitutionalDetail">上市 --｜上櫃 --</small></div>
   <div class="settings-history-row"><span>信用</span><div class="settings-progress-track"><i id="historyCreditBar"></i></div><strong id="historyCreditValue">-- / 90D</strong><small id="historyCreditDetail">上市 --｜上櫃 --</small></div>
-  <div class="settings-history-row" id="research500ProgressRow"><span>研究 500D（逐日保存）</span><div class="settings-progress-track"><i id="historyResearchBar"></i></div><strong id="historyResearchValue">-- / 500D</strong><small id="historyResearchDetail">各交易日獨立保存，不因成員異動回頭重算。</small></div>
+  <div class="settings-history-row" id="research500ProgressRow"><span>研究 500D</span><div class="settings-progress-track"><i id="historyResearchBar"></i></div><strong id="historyResearchValue">-- / 500D</strong><small id="historyResearchDetail">各交易日獨立保存，不因成員異動回頭重算。</small></div>
   <div class="settings-ready-grid"><span id="historyLiveReady">20D Live</span><span id="historyBacktestReady">近期 Raw</span><span id="historyResearchReady">500D Research</span></div>
   <small class="settings-history-note" id="historyProgressNote">Raw 採 bounded retention；單一500D研究使用窄欄位 numeric compact history，長期個股股價沿用 Yahoo 5Y Browser cache。</small>
 </section>
 <details class="sz-settings-fold" id="szW3Records"><summary>W3 運算紀錄</summary><div class="sz-fold-body"><div id="szW3RecordMeta" class="sz-w3-record-meta">尚未載入運算紀錄</div><div id="szW3Storage" class="sz-w3-record-meta">Neon W3 容量：讀取中｜警戒 0.5 MB｜管理目標 1 MB（非硬上限）</div><div class="sz-w3-table-wrap"><table class="sz-w3-table"><thead><tr><th>交易日</th><th>大盤環境</th><th>運算時間</th><th>結果</th></tr></thead><tbody id="szW3RecordRows"></tbody></table></div><button type="button" id="szW3Download">下載 W3 CSV</button></div></details>
-<details class="sz-settings-fold" id="szDeveloperMode"><summary>開發者模式</summary><div class="sz-fold-body"><section class="settings-manual-update settings-validation" aria-label="產業異動" id="industryChangeSection">
+<section class="settings-manual-update settings-validation" aria-label="產業異動" id="industryChangeSection">
   <div class="settings-manual-update-head"><span>產業異動</span><small>官方異動＋增資／減資／分割／除權｜鐵證審核後導入</small></div>
   <div class="settings-manual-update-box">
     <p>產業異動暫存於 Private Blob；增資／減資／分割／除權待驗證事件暫存於 Neon。經 SZ-鐵證確認並正式寫入 Neon 後才顯示「已導入」與 ×；× 只刪暫存，不刪正式紀錄。</p>
@@ -3918,12 +3931,12 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
   <script src="./capital-flow.js?v=2.6.8.29"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
   <script src="./lib/trade-orchestrator-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.7"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.8"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.7"></script>
+  <script src="./app.js?v=2.7.0.8"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
