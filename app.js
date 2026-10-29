@@ -4353,7 +4353,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.17（僅研究資料）',
+    modelVersion:'v2.7.0.18（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5827,7 +5827,8 @@ async function szIndustryRefresh(){
 $('industryChangeRefresh')?.addEventListener('click',szIndustryRefresh);
 $('industryChangeScan')?.addEventListener('click',async()=>{
   if(szIndustryChangeBusy)return;szIndustryText('industryChangeStatus','正在偵測產業異動與官方公司行動（暫存與正式 Neon 分離）…');
-  try{const data=await szIndustryRequest('scan','POST');await szIndustryRefresh();szIndustryText('industryChangeStatus',`偵測${data.partial?'部分完成':'完成'}：產業新增 ${data.industry?.events??'—'} 筆、公司行動新增 ${data.actions?.inserted??'—'} 筆暫存｜正式 Neon 不修改${data.errors?.length?`｜未完成：${data.errors.join('；').slice(0,380)}`:''}`);}catch(e){szIndustryText('industryChangeStatus',`掃描失敗：${e.message}`);}
+  try{const data=await szIndustryRequest('scan','POST');await szIndustryRefresh();const progress=data.actions||{},waiting=Array.isArray(progress.pendingMonths)?progress.pendingMonths:[];const pendingText=waiting.length?`｜待補查 ${waiting.map(m=>`${m.month}（${m.sources.length}個來源）`).join('、')}`:'';
+  szIndustryText('industryChangeStatus',`偵測${data.partial?'部分完成':'完成'}：產業新增 ${data.industry?.events??'—'} 筆、公司行動新增 ${data.actions?.inserted??'—'} 筆暫存｜正式分類不修改｜已核對完成 ${progress.completedMonths??0} 個歷史月份${pendingText}${data.errors?.length?`｜來源錯誤 ${data.errors.length} 項：${data.errors.slice(0,2).join('；').slice(0,190)}`:''}`);}catch(e){szIndustryText('industryChangeStatus',`掃描失敗：${e.message}`);}
 });
 $('industryChangeExport')?.addEventListener('click',()=>{
   const pending=szIndustryChangeEntries.filter(e=>!e.imported);const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),source:'StockZone SZ-鐵證待審核（產業 Private Blob／公司行動 Neon 暫存）',rows:pending},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`StockZone_待鐵證產業與公司行動_${new Date().toISOString().slice(0,10)}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
