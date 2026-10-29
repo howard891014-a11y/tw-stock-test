@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.8",
+  "version": "2.7.0.9",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -106,6 +106,7 @@
     "validate:v2705": "node scripts/validate-v2705-playstyle-consolidation.js",
     "validate:v2706": "node scripts/validate-v2706-playstyle-auto.js",
     "validate:v2707": "node scripts/validate-v2707-playstyle-alignment.js",
-    "validate:v2708": "node scripts/validate-v2708-settings.js"
+    "validate:v2708": "node scripts/validate-v2708-settings.js",
+    "validate:v2709": "node scripts/validate-v2709-three-engines.js"
   }
 }

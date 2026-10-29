@@ -6,6 +6,24 @@ function setText(id,value){
   const el=$(id); if(el) el.textContent=value ?? "—";
 }
 
+// Private price/resonance model may be allocation-derived; the user-facing play comes only from R1.
+function fiveYearRecommendation(){
+  return window.StockZoneResonanceLab?.getCurrentFiveYearPlay?.(currentStockCode())||null;
+}
+function fiveYearDisplay(){
+  const p=fiveYearRecommendation();
+  return p?.label || (p?.status==='no-qualified'?'暫無建議':p?.status==='invalid'?'資料待校正':'回測中');
+}
+function syncFiveYearDisplay(){
+  const label=fiveYearDisplay(),p=fiveYearRecommendation();
+  setText('overviewPlayMetric',label);
+  setText('overviewPlayStyle',label);
+  setText('playMainPeriod',label);
+  setText('overviewPlayStyleNote',p?.label?`五年回測勝率 ${p.winPct}%｜${p.count}筆｜${p.days}日`:'等待歷史驗證');
+  setText('playMainAction',p?.label?`核心倉依 ${label} 策略管理；近期訊號管理機動倉`:'五年回測尚未選出合格玩法');
+  setText('playReason',p?.reason||'建議玩法僅依五年R1回測，不由核心配置推導。');
+}
+window.addEventListener?.('stockzone:five-year-play',syncFiveYearDisplay);
 function overviewPlayMetricLabel(play){
   if(!play)return "--";
   const p=String(play.period||"");
@@ -2343,7 +2361,7 @@ function renderV4PlayCandidate(play){
   }
   latestV4PlayCandidate=raw?.available?raw:null;latestV4CandidateCode=currentStockCode();
   if(!raw.available){if(el)el.textContent='資料不足，暫不分類';if(detail)detail.textContent=raw.reason;return raw}
-  if(el)el.textContent=`${raw.label}｜核心 ${raw.basePct}%／機動 ${raw.tacticalPct}%${raw.provisional?'（暫定）':''}`;
+  if(el)el.textContent=`配置基準｜核心 ${raw.basePct}%／機動 ${raw.tacticalPct}%${raw.provisional?'（暫定）':''}`;
   if(detail)detail.textContent=`${raw.explanation}｜${raw.confidence}。長期基準：${raw.longHistoryDays}日歷史K線；${raw.fundamental.reason}；${raw.rhythm.reason}。中期檢查：${raw.medium.reason}。原版對照：${play?.period||'--'}／核心${play?.operationProfile?.basePct??'--'}%。${selectedPlayEngine()==='legacy'?'目前原版接管；V4僅作對照。':'目前V4.3為主；已記錄進場玩法的交易仍維持鎖定。'}近期技術與目標價僅供研究；不產生買賣指令。`;
   return raw;
 }
@@ -2367,6 +2385,8 @@ function renderPlayStyle(){
   const legacy=calculatePlayStyle(latestFiveStageResult,latestTechnicalForPlay);if(!legacy){resetPlayStyle("等待技術資料");return}
   latestLegacyPlayResult=legacy;
   const candidate=renderV4PlayCandidate(legacy);
+  // Allocation-derived model key is retained internally ONLY for existing resonance prices.
+  // It does not become the official recommended holding horizon.
   const x=resolveActivePlay(legacy,candidate);
   updatePlayEngineSelector(x);
   const map={short:"Short",swing:"Swing",long:"Long"};
@@ -2386,6 +2406,7 @@ function renderPlayStyle(){
   setText("playPositionModeNote",profileText);
   setText("playMainPeriod",x.period);setText("playMainAction",x.action);setText("playReason",x.reason);setText("overviewPlayStyle",x.period.replace("｜"," "));setText("overviewPlayStyleNote",x.action);
   latestPlayStyleResult=x;renderShortAnalysis(x);renderSwingWave(x);renderLongAnalysis(x);renderTradeOutputs();
+  syncFiveYearDisplay();
 }
 
 // v2.5.8.0 — 持股個人化輸出。市場目標價不因持股成本改寫；均價/股數只改變報酬、損益與分批數量呈現。
@@ -3005,8 +3026,9 @@ function drawOverviewResonance(play,expected){
 // v2.6.9.28 — 共振研究輸出，不讀取已移除的買賣決策。
 function renderOverviewResonance(play,expected,risk=null){
   if(!play||!expected){resetOverviewResonance();return}const res=expected?.plan?.resonance||{},mainCluster=res?.main||null,familyCount=mainCluster?.familyCount||0,resonanceStrength=res.adjustedStrength??res.strength??0;
-  setText("overviewResonancePlay",`${play.period||"--"}｜${play.action||"等待訊號"}`);
-  setText("overviewPlayMetric",overviewPlayMetricLabel(play));
+  // Hidden legacy chip: never present the allocation-derived price model as an R1 play.
+  setText("overviewResonancePlay",'核心／機動配置共振');
+  setText("overviewPlayMetric",fiveYearDisplay());
   if(familyCount>=2){setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength",`${resonanceStrengthLabel({...mainCluster,adjustedStrength:resonanceStrength})} ${resonanceStrength} / 100`);setText("overviewResonanceStrengthNote",`${familyCount} 類價格來源｜基本面 ${res.basicAdjustment>=0?"+":""}${res.basicAdjustment??0} 分${res.historyValidation?`｜5年驗證 ${res.historyValidation}%`:""}`)}
   else if(mainCluster){setText("overviewResonanceStrengthLabel","目標依據");setText("overviewResonanceStrength","單一來源");setText("overviewResonanceStrengthNote",`${mainCluster.points?.[0]?.source||mainCluster.points?.[0]?.label||"單一價格來源"}主導；其他來源仍以距離衰減保留${res.historyValidation?`｜5年驗證 ${res.historyValidation}%`:""}`)}
   else{setText("overviewResonanceStrengthLabel","目標依據");setText("overviewResonanceStrength","等待目標");setText("overviewResonanceStrengthNote","目前沒有高於現價的可用價格來源")}
@@ -4296,7 +4318,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.8（僅研究資料）',
+    modelVersion:'v2.7.0.9（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5951,7 +5973,7 @@ function renderResonanceLab(play,expected,risk,decision){
  const candidate=normalized.valid?lab.entryCandidate(bars,bars.length-1):{valid:false};
  const reason=normalized.largeJumps?.length?'偵測到未確認的大幅跳變，須先查核公司行動':normalized.errors?.length?'有不完整的 OHLC 日K，基準回測將檢查有效性':'需要至少120根合法日K';
  setText('szLabCandidate',candidate.valid?`歷史價格研究對照（非操作建議）：${candidate.label}｜核心傾向 ${candidate.corePct}%｜${candidate.reason}。
-對照現行正式玩法：${overviewPlayMetricLabel(play)}。此候選只用價格，不含歷史財報／W3，未驗證前不覆蓋原版。`:`研究候選資料不足：${reason}`);
+此為價格研究候選，不影響五年回測建議玩法、核心配置或共振價格。`:`研究候選資料不足：${reason}`);
  if(select&&!select.dataset.szlTouched&&!szLabActive(code))select.value=candidate?.key||play?.key||'swing';
  const pairs=[['主要',v.main],['次要',v.secondary],['回測',v.pullback]];
  const reach=pairs.map(([label,target])=>{
