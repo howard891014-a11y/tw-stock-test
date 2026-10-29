@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.14">
+  <meta name="stockzone-version" content="2.7.0.15">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -2735,7 +2735,7 @@ body.mode-analysis #technical .tech-metric:first-child{border-top:0!important}
 </style>
 <style id="sz-2673-css">
 
-/* v2.7.0.14: two-column, mobile-readable data schedule (times are Taiwan local). */
+/* v2.7.0.15: two-column, mobile-readable data schedule (times are Taiwan local). */
 #szMarketDailySchedule .sz-settings-schedule-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;color:#293d57}
 #szMarketDailySchedule .sz-settings-schedule-table th,#szMarketDailySchedule .sz-settings-schedule-table td{padding:11px 10px;border-bottom:1px solid #e8edf4;text-align:left;vertical-align:top;line-height:1.55}
 #szMarketDailySchedule .sz-settings-schedule-table th{background:#f2f6fc;font-weight:700}
@@ -2999,7 +2999,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.14</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.15</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3085,8 +3085,8 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
           <div class="overview-source-chips" id="overviewResonanceSources"><span>等待共振來源</span></div>
           <section class="sz-reslab" aria-label="共振研究室">
             <div class="sz-reslab-tip">價格目標目前<strong>沒有已驗證的到達期限</strong>。以下 3／5／10／20／40／60 交易日是驗證視窗，不是承諾到達日期。</div>
-            <div class="sz-reslab-candidate" id="szLabCandidate">讀取歷史資料後產生進場視角研究候選…</div>
-            <div class="sz-reslab-reach" id="szLabReach">歷史同幅度觸及率：等待有效日K與目標價。它不是共振目標達標率。</div>
+            <div class="sz-reslab-candidate" id="szLabCandidate" hidden aria-hidden="true">讀取歷史資料後產生進場視角研究候選…</div>
+            <div class="sz-reslab-reach" id="szLabReach" hidden aria-hidden="true">歷史同幅度觸及率：等待有效日K與目標價。它不是共振目標達標率。</div>
             <div class="sz-reslab-controls">
               <label>本筆交易玩法（建立後鎖定）<select id="szLabPlaySelect" aria-label="本筆交易玩法">
                 <option value="short">短期</option><option value="mixed">短波</option><option value="swing" selected>波段</option><option value="long-swing">長波</option><option value="long">長期</option>
@@ -3929,13 +3929,13 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 
   <script src="./capital-flow.js?v=2.6.8.29"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.14"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.14"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.15"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.15"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.14"></script>
+  <script src="./app.js?v=2.7.0.15"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}

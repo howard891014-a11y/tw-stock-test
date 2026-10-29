@@ -3145,7 +3145,7 @@ function renderTradeOutputs(){
     {...currentPlay,key:origKey,period:activePlan.initial.play||currentPlay.period,
       operationProfile:{...(currentPlay?.operationProfile||{}),key:origKey,period:activePlan.initial.play||currentPlay.period,
         basePct:activePlan.initial.allocation?.core,tacticalPct:activePlan.initial.allocation?.tactical}}:currentPlay;
-  // v2.7.0.14: configuration research is advisory and never changes resonance inputs.
+  // v2.7.0.15: configuration research is advisory and never changes resonance inputs.
   const expected=renderExpectedUpside(currentPlay);
   if(!expected)return;
   const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price);
@@ -4322,7 +4322,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.14（僅研究資料）',
+    modelVersion:'v2.7.0.15（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5990,6 +5990,7 @@ function renderResonanceLab(play,expected,risk,decision){
    const h20=stats.horizons.find(h=>h.days===20),h40=stats.horizons.find(h=>h.days===40);
    return `${label}：距現價 ${stats.distancePct>0?'+':''}${stats.distancePct}%｜歷史同幅度20D ${h20.hitPct}%・40D ${h40.hitPct}%（${stats.sample}筆）`;
  });
+ const reachDataNode=$('szLabReach');if(reachDataNode)reachDataNode.dataset.stockCode=code;
  setText('szLabReach',`到達時間參考（非目標價回測）｜每60交易日取1筆歷史樣本\n${reach.join('\n')}\n到達率僅表示過去相同百分比幅度曾否觸及，不能當成現在共振的預測機率。`);
  const snapshot=szLabActive(code),record=szLabRead()[code];
  setText('szLabOriginal',snapshot?`建立 ${snapshot.tradeDate}｜${szLabPlanText(snapshot.initial)}`:'尚未建立。按「鎖定原始交易計畫」記錄目前價格與自行確認的玩法。');
