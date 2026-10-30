@@ -46,7 +46,37 @@
     draw(core,'szFeaturedCoreList',payload.scene==='OFF'?'空頭環境防禦中，今天不推薦。':'今日無符合推薦名額的股票。');
     draw(extended,'szFeaturedExtendedList',payload.scene==='OFF'?'OFF防禦中，今天不延伸。':'無符合延伸品質門檻的股票。');
     $('szFeaturedNote').textContent='此區顯示T日研究訊號，不是當下即時股價；延伸只供觀察，不自動下單。模擬交易進出場、OFF隔日開盤清倉及手續費另行驗證。';
+    lastPayload=payload;
+    if(previewMode)renderPreview();
   }
+  let lastPayload=null;
+  let previewMode=false;
+  const previewButton=$('szFeaturedPreviewButton');
+  const previewData=prefix=>Array.from({length:5},(_,i)=>({
+    rank:i+1,stock_name:`範例股票 ${prefix}${i+1}`,stock_code:`DEMO-${prefix}${i+1}`,market:'純版面示意'
+  }));
+  function syncPreviewButton(){
+    if(!previewButton)return;
+    previewButton.textContent=previewMode?'結束預覽':'預覽選股版面';
+    previewButton.setAttribute('aria-pressed',String(previewMode));
+  }
+  function renderPreview(){
+    $('szFeaturedBadge').textContent='純示意';
+    $('szFeaturedState').textContent='市場狀態：空頭防禦未解除';
+    $('szFeaturedVersion').textContent='僅供檢查版面｜非正式選股';
+    $('szFeaturedCoreCount').textContent='示意 5 / 5';
+    $('szFeaturedExtendedCount').textContent='示意 5 / 5';
+    draw(previewData('R'),'szFeaturedCoreList','');
+    draw(previewData('E'),'szFeaturedExtendedList','');
+    $('szFeaturedNote').textContent='【版面預覽】全部股票名稱與代號皆為匿名範例，不是今日或歷史推薦。W3 空頭防禦保持有效；不寫入資料庫，不產生選股訊號、交易或持倉。';
+    syncPreviewButton();
+  }
+  if(previewButton)previewButton.addEventListener('click',()=>{
+    previewMode=!previewMode;
+    if(previewMode)renderPreview();
+    else if(lastPayload){render(lastPayload);syncPreviewButton();}
+    else{reset();syncPreviewButton();load();}
+  });
   let pending=null;
   async function load(){
     if(pending)return pending;
@@ -57,12 +87,13 @@
         const payload=await response.json();
         if(!response.ok||!payload.ok)throw Error(payload.error||'Neon 未傳回有效推薦資料');
         render(payload);
-        if(badge)badge.textContent=payload.scene==='OFF'?'防禦期':'Neon 日線候選';
-        if(payload.sourceQuality?.status==='NEON_RECONSTRUCTION_PARITY_MISMATCH_CONFIRMED'){
+        if(badge&&!previewMode)badge.textContent=payload.scene==='OFF'?'防禦期':'Neon 日線候選';
+        if(!previewMode&&payload.sourceQuality?.status==='NEON_RECONSTRUCTION_PARITY_MISMATCH_CONFIRMED'){
           const note=$('szFeaturedNote');if(note)note.textContent='來源：Neon · W3-D.1.2。已確認Neon產業特徵與歷史研究特徵存在差異，推薦名單僅為Neon資料重建的研究預覽，不能視為歷史原版公式的已驗證推薦；禁止自動買進。';
         }
         return payload;
       }catch(e){
+        if(previewMode){renderPreview();return null;}
         reset();
         if(badge)badge.textContent='資料尚未驗證';
         const note=$('szFeaturedNote');if(note)note.textContent='Neon/W3 資料暫不可用：'+String(e.message||e)+'；不使用舊資料偽裝當日推薦。';
@@ -77,4 +108,5 @@
   window.StockZoneFeatured={render,reset,load};
   window.addEventListener('stockzone:featured-daily',e=>render(e.detail));
   reset();
+  syncPreviewButton();
 }());
