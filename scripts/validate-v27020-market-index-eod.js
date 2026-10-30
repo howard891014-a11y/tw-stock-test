@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {parseTpexMarketTotal,normalizeRow}=require('../lib/market-index-eod');
+const market={Date:'1151029',ListedCompanyNumbers:'896',AuthorizedCapital:'846333',MarketCapitalization:'10829783',DailyTradingValue:'208422',DailyTradingVolume:'826235',CloseIndex:'387.37'};
+const got=parseTpexMarketTotal([market]);
+assert.deepEqual(got,{date:'2026-10-29',otcValue:208422000000,source:'TPEx tpex_mainborad_highlight',field:'DailyTradingValue'});
+assert.equal(parseTpexMarketTotal([{...market,DailyTradingValue:'x'}]),null);
+assert.equal(parseTpexMarketTotal([{...market,Date:'1151028'},{...market,Date:'1151029'}]),null);
+const listed=823812748529,total=listed+got.otcValue;
+const out=normalizeRow({trade_date:'2026-10-29',taiex_close:46368.33,listed_value:listed,cross_value:total,poll_bucket:'2026-10-29:99|tpex='+got.otcValue});
+assert.equal(out.turnoverComplete,true);
+assert.equal(out.otcValue,got.otcValue);
+assert.equal(out.totalValue,total);
+console.log('StockZone v2.7.0.20 TPEx official turnover parser: PASS');
