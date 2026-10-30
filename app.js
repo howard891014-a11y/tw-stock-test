@@ -419,12 +419,18 @@ async function disposal(query,market,price){
   const d=await readJson(await fetch(`/api/stock?action=disposal&${params.toString()}`,{cache:"no-store"}),"處置資料");
   return await repairTpexDisposalInBrowser(d,query,market);
 }
-function disposalToneClass(state){return state==="處置中"?"disposal-state-danger":state==="注意股票"||state==="注意股"?"disposal-state-watch":""}
+function disposalToneClass(state){return state==="處置中"?"disposal-state-danger":state==="注意股票"||state==="注意股"||state==="處置股票"?"disposal-state-watch":""}
+function setDisposalShield(state){
+  const shield=$("disposalShield");if(!shield)return;
+  shield.textContent=disposalToneClass(state)==="disposal-state-watch"?"−":"✓";
+}
 function disposalDots(id,count,total,dangerAt){
   const host=$(id);if(!host)return;const n=Math.max(0,Math.min(total,Number(count)||0));host.innerHTML=Array.from({length:total},(_,i)=>`<span class="disposal-dot${i<n?(n>=dangerAt?" danger":" on"):""}"></span>`).join("");
 }
 function disposalTag(id,count,total){const el=$(id);if(!el)return;const left=Math.max(0,total-(Number(count)||0));el.textContent=left===0?"達標":left===1?"警戒":"安全";el.style.background=left===0?"rgba(255,95,111,.2)":left===1?"rgba(255,201,67,.18)":"#34475a";el.style.color=left===0?"#ff7b87":left===1?"#ffd04d":"#edf4fa"}
 function resetDisposal(msg="搜尋股票後判讀"){
+  const panel=$("disposal");if(panel)panel.classList.remove("disposal-state-watch","disposal-state-danger");
+  setDisposalShield("正常");
   setText("disposalState","--");setText("disposalStateNote",msg);setText("disposalRisk","--");setText("disposalRiskNote","--");setText("disposalRiskDistance","--");const riskEl=$("disposalRisk");if(riskEl)riskEl.classList.remove("risk-low","risk-mid","risk-high");
   [["disposalDots3","disposalCount3","disposalTag3",3],["disposalDots10","disposalCount10","disposalTag10",6],["disposalDots30","disposalCount30","disposalTag30",12]].forEach(([d,c,t,n])=>{disposalDots(d,0,n,n);setText(c,`-- / ${n}`);setText(t,"--")});
   const reason=$('disposalReasonList');if(reason)reason.querySelectorAll('div').forEach(x=>x.classList.remove('active'));setText("disposalReasonNote","尚未取得今日注意資訊");
@@ -432,6 +438,7 @@ function resetDisposal(msg="搜尋股票後判讀"){
 }
 function renderDisposal(d){
   const panel=$("disposal");if(panel){panel.classList.remove("disposal-state-watch","disposal-state-danger");const c=disposalToneClass(d.state);if(c)panel.classList.add(c)}
+  setDisposalShield(d.state);
   setText("disposalState",d.state||"正常");setText("disposalStateNote",d.stateNote||"目前未列為注意股票");setText("disposalRisk",d.risk||"低");const riskEl=$("disposalRisk");if(riskEl){riskEl.classList.remove("risk-low","risk-mid","risk-high");const rt=String(d.risk||"低");riskEl.classList.add(rt.includes("高")?"risk-high":rt.includes("中")?"risk-mid":"risk-low")}setText("disposalRiskNote",d.historyComplete===false&&d.state!=="處置中"?(d.availability?.attention===false?"官方注意資料待補":d.official?.warning?"官方累計預警":"歷史次數未完整驗證"):(d.riskNote||"--"));const periodLabel=d?.state==="處置中"&&d?.disposalPeriod?.label?d.disposalPeriod.label:d.riskDistance;setText("disposalRiskDistance",periodLabel||"--");
   const counts=d.counts||{};const c3=Number(counts.d3)||0,c10=Number(counts.d10)||0,c30=Number(counts.d30)||0;
   disposalDots("disposalDots3",c3,3,3);disposalDots("disposalDots10",c10,6,6);disposalDots("disposalDots30",c30,12,12);
@@ -2632,7 +2639,7 @@ function overviewZoneText(cluster){
 }
 function resetOverviewResonance(note="等待分析資料"){
   setText("overviewResonancePlay","等待資料");setText("overviewPlayMetric","等待資料");setText("overviewStrengthMini",szResonanceIsLoading()?"共振強度：正在計算…":"共振強度：--/100");setText("overviewResonanceStrengthLabel","共振強度");setText("overviewResonanceStrength","--");setText("overviewResonanceStrengthNote",note);setText("overviewGrowthUp","--%");setText("overviewGrowthDown","--%");setText("overviewTargetZone","--");
-  const svg=$("overviewResonanceSvg");if(svg)svg.replaceChildren();const src=$("overviewResonanceSources");if(src)src.replaceChildren();
+  const svg=$("overviewResonanceSvg");if(svg)svg.replaceChildren();const legend=$("overviewSR8Levels");if(legend)legend.replaceChildren();const src=$("overviewResonanceSources");if(src)src.replaceChildren();
 }
 // v2.6.9.5: Price-zone chart source is exclusively R8.2. The old 'lowest
 // close in the 120-day chart' support/previous-high selection is retired.
@@ -2682,17 +2689,17 @@ function szSR8FmtBand(level){
 function szRenderSR8Legend(zones){
   const el=$("overviewSR8Levels");if(!el)return;
   el.replaceChildren();
-  if(!zones?.valid){el.textContent=`支撐／壓力：${zones?.reason||"讀取中"}`;return}
-  for(const key of ['S1','S2','R1','R2']){
-    const level=zones.levels?.[key];const item=document.createElement('span');item.className=`sz-sr82-chip sz-sr82-${key.toLowerCase()}`;
-    if(!level){item.textContent=`${key}：無可靠歷史壓力`;item.classList.add('sz-sr82-missing')}
-    else{item.textContent=`${key} ${szSR8FmtBand(level)}${level.confidence==='projected'?'（ATR估算）':''}`;
-      item.title=`${key}｜${level.origin}｜${zones.asOf}｜日K成交密度為估算，非實際逐價成交量`;
-      if(level.confidence==='projected')item.classList.add('sz-sr82-projected')}
-    el.append(item);
+  const labels={S1:"支撐區間（S1）",S2:"支撐區間（S2）",R1:"壓力區間（R1）",R2:"壓力區間（R2）"};
+  for(const key of ["S1","S2","R1","R2"]){
+    const level=zones?.valid?zones.levels?.[key]:null;
+    const cell=document.createElement("div");cell.className=`sz-resonance-zone sz-resonance-zone-${key.toLowerCase()}`;
+    const heading=document.createElement("span");heading.textContent=labels[key];
+    const value=document.createElement("strong");value.textContent=level?szSR8FmtBand(level):key==="R2"&&zones?.valid?"無可靠歷史壓力":"—";
+    if(level?.confidence==="projected")value.title="ATR估算，非實際成交價位";
+    cell.append(heading,value);el.append(cell);
   }
-
 }
+
 function szSR8ChartGuides(svg,zones,y,left,right,top,bottom){
   if(!zones?.valid)return;
   const colors={S1:'#278ed3',S2:'#1464a9',R1:'#e29b32',R2:'#a678d4'};
@@ -3065,7 +3072,32 @@ function renderOverviewResonance(play,expected,risk=null){
   if(szResonanceIsLoading())setText("overviewResonanceStrength","正在計算…");
   const main=expected?.plan?.levels?.[0]?.value,up=main?positionReturn(main,expected.price):null,down=expected?.downside?.levels?.[0]?.value?positionReturn(expected.downside.levels[0].value,expected.price):null;
   setText("overviewGrowthUp",expected?.upRange|| (Number.isFinite(up)?signedPercent(up):"--%"));setText("overviewGrowthDown",expected?.downRange|| (Number.isFinite(down)?signedPercent(down):"--%"));setText("overviewTargetZone",mainCluster?overviewZoneText(mainCluster):(main?overviewIntFmt(main):"--"));
-  const host=$("overviewResonanceSources");if(host){host.replaceChildren();const pts=(mainCluster?.points||[]).filter(x=>{const family=String(x?.family||"");const label=String(x?.label||"");if(family==="swing"&&label.includes("第2波 1X"))return false;if(family==="broker"&&label.includes("券商基準目標"))return false;return true});const familyName={swing:"波段倍率",broker:"券商目標",valuation:"內部估值",shortwave:"短波倍率",pressure:"前高／壓力"};for(const point of pts){const chip=document.createElement("span");chip.textContent=`${familyName[point.family]||point.family}｜${point.label}`;host.append(chip)}const ba=res?.basicAssessment;if(ba){for(const txt of [`營運確認｜${ba.companyLabel} ${ba.companyQuality}/100`,`延續性｜${ba.continuationLabel} ${ba.continuation}/100`,`估值壓力｜${ba.valuation.pressureLabel}`]){const chip=document.createElement("span");chip.textContent=txt;host.append(chip)}}if(expected?.winRate?.valid){const chip=document.createElement("span");chip.textContent=`5年相似訊號｜達標 ${expected.winRate.rate}%・獲利 ${expected.winRate.profitRate}%・${expected.winRate.sample}次`;host.append(chip)}if(!pts.length){const chip=document.createElement("span");chip.textContent="等待可用價格來源";host.append(chip)}}
+  const host=$("overviewResonanceSources");if(host){
+    host.replaceChildren();
+    const zones=szChartPriceZones(),path=latestFiveStageResult?.path||{},ba=res?.basicAssessment;
+    const price=positionNumber(expected?.price),rows=Array.isArray(path.rows)?path.rows:[];
+    const pct=v=>Number.isFinite(v)?stageFmtPct(v):"—";
+    const rawRsi=latestTechnicalForPlay?.momentum?.rsi14,rsi=rawRsi==null?null:stageNum(rawRsi);
+    const pressure=(mainCluster?.points||[]).find(x=>x?.family==="pressure");
+    const r1=zones?.valid?zones.levels?.R1:null;
+    const wr=expected?.winRate;
+    const details=[
+      [pressure?`前高／壓力｜${pressure.label}`:"前高／壓力",r1?szSR8FmtBand(r1):"—"],
+      ["距60日高",pct(path.fromHigh60)],
+      ["延續性",ba?`${ba.continuationLabel} ${ba.continuation}/100`:"—"],
+      ["20MA斜率",pct(path.ma20Slope10)],
+      ["估值壓力",ba?.valuation?.pressureLabel||"—"],
+      ["近5日",pct(stageRet(rows,5,price))],
+      ["5年相似訊號",wr?.valid?`達標 ${wr.rate}%・獲利 ${wr.profitRate}%・${wr.sample}次`:"樣本不足"],
+      ["RSI",rsi===null?"—":rsi.toFixed(1)]
+    ];
+    for(const [label,value] of details){
+      const cell=document.createElement("div");cell.className="sz-resonance-data-cell";
+      const name=document.createElement("span");name.textContent=label;
+      const val=document.createElement("strong");val.textContent=String(value);
+      cell.append(name,val);host.append(cell);
+    }
+  }
   drawOverviewResonance(play,expected);
 }
 function resetTradeOutputs(note="等待分析資料"){
@@ -4412,7 +4444,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.24（僅研究資料）',
+    modelVersion:'v2.7.0.25（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
