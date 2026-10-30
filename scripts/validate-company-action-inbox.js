@@ -39,7 +39,7 @@ const sql={query:async(q,args=[])=>{
  if(q.includes('SELECT month,source,finalized,rows,actions FROM market_company_action_scan_source'))return [...sourceCache.values()];
  if(q.includes('INSERT INTO market_company_action_scan_source')){const [month,source,finalized,rows,actions]=args;sourceCache.set(`${month}/${source}`,{month,source,finalized,rows,actions:JSON.parse(actions)});return [];} 
  if(q.includes('FROM market_company_profile'))return[{stock_code:'2330',stock_name:'台積電',industry:'半導體業',market:'上市'}];
- if(q.includes('INSERT INTO market_company_action_candidate')){assert(q.includes('WHERE NOT EXISTS'),'must not resurrect audited deleted candidates');assert(q.includes('ON CONFLICT(candidate_id) DO NOTHING'),'idempotent scanner');return[{candidate_id:'abc'}];}
+ if(q.includes('INSERT INTO market_company_action_candidate')){assert(q.includes('WHERE NOT EXISTS'),'must not resurrect audited deleted candidates');assert(q.includes('ON CONFLICT(candidate_id) DO NOTHING'),'idempotent scanner');assert(q.includes('r.candidate_id=j.id')&&q.includes('r.stock_code=j.code')&&q.includes('r.market=j.market')&&q.includes('r.event_date=j.date::date')&&q.includes('length(trim(r.evidence))>=10'),'only the exact independently verified event is suppressed');assert(!q.includes('r.action=j.action'),'SZ-鐵證 reclassifies 除權 to 增資: original label must not resurrect a reviewed event');return[{candidate_id:'abc'}];}
  if(q.includes('DELETE FROM market_company_action_candidate')){assert(/(?:AND|WHERE) EXISTS/.test(q),'cannot delete without approved verified row');return args[0]==='a'.repeat(24)?[{candidate_id:args[0]}]:[];}
  if(q.includes('to_regclass'))return[{candidate:true,release:true}];
  if(q.includes('FROM market_company_action_candidate'))return[];
