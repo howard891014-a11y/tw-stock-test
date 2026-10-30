@@ -4469,7 +4469,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.33（僅研究資料）',
+    modelVersion:'v2.7.0.34（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -4497,7 +4497,7 @@ function addToList(type){
 function removeFromList(type,code){
   const rows=readList(type),found=rows.find(x=>stockKey(x)===String(code));
   if(type==='holdings'&&(found?.researchSnapshots?.length||holdingPlanActive(code))&&
-     !window.confirm('從持股清單移除這檔股票？此清單上的研究快照也會一併移除，請先下載完整備份。舊版交易記錄仍保留在本機。'))return;
+     !window.confirm('從持股清單移除這檔股票？此清單上的研究快照也會一併移除，此清單的研究快照將被移除，舊版交易記錄仍保留在本機。'))return;
   writeList(type,rows.filter(x=>stockKey(x)!==String(code)));
   renderLists();updateListButtons();
   if(String(code)===currentStockCode())renderTradeOutputs();
@@ -4514,61 +4514,56 @@ function saveHoldingResearchSnapshot(code){
   try{writeList('holdings',rows);renderLists();setStatus(`${snapshot.name} 的研究快照已保存（${prior.length+1} 筆），不會因更新分析而覆寫`)}
   catch(e){setStatus('儲存失敗：'+String(e.message||e),true)}
 }
+function holdingResearchPosition(row){
+  const legacy=holdingPlanActive(stockKey(row));
+  const avgCost=Number(row.avgCost??legacy?.position?.avgCost),shares=Number(row.shares??legacy?.position?.shares);
+  return Number.isFinite(avgCost)&&avgCost>0&&Number.isSafeInteger(shares)&&shares>0
+    ?{avgCost,shares}:null;
+}
+function holdingResearchPnl(target,position){
+  const price=Number(target);
+  if(!Number.isFinite(price)||price<=0)return '<span class="holding-pnl-muted">資料不足</span>';
+  if(!position)return '<span class="holding-pnl-muted">先儲存持股成本與股數</span>';
+  const raw=(price-position.avgCost)*position.shares,percent=(price/position.avgCost-1)*100;
+  if(!Number.isFinite(raw)||!Number.isFinite(percent)||!Number.isSafeInteger(Math.round(raw*100)))return '<span class="holding-pnl-muted">超出可計算範圍</span>';
+  const profit=Math.round(raw*100)/100,cls=profit>0?'is-profit':profit<0?'is-loss':'is-flat';
+  const signed=(v,d)=>`${v>0?'+':v<0?'−':''}${Math.abs(v).toLocaleString('zh-TW',{minimumFractionDigits:d,maximumFractionDigits:d})}`;
+  return `<span class="holding-pnl-value ${cls}">${signed(profit,2)} 元 <small>(${signed(percent,2)}%)</small></span>`;
+}
 function holdingResearchSnapshotCards(row){
   const record=window.StockZoneHoldingPlans?.read(localStorage)?.[stockKey(row)],oldPlans=[record?.active,...(record?.archived||[])].filter(p=>p?.explicitPlan&&p?.initial);
   const saved=Array.isArray(row.researchSnapshots)?row.researchSnapshots:[];
   const fromOld=oldPlans.map(p=>({...p.initial,capturedAt:p.createdAt,legacy:true}));
   const all=[...saved,...fromOld].sort((x,y)=>String(y.capturedAt||'').localeCompare(String(x.capturedAt||'')));
   if(!all.length)return '<small class="holding-snapshot-hint">尚無研究快照；先點選股票完成分析，再按「儲存研究快照」。</small>';
+  const position=holdingResearchPosition(row);
   return all.map((x,i)=>{
-    const targets=x.targets||{},play=x.play||'未知',label=x.legacy?'舊版計畫留存的研究快照':'獨立研究快照';
-    return `<details class="holding-trade-detail"><summary><strong>${holdingPlanEscape(play)}｜${holdingPlanEscape(holdingPlanTime(x.capturedAt))}</strong><span>${label}</span></summary>
+    const targets=x.targets||{},play=x.play||'未知',label=x.legacy?'舊版研究快照':'原始研究快照';
+    const levels=[['主要共振',targets.main],['次要共振',targets.secondary],['主要回測',targets.pullback],['深跌參考',targets.defense]];
+    return `<details class="holding-trade-detail" ${i===0?'open':''}><summary><strong>${holdingPlanEscape(play)}｜${holdingPlanEscape(holdingPlanTime(x.capturedAt))}</strong><span>${label}・固定不更新</span></summary>
     <div class="holding-trade-body">
-      <p>主要共振 <b>${holdingPlanEscape(holdingPlanPrice(targets.main))}</b>｜次要共振 <b>${holdingPlanEscape(holdingPlanPrice(targets.secondary))}</b></p>
-      <p>回測價 ${holdingPlanEscape(holdingPlanPrice(targets.pullback))}｜防守位 ${holdingPlanEscape(holdingPlanPrice(targets.defense))}</p>
-      <small>核心／機動研究比例 ${holdingPlanEscape(`${x.allocation?.core??'--'}% / ${x.allocation?.tactical??'--'}%`)}｜保存後不自動修改，非買賣指令</small>
+      <div class="holding-pnl-head"><span>原始預測價位</span><span>以目前持股成本試算</span></div>
+      ${levels.map(([name,value])=>`<div class="holding-pnl-row"><span>${name}</span><b>${holdingPlanEscape(holdingPlanPrice(value))}</b>${holdingResearchPnl(value,position)}</div>`).join('')}
+      <small>核心／機動研究比例 ${holdingPlanEscape(`${x.allocation?.core??'--'}% / ${x.allocation?.tactical??'--'}%`)}｜快照價位永久固定；變更持股成本或股數只會重新試算損益，不會修改快照。</small>
+      <small>價格情境試算，未扣交易費用與稅金，非保證獲利或買賣建議。</small>
     </div></details>`;
   }).join('');
 }
-function holdingPlanInputs(code,host){
-  const row=[...host.querySelectorAll(".holding-row")].find(el=>el.querySelector("[data-search-stock]")?.dataset.searchStock===String(code));
-  const avgRaw=String(row?.querySelector("[data-holding-avg]")?.value||"").trim(),sharesRaw=String(row?.querySelector("[data-holding-shares]")?.value||"").trim();
-  if(!avgRaw||!sharesRaw)throw Error("請完整輸入持股均價與持股股數");
-  return window.StockZoneHoldingPlans.normalizePosition(avgRaw,sharesRaw);
-}
 function saveHoldingProfile(code,host){
-  const api=window.StockZoneHoldingPlans;
-  if(!api)return setStatus("交易計畫功能尚未載入",true);
   try{
-    const position=holdingPlanInputs(code,host),rows=readList("holdings"),index=rows.findIndex(x=>stockKey(x)===String(code));
-    if(index<0)throw Error("股票已不在持股清單");
-    const previous=holdingPlanActive(code);
-    const patched={...rows[index],avgCost:position.avgCost,shares:position.shares,positionUpdatedAt:new Date().toISOString()};
-    if(previous){
-      // 持股更新只改當前成本與股數；initial、原始目標、玩法與建立日期全部保留。
-      api.revise(localStorage,code,position.avgCost,position.shares);
-      rows[index]=patched;writeList("holdings",rows);
-    }else{
-      if(currentStockCode()!==String(code)||szResonanceIsLoading()||!holdingPlanSnapshot(code)){
-        throw Error("請先點選這檔股票並等待玩法／共振分析完成，再按建立計畫（未保存持股數值）");
-      }
-      // 手動建立原始研究快照；持股成本與股數僅用於人工紀錄。
-      const oldRows=readList("holdings"),historicalRec=api.read(localStorage)[String(code)]?.active;
-      rows[index]=patched;writeList("holdings",rows);
-      try{
-        renderTradeOutputs();
-        const snapshot=holdingPlanSnapshot(code);
-        if(!snapshot)throw Error("目前尚無完整玩法／共振快照，無法建立計畫");
-        api.create(localStorage,code,position.avgCost,position.shares,snapshot);
-        // 舊自動追蹤如曾在研究室建立活動快照，只解除「活動」標籤，原始歷史不刪除。
-        const oldId=historicalRec?.legacyPlanId;
-        if(oldId){const lab=szLabRead(),r=lab[String(code)];if(r?.activeId===oldId){r.activeId=null;szLabWrite(lab)}}
-      }catch(e){writeList("holdings",oldRows);renderTradeOutputs();throw e}
-    }
-    renderLists();
-    if(String(code)===currentStockCode()){renderTradeOutputs();if(["swing","mixed"].includes(latestPlayStyleResult?.key))renderSwingWave(latestPlayStyleResult)}
-    setStatus(previous?"計畫已修改：均價／股數已更新，原始玩法與目標保留":"交易計畫已建立：原始玩法／目標已鎖定，之後的共振僅更新目前建議");
-  }catch(e){setStatus(e.message||"交易計畫儲存失敗",true)}
+    const element=[...host.querySelectorAll('.holding-row')].find(el=>el.querySelector('[data-search-stock]')?.dataset.searchStock===String(code));
+    const avgRaw=String(element?.querySelector('[data-holding-avg]')?.value??'').trim();
+    const sharesRaw=String(element?.querySelector('[data-holding-shares]')?.value??'').trim();
+    const avgCost=Number(avgRaw),shares=Number(sharesRaw);
+    if(!avgRaw||!sharesRaw||!Number.isFinite(avgCost)||avgCost<=0||avgCost>1e8||!Number.isSafeInteger(shares)||shares<=0||shares>1e9)
+      throw Error('請填有效的持股均價（大於 0）及正整數股數');
+    if(!Number.isSafeInteger(Math.round(avgCost*shares*100)))throw Error('持股金額超過可計算範圍');
+    const rows=readList('holdings'),idx=rows.findIndex(x=>stockKey(x)===String(code));
+    if(idx<0)throw Error('該股票已不在持股清單');
+    rows[idx]={...rows[idx],avgCost,shares,positionUpdatedAt:new Date().toISOString()};
+    writeList('holdings',rows);renderLists();
+    setStatus('持股成本與股數已儲存；各筆原始研究快照未修改，損益已重新計算');
+  }catch(e){setStatus('持股資料儲存失敗：'+String(e.message||e),true)}
 }
 // v2.6.9.15 — 第三批：人工模擬成交流水，僅本機計畫，不自動交易／不讀寫 Neon。
 function holdingTradeMoney(v){return Number.isFinite(Number(v))?Number(v).toLocaleString('zh-TW',{minimumFractionDigits:0,maximumFractionDigits:2}):'—'}
@@ -4765,13 +4760,19 @@ function renderOneList(type,hostId){
   if(!host)return;
   host.innerHTML=rows.length?rows.map(x=>{
     const holding=type==='holdings',name=holdingPlanEscape(x.name||'—'),code=holdingPlanEscape(x.code||''),market=holdingPlanEscape(x.market||'台股');
+    const position=holding?holdingResearchPosition(x):null;
+    const avg=position?holdingPlanEscape(String(position.avgCost)):'';
+    const shares=position?holdingPlanEscape(String(position.shares)):'';
     return `<div class="manage-stock ${holding?'holding-row':''}">
       <div class="manage-stock-main" data-search-stock="${code}"><strong>${name} <small>${code}</small></strong></div>
       <small class="list-market">${market}</small>
       <strong class="list-price">${targetFmt(x.last)}</strong>
       <button class="remove-list" type="button" data-remove-type="${type}" data-remove-code="${code}" aria-label="刪除">×</button>
       ${holding?`<div class="holding-profile holding-research-only">
-        <div class="holding-snapshot-actions"><button type="button" data-save-research="${code}">儲存研究快照</button><small>僅記錄當下研究，不記錄買賣／交易計畫</small></div>
+        <label>持股均價<input type="number" min="0.01" step="any" inputmode="decimal" data-holding-avg="${code}" placeholder="輸入每股成本" value="${avg}"></label>
+        <label>持股股數<input type="number" min="1" step="1" inputmode="numeric" data-holding-shares="${code}" placeholder="輸入股數" value="${shares}"></label>
+        <button type="button" class="holding-position-save" data-save-position="${code}">儲存持股資料</button>
+        <div class="holding-snapshot-actions"><button type="button" data-save-research="${code}">儲存研究快照</button><small>只記錄當下研究；不建立交易計畫</small></div>
         ${holdingResearchSnapshotCards(x)}
       </div>`:''}
     </div>`;
@@ -4781,10 +4782,10 @@ function renderOneList(type,hostId){
   }));
   host.querySelectorAll('[data-remove-type]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();removeFromList(btn.dataset.removeType,btn.dataset.removeCode)}));
   host.querySelectorAll('[data-save-research]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();saveHoldingResearchSnapshot(btn.dataset.saveResearch)}));
+  host.querySelectorAll('[data-save-position]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();saveHoldingProfile(btn.dataset.savePosition,host)}));
 }
 function renderLists(){
   renderOneList('holdings','holdingsCards');renderOneList('watchlist','watchlistCards');
-  if($('szHoldingBackupBtn'))$('szHoldingBackupBtn').onclick=()=>{void szTradeExportBackup().catch(e=>setStatus(e.message,true))};
   setText('holdingsCount',readList('holdings').length);setText('watchlistCount',readList('watchlist').length);
 }
 function updateListButtons(){
@@ -5565,7 +5566,7 @@ function setView(view){
   if(view==="screening")view="market-dynamic";
   if(screeningViews.has(view)){loadMarketIndexQuick(false);loadMarketDynamic(false);}
   if(view==="fundflow"){window.StockZoneCapital?.load(false);}
-  if(view==="simulation")renderSimulationLedger();
+  if(view==="simulation")window.StockZoneFeatured?.loadHistory();
   if(view==="featured"){window.StockZoneFeatured?.load();}
   document.body.classList.toggle("view-overview",view==="overview");
   document.querySelectorAll("[data-view-panel]").forEach(p=>p.classList.toggle("active-view",p.dataset.viewPanel===view));

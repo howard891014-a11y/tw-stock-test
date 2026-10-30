@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.33">
+  <meta name="stockzone-version" content="2.7.0.34">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -3009,6 +3009,30 @@ body.dark .sz-play-version-control select,body.dark-mode .sz-play-version-contro
 body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 @media(max-width:520px){.sz-entry-verdict{padding:12px;margin:8px 0 13px}.sz-entry-verdict strong{font-size:14px}.sz-entry-verdict span{font-size:12px}}
 </style>
+
+<style id="sz-v27034-fixed-research-scenarios">
+#stockManagement .holding-position-save{grid-column:1/-1;width:100%;height:37px;font-size:12px;}
+#stockManagement .holding-snapshot-actions{grid-column:1/-1;margin:1px 0 5px;}
+#stockManagement .holding-research-only>.holding-trade-detail{grid-column:1/-1;}
+#stockManagement .holding-pnl-head{display:grid;grid-template-columns:1fr 1.6fr;gap:8px;color:#8798ac;font-size:10px;font-weight:700;margin-bottom:3px;}
+#stockManagement .holding-pnl-head span:last-child{text-align:right;}
+#stockManagement .holding-pnl-row{display:grid;grid-template-columns:minmax(68px,0.9fr) minmax(60px,0.8fr) minmax(135px,1.8fr);gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #edf2f8;font-size:11px;}
+#stockManagement .holding-pnl-row>span:first-child{font-weight:700;color:#5c718c;}
+#stockManagement .holding-pnl-row>b{color:#314861;white-space:nowrap;font-variant-numeric:tabular-nums;}
+#stockManagement .holding-pnl-value{display:block;text-align:right;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
+#stockManagement .holding-pnl-value small{font-weight:500;font-size:10px;}
+#stockManagement .holding-pnl-value.is-profit{color:#d84f5d;}
+#stockManagement .holding-pnl-value.is-loss{color:#278b65;}
+#stockManagement .holding-pnl-value.is-flat{color:#667a91;}
+#stockManagement .holding-pnl-muted{font-size:10px;text-align:right;color:#8998aa;}
+#stockManagement .holding-trade-body>small{display:block;margin-top:9px;line-height:1.6;}
+#szSimulationLedgerPage .sz-featured-history-table{min-width:0;width:100%;}
+#szSimulationLedgerPage .sz-featured-history-table td,#szSimulationLedgerPage .sz-featured-history-table th{text-align:left;white-space:normal;}
+@media(max-width:430px){
+  #stockManagement .holding-pnl-row{grid-template-columns:minmax(57px,.85fr) minmax(51px,.7fr) minmax(125px,1.9fr);gap:4px;font-size:10px;}
+  #stockManagement .holding-pnl-value small{font-size:9px;}
+}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -3037,7 +3061,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.33</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.34</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3517,16 +3541,16 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
           <div class="sz-featured-list" id="szFeaturedExtendedList" aria-live="polite"><p class="sz-featured-empty">延伸不代表自動買進，僅供研究觀察。</p></div>
         </section>
       </div>
-      <section class="sz-featured-history" aria-label="近期精選歷史追蹤">
+      <p class="sz-featured-disclaimer" id="szFeaturedNote">OFF 一律 0 推薦、0 延伸；若沒有當日經驗證資料，不將「未同步」偽裝成 0 檔。模型未接即時資料、未部署自動交易。</p>
+    </article>
+    <article class="card detail-panel simple-detail" data-view-panel="simulation" id="szSimulationLedgerPage">
+      <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-simulation" aria-hidden="true"></i><span>模擬交易</span></span></div>
+      <section class="sz-featured-history" aria-label="模擬交易歷史追蹤">
         <div class="sz-featured-history-head"><div><h3>歷史追蹤</h3><small>每日自動封存選股名單，觀察實際報酬與雙重成功</small></div><label>市場狀態 <select id="szFeaturedHistoryScene"><option value="ALL">全部</option><option value="ON_BROAD">偏多・廣度強</option><option value="ON_NARROW">偏多・廣度弱</option><option value="WARNING">預警</option><option value="OFF">防禦</option></select></label><label>持有交易日 <select id="szFeaturedHistoryHorizon"><option value="3">3 日</option><option value="5">5 日</option><option value="10" selected>10 日</option><option value="15">15 日</option><option value="20">20 日</option></select></label></div>
         <div class="sz-featured-history-summary" id="szFeaturedHistorySummary">讀取歷史追蹤…</div>
         <div class="sz-featured-history-table-wrap"><table class="sz-featured-history-table"><thead><tr><th>日期／狀態</th><th>推薦／延伸</th><th>已成熟</th><th>雙重成功</th></tr></thead><tbody id="szFeaturedHistoryRows"><tr><td colspan="4">部署後開始封存，尚無歷史資料</td></tr></tbody></table></div>
         <p class="sz-featured-history-note" id="szFeaturedHistoryNote">T+1 收盤為統一研究基準，H 個交易日後收盤比較；OFF 後下一交易日收盤結束追蹤。未成熟或缺行情不計入成功率，並非自動交易。</p>
       </section>
-      <p class="sz-featured-disclaimer" id="szFeaturedNote">OFF 一律 0 推薦、0 延伸；若沒有當日經驗證資料，不將「未同步」偽裝成 0 檔。模型未接即時資料、未部署自動交易。</p>
-    </article>
-    <article class="card detail-panel simple-detail" data-view-panel="simulation" id="szSimulationLedgerPage">
-      <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-simulation" aria-hidden="true"></i><span>模擬交易</span></span></div>
     </article>
 
 
@@ -3722,7 +3746,6 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
           <div class="card-title theme-white-card-title manage-theme-title">
             <span class="theme-title-group"><i class="manage-title-icon manage-title-icon-holdings" aria-hidden="true"></i><span>持股清單</span></span>
           </div>
-          <div class="sz-holding-backup-alert"><span id="szHoldingBackupStatus">研究快照只儲存在本瀏覽器，請定期備份。</span><button id="szHoldingBackupBtn" type="button">完整備份</button></div>
           <div id="holdingsCards" class="manage-list"></div>
         </article>
         <article class="card manage-card manage-panel manage-theme-card" data-manage-panel="watchlist">
@@ -3969,15 +3992,15 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 @media(max-width:570px){#overviewResonanceCard .sz-reslab{padding:11px}#overviewResonanceCard .sz-reslab-controls{gap:6px}#overviewResonanceCard .sz-reslab-dual b{font-size:11px}#overviewResonanceCard .sz-reslab-actions button{flex:1}}
 </style>
 
-  <script src="./capital-flow.js?v=2.7.0.33"></script>
+  <script src="./capital-flow.js?v=2.7.0.34"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.33"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.33"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.34"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.34"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.33"></script>
+  <script src="./app.js?v=2.7.0.34"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4463,7 +4486,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.7.0.33"></script>
+<script defer src="./featured-picks-ui.js?v=2.7.0.34"></script>
 
 <style id="stockzone-v26811-ui">
 /* v2.6.8.15 | Monetary TOP10 only; legacy industry capital intensity/X20 are unchanged. */

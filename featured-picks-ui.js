@@ -49,7 +49,6 @@
   }
   let pending=null;
   async function load(){
-    void loadHistory();
     if(pending)return pending;
     const badge=$('szFeaturedBadge');if(badge)badge.textContent='Neon 資料讀取中';
     pending=(async()=>{
