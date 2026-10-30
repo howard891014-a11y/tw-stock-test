@@ -49,6 +49,7 @@
   }
   let pending=null;
   async function load(){
+    void loadHistory();
     if(pending)return pending;
     const badge=$('szFeaturedBadge');if(badge)badge.textContent='Neon 資料讀取中';
     pending=(async()=>{
@@ -74,7 +75,63 @@
     })();
     return pending;
   }
-  window.StockZoneFeatured={render,reset,load};
+
+  let historyData=null,historyPending=null;
+  const historyHorizon=()=>String($('szFeaturedHistoryHorizon')?.value||'10');
+  function renderHistory(){
+    const summary=$('szFeaturedHistorySummary'),body=$('szFeaturedHistoryRows'),note=$('szFeaturedHistoryNote');
+    if(!summary||!body)return;
+    const payload=historyData,h=historyHorizon(),scene=String($('szFeaturedHistoryScene')?.value||'ALL');
+    if(!payload){summary.textContent='歷史紀錄尚未載入';body.replaceChildren(addText('tr','', ''));return;}
+    const all=Array.isArray(payload.rows)?payload.rows:[],rows=scene==='ALL'?all:all.filter(r=>r.scene===scene),
+       counts=(scene==='ALL'?payload.summaries?.[h]:payload.summariesByScene?.[scene]?.[h])||{};
+    const fmt=c=>c?.eligible?`${c.success}／${c.eligible}（${(c.success/c.eligible*100).toFixed(1)}%）`:'尚無成熟樣本';
+    summary.textContent=`${h} 日雙重成功｜推薦 ${fmt(counts.core)} · 延伸 ${fmt(counts.extended)} · 合計 ${fmt(counts.all)}。成熟樣本不足時不顯示勝率。`;
+    if(note)note.textContent='自部署後，每個交易日夜間自動封存實際推薦（包含 OFF 0+0）。T+1 收盤進場，H 個交易日後收盤比較；如期間轉 OFF，於 OFF 下一交易日收盤結束追蹤。股票與大盤使用同時點收盤價，不含費稅。Neon 重建特徵與早期研究版不一致，績效僅代表此版已保存訊號。';
+    body.replaceChildren();
+    if(!rows.length){const tr=document.createElement('tr'),td=addText('td','','部署後尚無成功封存的日選股；不以歷史重算填補。');td.colSpan=4;tr.append(td);body.append(tr);return;}
+    for(const r of rows){
+      const tr=document.createElement('tr'),items=r.performance?.items||[],completed=items.filter(x=>x.horizons?.[h]?.status==='complete'),winners=completed.filter(x=>x.horizons[h].doubleSuccess);
+      const off=r.scene==='OFF',label={OFF:'防禦',WARNING:'預警',ON_BROAD:'偏多・廣度強',ON_NARROW:'偏多・廣度弱'}[r.scene]||'未知';
+      const col1=addText('td','',r.trade_date),small=addText('small','',label);col1.append(small);tr.append(col1);
+      const col2=addText('td','',`${r.core?.length||0}／${r.extended?.length||0}`);
+      const names=[...(r.core||[]),...(r.extended||[])].map(x=>x.stock_name||x.stock_code);
+      if(names.length){
+        const detail=document.createElement('details'),trigger=addText('summary','',names.join('、'));
+        detail.append(trigger);
+        for(const item of items){
+          const hResult=item.horizons?.[h],original=[...(r.core||[]),...(r.extended||[])].find(x=>x.stock_code===item.stock_code&&x.market===item.market);
+          const label=(original?.stock_name||item.stock_code)+` (${item.tier==='core'?'推薦':'延伸'})`;
+          let performance='待觀察';
+          if(hResult?.status==='complete')performance=`${hResult.returnPct>=0?'+':''}${hResult.returnPct}%／大盤 ${hResult.marketPct>=0?'+':''}${hResult.marketPct}%${hResult.offExit?'｜OFF提前結束':''}`;
+          else if(hResult?.status==='missing_price')performance='缺少有效行情，不納入統計';
+          detail.append(addText('small','',label+'：'+performance));
+        }
+        col2.append(detail);
+      }else col2.append(addText('small','',off?'OFF：當日不推薦':'未達篩選門檻'));
+      tr.append(col2);
+      tr.append(addText('td','',off?'—':`${completed.length}／${items.length}`));
+      tr.append(addText('td','',off?'—':completed.length?`${winners.length}／${completed.length}（${(winners.length/completed.length*100).toFixed(0)}%）`:'待觀察'));
+      body.append(tr);
+    }
+  }
+  async function loadHistory(){
+    if(historyPending)return historyPending;
+    historyPending=(async()=>{
+      try{
+        const response=await fetch('/api/capital-flow?view=featured-history',{cache:'no-store'}),data=await response.json();
+        if(!response.ok||!data.ok)throw Error(data.error||'歷史資料尚未接通');
+        historyData=data;renderHistory();return data;
+      }catch(e){
+        const summary=$('szFeaturedHistorySummary');if(summary)summary.textContent='歷史追蹤讀取失敗：'+String(e.message||e);
+        return null;
+      }finally{historyPending=null;}
+    })();
+    return historyPending;
+  }
+  $('szFeaturedHistoryHorizon')?.addEventListener('change',renderHistory);
+  $('szFeaturedHistoryScene')?.addEventListener('change',renderHistory);
+  window.StockZoneFeatured={render,reset,load,loadHistory};
   window.addEventListener('stockzone:featured-daily',e=>render(e.detail));
   reset();
 }());

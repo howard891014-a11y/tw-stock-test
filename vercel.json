@@ -126,6 +126,10 @@
     {
       "path": "/api/market-dynamic?view=index",
       "schedule": "10 9 * * 1-5"
+    },
+    {
+      "path": "/api/capital-flow?view=featured&action=archive",
+      "schedule": "50 15 * * 1-5"
     }
   ],
   "rewrites": [
