@@ -3144,8 +3144,8 @@ function renderExpectedUpside(play=latestPlayStyleResult){
   setText("overviewExpectedUpsideNote",`${modeName}｜現行共振上行 ${range}／結構防守 ${downRange}`);
   setText("expectedWinRate",wr.valid?`${wr.rate}%`:"--");
   setText("expectedProfitRate",wr.valid?`${wr.profitRate}%`:"--");
-  setText("expectedProfitRateNote",wr.valid?`${wr.sample}次｜${wr.horizon}日｜同一目標與防守｜未達標則期末賺錢才算`:`樣本不足（${wr.sample||0}次）`);
-  setText("expectedWinRateNote",wr.valid?`${wr.sample}次｜${wr.horizon}日｜主要共振 +${wr.up.toFixed(1)}%｜防守 -${wr.down.toFixed(1)}%｜先漲達標才算`:`樣本不足（${wr.sample||0}次）`);
+  setText("expectedProfitRateNote",wr.valid?`持有${wr.horizon}日未達標主要共振勝率`:`樣本不足（${wr.sample||0}次）`);
+  setText("expectedWinRateNote",wr.valid?`持有${wr.horizon}日達標主要共振 +${wr.up.toFixed(1)}%且防守 -${wr.down.toFixed(1)}%勝率`:`樣本不足（${wr.sample||0}次）`);
   // Extreme-market status is rendered from the current W3 + the live technical risk model, not old historical crash percentiles.
   setText("expectedExtremeRisk","待確認");setText("expectedExtremeRiskNote","最新結構風險與當日W3待確認");
   const season=wr.seasonality||seasonality5Y(latestHistory5Y?.history||[]);setText("expectedSeasonalityNote",`季節性：${season?.label||"五年樣本不足"}`);
@@ -4412,7 +4412,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.22（僅研究資料）',
+    modelVersion:'v2.7.0.23（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},

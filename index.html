@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.22">
+  <meta name="stockzone-version" content="2.7.0.23">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -1405,7 +1405,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 
 /* v2.5.8.6 — 持股均價/股數、預計成長空間與個人化買賣決策 */
 .expected-card{overflow:hidden}
-.expected-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 0 12px}
+.expected-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 0 12px}
 .expected-hero>span,.expected-hero>small{color:var(--muted)}
 .expected-hero>strong{font-size:34px;margin:10px 0 5px}
 .expected-position[hidden]{display:none!important}
@@ -1447,7 +1447,7 @@ body.mode-management .dashboard-grid{display:none!important}body.mode-management
 .long-engine-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}.long-engine-grid>div{padding:10px;border:1px solid #343b59;border-radius:10px;background:#0a1524}.long-engine-grid span{display:block;color:#8593ac;font-size:10px;margin-bottom:5px}.long-engine-grid b{display:block;color:#edf2ff;font-size:12px;line-height:1.45;overflow-wrap:anywhere}.playstyle-long-foot{display:block;margin-top:9px;color:#76849b;font-size:10px;line-height:1.5}
 @media(max-width:720px){.playstyle-position-mode{grid-template-columns:auto 1fr;gap:5px 8px;padding:8px}.playstyle-position-mode>small{grid-column:1/-1;font-size:9px}.playstyle-long-analysis{padding:12px 10px}.playstyle-long-head>div strong{font-size:15px}.long-engine-grid{grid-template-columns:1fr}.long-engine-grid b{font-size:11px}}
 
-.expected-growth-hero{gap:8px}.expected-growth-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin:4px 0 2px}.expected-growth-grid>div{min-width:0;padding:10px 8px;border:1px solid #29445c;border-radius:10px;background:#091725;text-align:center}.expected-growth-grid small{display:block;color:#8297aa;font-size:10px;margin-bottom:5px}.expected-growth-grid strong{display:block;font-size:18px;line-height:1.2}.expected-growth-grid .risk{color:#ff9b8f}.expected-growth-grid .win{color:#64e7b5}.expected-growth-grid .extreme-risk{color:#ffbe73}.expected-seasonality{display:block;color:#71899d;font-size:9px;line-height:1.4}.expected-growth-grid em{display:block;margin-top:4px;color:#8194a5;font-size:9px;font-style:normal;line-height:1.35}.playstyle-fit-head b{max-width:58%;text-align:right;white-space:normal;line-height:1.25}
+.expected-growth-hero{gap:6px}.expected-growth-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;margin:0 0 2px}.expected-growth-grid>div{min-width:0;padding:10px 8px;border:1px solid #29445c;border-radius:10px;background:#091725;text-align:center}.expected-growth-grid small{display:block;color:#8297aa;font-size:10px;margin-bottom:5px}.expected-growth-grid strong{display:block;font-size:18px;line-height:1.2}.expected-growth-grid .risk{color:#ff9b8f}.expected-growth-grid .win{color:#64e7b5}.expected-growth-grid .extreme-risk{color:#ffbe73}.expected-seasonality{display:block;color:#71899d;font-size:9px;line-height:1.4}.expected-growth-grid em{display:block;margin-top:4px;color:#8194a5;font-size:9px;font-style:normal;line-height:1.35}.playstyle-fit-head b{max-width:58%;text-align:right;white-space:normal;line-height:1.25}
 .expected-growth-grid{grid-template-columns:repeat(5,minmax(0,1fr));}
 @media(max-width:900px){.expected-growth-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:720px){.expected-growth-grid{grid-template-columns:1fr 1fr}.expected-growth-grid>div:last-child{grid-column:1/-1}.expected-growth-grid strong{font-size:16px}.playstyle-fit-head b{max-width:62%;font-size:9px}}
@@ -3000,7 +3000,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.22</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.23</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3929,13 +3929,13 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 
   <script src="./capital-flow.js?v=2.6.8.29"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.22"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.22"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.23"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.23"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.22"></script>
+  <script src="./app.js?v=2.7.0.23"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
