@@ -35,11 +35,23 @@ assert.equal(context.fundamentalPayloadNeedsSupplement(good),false);
 const missing={...good,quarters:[{period:'2026 Q2',eps:15},{period:'2025 Q1',eps:8}]};
 assert.equal(context.fundamentalEpsPeriodCoverage(missing).yoy,false);
 assert.equal(context.fundamentalPayloadNeedsSupplement(missing),true);
-assert.match(app,/fundamentals:v26824:/);
+assert.match(app,/fundamentals:v27029:/);
 assert.match(app,/FUNDAMENTALS_RETRY_MS=2\*60\*1000/);
 assert.match(app,/const yoyEps=fundamentalPair\(epsNow,epsPrev,"eps"\)/);
 assert.match(app,/epsTtmSeq\.every\(Number\.isFinite\)/);
 assert.match(api,/epsYoyReady/);
+// v2.7.0.29: shared historical margin year comparison must not infer YTD from one quarter.
+const appSource=app.slice(app.indexOf('function fundamentalScalar(v){'),app.indexOf('function fundamentalComment(assessment){'));
+const marginContext={Number,Date,Map,Set,console,valuationNum:v=>v===null||v===undefined||v===''?null:Number.isFinite(Number(v))?Number(v):null};
+vm.createContext(marginContext);
+vm.runInContext(app.slice(app.indexOf('function fundamentalQuarterInfo('),app.indexOf('async function fundamentals('))+appSource,marginContext);
+const off=(y,q,g,o)=>({period:`${y} Q${q}`,year:y,quarterNo:q,grossMargin:g,operatingMargin:o,marginSource:'official'});
+const yearPair={officialStatement:off(2026,2,53.6,29.5),previousYearStatement:off(2025,2,48.3,24.1),quarters:[]};
+assert.equal(Number(marginContext.fundamentalMarginYearComparison(yearPair,'gross').delta.toFixed(1)),5.3);
+assert.equal(Number(marginContext.fundamentalMarginYearComparison(yearPair,'operating').delta.toFixed(1)),5.4);
+assert.equal(marginContext.fundamentalMarginYearComparison({officialStatement:off(2026,2,53.6,29.5),quarters:[{period:'2025 Q2',revenue:100,grossProfit:10}]},'gross').delta,null);
+assert.equal(marginContext.fundamentalMarginYearComparison({officialStatement:off(2026,1,.8,.5),previousYearStatement:off(2025,1,.7,.3)},'gross').delta.toFixed(1),'0.1');
+
 
 (async()=>{
   const originalFetch=global.fetch;
