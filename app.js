@@ -3115,30 +3115,44 @@ const szMainPullback=(()=>{
   const current=positive(price),deep=positive(deepReference);
   if(!current||!zones?.valid||typeof lab?.reachabilityProfile!=='function')
     return {valid:false,price:null,deepReference:deep,reason:'支撐或歷史觸及資料不足'};
-  const candidates=[];
-  for(const name of ['S1','S2']){
-    const z=zones.levels?.[name],value=positive(z?.center);
-    if(!value||value>=current*.998||(deep&&value<=deep*1.005))continue;
-    const result=lab.reachabilityProfile(bars,current,value);
-    if(!result?.valid)continue;
-    const h20=result.horizons?.find(x=>x.days===20),h40=result.horizons?.find(x=>x.days===40);
-    const sample=Number(result.sample)||0,hit40=Number(h40?.hit)||0;
-    // Minimum independent evidence: two 40-day touches from the existing 60-day spaced samples.
-    if(sample<6||hit40<2)continue;
-    candidates.push({valid:true,label:name,price:value,deepReference:deep,
-      sample,hit20:Number(h20?.hit)||0,hit40,pct20:Number(h20?.hitPct)||0,
-      pct40:Number(h40?.hitPct)||0,confidence:z.confidence||'observed',
-      source:'SR8.2 support center + unchanged historical same-amplitude touch rate'});
+  // For every stock use the same SR8.2 support bands and the existing historical
+  // touch-rate engine. Try center first; the upper/lower boundaries are real
+  // band values, not manufactured targets. An original defense level that lies
+  // inside a band must not erase the valid, nearer part of that support band.
+  for(const label of ['S1','S2']){
+    const level=zones.levels?.[label];if(!level)continue;
+    const seen=[];
+    for(const part of ['center','upper','lower']){
+      const value=positive(level[part]);
+      if(!value||value>=current*.998||(deep&&value<=deep*1.005))continue;
+      if(seen.some(x=>Math.abs(value/x-1)<.002))continue;
+      seen.push(value);
+      const result=lab.reachabilityProfile(bars,current,value);
+      if(!result?.valid)continue;
+      const h20=result.horizons?.find(x=>x.days===20),h40=result.horizons?.find(x=>x.days===40);
+      const sample=Number(result.sample)||0,hit40=Number(h40?.hit)||0;
+      if(sample<6||hit40<2)continue;
+      return {valid:true,label,part,price:value,deepReference:deep,
+        sample,hit20:Number(h20?.hit)||0,hit40,pct20:Number(h20?.hitPct)||0,
+        pct40:Number(h40?.hitPct)||0,confidence:level.confidence||'observed',
+        source:'SR8.2支撐區間＋原始歷史同幅度觸及率'};
+    }
   }
-  // Select the nearest supported, validated structure, not an arbitrary optimistic level.
-  candidates.sort((a,b)=>b.price-a.price);
-  return candidates[0]||{valid:false,price:null,deepReference:deep,reason:'沒有通過歷史觸及驗證的主要回測價'};
+  return {valid:false,price:null,deepReference:deep,reason:'沒有通過歷史觸及驗證、且高於深跌參考的主要回測價'};
  }
  function displayRange({price,deepReference,mainPullback}={}){
   const p=positive(price),deep=positive(deepReference),main=positive(mainPullback?.price);
-  if(!p||!deep||!mainPullback?.valid||!main||!(deep<main&&main<p))return '--%';
+  if(!p)return '--%';
   const fmt=v=>(v>=0?'+':'')+Number(v.toFixed(1))+'%';
-  return fmt((main/p-1)*100)+' ～ '+fmt((deep/p-1)*100);
+  const near=mainPullback?.valid&&main&&main<p*.998?main:null;
+  const far=deep&&deep<p*.998?deep:null;
+  if(near&&far&&far<near)return fmt((near/p-1)*100)+' ～ '+fmt((far/p-1)*100);
+  // Don't erase a real structural reference when no historically validated
+  // primary level exists. Label single-price fallbacks explicitly so the UI
+  // doesn't falsely claim a validated main-to-deep range.
+  if(far)return '深跌參考 '+fmt((far/p-1)*100);
+  if(near)return '主要回測 '+fmt((near/p-1)*100);
+  return '--%';
  }
  return {select,displayRange};
 })();
@@ -4444,7 +4458,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.25（僅研究資料）',
+    modelVersion:'v2.7.0.26（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
