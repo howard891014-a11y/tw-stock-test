@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.21">
+  <meta name="stockzone-version" content="2.7.0.22">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -3000,7 +3000,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.21</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.22</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3369,15 +3369,14 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
       <small class="playstyle-note" id="playStyleNote">技術、基本面與目標價用於核心／機動配置及共振；五年R1獨立決定建議玩法與歷史勝率，近期分析負責操作時機。</small>
     </article>
     <article class="card detail-panel expected-card" data-view-panel="analysis" id="expectedUpsideCard">
-      <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-growth" aria-hidden="true"></i><span>預計成長空間</span></span><span class="badge" id="expectedModeBadge">依玩法</span></div>
+      <div class="card-title theme-white-card-title"><span class="theme-title-group"><i class="theme-title-icon theme-icon-growth" aria-hidden="true"></i><span>預計成長空間</span></span><span class="badge" id="expectedModeBadge">現價基準</span></div>
       <div class="expected-hero expected-growth-hero">
-        <span id="expectedBasisLabel">現價基準</span>
         <div class="expected-growth-grid">
           <div><small>上漲空間</small><strong class="blue" id="expectedRange">--%</strong></div>
           <div><small>下跌空間</small><strong class="risk" id="expectedDownsideRange">--%</strong></div>
           <div><small>歷史相似達標率</small><strong class="win" id="expectedWinRate">--</strong><em id="expectedWinRateNote">樣本不足</em></div>
           <div><small>歷史相似勝率</small><strong class="win" id="expectedProfitRate">--</strong><em id="expectedProfitRateNote">樣本不足</em></div>
-          <div><small>極端市場風險（風險分）</small><strong class="extreme-risk" id="expectedExtremeRisk">--</strong><em id="expectedExtremeRiskNote">當日W3與結構風險待確認</em></div>
+          <div><small>極端市場風險分數</small><strong class="extreme-risk" id="expectedExtremeRisk">--</strong><em id="expectedExtremeRiskNote">當日W3與結構風險待確認</em></div>
         </div>
         <small class="expected-seasonality" id="expectedSeasonalityNote">季節性：等待五年資料</small>
       </div>
@@ -3930,14 +3929,13 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 
   <script src="./capital-flow.js?v=2.6.8.29"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.21"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.21"></script>
-  <script src="./lib/resonance-main-pullback.js?v=2.7.0.21"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.22"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.22"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.21"></script>
+  <script src="./app.js?v=2.7.0.22"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -5447,10 +5445,13 @@ body.mode-analysis #expectedUpsideCard .expected-growth-grid>div{
   border-radius:16px!important;
   box-shadow:none!important;
 }
-body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(1){background:linear-gradient(180deg,#f3f7ff,#eef4ff)!important}
-body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(2){background:linear-gradient(180deg,#fff3f5,#ffedf0)!important}
-body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(3){background:linear-gradient(180deg,#effaf5,#e7f7ee)!important}
-body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(4){background:linear-gradient(180deg,#effaf5,#e7f7ee)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(1){background:linear-gradient(180deg,#fff5f5,#ffebee)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(2){background:linear-gradient(180deg,#f1fbf5,#e7f7ef)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(3){background:linear-gradient(180deg,#f3f7ff,#eaf1ff)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(4){background:linear-gradient(180deg,#f3f7ff,#eaf1ff)!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(1) strong{color:#cf4055!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(2) strong{color:#258a63!important}
+body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(3) strong,body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(4) strong{color:#3277d9!important}
 body.mode-analysis #expectedUpsideCard .expected-growth-grid>div:nth-child(5){background:linear-gradient(180deg,#fff8eb,#fff2da)!important}
 body.mode-analysis #expectedUpsideCard .expected-growth-grid small,
 body.mode-analysis #expectedUpsideCard .expected-growth-grid em{color:#7c8da2!important}
