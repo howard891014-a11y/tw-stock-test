@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.36",
+  "version": "2.7.0.38",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -26,6 +26,7 @@
     "validate:business-enrichment": "node scripts/validate-business-enrichment.js",
     "validate:credit-trading": "node scripts/validate-credit-trading.js",
     "validate:app-version": "node scripts/validate-app-version.js",
+    "validate:v27038": "node scripts/validate-v27038-reference-play.js",
     "validate:fast-search": "node scripts/validate-fast-search.js",
     "validate:intraday-quote": "node scripts/validate-intraday-quote.js",
     "validate:institutional-history": "node scripts/validate-institutional-history.js",

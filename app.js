@@ -11,17 +11,21 @@ function fiveYearRecommendation(){
   return window.StockZoneResonanceLab?.getCurrentFiveYearPlay?.(currentStockCode())||null;
 }
 function fiveYearDisplay(){
-  const p=fiveYearRecommendation();
-  return p?.label || (p?.referenceLabel?`${p.referenceLabel}（參考）`:p?.status==='no-qualified'?'回測未達推薦門檻':p?.status==='invalid'?'資料待校正':'回測中');
+  return fiveYearRecommendation()?.displayLabel||'回測中';
 }
 function syncFiveYearDisplay(){
-  const label=fiveYearDisplay(),p=fiveYearRecommendation();
+  const p=fiveYearRecommendation(),label=fiveYearDisplay();
   setText('overviewPlayMetric',label);
   setText('overviewPlayStyle',label);
   setText('playMainPeriod',label);
-  setText('overviewPlayStyleNote',p?.label?`五年回測勝率 ${p.winPct}%｜${p.count}筆｜${p.days}日`:p?.referenceLabel?`歷史僅 ${p.referenceCount} 筆，未達正式玩法至少10筆門檻`:'五年回測尚未選出合格玩法');
-  setText('playMainAction',p?.label?`核心倉依 ${label} 策略管理；近期訊號管理機動倉`:'五年回測未達正式玩法標準，勿將參考結果視為買賣建議');
-  setText('playReason',p?.referenceLabel?`股票上市歷史較短，回測有效樣本僅 ${p.referenceCount} 筆（正式門檻10筆），${label}僅供研究參考。`:p?.reason||'建議玩法僅依五年R1回測，不由核心配置推導。');
+  setText('overviewPlayStyleNote',['selected','reference'].includes(p?.status)
+    ?`五年回測勝率 ${p.winPct}%｜${p.count}筆｜${p.days}日`
+    :p?.count?`${p.count}筆歷史樣本｜資料待補`
+    :'五年歷史回測資料尚待確認');
+  setText('playMainAction',['selected','reference'].includes(p?.status)
+    ?`核心倉依 ${label} 策略管理；近期訊號管理機動倉`
+    :'五年回測尚無可用玩法，暫不發布配置建議');
+  setText('playReason',p?.status==='reference'?`${p.referenceLabel} ${p.days}日策略｜依既有五年回測評估`:(p?.reason||'等待五年價格基準回測'));
 }
 window.addEventListener?.('stockzone:five-year-play',syncFiveYearDisplay);
 function overviewPlayMetricLabel(play){
@@ -4469,7 +4473,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.36（僅研究資料）',
+    modelVersion:'v2.7.0.38（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
