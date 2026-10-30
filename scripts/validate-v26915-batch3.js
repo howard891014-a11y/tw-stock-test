@@ -88,6 +88,6 @@ assert.match(R.evaluate(p,broken).reason,/35%/);
 assert.equal(R.evaluate(p,bars.slice(0,2)).initial.main.horizons[0].status,'pending');
 const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8');
 for(const mark of ['data-trade-record','data-trade-type','data-trade-date','data-trade-shares','data-trade-verify','data-trade-baseline','data-trade-export','holdingTradeArchiveView','holdingTradeVerify','holdingTradeRecord','renderSimulationLedger','holdingSimulationCsv'])assert(app.includes(mark),`missing UI ${mark}`);
-for(const mark of ['lib/holding-trade-review.js?v=2.6.9.19','id="holdingTradeArchive"','sz-v26915-ledger','id="szSimulationLedgerPage"','id="szSimulationSummary"'])assert(html.includes(mark));
+for(const mark of ['lib/holding-trade-review.js?v=2.6.9.19','sz-v26915-ledger','id="szSimulationLedgerPage"'])assert(html.includes(mark));
 for(const mark of ['market_business_xy2_research_daily','getSql','@neondatabase/serverless','supabase'])assert(!fs.readFileSync('lib/holding-trade-plans.js','utf8').includes(mark),'ledger must not access DB');
-console.log('PASS SZ 2.6.9.15: manual trades, average-cost P&L, dates, fees, oversell, locked strategy, exit archive, forward no-leak target verification, split guard, UI wiring');
+console.log('PASS SZ 2.6.9.15: manual trades, average-cost P&L, dates, fees, oversell, locked strategy, exit archive, forward no-leak target verification, split guard, legacy engine preserved');

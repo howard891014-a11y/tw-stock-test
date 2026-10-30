@@ -24,7 +24,7 @@ assert(q.includes('async function szStockActionHandler')&&q.includes('stockRoute
 assert(!f.includes('szDw4Handler'),'retired forecast route must not exist');
 assert(m.includes("require('../lib/api-routes/w3-shadow').d111")&&m.includes("require('../lib/api-routes/w3-shadow').d112"));
 assert(fs.existsSync(path.join(root,'lib/api-routes/w3-shadow.js')));
-assert.equal((config.crons||[]).length,12,'Keep all 12 currently scheduled jobs');
+assert.equal((config.crons||[]).length,23,'Keep all 22 existing schedules plus featured daily archive');
 assert.equal((config.crons||[]).filter(x=>x.path==='/api/fundflow?view=industry-changes&action=scan').length,1);
 assert(!Object.keys(config.functions||{}).some(x=>!fs.existsSync(path.join(root,x))));
 

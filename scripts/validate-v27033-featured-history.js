@@ -1,0 +1,75 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const Module=require('node:module');
+const real=Module._load;
+Module._load=function(id,parent,isMain){if(id==='@neondatabase/serverless')return{neon:()=>({})};return real.apply(this,arguments)};
+const {evaluateArchive,validateSignal,summarize,archiveToday,runDailyArchive,taiwanDay}=require('../lib/featured-research-history');
+(async()=>{
+ const now=new Date('2026-10-30T15:55:00Z'),date='2026-10-30';
+ assert.equal(taiwanDay(now),date);
+ const signal={ok:true,asOfDate:date,w3ModelVersion:'W3-D.1.2',scene:'ON_BROAD',scenario:'original_all',version:'v2.6.8.2',
+  core:[{stock_code:'2330',stock_name:'測試股票',market:'上市',rank:1}],extended:[],
+  sourceQuality:{asOfDate:date,latestPriceDate:date,latestMarketDate:date,status:'NEON_RECONSTRUCTION_PARITY_MISMATCH_CONFIRMED'}};
+ assert.equal(validateSignal(signal,date),true);
+ assert.throws(()=>validateSignal({...signal,scene:'OFF'},date),/訊號/);
+ assert.throws(()=>validateSignal({...signal,sourceQuality:{...signal.sourceQuality,latestPriceDate:'2026-10-29'}},date),/不得封存/);
+ const off={...signal,scene:'OFF',core:[],extended:[]};assert.equal(validateSignal(off,date),true);
+ const dates=Array.from({length:25},(_,i)=>{const d=new Date('2026-10-30T00:00:00Z');d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10)});
+ const calendar=dates.map((day,i)=>({day,index:100+i}));
+ const prices=new Map([['2330',new Map(dates.map((d,i)=>[d,100+i*2]))]]);
+ const states=new Map(dates.map(d=>[d,'RiskOn']));
+ const archived={trade_date:date,scene:'ON_BROAD',core:signal.core,extended:[]};
+ let performance=evaluateArchive(archived,calendar,prices,states);
+ assert.equal(performance.items[0].horizons['3'].status,'complete');
+ assert.equal(performance.items[0].horizons['3'].entryDate,dates[1]);
+ assert.equal(performance.items[0].horizons['3'].exitDate,dates[4]);
+ assert.equal(performance.items[0].horizons['3'].doubleSuccess,true);
+ const score=summarize([{performance}], '3');assert.deepEqual(score.core,{success:1,eligible:1});
+ states.set(dates[2],'RiskOff');
+ performance=evaluateArchive(archived,calendar,prices,states);
+ assert.equal(performance.items[0].horizons['3'].offExit,true);
+ assert.equal(performance.items[0].horizons['3'].exitDate,dates[3]);
+ states.delete(dates[2]);
+ performance=evaluateArchive(archived,calendar,prices,states);
+ assert.equal(performance.items[0].horizons['3'].status,'pending_w3');
+ prices.get('2330').delete(dates[4]);states.set(dates[2],'RiskOn');
+ performance=evaluateArchive(archived,calendar,prices,states);
+ assert.equal(performance.items[0].horizons['3'].status,'missing_price');
+ assert.deepEqual(summarize([{performance}], '3').all,{success:0,eligible:0});
+ const calls=[];
+ const sql={async query(q,args){calls.push({q,args});if(q.includes('INSERT INTO public.market_featured_research_daily'))return [{trade_date:date}];throw Error('unexpected DB '+q.slice(0,40));}};
+ const result=await archiveToday({sql,now,getSignal:async()=>signal});
+ assert.deepEqual(result,{day:date,created:true,scene:'ON_BROAD',counts:[1,0]});
+ assert.equal(calls.length,1);assert.equal(JSON.parse(calls[0].args[5])[0].stock_code,'2330');
+ const Backups=require('../lib/trade-backup');
+ const rawHoldings=JSON.stringify([{code:'2330',name:'測試股票',researchSnapshots:[{code:'2330',play:'波段',capturedAt:'2026-10-30T16:00:00.000Z',targets:{main:120}}]}]);
+ const local=new Map([['stockzone_holdings_v2',rawHoldings]]),mem={getItem:k=>local.has(k)?local.get(k):null,setItem:(k,v)=>local.set(k,String(v)),removeItem:k=>local.delete(k)};
+ const built=await Backups.build(mem),verified=await Backups.verify(built);
+ assert.equal(verified.summary.holdings,1);
+ assert.equal(JSON.parse(verified.snapshot.stockzone_holdings_v2)[0].researchSnapshots[0].targets.main,120);
+ mem.removeItem('stockzone_holdings_v2');Backups.restore(mem,verified);
+ assert.equal(mem.getItem('stockzone_holdings_v2'),rawHoldings,'持股研究快照必須可完整備份還原');
+ const mockState=new Map();
+ const timelineDb={async query(q,args){
+   if(q.includes('FROM public.market_featured_research_daily WHERE trade_date >='))return [archived];
+   if(q.includes('FROM market_dynamic_daily WHERE trade_date >='))return calendar;
+   if(q.includes('FROM market_daily_history WHERE trade_date >='))return dates.map((d,i)=>({day:d,stock_code:'2330',close:100+i*2}));
+   if(q.includes('FROM market_w3_run_daily'))return dates.map(d=>({day:d,regime:'RiskOn'}));
+   if(q.includes('UPDATE public.market_featured_research_daily')){mockState.set('args',args);return[{trade_date:date}];}
+   throw Error('Unexpected query '+q.slice(0,55));
+ }};
+ const processed=await require('../lib/featured-research-history').updatePerformance({sql:timelineDb,now:new Date('2026-11-24T16:00:00Z')});
+ assert.equal(processed.updated,1);
+ assert.equal(JSON.parse(mockState.get('args')[1]).items[0].horizons['3'].status,'complete');
+
+ await assert.rejects(archiveToday({sql,now,getSignal:async()=>({...signal,asOfDate:'2026-10-29'})}),/日期/);
+ const html=fs.readFileSync('index.html','utf8'),app=fs.readFileSync('app.js','utf8');
+ assert(html.includes('id="szFeaturedHistoryRows"'));
+ assert(html.includes('id="szSaveResearchSnapshot"'));
+ assert(!html.includes('id="holdingTradeArchive"'));
+ assert(!html.includes('id="szLabLockPlan"'));
+ assert(app.includes('researchSnapshots:[...prior,snapshot]'));
+ assert(!app.slice(app.indexOf('function renderOneList('),app.indexOf('function updateListButtons(')).includes('data-trade-record'));
+ console.log('PASS featured history: W3 gate, exact-date archive, T+1 index parity, OFF next-session exit, missing data, snapshot-only UI');
+})().catch(e=>{console.error(e);process.exitCode=1;});
