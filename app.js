@@ -2941,7 +2941,8 @@ function drawOverviewResonance(play,expected){
   const main=positionNumber(res?.main?.center??expected?.plan?.levels?.[0]?.value);
   // 沒有第二個更高的獨立峰值時，不再以估值價冒充延伸目標。
   const alt=positionNumber(res?.secondary?.center??expected?.plan?.levels?.[1]?.value);
-  const pullback=positionNumber(expected?.downside?.levels?.[0]?.value); // Same price as historical reach '回測'.
+  const pullback=positionNumber(expected?.downside?.levels?.[0]?.value); // Original deep reference, unchanged historical touch input.
+  const mainPullback=positionNumber(expected?.mainPullback?.valid?expected.mainPullback.price:null);
   const mainTitle='主要共振';
   const altTitle='次要共振';
 
@@ -2954,14 +2955,16 @@ function drawOverviewResonance(play,expected){
   if(main!==null&&main>price*1.002)targetNodes.push({title:mainTitle,value:main,color:'#8150e7',kind:'main'});
   if(alt!==null&&alt>price*1.002&&!targetNodes.some(n=>Math.abs(n.value/alt-1)<.003))
     targetNodes.push({title:altTitle,value:alt,color:'#f5b63e',kind:'alternate'});
-  const retestNode=pullback!==null&&pullback>0?{title:'回測',value:pullback,color:'#d96e88',kind:'retest'}:null;
+  const retestNode=pullback!==null&&pullback>0?{title:'深跌參考',value:pullback,color:'#d96e88',kind:'retest'}:null;
+  const mainPullbackNode=mainPullback!==null&&mainPullback>0&&mainPullback<price*.998?
+    {title:'主要回測',value:mainPullback,color:'#2596a7',kind:'pullback'}:null;
   // Reserve each label's full width to keep the forecast endpoint outside the label box.
   const labelWidth=n=>Math.min(122,Math.max(86,Math.max(String(n.title).length*15+20,
-    String(n.kind==='retest'?technicalFmt(n.value):overviewIntFmt(n.value)).length*12+18)));
-  const widestLabel=Math.max(86,...[...targetNodes,...(retestNode?[retestNode]:[])].map(labelWidth));
+    String(n.kind==='retest'||n.kind==='pullback'?technicalFmt(n.value):overviewIntFmt(n.value)).length*12+18)));
+  const widestLabel=Math.max(86,...[...targetNodes,...(mainPullbackNode?[mainPullbackNode]:[]),...(retestNode?[retestNode]:[])].map(labelWidth));
   const futureX=Math.min(futureXMax,760-widestLabel-14);
   const zoneEdges=sr8.valid?Object.values(sr8.levels||{}).filter(Boolean).flatMap(z=>[z.lower,z.upper]):[];
-  const numbers=[...history.map(h=>h.value),...targetNodes.map(n=>n.value),...(retestNode?[retestNode.value]:[]),...zoneEdges];
+  const numbers=[...history.map(h=>h.value),...targetNodes.map(n=>n.value),...(mainPullbackNode?[mainPullbackNode.value]:[]),...(retestNode?[retestNode.value]:[]),...zoneEdges];
   const minValue=Math.min(...numbers),maxValue=Math.max(...numbers),range=Math.max(1,maxValue-minValue);
   const step=overviewNiceStep(range*1.12/4);
   let lo=Math.floor((minValue-range*.07)/step)*step;
@@ -3015,12 +3018,13 @@ function drawOverviewResonance(play,expected){
   };
   // 依各目標的實際價格畫線；線條高低由價格決定，與主要／次要身份無關。
   targetNodes.forEach(drawForecast);
-  // 回測是歷史觸及率使用的下探價格，僅畫水平參考標記，不當作第三條預測路徑。
+  if(mainPullbackNode)drawForecast(mainPullbackNode);
+  // 深跌參考保留原本下探價格與歷史觸及率，僅畫水平參考線。
   if(retestNode){
     const ry=y(retestNode.value);
     svg.append(swingWaveSvg('path',{d:`M ${divider+7} ${ry} L ${futureX} ${ry}`,
       class:'overview-wave-retest-level',fill:'none',stroke:retestNode.color,'stroke-width':1.9,
-      'stroke-dasharray':'3 5',opacity:'.75','aria-label':'回測價格參考線'}));
+      'stroke-dasharray':'3 5',opacity:'.75','aria-label':'深跌參考價格線'}));
   }
   const point=(x,value,color,r=5.5)=>{
     const py=y(value);
@@ -3032,13 +3036,14 @@ function drawOverviewResonance(play,expected){
   const labels=[];
   const add=(node,px,py,prefer,side)=>labels.push({
     pointX:px,pointY:py,x:px,y:py,prefer,side,color:node.color,
-    title:node.title,value:node.kind==='retest'?technicalFmt(node.value):overviewIntFmt(node.value),textColor:node.textColor
+    title:node.title,value:node.kind==='retest'||node.kind==='pullback'?technicalFmt(node.value):overviewIntFmt(node.value),textColor:node.textColor
   });
   point(historyRight,price,'#8798ad',6); // 現價只留圓點，不畫數字標籤。
   const altNode=targetNodes.find(n=>n.kind==='alternate');
   const mainNode=targetNodes.find(n=>n.kind==='main');
   if(altNode)add({...altNode,textColor:'#c78316'},futureX,point(futureX,altNode.value,altNode.color,5.7),'center','right');
   if(mainNode)add({...mainNode,textColor:'#6832cf'},futureX,point(futureX,mainNode.value,mainNode.color,5.7),'center','right');
+  if(mainPullbackNode)add({...mainPullbackNode,textColor:'#207b88'},futureX,point(futureX,mainPullbackNode.value,mainPullbackNode.color,5.7),'center','right');
   if(retestNode)add({...retestNode,textColor:'#b44460'},futureX,point(futureX,retestNode.value,retestNode.color,5.7),'center','right');
   // 上漲共振與下探回測均對齊自身價格點；回測標記不是預測趨勢。
   const historyLabels=overviewWavePlaceLabels(labels.filter(n=>n.side!=='right'));
@@ -3087,6 +3092,10 @@ function renderExpectedUpside(play=latestPlayStyleResult){
   const price=positionNumber(currentStock?.last??currentStock?.price??latestFiveStageResult?.price);if(price===null){resetTradeOutputs("等待股價資料");return null}
   const position=currentHoldingPosition(),base=position?.avgCost||price,plan=buildExpectedPlan(play,price),downside=buildDownsidePlan(play,price);
   const spaces=sz918ExpectedSpaces(price,plan,downside),firstUp=spaces.up[0]??null,nearestDown=spaces.down[0]??null;
+  const mainPullback=window.StockZoneMainPullback?.select({
+    price,deepReference:downside?.levels?.[0]?.value,zones:szChartPriceZones(),
+    bars:szLabBars(),lab:window.StockZoneResonanceLab
+  })||{valid:false};
   // v2.6.9.20: the historical check must verify the ACTUAL current main target and structural defense.
   // No fallback target and no 28% cap masquerading as a larger resonance objective.
   const wr=historicalSimilarWinRate(play,price,firstUp,nearestDown);
@@ -3094,7 +3103,10 @@ function renderExpectedUpside(play=latestPlayStyleResult){
   const modeName=plan.mode==="swing"?"波段":plan.mode==="short"?"短期":plan.mode==="mixed"?"短波混合":plan.mode==="long-swing"?"長波混合":plan.mode==="long"?"長期":"觀察";
   setText("expectedModeBadge",`${position?.avgCost?"持股｜":""}${modeName}`);
   setText("expectedBasisLabel",position?.avgCost?"目標與防守看現價｜損益看均價":"現價基準");
-  const range=spaces.upRange,downRange=spaces.downRange;
+  const range=spaces.upRange;
+  const downRange=window.StockZoneMainPullback?.displayRange({
+    price,deepReference:downside?.levels?.[0]?.value,mainPullback
+  })||'--%';
   setText("expectedRange",range);setText("expectedDownsideRange",downRange);
   setText("overviewExpectedUpside",range);
   setText("overviewExpectedUpsideNote",`${modeName}｜現行共振上行 ${range}／結構防守 ${downRange}`);
@@ -3115,7 +3127,7 @@ function renderExpectedUpside(play=latestPlayStyleResult){
     setText('expectedCurrentPnl',matched?`${signedMoney(pnl)}${pct===null?'':`（${signedPercent(pct)}）`}`:'--');
   }
   for(let i=1;i<=3;i++){const item=plan.levels[i-1],box=$(`expectedTarget${i}`);if(box)box.hidden=i>2;if(!item){if(i===2){setText('expectedT2Label','次要共振（延伸高點）');setText('expectedT2Price','暫無延伸目標');setText('expectedT2Return','尚無更高的獨立共振峰');setText('expectedT2Profit','')}continue}setText(`expectedT${i}Label`,item.label);setText(`expectedT${i}Price`,technicalFmt(item.value));const ret=positionReturn(item.value,base);setText(`expectedT${i}Return`,`${position?.avgCost?"對均價":"對現價"} ${signedPercent(ret)}`);const profit=position?.avgCost&&position?.shares?(item.value-position.avgCost)*position.shares:null;setText(`expectedT${i}Profit`,profit===null?"":`預估損益 ${signedMoney(profit)}`)}
-  return {price,position,base,plan,downside,winRate:wr,upRange:range,downRange,spaces};
+  return {price,position,base,plan,downside,winRate:wr,upRange:range,downRange,spaces,mainPullback};
 }
 // Risk scores and verified W3 labels already exist in the current engines; an unverified % crash prediction is deliberately omitted.
 function renderCurrentExtremeRisk(risk){
@@ -3180,9 +3192,20 @@ function renderTradeOutputs(){
   const expected=renderExpectedUpside(currentPlay);
   if(!expected)return;
   const price=positionNumber(expected?.price??currentStock?.last??currentStock?.price);
-  const effectiveExpected=lockedPlay!==currentPlay?{...expected,
+  let effectiveExpected=lockedPlay!==currentPlay?{...expected,
     position:currentHoldingPosition()||activePlan.position,
     plan:buildExpectedPlan(lockedPlay,price),downside:buildDownsidePlan(lockedPlay,price)}:expected;
+  if(lockedPlay!==currentPlay){
+    const mainPullback=window.StockZoneMainPullback?.select({
+      price,deepReference:effectiveExpected.downside?.levels?.[0]?.value,
+      zones:szChartPriceZones(),bars:szLabBars(),lab:window.StockZoneResonanceLab
+    })||{valid:false};
+    const downRange=window.StockZoneMainPullback?.displayRange({
+      price,deepReference:effectiveExpected.downside?.levels?.[0]?.value,mainPullback
+    })||'--%';
+    effectiveExpected={...effectiveExpected,mainPullback,downRange};
+    setText('expectedDownsideRange',downRange);
+  }
   const risk=buildDecisionRisk(lockedPlay,price,effectiveExpected);
   renderCurrentExtremeRisk(risk);
   renderOverviewResonance(lockedPlay,effectiveExpected,risk);
@@ -4353,7 +4376,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.20（僅研究資料）',
+    modelVersion:'v2.7.0.21（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
