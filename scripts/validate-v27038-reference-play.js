@@ -8,9 +8,10 @@ const lib=fs.readFileSync(require.resolve('../lib/resonance-lab-v1.js'),'utf8');
 const app=fs.readFileSync('app.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'2.7.0.38');
-for(const p of ['stockzone-version" content="2.7.0.38','v2.7.0.38</span>','resonance-lab-v1.js?v=2.7.0.38','app.js?v=2.7.0.38'])assert(html.includes(p),p);
-assert(app.includes("modelVersion:'v2.7.0.38"));
+assert(/^2\.7\.0\.\d+$/.test(pkg.version));
+const version=pkg.version;
+for(const p of [`stockzone-version" content="${version}`,`v${version}</span>`,`resonance-lab-v1.js?v=${version}`,`app.js?v=${version}`])assert(html.includes(p),p);
+assert(app.includes(`modelVersion:'v${version}`));
 const make=(key,count,win,avg,median,mae)=>({strategy:api.STRATEGIES.find(s=>s.key===key),stats:{count,winPct:win,avgPct:avg,medianPct:median,avgMaePct:mae}});
 const report=rows=>({valid:true,coverage:{signals:rows[0]?.stats.count||0},results:rows});
 const xintang=report([
@@ -97,4 +98,4 @@ assert.equal(lock.alloc.reference,false,'different locked play must not be misla
 assert(app.includes("['selected','reference'].includes(p?.status)"));
 assert(!lib.includes('actions:isReference?null:planActions'));
 assert(!lib.includes('if(isReference||holding.referenceOnly)'));
-console.log('PASS v2.7.0.38: formal R1 unchanged; qualified / rejected / short-sample / zero-sample / invalid; reference UI follows normal allocation & monetary actions, clear reason only in adjustment, locked plans untouched');
+console.log(`PASS ${pkg.version}: formal R1 unchanged; qualified / rejected / short-sample / zero-sample / invalid; reference UI follows normal allocation & monetary actions, clear reason only in adjustment, locked plans untouched`);
