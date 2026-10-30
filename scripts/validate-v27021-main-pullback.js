@@ -1,26 +1,30 @@
 'use strict';
-const assert=require('node:assert/strict');
-const moduleToTest=require('../lib/resonance-main-pullback');
-const lab=require('../lib/resonance-lab-v1');
-const bars=Array.from({length:800},(_,i)=>({
- date:new Date(Date.UTC(2022,0,1+i)).toISOString().slice(0,10),
- open:100,high:110,low:91,close:100,volume:15000
-}));
-const common={price:100,deepReference:65.6,bars,lab,zones:{valid:true,levels:{
- S1:{lower:94,center:95,upper:97,confidence:'observed'},
- S2:{lower:91,center:92,upper:94,confidence:'observed'}
-}}};
-const selected=moduleToTest.select(common);
-assert(selected.valid);
-assert.equal(selected.label,'S1');
-assert.equal(selected.price,95);
-assert(selected.sample>=6);
-assert(selected.hit40>=2);
-assert.equal(moduleToTest.displayRange({...common,mainPullback:selected}),'-5% ～ -34.4%');
-const deepHit=lab.reachabilityProfile(bars,100,65.6);
-assert.equal(deepHit.horizons.find(x=>x.days===40).hitPct,0,'deep reference can have 0% touch rate and must be preserved');
-assert.equal(moduleToTest.select({...common,zones:{valid:true,levels:{S1:{center:65},S2:{center:64}}}}).valid,false);
-assert.equal(moduleToTest.displayRange({...common,mainPullback:null}),'--%');
-assert.equal(moduleToTest.select({...common,bars:bars.slice(0,180)}).valid,false);
-console.log('PASS .20-base primary pullback, unchanged deep reference, same historical reach, no fabricated targets');
-
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const path=require('path');const root=path.resolve(__dirname,'..');
+const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+const start=app.indexOf('const szMainPullback=(()=>{'),end=app.indexOf('function sz918ExpectedSpaces(',start);
+assert(start>0&&end>start);
+const ctx=vm.createContext({});vm.runInContext(app.slice(start,end)+'\nthis.moduleUnderTest=szMainPullback;',ctx);
+const engine=ctx.moduleUnderTest,lab=require(path.join(root,'lib/resonance-lab-v1.js'));
+const bars=Array.from({length:800},(_,i)=>({date:new Date(Date.UTC(2023,0,1+i)).toISOString().slice(0,10),open:100,high:110,low:91,close:100,volume:15000}));
+const select=(o)=>engine.select({bars,lab,...o});
+const show=(price,deepReference,mainPullback)=>engine.displayRange({price,deepReference,mainPullback});
+const normal=select({price:100,deepReference:65.6,zones:{valid:true,levels:{S1:{center:95,upper:97,lower:94},S2:{center:92,upper:94,lower:91}}}});
+assert(normal.valid&&normal.label==='S1'&&normal.part==='center'&&normal.price===95);
+assert.equal(show(100,65.6,normal),'-5% ～ -34.4%');
+const edge=select({price:492.5,deepReference:471.95,zones:{valid:true,levels:{S1:{lower:458.4,center:469.25,upper:480.1},S2:{lower:414.8,center:425.7,upper:436.6}}}});
+assert(edge.valid&&edge.label==='S1'&&edge.part==='upper'&&edge.price===480.1,JSON.stringify(edge));
+assert.equal(show(492.5,471.95,edge),'-2.5% ～ -4.2%');
+const noNear=select({price:492.5,deepReference:490,zones:{valid:true,levels:{S1:{lower:440,center:450,upper:460},S2:{lower:400,center:410,upper:420}}}});
+assert(!noNear.valid);assert.equal(show(492.5,490,noNear),'深跌參考 -0.5%');
+const dataUnavailable=select({price:492.5,deepReference:471.95,zones:{valid:false}});
+assert.equal(show(492.5,471.95,dataUnavailable),'深跌參考 -4.2%');
+assert.equal(show(492.5,null,{valid:false}),'--%');
+const noDeep=select({price:100,deepReference:null,zones:{valid:true,levels:{S1:{center:95,upper:97,lower:94}}}});
+assert(noDeep.valid&&noDeep.price===95);assert.equal(show(100,null,noDeep),'主要回測 -5%');
+const inadequate=select({price:100,deepReference:65.6,zones:{valid:true,levels:{S1:{center:95,upper:97,lower:94}}},bars:bars.slice(0,170)});
+assert(!inadequate.valid);assert.equal(show(100,65.6,inadequate),'深跌參考 -34.4%');
+const untrustedLab={reachabilityProfile(){return {valid:false,reason:'split'}}};
+const reject=engine.select({price:100,deepReference:65.6,zones:{valid:true,levels:{S1:{center:95,upper:97,lower:94}}},bars,lab:untrustedLab});
+assert(!reject.valid);assert.equal(show(100,65.6,reject),'深跌參考 -34.4%');
+console.log('PASS v2.7.0.26 universal downside: centers, SR8 upper edge, independent touch evidence, missing/deep safeguards');
