@@ -134,7 +134,7 @@ function renderList(){const data=state.summary;if(!data)return;summaryCards();co
 function detailStockHtml(s,i){
  const money=n(s.money5RawE8);
  return `<div class="cf-stock"><div class="cf-stock-head"><span class="cf-stock-index">${String(i+1).padStart(2,'0')}</span><span class="cf-stock-name"><b>${esc(s.name)}</b><small>${esc(s.code)} · ${s.importance==='core'?'核心公司':'相關公司'}</small></span><span class="cf-stock-badge cf-stock-badge-${esc(s.importance)}">${s.importance==='core'?'核心':'相關'}</span></div>
- <div class="cf-stock-values"><span><small>個股法人5日原始淨額</small><strong class="cf-${tone(money)}">${signed(money,{d:2})}${money===null?'':'億'}</strong></span><span><small>法人5日比</small><strong class="cf-${tone(s.flow5Pct)}">${signed(s.flow5Pct,{pct:true})}</strong></span><span><small>股價近5日</small><strong class="cf-${tone(s.return5Pct)}">${signed(s.return5Pct,{pct:true})}</strong></span><span><small>股價近20日</small><strong class="cf-${tone(s.return20Pct)}">${signed(s.return20Pct,{pct:true})}</strong></span></div></div>`;
+ <div class="cf-stock-values"><span><small>法人5日淨額</small><strong class="cf-${tone(money)}">${signed(money,{d:2})}${money===null?'':'億'}</strong></span><span><small>法人5日比</small><strong class="cf-${tone(s.flow5Pct)}">${signed(s.flow5Pct,{pct:true})}</strong></span><span><small>股價近5日</small><strong class="cf-${tone(s.return5Pct)}">${signed(s.return5Pct,{pct:true})}</strong></span><span><small>股價近20日</small><strong class="cf-${tone(s.return20Pct)}">${signed(s.return20Pct,{pct:true})}</strong></span></div></div>`;
 }
 function stockSort(stocks){return stocks.sort((a,b)=>{
  const av=n(a.money5RawE8),bv=n(b.money5RawE8);
@@ -157,7 +157,7 @@ function renderDetail(){const d=state.detail;if(!d)return;const s=d.sector;
  $('cfStockListTotal').textContent=`顯示 ${sorted.length} / ${d.stocks.length} 家`;
  $('cfStockSort').value=state.stockSort;
  const path=d.history||[],xvalues=path.map(z=>z.x).filter(v=>v!==null);
- $('cfTrend').innerHTML=`<div class="cf-trend-title"><b>中期資金強度・近${path.length}個交易日</b><small>原有模型，僅供觀察中期位置</small></div>${sparkline(path,'x',xvalues)}<div class="cf-trend-dates"><span>${esc(path[0]?.date||'')}</span><span>${esc(path.at(-1)?.date||'')}</span></div><div class="cf-mini-legend">● 中期強度走勢　　產業5日股價 ${signed(s.price5Pct,{pct:true})}</div>`;
+ $('cfTrend').innerHTML=`<div class="cf-trend-title"><b>中期資金強度・近${path.length}個交易日</b></div>${sparkline(path,'x',xvalues)}<div class="cf-trend-dates"><span>${esc(path[0]?.date||'')}</span><span>${esc(path.at(-1)?.date||'')}</span></div><div class="cf-mini-legend">● 中期強度走勢　　產業5日股價 ${signed(s.price5Pct,{pct:true})}</div>`;
 }
 function sparkline(data,key,values){if(values.length<2)return '<p class="cf-empty">歷史資料不足</p>';const mi=Math.min(0,...values),ma=Math.max(0,...values),range=Math.max(1,ma-mi),w=720,h=120;
  const pts=data.map((r,i)=>({x:20+i*680/Math.max(1,data.length-1),y:r[key]===null?null:108-(r[key]-mi)/range*92}));

@@ -43,7 +43,7 @@
     $('szFeaturedVersion').textContent='模型：'+({'original_all':'V4-R1 基準','early_frozen_warn_up':'S2-R3 預警研究','posthoc_narrow_warning_up':'四狀態探索'}[payload.scenario]||'來源需確認');
     $('szFeaturedCoreCount').textContent=core.length+' / 5';
     $('szFeaturedExtendedCount').textContent=extended.length+' / 5';
-    draw(core,'szFeaturedCoreList',payload.scene==='OFF'?'OFF防禦中，今天不推薦。':'今日無符合推薦名額的股票。');
+    draw(core,'szFeaturedCoreList',payload.scene==='OFF'?'空頭環境防禦中，今天不推薦。':'今日無符合推薦名額的股票。');
     draw(extended,'szFeaturedExtendedList',payload.scene==='OFF'?'OFF防禦中，今天不延伸。':'無符合延伸品質門檻的股票。');
     $('szFeaturedNote').textContent='此區顯示T日研究訊號，不是當下即時股價；延伸只供觀察，不自動下單。模擬交易進出場、OFF隔日開盤清倉及手續費另行驗證。';
   }

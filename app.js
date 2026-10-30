@@ -2683,8 +2683,7 @@ function szChartPriceZones(){
 }
 function szSR8FmtBand(level){
   if(!level)return "—";
-  const format=v=>Number(v).toLocaleString('zh-TW',{maximumFractionDigits:v<100?2:1});
-  return `${format(level.lower)}～${format(level.upper)}`;
+  return `${overviewIntFmt(level.lower)}～${overviewIntFmt(level.upper)}`;
 }
 function szRenderSR8Legend(zones){
   const el=$("overviewSR8Levels");if(!el)return;
@@ -2967,7 +2966,7 @@ function drawOverviewResonance(play,expected){
     {title:'主要回測',value:mainPullback,color:'#2596a7',kind:'pullback'}:null;
   // Reserve each label's full width to keep the forecast endpoint outside the label box.
   const labelWidth=n=>Math.min(122,Math.max(86,Math.max(String(n.title).length*15+20,
-    String(n.kind==='retest'||n.kind==='pullback'?technicalFmt(n.value):overviewIntFmt(n.value)).length*12+18)));
+    String(overviewIntFmt(n.value)).length*12+18)));
   const widestLabel=Math.max(86,...[...targetNodes,...(mainPullbackNode?[mainPullbackNode]:[]),...(retestNode?[retestNode]:[])].map(labelWidth));
   const futureX=Math.min(futureXMax,760-widestLabel-14);
   const zoneEdges=sr8.valid?Object.values(sr8.levels||{}).filter(Boolean).flatMap(z=>[z.lower,z.upper]):[];
@@ -3043,7 +3042,7 @@ function drawOverviewResonance(play,expected){
   const labels=[];
   const add=(node,px,py,prefer,side)=>labels.push({
     pointX:px,pointY:py,x:px,y:py,prefer,side,color:node.color,
-    title:node.title,value:node.kind==='pullback'?overviewIntFmt(Math.floor(node.value)):node.kind==='retest'?technicalFmt(node.value):overviewIntFmt(node.value),textColor:node.textColor
+    title:node.title,value:overviewIntFmt(node.value),textColor:node.textColor
   });
   point(historyRight,price,'#8798ad',6); // 現價只留圓點，不畫數字標籤。
   const altNode=targetNodes.find(n=>n.kind==='alternate');
@@ -3088,7 +3087,7 @@ function renderOverviewResonance(play,expected,risk=null){
       ["20MA斜率",pct(path.ma20Slope10)],
       ["估值壓力",ba?.valuation?.pressureLabel||"—"],
       ["近5日",pct(stageRet(rows,5,price))],
-      ["5年相似訊號",wr?.valid?`達標 ${wr.rate}%・獲利 ${wr.profitRate}%・${wr.sample}次`:"樣本不足"],
+      ["5年相似訊號",wr?.valid?`達標 ${wr.rate}%・獲利 ${wr.profitRate}%`:"樣本不足"],
       ["RSI",rsi===null?"—":rsi.toFixed(1)]
     ];
     for(const [label,value] of details){
@@ -4458,7 +4457,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.26（僅研究資料）',
+    modelVersion:'v2.7.0.27（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.26">
+  <meta name="stockzone-version" content="2.7.0.27">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -3020,7 +3020,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.26</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.27</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3478,16 +3478,14 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
           <div class="cf-sector-list" id="cfList" aria-live="polite"><div class="cf-empty">正在整理產業資金資料…</div></div>
           <button class="cf-more" id="cfMore" type="button" hidden>顯示更多</button>
         </section>
-        <p class="cf-disclaimer">說明：中期資金強度是模型計算的相對分數，不是金額或百分比；近5日法人淨額是收盤價換算後依核心／相關分配的估算金額。核心買超廣度是一家公司一票；核心公司不足3家標示「個股主導」。此處只做資金觀察，個股進場判斷交由「近期精選」。</p>
       </section>
       <section id="cfDetail" class="cf-detail" hidden>
-        <div class="cf-card cf-detail-head"><button type="button" id="cfBack" class="cf-back">← 返回產業觀察</button><span class="cf-eyebrow">SECTOR CAPITAL REVIEW</span><h2 id="cfDetailTitle">正在載入</h2><p id="cfDetailMeta">—</p>
+        <div class="cf-card cf-detail-head"><button type="button" id="cfBack" class="cf-back">← 返回產業觀察</button><h2 id="cfDetailTitle">正在載入</h2><p id="cfDetailMeta">—</p>
           <div class="cf-kpis cf-detail-kpis" id="cfDetailKPIs"></div><p class="cf-core-note" id="cfCoreBreadth">—</p></div>
-        <section class="cf-card cf-interpret"><div class="cf-interpret-title"><span class="cf-accent-dot"></span><h3>資金狀態解讀</h3><small>中期資金強度 × 近5日法人淨額 × 核心廣度</small></div><p id="cfReading">載入中…</p></section>
+        <section class="cf-card cf-interpret"><div class="cf-interpret-title"><span class="cf-accent-dot"></span><h3>資金狀態解讀</h3></div><p id="cfReading">載入中…</p></section>
         <section class="cf-card cf-trend-card" id="cfTrend"></section>
-        <section class="cf-card cf-stock-board"><div class="cf-stock-board-head"><div><span class="cf-eyebrow">SECTOR MEMBERS</span><h3>成分股・資金拆解</h3><p id="cfPotentialCount">—</p></div><small>核心／相關各自檢視</small></div>
+        <section class="cf-card cf-stock-board"><div class="cf-stock-board-head"><div><h3>成分股・資金拆解</h3><p id="cfPotentialCount">—</p></div></div>
           <div class="cf-stock-controls"><div class="cf-chips" aria-label="成分股分類"><button type="button" data-cf-stock-filter="core" class="is-on">核心公司</button><button type="button" data-cf-stock-filter="related">相關公司</button><button type="button" data-cf-stock-filter="all">全部公司</button></div><label class="cf-stock-sort-label">排序 <select id="cfStockSort"><option value="buy">法人近5日買超最多</option><option value="sell">法人近5日賣超最多</option><option value="flow">法人5日比例</option></select></label></div>
-          <p class="cf-method">此處「個股法人5日原始淨額」未依核心／相關產業分攤；上方的產業淨額／核心／相關金額才是正式分配後結果。原始額用於辨識哪家公司資金變化較大，不代表推薦或適合進場。</p>
           <div class="cf-stock-list" id="cfStockList"><div class="cf-empty">載入中…</div></div><p class="cf-list-total" id="cfStockListTotal">—</p>
         </section>
       </section>
@@ -3949,15 +3947,15 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 @media(max-width:570px){#overviewResonanceCard .sz-reslab{padding:11px}#overviewResonanceCard .sz-reslab-controls{gap:6px}#overviewResonanceCard .sz-reslab-dual b{font-size:11px}#overviewResonanceCard .sz-reslab-actions button{flex:1}}
 </style>
 
-  <script src="./capital-flow.js?v=2.6.8.29"></script>
+  <script src="./capital-flow.js?v=2.7.0.27"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.26"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.26"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.27"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.27"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.26"></script>
+  <script src="./app.js?v=2.7.0.27"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -3996,7 +3994,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 .disposal-risk-side>span{margin-bottom:7px!important;line-height:1.2!important}
 .disposal-risk-side>strong{margin:0 0 7px!important;line-height:1.08!important}
 .disposal-risk-side small{margin-top:2px!important;line-height:1.18!important}
-.disposal-state-watch .disposal-shield{background:#ffd04d!important;color:#2b2100!important}
+.disposal-state-watch .disposal-shield{background:#ffd04d!important;color:#986500!important}
 
 .disposal-state-danger .disposal-shield{background:#ff6977!important;color:#2b080d!important;font-size:0!important}
 .disposal-state-danger .disposal-shield::after{content:"×";font-size:29px;font-weight:900}
@@ -4027,7 +4025,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 .disposal-summary-head{width:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important}
 .disposal-summary-sep{align-self:stretch!important;width:1px!important;min-height:100%!important;background:#496278!important;font-size:0!important;margin:0!important}
 .disposal-summary-card p{margin:0!important;min-width:0!important}
-.disposal-state-watch-force .disposal-shield{background:#ffd04d!important;color:#2b2100!important}
+.disposal-state-watch-force .disposal-shield{background:#ffd04d!important;color:#986500!important}
 
 .disposal-state-watch-force .disposal-status-main strong{color:#ffd04d!important}
 .disposal-state-danger-force .disposal-shield{background:#ff6977!important;color:#2b080d!important;font-size:0!important}
@@ -4440,7 +4438,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.6.8.15"></script>
+<script defer src="./featured-picks-ui.js?v=2.7.0.27"></script>
 
 <style id="stockzone-v26811-ui">
 /* v2.6.8.15 | Monetary TOP10 only; legacy industry capital intensity/X20 are unchanged. */
@@ -4539,12 +4537,12 @@ body.mode-screening .cf-page .cf-period-toggle button{
 body.mode-screening .cf-page .cf-period-toggle button.active{
   background:#fff;color:#286fc7;box-shadow:0 1px 5px rgba(50,80,125,.12);
 }
-body.mode-screening .cf-page .cf-stock-values{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px 6px!important;}
+body.mode-screening .cf-page .cf-stock-values{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px 4px!important;}
 body.mode-screening .cf-page .cf-stock-values span{min-width:0!important;}
-body.mode-screening .cf-page .cf-stock-values small{font-size:9px!important;}
+body.mode-screening .cf-page .cf-stock-values small{font-size:clamp(7px,2vw,9px)!important;white-space:nowrap;}
 @media(max-width:520px){
  body.mode-screening .market-dynamic-page .md-metric-tiles>.md-tile{padding:12px 10px 10px!important;}
- body.mode-screening .cf-page .cf-stock-values strong{font-size:12px!important;}
+ body.mode-screening .cf-page .cf-stock-values strong{font-size:clamp(10px,2.5vw,12px)!important;}
 }
 </style>
 <style id="stockzone-v26813-official-eod-amounts">
@@ -4579,7 +4577,7 @@ body.mode-screening .cf-page .cf-row-grid strong{font-variant-numeric:tabular-nu
 body.mode-screening .cf-page .cf-row-bottom b{white-space:nowrap;font-weight:750;color:#8494a7;}
 body.mode-screening .cf-page .cf-stock-badge-core{color:#2e78aa;background:#eaf4ff;}
 body.mode-screening .cf-page .cf-stock-badge-related{color:#7b8698;background:#f2f5f8;}
-body.mode-screening .cf-page .cf-stock-values{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+body.mode-screening .cf-page .cf-stock-values{grid-template-columns:repeat(4,minmax(0,1fr))!important;}
 @media (max-width:600px){body.mode-screening .cf-page .cf-row-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 7px;}body.mode-screening .cf-page .cf-row-grid small{font-size:9px;}body.mode-screening .cf-page .cf-row-grid strong{font-size:15px;}body.mode-screening .cf-page .cf-status{max-width:80px;text-align:center;}}
 </style>
 
@@ -4994,7 +4992,7 @@ body.mode-analysis #technical .tech-tile .tech-metric:last-child,
 .disposal-summary-head{align-self:center!important;align-items:center!important}
 .disposal-bulb{display:inline-flex!important;align-items:center!important;justify-content:center!important;line-height:1!important}
 .disposal-summary-sep{align-self:stretch!important;width:1px!important;min-height:34px!important;background:#496278!important;font-size:0!important;margin:0 3px!important}
-.disposal-state-watch .disposal-shield{background:#ffd04d!important;color:#2b2100!important}
+.disposal-state-watch .disposal-shield{background:#ffd04d!important;color:#986500!important}
 @media(max-width:720px){.disposal-summary-card{align-items:center!important}.disposal-summary-head{align-self:center!important}.disposal-summary-sep{min-height:42px!important;margin:0 2px!important}}
 </style>
 <style>
@@ -6722,7 +6720,7 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 .cf-sort-wrap>span{font-size:10px;font-weight:900;color:#8293a6;white-space:nowrap}
 .cf-list-caption{display:flex;gap:8px;justify-content:space-between;align-items:center;margin:15px 2px 12px;color:#6f8195;font-size:11px;font-weight:800}
 .cf-list-caption small{font-size:9px;font-weight:600;color:#a3afbc}
-.cf-sector-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.cf-sector-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:12px}
 .cf-sector{min-width:0;display:block;width:100%;text-align:left;border:1px solid #e7edf4;border-radius:16px;background:#fff;padding:16px;transition:border-color .15s,transform .15s;box-shadow:0 2px 6px rgba(20,57,93,.018)}
 .cf-sector:hover{border-color:#c7dced}
 .cf-row-head{display:flex;align-items:center;gap:9px;min-width:0}
@@ -6774,7 +6772,7 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
 .cf-stock-badge{flex:0 0 auto;padding:6px 8px;border-radius:999px;background:#e9f4ff;color:#3a7da9;font-size:9px;font-weight:850}
 .cf-stock-muted{flex:0 0 auto;color:#95a3b2;font-size:9px;max-width:85px;text-align:right}
 .cf-stock-values{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:13px;padding-top:12px;border-top:1px solid #edf1f5}
-.cf-stock-values span{min-width:0}.cf-stock-values small{display:block;font-size:9px;color:#98a7b8;margin-bottom:5px}.cf-stock-values strong{font-size:14px;font-weight:850;color:#2e4a64}
+.cf-stock-values span{min-width:0}.cf-stock-values small{display:block;font-size:9px;color:#98a7b8;margin-bottom:5px;white-space:nowrap;letter-spacing:-.03em}.cf-stock-values strong{display:block;font-size:14px;font-weight:850;color:#2e4a64;white-space:nowrap;font-variant-numeric:tabular-nums}
 .cf-list-total{text-align:right;font-size:10px!important;margin-top:10px!important;color:#9cabb7!important}
 .cf-empty{grid-column:1/-1;text-align:center;background:#f8fafd;border:1px dashed #e3eaf1;border-radius:14px;padding:25px 16px;font-size:12px;line-height:1.65;color:#93a1b1}
 @media(max-width:940px){.cf-sector-list,.cf-stock-list{grid-template-columns:1fr}.cf-page .cf-card{padding:18px!important}}
@@ -6791,7 +6789,7 @@ body.mode-analysis #technical .tech-overview.tech-overview-v2.tone-bad .tech-sta
  .cf-row-title b{font-size:13px}.cf-status{font-size:8px}.cf-sector{padding:13px 11px;border-radius:13px}
  .cf-row-grid{gap:3px;margin:13px 0 11px}.cf-row-grid small{font-size:8px}.cf-row-grid strong{font-size:14px}
  .cf-row-bottom span{font-size:9px}.cf-detail-head .cf-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
- .cf-stock-board-head{display:block}.cf-stock-board-head>small{display:block;margin-top:6px}.cf-stock-values strong{font-size:12px}
+ .cf-stock-board-head{display:block}.cf-stock-board-head>small{display:block;margin-top:6px}.cf-stock-values small{font-size:clamp(7px,1.85vw,9px)!important}.cf-stock-values strong{font-size:clamp(10px,2.65vw,12px)}
  .cf-stock{padding:11px}.cf-stock-name b{font-size:12px}.cf-stock-badge{font-size:8px;padding:5px}
  .cf-interpret-title small{flex:1;font-size:9px}.cf-interpret p{font-size:12px}
 }
