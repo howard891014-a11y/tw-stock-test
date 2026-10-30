@@ -4473,7 +4473,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.38（僅研究資料）',
+    modelVersion:'v2.7.0.39（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -6143,18 +6143,23 @@ function renderResonanceLab(play,expected,risk,decision){
 此為價格研究候選，不影響五年回測建議玩法、核心配置或共振價格。`:`研究候選資料不足：${reason}`);
  if(select&&!select.dataset.szlTouched&&!szLabActive(code))select.value=candidate?.key||play?.key||'swing';
  const pairs=[['主要',v.main],['次要',v.secondary],['回測',v.pullback]];
+ const reachByType={};
  const reach=pairs.map(([label,target])=>{
    if(!target)return `${label}：缺少有效目標價`;
    const stats=lab.reachabilityProfile(szLabBars(),v.price,target);
    if(!stats.valid)return `${label}：${stats.reason}`;
    const h20=stats.horizons.find(h=>h.days===20),h40=stats.horizons.find(h=>h.days===40);
+   reachByType[label]={distance:stats.distancePct,h20:h20?.hitPct??null,h40:h40?.hitPct??null,count:stats.sample};
    return `${label}：距現價 ${stats.distancePct>0?'+':''}${stats.distancePct}%｜歷史同幅度20D ${h20.hitPct}%・40D ${h40.hitPct}%（${stats.sample}筆）`;
  });
+ // Canonical model output shared by 共振圖, 玩法分析, and historic touch-rate UI.
+ // Prices come from this render's expected.plan; no DOM parsing, alternate formula or fallback.
+ lab.liveResonance={code,values:{price:v.price,main:v.main,secondary:v.secondary,pullback:v.pullback,defense:v.defense},reachByType};
+ window.dispatchEvent(new Event('stockzone:resonance-live'));
  const reachDataNode=$('szLabReach');if(reachDataNode)reachDataNode.dataset.stockCode=code;
  setText('szLabReach',`到達時間參考（非目標價回測）｜每60交易日取1筆歷史樣本\n${reach.join('\n')}\n到達率僅表示過去相同百分比幅度曾否觸及，不能當成現在共振的預測機率。`);
  const snapshot=szLabActive(code),record=szLabRead()[code];
  setText('szLabOriginal',snapshot?`建立 ${snapshot.tradeDate}｜${szLabPlanText(snapshot.initial)}`:'尚未建立。按「鎖定原始交易計畫」記錄目前價格與自行確認的玩法。');
- setText('szLabLive',szLabPlanText(v));
  if($('szLabLockPlan'))$('szLabLockPlan').disabled=!!snapshot;
  if($('szLabSaveUpdate'))$('szLabSaveUpdate').disabled=!snapshot;
  if($('szLabNewTrade'))$('szLabNewTrade').disabled=!snapshot;
