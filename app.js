@@ -4457,7 +4457,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.27（僅研究資料）',
+    modelVersion:'v2.7.0.28（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5909,6 +5909,8 @@ async function szIndustryRequest(action,method='GET',body=null){
   return await readJson(res,'產業異動');
 }
 function szIndustryRender(){
+  const bulk=$('industryChangeDeleteImported');
+  if(bulk)bulk.disabled=szIndustryChangeBusy||!szIndustryChangeEntries.some(e=>e.imported===true);
   const container=$('industryChangeRows');if(!container)return;container.replaceChildren();
   if(!szIndustryChangeEntries.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.className='sz-change-empty';td.textContent='目前沒有異動紀錄';tr.append(td);container.append(tr);return;}
   for(const row of szIndustryChangeEntries){
@@ -5926,9 +5928,23 @@ function szIndustryRender(){
 }
 async function szIndustryRefresh(){
   if(szIndustryChangeBusy)return;szIndustryChangeBusy=true;szIndustryText('industryChangeStatus','讀取異動紀錄中…');
-  try{const data=await szIndustryRequest('list');szIndustryChangeEntries=Array.isArray(data?.rows)?data.rows:[];szIndustryRender();const pending=szIndustryChangeEntries.filter(e=>!e.imported).length;szIndustryText('industryChangeStatus',`共 ${szIndustryChangeEntries.length} 筆｜未導入 ${pending} 筆｜已導入 ${szIndustryChangeEntries.length-pending} 筆`);}catch(e){szIndustryText('industryChangeStatus',`讀取失敗：${e.message}`);}finally{szIndustryChangeBusy=false;}
+  try{const data=await szIndustryRequest('list');szIndustryChangeEntries=Array.isArray(data?.rows)?data.rows:[];szIndustryRender();const pending=szIndustryChangeEntries.filter(e=>!e.imported).length;szIndustryText('industryChangeStatus',`共 ${szIndustryChangeEntries.length} 筆｜未導入 ${pending} 筆｜已導入 ${szIndustryChangeEntries.length-pending} 筆`);}catch(e){szIndustryText('industryChangeStatus',`讀取失敗：${e.message}`);}finally{szIndustryChangeBusy=false;szIndustryRender();}
 }
 $('industryChangeRefresh')?.addEventListener('click',szIndustryRefresh);
+$('industryChangeDeleteImported')?.addEventListener('click',async()=>{
+  if(szIndustryChangeBusy)return;
+  const confirmed=szIndustryChangeEntries.filter(e=>e.imported===true).length;
+  if(!confirmed)return;
+  if(!window.confirm(`確定一次刪除 ${confirmed} 筆「已導入」的產業異動與公司行動暫存紀錄？\n未導入紀錄、Neon 正式分類與鐵證核准資料都不會刪除。`))return;
+  szIndustryChangeBusy=true;szIndustryRender();szIndustryText('industryChangeStatus',`正在清除 ${confirmed} 筆已導入暫存紀錄…`);
+  let outcome=null,error=null;
+  try{outcome=await szIndustryRequest('delete-imported','POST',{confirmed:true});}
+  catch(e){error=e;}
+  finally{szIndustryChangeBusy=false;await szIndustryRefresh();}
+  if(error)szIndustryText('industryChangeStatus',`批次刪除失敗或未完成：${error.message}。已重新讀取，請依剩餘紀錄確認。`);
+  else if(outcome?.partial)szIndustryText('industryChangeStatus',`已清除 ${outcome.removed} 筆，部分失敗：${(outcome.errors||[]).join('；')}。已重新讀取。`);
+  else szIndustryText('industryChangeStatus',`已清除 ${outcome?.removed||0} 筆已導入暫存事件，未導入與正式 Neon 核准紀錄保留。`);
+});
 $('industryChangeScan')?.addEventListener('click',async()=>{
   if(szIndustryChangeBusy)return;szIndustryText('industryChangeStatus','正在偵測產業異動與官方公司行動（暫存與正式 Neon 分離）…');
   try{const data=await szIndustryRequest('scan','POST');await szIndustryRefresh();const progress=data.actions||{},waiting=Array.isArray(progress.pendingMonths)?progress.pendingMonths:[];const pendingText=waiting.length?`｜待補查 ${waiting.map(m=>`${m.month}（${m.sources.length}個來源）`).join('、')}`:'';

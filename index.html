@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.27">
+  <meta name="stockzone-version" content="2.7.0.28">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -3020,7 +3020,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.27</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.28</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3199,18 +3199,24 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
           <section class="valuation-summary-modern" aria-label="估值核心輸出">
             <div class="valuation-summary-grid">
               <div class="valuation-summary-card valuation-summary-card-main">
-                <span class="valuation-summary-label">綜合合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看綜合合理價說明">i</button></span>
-                <strong id="valuationCompositeFair">--</strong>
-                <small id="valuationCompositeGap">--</small>
-                <div class="valuation-summary-subblock">
-                  <div class="valuation-data-row compact"><span>模型依據</span><b id="valuationCompositeModelLine">--</b></div>
-                  <div class="valuation-data-row compact"><span>權重</span><b id="valuationCompositeWeightLine">PE --｜PS --｜PB --</b></div>
-                  <div class="valuation-data-row compact"><span>合理價區間</span><b id="valuationCompositeRangeLine">--</b></div>
-                  <div class="valuation-data-row compact"><span>估值位置</span><b id="valuationCompositeScenarioLine">--</b></div>
-                  <div class="valuation-data-row compact"><span>價格吸引力</span><b id="valuationCompositeAttractivenessLine">--</b></div>
-                  <div class="valuation-data-row compact"><span>估值可信度</span><b id="valuationCompositeConfidenceLine">--</b></div>
-                  <div class="valuation-summary-reason" id="valuationCompositeReasonLine">等待估值判讀</div>
+                <div class="valuation-summary-top">
+                  <div class="valuation-summary-price">
+                    <span class="valuation-summary-label">綜合合理價 <button class="formula-info" type="button" data-formula="composite" aria-label="查看綜合合理價說明">i</button></span>
+                    <strong id="valuationCompositeFair">--</strong>
+                    <small id="valuationCompositeGap">--</small>
+                  </div>
+                  <div class="valuation-summary-facts">
+                    <div class="valuation-data-row compact"><span>合理價區間</span><b id="valuationCompositeRangeLine">--</b></div>
+                    <div class="valuation-data-row compact"><span>估值位置</span><b id="valuationCompositeScenarioLine">--</b></div>
+                    <div class="valuation-data-row compact"><span>估值可信度</span><b id="valuationCompositeConfidenceLine">--</b></div>
+                    <div class="valuation-data-row compact"><span>價格吸引力</span><b id="valuationCompositeAttractivenessLine">--</b></div>
+                  </div>
                 </div>
+                <div class="valuation-summary-subblock">
+                  <div class="valuation-summary-detail"><span>模型依據</span><b id="valuationCompositeModelLine">--</b></div>
+                  <div class="valuation-summary-detail"><span>權重</span><b id="valuationCompositeWeightLine">PE --｜PS --｜PB --</b></div>
+                </div>
+                <div class="valuation-summary-reason" id="valuationCompositeReasonLine">等待估值判讀</div>
               </div>
             </div>
           </section>
@@ -3778,6 +3784,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
       <button type="button" id="industryChangeRefresh">讀取異動</button>
       <button type="button" id="industryChangeScan">立即偵測</button>
       <button type="button" id="industryChangeExport">匯出待驗證 JSON</button>
+      <button type="button" id="industryChangeDeleteImported" disabled>一鍵刪除已導入</button>
     </div>
     <small class="settings-manual-update-status" id="industryChangeStatus">尚未載入｜定時檢查產業與公司行動，官方來源失敗會顯示未完成</small>
     <div class="sz-change-scroll"><table class="sz-change-table" aria-label="產業異動紀錄">
@@ -3805,6 +3812,8 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 #industryChangeSection .sz-change-pending{color:#98744a}
 #industryChangeSection .sz-change-done{color:#26835c}
 #industryChangeSection .sz-change-remove{background:none!important;border:0!important;color:#687580!important;font-size:17px!important;margin-left:10px!important;padding:0 5px!important;cursor:pointer}
+#industryChangeSection #industryChangeDeleteImported{background:#fff3f3;color:#b44c55;border:1px solid #efcdd1;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:650;cursor:pointer}
+#industryChangeSection #industryChangeDeleteImported:disabled{opacity:.45;cursor:not-allowed}
 </style>
 <section class="settings-manual-update" aria-label="XY 快照手動更新">
   <div class="settings-manual-update-head"><span>XY / 分類快照</span><small>開發模式：手動</small></div>
@@ -3947,15 +3956,15 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 @media(max-width:570px){#overviewResonanceCard .sz-reslab{padding:11px}#overviewResonanceCard .sz-reslab-controls{gap:6px}#overviewResonanceCard .sz-reslab-dual b{font-size:11px}#overviewResonanceCard .sz-reslab-actions button{flex:1}}
 </style>
 
-  <script src="./capital-flow.js?v=2.7.0.27"></script>
+  <script src="./capital-flow.js?v=2.7.0.28"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.27"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.27"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.28"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.28"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.27"></script>
+  <script src="./app.js?v=2.7.0.28"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4176,7 +4185,10 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
     set('valuationCompositeScenarioLine', position);
     set('valuationCompositeAttractivenessLine', attract);
     set('valuationCompositeConfidenceLine', conf);
-    set('valuationCompositeReasonLine', [fairRangeNote, confNote].filter(Boolean).join('｜') || usable('valuationModelReason') || '等待模型資料');
+    var width=(fairRangeNote.match(/區間\s*(±[\d.]+%)/)||[])[1]||'--';
+    var dispersion=(confNote.match(/分歧\s*([\d.]+%)/)||[])[1]||'--';
+    var coverage=(confNote.match(/資料\s*([\d.]+%)/)||[])[1]||'--';
+    set('valuationCompositeReasonLine', '中心 '+(usable('valuationCompositeFair')||'--')+' ｜ 區間 '+width+' ｜ 分歧 '+dispersion+' ｜ 資料 '+coverage);
 
     var curPeTxt=usable('valuationCurrentPe')||usable('valuationEvidenceCurrentPe')||'--';
     var peerPeTxt=usable('valuationPeerPe')||usable('valuationEvidencePeerPe')||'--';
@@ -4438,7 +4450,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.7.0.27"></script>
+<script defer src="./featured-picks-ui.js?v=2.7.0.28"></script>
 
 <style id="stockzone-v26811-ui">
 /* v2.6.8.15 | Monetary TOP10 only; legacy industry capital intensity/X20 are unchanged. */
@@ -6246,14 +6258,24 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .
 </style>
 <style id="v26132-valuation-restore-style-final">
 #valuation.valuation-card-v26131{padding:18px 16px!important;background:#fff!important;border:1px solid #e8eef5!important;border-radius:22px!important;box-shadow:0 12px 28px rgba(17,34,61,.05)!important;color:#13233a!important}
-#valuation .valuation-summary-modern .valuation-summary-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-template-rows:none!important;gap:10px!important;min-height:0!important;margin:0!important;border:0!important;border-radius:0!important;background:none!important;overflow:visible!important;position:static!important;box-shadow:none!important}
-#valuation .valuation-summary-modern .valuation-summary-card{background:linear-gradient(180deg,#f8fbff,#f2f7ff)!important;border:1px solid #dfe8f5!important;border-radius:18px!important;padding:14px 14px 13px!important;box-shadow:0 8px 20px rgba(17,34,61,.035)!important;min-width:0!important}
-#valuation .valuation-summary-modern .valuation-summary-card-main{grid-column:1/-1!important;background:linear-gradient(180deg,#f6fbf8,#eef8f2)!important;border-color:#dceee1!important}
+#valuation .valuation-summary-modern .valuation-summary-grid{display:block!important;margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
+#valuation .valuation-summary-modern .valuation-summary-card-main{display:block!important;min-width:0!important;grid-column:1/-1!important;background:transparent!important;border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important}
 #valuation .valuation-summary-modern .valuation-summary-card::before{content:none!important;display:none!important}
-#valuation .valuation-summary-modern .valuation-summary-card strong{display:block!important;margin-top:8px!important;color:#13233a!important;font-size:26px!important;line-height:1.1!important;font-weight:800!important;word-break:break-word!important}
-#valuation .valuation-summary-modern .valuation-summary-card small{display:block!important;margin-top:8px!important;color:#8294a8!important;font-size:11px!important;line-height:1.4!important}
-#valuation .valuation-summary-modern .valuation-summary-label{display:flex!important;align-items:center!important;gap:6px!important;color:#6e8298!important;font-size:12px!important;font-weight:700!important}
-#valuation .valuation-summary-modern .valuation-summary-card-main strong{font-size:38px!important}
+#valuation .valuation-summary-modern .valuation-summary-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:0;background:linear-gradient(135deg,#f4f8ff,#f8fbff);border:1px solid #e0e8f3;border-radius:18px;padding:22px 24px;align-items:stretch}
+#valuation .valuation-summary-modern .valuation-summary-price{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;min-width:0;padding-right:22px;border-right:1px solid #dce5f1}
+#valuation .valuation-summary-modern .valuation-summary-label{display:flex!important;align-items:center!important;gap:7px!important;color:#64778f!important;font-size:15px!important;font-weight:700!important}
+#valuation .valuation-summary-modern .valuation-summary-price>strong{display:block!important;margin:17px 0 13px!important;color:#13233a!important;font-size:48px!important;line-height:1!important;font-weight:900!important;letter-spacing:-.025em}
+#valuation .valuation-summary-modern .valuation-summary-price>small{display:block!important;margin:0!important;color:#72859e!important;font-size:15px!important;line-height:1.5!important}
+#valuation .valuation-summary-modern .valuation-summary-facts{display:flex;flex-direction:column;justify-content:space-evenly;min-width:0;padding-left:22px;gap:8px}
+#valuation .valuation-summary-modern .valuation-summary-facts .valuation-data-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:10px!important;border:0!important;padding:5px 0!important}
+#valuation .valuation-summary-modern .valuation-summary-facts .valuation-data-row span{color:#697c95!important;font-size:13px!important;line-height:1.35!important}
+#valuation .valuation-summary-modern .valuation-summary-facts .valuation-data-row b{color:#172743!important;font-size:18px!important;line-height:1.25!important;font-weight:850!important;white-space:nowrap!important;text-align:right!important}
+#valuation .valuation-summary-modern .valuation-summary-subblock{display:grid!important;grid-template-columns:1fr 1.08fr!important;gap:0!important;margin:16px 0 0!important;padding:0 8px 16px!important;border:0!important;border-bottom:1px solid #e2e9f2!important}
+#valuation .valuation-summary-modern .valuation-summary-detail{display:flex;flex-direction:column;gap:7px;min-width:0;padding:0 16px}
+#valuation .valuation-summary-modern .valuation-summary-detail:first-child{border-right:1px solid #e0e7ef;padding-left:10px}
+#valuation .valuation-summary-modern .valuation-summary-detail span{color:#788aa2;font-size:12px}
+#valuation .valuation-summary-modern .valuation-summary-detail b{color:#182946;font-weight:750;font-size:14px;line-height:1.45;white-space:normal;overflow-wrap:anywhere}
+#valuation .valuation-summary-modern .valuation-summary-reason{margin:0!important;padding:12px 8px 2px!important;border:0!important;color:#8293a9!important;font-size:12px!important;line-height:1.65!important;white-space:normal}
 #valuation .valuation-summary-modern #valuationPositionCard strong{font-size:20px!important;color:#1fa86a!important}
 #valuation .valuation-model-tiles{margin-top:10px!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
 #valuation .valuation-model-tiles .valuation-tech-tile{padding:11px 11px 10px!important;border:1px solid #dfe8f5!important;border-radius:18px!important;background:#eef5ff!important;box-shadow:0 8px 20px rgba(17,34,61,.035)!important;min-width:0!important}
@@ -6269,10 +6291,21 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .
 #valuation .valuation-model-tiles .valuation-tech-tile small{display:block!important;padding-top:7px!important;border-top:1px solid #d9e3ef!important;color:#8999aa!important;font-size:9px!important;line-height:1.45!important}
 @media(max-width:720px){
 #valuation.valuation-card-v26131{padding:16px 14px!important}
-#valuation .valuation-summary-modern .valuation-summary-grid{gap:8px!important}
-#valuation .valuation-summary-modern .valuation-summary-card{padding:12px 12px 11px!important;border-radius:16px!important}
-#valuation .valuation-summary-modern .valuation-summary-card-main strong{font-size:34px!important}
-#valuation .valuation-summary-modern .valuation-summary-card strong{font-size:23px!important}
+#valuation .valuation-summary-modern .valuation-summary-top{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);padding:13px 12px;border-radius:16px}
+#valuation .valuation-summary-modern .valuation-summary-price{padding-right:10px}
+#valuation .valuation-summary-modern .valuation-summary-label{font-size:12px!important}
+#valuation .valuation-summary-modern .valuation-summary-price>strong{font-size:32px!important;margin:11px 0!important}
+#valuation .valuation-summary-modern .valuation-summary-price>small{font-size:11px!important}
+#valuation .valuation-summary-modern .valuation-summary-facts{padding-left:10px;gap:5px}
+#valuation .valuation-summary-modern .valuation-summary-facts .valuation-data-row{gap:4px!important;padding:3px 0!important}
+#valuation .valuation-summary-modern .valuation-summary-facts .valuation-data-row span{font-size:10px!important}
+#valuation .valuation-summary-modern .valuation-summary-facts .valuation-data-row b{font-size:12px!important}
+#valuation .valuation-summary-modern .valuation-summary-subblock{margin-top:12px!important;padding:0 0 12px!important}
+#valuation .valuation-summary-modern .valuation-summary-detail{padding:0 9px}
+#valuation .valuation-summary-modern .valuation-summary-detail:first-child{padding-left:3px}
+#valuation .valuation-summary-modern .valuation-summary-detail span{font-size:11px}
+#valuation .valuation-summary-modern .valuation-summary-detail b{font-size:12px}
+#valuation .valuation-summary-modern .valuation-summary-reason{font-size:10px!important;padding:9px 2px 2px!important}
 #valuation .valuation-summary-modern #valuationPositionCard strong{font-size:18px!important}
 #valuation .valuation-signal-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
 #valuation .valuation-confidence-output{grid-column:1/-1!important}
