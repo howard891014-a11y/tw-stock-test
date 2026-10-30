@@ -587,13 +587,13 @@ function mergeFundamentalPayload(primary,fallback){
 async function fundamentals(query,market){
   const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),legacyKey=`${code}|${String(market||"")}`;
   // New namespace invalidates old incomplete 6-hour snapshots, without touching other caches.
-  const key=`fundamentals:v27029:${legacyKey}`;
+  const key=`fundamentals:v27030:${legacyKey}`;
   const cached=await stockzoneIdbGet("marketCache",key);
   const age=Date.now()-Number(cached?.savedAt||0);
   const good=cached?.data&&!fundamentalPayloadNeedsSupplement(cached.data);
   if(cached?.data&&Array.isArray(cached.data?.quarters)&&
     (good?age<FUNDAMENTALS_CACHE_MS:age<FUNDAMENTALS_RETRY_MS))return cached.data;
-  const params=new URLSearchParams({q:code,market:String(market||"")});
+  const params=new URLSearchParams({q:code,market:String(market||""),v:"27030"});
   const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
   let data=null;
   try{
@@ -4501,7 +4501,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.29（僅研究資料）',
+    modelVersion:'v2.7.0.30（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
