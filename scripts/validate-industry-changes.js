@@ -55,12 +55,27 @@ async function scanSmoke(){
   const second=await moduleUnderTest.scan({...req,date:'2026-10-24',fetchRoster:async()=>fetchRosters[1]});
   assert.equal(second.mode,'detected');assert.equal(second.neonWrites,0);assert(logs.some(x=>x.value.code==='9012'&&x.value.event==='listing'));
 }
+async function batchDeleteIsolationSmoke(){
+  const removed=[];
+  const importedId='a'.repeat(24),pendingId='b'.repeat(24);
+  const r=await moduleUnderTest.removeAllConfirmed({
+    listVerified:async()=>[
+      {id:importedId,date:'2026-10-29',imported:true},
+      {id:pendingId,date:'2026-10-29',imported:false}
+    ],
+    deleteCandidates:async paths=>removed.push(...paths)
+  });
+  assert.equal(r.removed,1,'bulk industry cleanup removes only Neon-verified imported candidates');
+  assert.equal(removed.length,1);
+  assert(removed[0].endsWith('/'+importedId+'.json'));
+  assert(!removed.some(p=>p.includes(pendingId)),'unimported candidates must remain');
+}
 async function apiAccessSmoke(){
   const api=require('../lib/industry-change-api'),oldToken=process.env.BLOB_READ_WRITE_TOKEN,oldCron=process.env.CRON_SECRET;
-  const originals={listChanges:moduleUnderTest.listChanges,scan:moduleUnderTest.scan,removeConfirmed:moduleUnderTest.removeConfirmed};
-  const originalActions={list:actionMonitor.list,scanRecent:actionMonitor.scanRecent,removeApproved:actionMonitor.removeApproved};
-  actionMonitor.list=async()=>[];actionMonitor.scanRecent=async()=>({ok:true,complete:true,inserted:0});actionMonitor.removeApproved=async id=>({ok:true,removed:id});
-  moduleUnderTest.listChanges=async()=>[];moduleUnderTest.scan=async()=>({ok:true,neonWrites:0});moduleUnderTest.removeConfirmed=async id=>({ok:true,removed:id});
+  const originals={listChanges:moduleUnderTest.listChanges,scan:moduleUnderTest.scan,removeConfirmed:moduleUnderTest.removeConfirmed,removeAllConfirmed:moduleUnderTest.removeAllConfirmed};
+  const originalActions={list:actionMonitor.list,scanRecent:actionMonitor.scanRecent,removeApproved:actionMonitor.removeApproved,removeAllApproved:actionMonitor.removeAllApproved};
+  actionMonitor.list=async()=>[];actionMonitor.scanRecent=async()=>({ok:true,complete:true,inserted:0});actionMonitor.removeApproved=async id=>({ok:true,removed:id});actionMonitor.removeAllApproved=async()=>({ok:true,removed:2});
+  moduleUnderTest.listChanges=async()=>[];moduleUnderTest.scan=async()=>({ok:true,neonWrites:0});moduleUnderTest.removeConfirmed=async id=>({ok:true,removed:id});moduleUnderTest.removeAllConfirmed=async()=>({ok:true,removed:3});
   process.env.BLOB_READ_WRITE_TOKEN='fake-unit-test-token';process.env.CRON_SECRET='fake-cron';
   async function request(act='list',method='GET',headers={},body={}){
     const res={code:0,body:null,setHeader(){return this;},status(n){this.code=n;return this;},json(obj){this.body=obj;return this;}};
@@ -75,6 +90,9 @@ async function apiAccessSmoke(){
     assert.equal((await request('delete','POST',origin,{id:'f'.repeat(24)})).code,200,'verified-row delete endpoint remains available');
     assert.equal((await request('delete-action','POST',origin,{id:'f'.repeat(24)})).code,200,'verified company-action candidate delete');
     assert.equal((await request('scan-actions','POST',origin)).code,200,'manual corporate action scan');
+    assert.equal((await request('delete-imported','POST',origin,{confirmed:true})).body.removed,5,'bulk deletes audited candidates only');
+    assert.equal((await request('delete-imported','POST',origin,{confirmed:false})).code,400,'batch operation requires explicit confirmation');
+    assert.equal((await request('delete-imported','POST',{host:'stockzone.example',origin:'https://stranger.example','sec-fetch-site':'cross-site'},{confirmed:true})).code,403,'cross-site bulk delete denied');
     assert.equal((await request('delete','POST',{host:'stockzone.example',origin:'https://stranger.example','sec-fetch-site':'cross-site'},{id:'f'.repeat(24)})).code,403,'cross-origin mutation denied');
     assert.equal((await request('delete','POST',{host:'stockzone.example'},{id:'f'.repeat(24)})).code,403,'originless mutation denied');
     assert.equal((await request('confirm','POST',origin,{ids:['f'.repeat(24)]})).code,405,'cannot mark candidates imported using a public endpoint');
@@ -86,4 +104,4 @@ async function apiAccessSmoke(){
     if(oldCron===undefined)delete process.env.CRON_SECRET;else process.env.CRON_SECRET=oldCron;
   }
 }
-scanSmoke().then(apiAccessSmoke).then(()=>console.log('PASS industry-change-monitor + keyless candidate API — smoke, Cron guard, same-origin mutation, confirm forbidden, official Neon immutable')).catch(e=>{console.error(e);process.exitCode=1});
+scanSmoke().then(batchDeleteIsolationSmoke).then(apiAccessSmoke).then(()=>console.log('PASS industry-change-monitor + keyless candidate API — smoke, Cron guard, same-origin mutation, confirm forbidden, official Neon immutable')).catch(e=>{console.error(e);process.exitCode=1});

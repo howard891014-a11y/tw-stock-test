@@ -40,7 +40,7 @@ const sql={query:async(q,args=[])=>{
  if(q.includes('INSERT INTO market_company_action_scan_source')){const [month,source,finalized,rows,actions]=args;sourceCache.set(`${month}/${source}`,{month,source,finalized,rows,actions:JSON.parse(actions)});return [];} 
  if(q.includes('FROM market_company_profile'))return[{stock_code:'2330',stock_name:'台積電',industry:'半導體業',market:'上市'}];
  if(q.includes('INSERT INTO market_company_action_candidate')){assert(q.includes('WHERE NOT EXISTS'),'must not resurrect audited deleted candidates');assert(q.includes('ON CONFLICT(candidate_id) DO NOTHING'),'idempotent scanner');return[{candidate_id:'abc'}];}
- if(q.includes('DELETE FROM market_company_action_candidate')){assert(q.includes('AND EXISTS'),'cannot delete without approved verified row');return args[0]==='a'.repeat(24)?[{candidate_id:args[0]}]:[];}
+ if(q.includes('DELETE FROM market_company_action_candidate')){assert(/(?:AND|WHERE) EXISTS/.test(q),'cannot delete without approved verified row');return args[0]==='a'.repeat(24)?[{candidate_id:args[0]}]:[];}
  if(q.includes('to_regclass'))return[{candidate:true,release:true}];
  if(q.includes('FROM market_company_action_candidate'))return[];
  throw Error('unhandled test sql '+q.slice(0,100));
@@ -55,6 +55,10 @@ async function tests(){
   assert(a.errors.length>=1);assert(a.errors.some(x=>x.includes('TWSE TWT49U')));assert(queries.some(x=>x.q.includes('market_company_action_candidate')));
   const deleted=await mod.removeApproved('a'.repeat(24),{sql});assert.equal(deleted.verifiedReleasePreserved,true);
   await assert.rejects(()=>mod.removeApproved('b'.repeat(24),{sql}),/禁止刪除/);
+  const bulk=await mod.removeAllApproved({sql});
+  assert.equal(bulk.removed,0,'bulk delete returns no change if no release-matched candidates');
+  assert(queries.some(x=>x.q.includes('DELETE FROM market_company_action_candidate c')&&x.q.includes('AND r.event_date=c.event_date')&&x.q.includes('length(trim(r.evidence))>=10')),'bulk deletion must gate via independent SZ release');
+  assert(!queries.some(x=>/DELETE FROM market_company_action_release|DELETE FROM market_business_xy2_member/i.test(x.q)),'official releases and taxonomy must never be deleted');
   assert.equal((await mod.list({sql})).length,0);
   console.log('PASS v2.6.8.23 corporate events candidate inbox, official partial failure, Neon audited release gate, XY refresh, approved-only deletion');
 }
