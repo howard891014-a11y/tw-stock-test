@@ -9,8 +9,8 @@ const read=file=>fs.readFileSync(path.join(dir,file),'utf8');
 const app=read('app.js'),html=read('index.html'),labText=read('lib/resonance-lab-v1.js');
 const pure=require('../lib/resonance-lab-v1.js');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'2.7.0.41');
-for(const s of ['content="2.7.0.41"','v2.7.0.41</span>','app.js?v=2.7.0.41','resonance-lab-v1.js?v=2.7.0.41'])assert(html.includes(s),s);
+assert.equal(pkg.version,'2.7.0.43');
+for(const s of ['content="2.7.0.43"','v2.7.0.43</span>','app.js?v=2.7.0.43','resonance-lab-v1.js?v=2.7.0.43'])assert(html.includes(s),s);
 for(const text of [html,labText,app]){
   assert(!text.includes('szLabRunBacktest'),'no old manual backtest DOM element, event or synthetic click');
   assert(!text.includes('按「執行五年價格基準回測」開始'),'no manual prompt');
@@ -23,11 +23,15 @@ assert.match(app,/technical\(code,market\)\.catch/,'technical failures independe
 assert(!app.includes("if(szLabLastStock!==code){if(select)select.value=play?.key||'swing';szLabLastStock=code;setText('szLabBacktest'"),'render cannot erase finished R1');
 assert.match(app,/priceBacktest:window\.StockZoneResonanceLab\?\.getCurrentFiveYearReport\?\.\(code\)/);
 // Original R1 and OHLC checks cannot change while fixing the lifecycle.
-const orig=fs.readFileSync(path.join(dir,'../../v40/tw-stock-test-main/lib/resonance-lab-v1.js'),'utf8');
 const section=(src,a,b)=>src.slice(src.indexOf(a),src.indexOf(b,src.indexOf(a)));
 const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
-for(const [a,b] of [['  function backtestPriceBaselines(','  function reachabilityProfile('],['  function cleanBars(','  function avg(values)'],['  function classifyFiveYearPlay(','  function createSnapshot(']]){
-  assert.equal(sha(section(labText,a,b)),sha(section(orig,a,b)),`model unchanged: ${a}`);
+const frozenR1Hash=[
+ ['  function backtestPriceBaselines(','  function reachabilityProfile(','eb25b529b4f9015ac2188adf841ebedb5e297ddd7721a333518aa849beff04ea'],
+ ['  function cleanBars(','  function avg(values)','e8996e6e97c9a0636ce20627f822b47667409c57250715e0ae8904000d410ab1'],
+ ['  function classifyFiveYearPlay(','  function createSnapshot(','ce92d92b9d646548985e41542b38c6a5305a0a1c6daa696b14ec99fe05050ea5']
+];
+for(const [a,b,expected] of frozenR1Hash){
+  assert.equal(sha(section(labText,a,b)),expected,`R1 source unchanged from .40: ${a}`);
 }
 function generate(n=1211){
   const out=[],d=new Date('2021-10-01T00:00:00.000Z');let i=0;
@@ -71,4 +75,4 @@ const next=stub.api.evaluateFiveYearForCode('2330',good);
 assert(next.published);
 assert.equal(stub.api.fiveYearPlay.code,'2330');
 assert.equal(stub.api.getCurrentFiveYearReport('2603'),null);
-console.log('v2.7.0.41 PASS — original R1 and OHLC hashes, real 18-sample backtest, source error and corporate-action rejection, cross-stock isolation, no DOM/manual run');
+console.log('v2.7.0.43 PASS — original R1 and OHLC hashes, real 18-sample backtest, source error and corporate-action rejection, cross-stock isolation, no DOM/manual run');

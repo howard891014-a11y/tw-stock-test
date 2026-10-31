@@ -1,0 +1,25 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const crypto=require('node:crypto');
+const root=path.resolve(__dirname,'..');
+const settings=require('../vercel.json');
+const pkg=require('../package.json');
+assert.equal(pkg.version,'2.7.0.43');
+assert.equal(settings.proxy?.entrypoint,'proxy.js');
+assert(fs.existsSync(path.join(root,'proxy.js')),'new .js entrypoint required');
+assert(!fs.existsSync(path.join(root,'proxy.ts')),'remove obsolete .ts before deployment');
+assert(!fs.existsSync(path.join(root,'proxy.mjs')),'remove obsolete .mjs before deployment');
+// Preserve the middleware body byte-for-byte from v2.7.0.42's proxy.ts.
+const actual=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'proxy.js'))).digest('hex');
+assert.equal(actual,'f6bf9d5020706eb53c7a0c70250ba64c7bf5aa90dc7ef30d38599cd6152bc173');
+const source=fs.readFileSync(path.join(root,'proxy.js'),'utf8');
+assert.match(source,/export default async function proxy/);
+assert.match(source,/sessionFromCookie/);
+assert.match(source,/verifiedCron/);
+assert.equal(settings.crons.length,23);
+assert.equal(settings.rewrites.length,3);
+assert(pkg.dependencies?.['@vercel/functions']);
+assert.equal(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('v2.7.0.43'),true);
+console.log('v2.7.0.43 proxy.js, unchanged authorization logic, Vercel config, cron & rewrite checks PASS');
