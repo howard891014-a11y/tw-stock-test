@@ -9,12 +9,16 @@ module.exports=async function handler(req,res){
  try{
   const session=await a.sessionFromCookie(req.headers?.cookie);
   if(method==='GET'){
-   if(req.query?.action==='status')return send(res,200,{ok:true,authorized:!!session,role:session?.role||null,label:session?.label||null,sessionId:session?.id||null,enforced:a.enforced()});
+   if(req.query?.action==='status'){
+    // Renew cookie lifetime while preserving the same Neon-revocable token.
+    if(session)res.setHeader('Set-Cookie',a.cookie(a.parseCookie(req.headers?.cookie),a.COOKIE_AGE_SECONDS));
+    return send(res,200,{ok:true,authorized:!!session,role:session?.role||null,label:session?.label||null,sessionId:session?.id||null,enforced:a.enforced()});
+   }
    if(req.query?.action==='list'){
     if(session?.role!=='admin')return send(res,403,{ok:false,error:'ADMIN_ONLY'});
     const [invites,sessions]=await Promise.all([
       getSql().query(`SELECT id,label,created_at,expires_at,used_at,revoked_at FROM public.sz_access_invites ORDER BY created_at DESC LIMIT 150`),
-      getSql().query(`SELECT id,invite_id,label,role,created_at,expires_at,revoked_at FROM public.sz_access_sessions ORDER BY created_at DESC LIMIT 200`)]);
+      getSql().query(`SELECT id,invite_id,label,role,created_at,expires_at,permanent,revoked_at FROM public.sz_access_sessions ORDER BY created_at DESC LIMIT 200`)]);
     return send(res,200,{ok:true,invites,sessions:sessions.map(s=>({...s,sessionId:s.id}))});
    }
    return send(res,400,{ok:false,error:'INVALID_ACTION'});
@@ -26,7 +30,7 @@ module.exports=async function handler(req,res){
   if(action==='admin-login'){
    const configured=String(process.env.SZ_ACCESS_ADMIN_SECRET||'');
    if(configured.length<32||!a.safeCompare(body.secret,configured))return send(res,401,{ok:false,error:'INVALID_ADMIN_SECRET'});
-   const created=await a.createSession({label:'StockZone owner',role:'admin',days:365});
+   const created=await a.createSession({label:'StockZone owner',role:'admin'});
    res.setHeader('Set-Cookie',a.cookie(created.token,created.ageSeconds));
    return send(res,200,{ok:true,role:'admin'});
   }
