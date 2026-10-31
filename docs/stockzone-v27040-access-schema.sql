@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS public.sz_access_invites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   label TEXT NOT NULL CHECK (char_length(label) BETWEEN 1 AND 80),
   token_hash CHAR(64) NOT NULL UNIQUE,
+  role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('admin','viewer')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL,
   used_at TIMESTAMPTZ,
