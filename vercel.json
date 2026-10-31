@@ -153,6 +153,6 @@
     }
   ],
   "proxy": {
-    "entrypoint": "proxy.mjs"
+    "entrypoint": "proxy.js"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.41",
+  "version": "2.7.0.43",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -118,6 +118,11 @@
     "validate:v27019": "node scripts/validate-v27019-official-action-sources.js",
     "validate:v27018": "node scripts/validate-v27018-industry-resume.js",
     "validate:v27015": "node scripts/validate-v27015-integration.js",
-    "validate:v27040": "node scripts/validate-v27040-access.js"
+    "validate:v27040": "node scripts/validate-v27040-access.js",
+    "validate:v27042": "node scripts/validate-v27042-vercel-entrypoint.js",
+    "validate:v27041": "node scripts/validate-v27041-auto-r1-root.js",
+    "validate:release42": "npm run validate:v27042 && npm run validate:v27041 && npm run validate:v27040 && npm run validate:v27039 && npm run validate:v27038 && npm run validate:app-version && npm run validate:layout",
+    "validate:v27043": "node scripts/validate-v27043-proxy-js.js",
+    "validate:release43": "npm run validate:v27043 && npm run validate:v27042 && npm run validate:v27041 && npm run validate:v27040 && npm run validate:v27039 && npm run validate:v27038 && npm run validate:app-version && npm run validate:layout"
   }
 }
