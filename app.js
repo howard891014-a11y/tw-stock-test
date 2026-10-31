@@ -4508,7 +4508,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.45（僅研究資料）',
+    modelVersion:'v2.7.0.46（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5421,6 +5421,17 @@ function marketStableTradeDate(){
   }
   return String(model.lastValidDate||model.sourceDate||latestDate||'');
 }
+// v2.7.0.46 — Canonical W3 feed for stock-level allocation.
+// Only market-dynamic's formal, live W3 can authorize risk allocations.
+// Price history and UI text are not W3 sources.
+window.StockZoneGetOfficialW3=function(){
+  const date=marketStableTradeDate(),regime=stockzoneW3Regime();
+  const stamp=/^\d{4}-\d{2}-\d{2}$/.test(date)?Date.parse(date+'T00:00:00Z'):NaN;
+  const age=Number.isFinite(stamp)?(Date.now()-stamp)/86400000:Infinity;
+  if(!regime||age< -1||age>7)return {value:'unknown',date:date||'--',source:'W3正式資料尚未取得或已過期'};
+  const warning=regime==='on'&&marketDynamicData?.w3?.warning===true;
+  return {value:regime==='off'?'off':warning?'warning':'on',date,source:'W3-D.1.2正式大盤快照'};
+};
 function renderMarketDistribution(){
   const dist=marketDynamicData?.distribution;
   const chart=$("marketDistributionChart"),summary=$("marketDistributionSummary");
@@ -5542,6 +5553,7 @@ function renderMarketDynamic(){
     w3==="off"?"空頭環境":warning?"風險升溫":w3==="on"?"多頭環境":"資料待補";
   set("marketW3Regime",label);
   renderW3Verification();
+  window.dispatchEvent(new Event('stockzone:w3-current'));
   const w3Card=$("marketW3Regime")?.closest(".md-stat");
   if(w3Card){
     w3Card.classList.toggle("stockzone-w3-on",w3==="on");
