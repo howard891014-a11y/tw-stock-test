@@ -1,0 +1,1602 @@
+/* StockZone 共振研究室 R1 — 可重現的價格資料驗證、進場視角研究候選、不可覆蓋快照。
+ * 不改動正式 V4.3.1／共振價格原始計算；歷史價格基準測試不等於正式目標歷史重算。
+ * Browser: window.StockZoneResonanceLab; Node: require('...')
+ */
+(function (root, factory) {
+  const api = factory();
+
+// v2.6.9.4 | 近期玩法獨立研究引擎。僅使用使用者指定的 14 類指標；不使用 MA120、估值、W3 或五年股性作為近期特徵。
+// 這個研究輸出不是實測的勝率，也不會改寫原R1五年18筆、V4、共振或實際下單。
+api.recentPlayStudy=function({bars=[],institutional=null,asOf=null}={}){
+  const finite=x=>typeof x==='number'&&Number.isFinite(x);
+  const num=x=>(x===null||x===undefined||x==='')?null:(finite(+x)?+x:null);
+  const rnd=(x,d=2)=>finite(x)?+x.toFixed(d):null;
+  const pct=(a,b)=>finite(a)&&finite(b)&&b!==0?(a/b-1)*100:null;
+  const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+  const safeDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s||''))?String(s):null;
+  const raw=Array.isArray(bars)?bars:[];
+  const ordered=raw.map(row=>({date:safeDate(row?.date||row?.tradeDate||row?.trade_date),
+    open:num(row?.open),high:num(row?.high),low:num(row?.low),close:num(row?.close),volume:num(row?.volume??row?.tradeVolume??row?.trade_volume)}))
+    .filter(x=>x.date&&x.open>0&&x.close>0&&x.high>=Math.max(x.open,x.close)&&x.low>0&&x.low<=Math.min(x.open,x.close)&&x.high>=x.low)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  const cur=asOf?safeDate(asOf):ordered.at(-1)?.date;
+  const data=ordered.filter(x=>!cur||x.date<=cur),missing=[];
+  if(data.length<65)return {valid:false,status:'insufficient',missing:['至少65根有效OHLCV日K'],reason:'近期價格歷史不足',asOf:cur,studyOnly:true};
+  const last=data.at(-1),recent65=data.slice(-65);
+  if(cur&&last.date!==cur)return {valid:false,status:'insufficient',missing:['指定日期沒有價格資料'],reason:'歷史日期未對齊',asOf:cur,studyOnly:true};
+  if(new Set(recent65.map(x=>x.date)).size!==recent65.length)return {valid:false,status:'insufficient',missing:['K線日期重複'],reason:'日K資料異常',asOf:last.date,studyOnly:true};
+  if(recent65.some((b,i)=>i>0&&Math.abs(pct(b.close,recent65[i-1].close))>35))return {valid:false,status:'insufficient',missing:['近期疑似分割／增資減資價格跳變，待校正'],reason:'價格需先校正',asOf:last.date,studyOnly:true};
+  if(recent65.some(x=>!finite(x.volume)||x.volume<0)){missing.push('完整成交量');}
+  const price=data.map(x=>x.close),vol=data.slice(-20).map(x=>x.volume),n=price.length,lastClose=last.close;
+  const ma=k=>mean(price.slice(-k)),MA={ma5:ma(5),ma10:ma(10),ma20:ma(20),ma60:ma(60)};
+  const p20=price.slice(-20),std=Math.sqrt(mean(p20.map(x=>(x-MA.ma20)**2)));
+  const boll={middle:MA.ma20,upper:MA.ma20+2*std,lower:MA.ma20-2*std,
+    percentB:std===0?.5:(lastClose-(MA.ma20-2*std))/(4*std),bandwidthPct:std===0?0:4*std/MA.ma20*100};
+  const emaSeries=(array,period)=>{const a=2/(period+1);let prev=array[0];return array.map((v,i)=>{prev=i?prev+(v-prev)*a:v;return prev})};
+  const fast=emaSeries(price,12),slow=emaSeries(price,26),dif=fast.map((x,i)=>x-slow[i]),dea=emaSeries(dif,9);
+  const macd={dif:dif.at(-1),signal:dea.at(-1),hist:dif.at(-1)-dea.at(-1),prevHist:dif.at(-2)-dea.at(-2)};
+  let gains=0,losses=0;for(let i=n-14;i<n;i++){const d=price[i]-price[i-1];gains+=Math.max(0,d);losses+=Math.max(0,-d)}
+  const rsi=losses===0?(gains===0?50:100):100-(100/(1+gains/losses));
+  const lowest=(i,period)=>Math.min(...data.slice(i-period+1,i+1).map(x=>x.low));
+  const highest=(i,period)=>Math.max(...data.slice(i-period+1,i+1).map(x=>x.high));
+  let k=50,d=50;for(let i=8;i<data.length;i++){
+    const low=lowest(i,9),high=highest(i,9),rsv=(high===low)?50:(data[i].close-low)/(high-low)*100;
+    k=(2*k+rsv)/3;d=(2*d+k)/3;
+  }
+  const support20=Math.min(...data.slice(-21,-1).map(x=>x.low)),support60=Math.min(...data.slice(-61,-1).map(x=>x.low));
+  const resistance20=Math.max(...data.slice(-21,-1).map(x=>x.high)),resistance60=Math.max(...data.slice(-61,-1).map(x=>x.high));
+  const supportCandidates=[support20,support60].filter(x=>x<lastClose).sort((a,b)=>b-a);
+  const resistanceCandidates=[resistance20,resistance60].filter(x=>x>lastClose).sort((a,b)=>a-b);
+  const support=supportCandidates[0]??Math.min(support20,support60),resistance=resistanceCandidates[0]??Math.max(resistance20,resistance60);
+  const volatility=mean(data.slice(-20).map(x=>(x.high-x.low)/x.close*100));
+  const volumeComplete=!missing.includes('完整成交量');
+  const volume5=volumeComplete?mean(data.slice(-5).map(x=>x.volume)):null;
+  const volume20=volumeComplete?mean(vol):null;
+  const volumeRatio=volumeComplete&&volume20>0?volume5/volume20:null;
+  if(volumeComplete&&!finite(volumeRatio))missing.push('有效的20日成交量比較基準');
+  const advancingVolume=volumeComplete?data.slice(-5).reduce((t,x,i,a)=>t+((i>0&&x.close>a[i-1].close)?x.volume:0),0):null;
+  const decliningVolume=volumeComplete?data.slice(-5).reduce((t,x,i,a)=>t+((i>0&&x.close<a[i-1].close)?x.volume:0),0):null;
+  const fiveDate=String(institutional?.asOfDate||''),marginDate=String(institutional?.creditTrading?.asOfDate||'');
+  const inst5=institutional?.periods?.['5'],margin5=institutional?.creditTrading?.periods?.['5'];
+  const age=stamp=>safeDate(stamp)?(Date.parse(last.date+'T00:00:00Z')-Date.parse(stamp+'T00:00:00Z'))/86400000:Infinity;
+  const instReady=inst5?.complete===true&&finite(num(inst5?.total))&&age(fiveDate)>=0&&age(fiveDate)<=7;
+  const marginReady=margin5?.complete===true&&finite(num(margin5?.marginChange))&&
+    finite(num(institutional?.creditTrading?.latest?.margin_balance))&&age(marginDate)>=0&&age(marginDate)<=7;
+  if(!instReady)missing.push('法人近5日完整資料（發布日需在價格資料日之前7日內）');
+  if(!marginReady)missing.push('融資近5日完整資料（發布日需在價格資料日之前7日內）');
+  const instNet=instReady?num(inst5.total):null,marginChange=marginReady?num(margin5.marginChange):null;
+  const marginBalance=marginReady?num(institutional.creditTrading.latest.margin_balance):null;
+  const scoreParts={trend:[MA.ma5,MA.ma10,MA.ma20,MA.ma60].reduce((s,m)=>s+(lastClose>=m?1:-1),0),
+    momentum:(pct(lastClose,price[n-6])>0?1:-1)+(pct(lastClose,price[n-21])>0?1:-1),
+    macd:macd.hist>0?1:-1,rsi:rsi>=55?1:rsi<45?-1:0,kd:k>d?1:-1,
+    volume:volumeComplete?(volumeRatio>1.1&&lastClose>=price[n-2]?1:volumeRatio>1.1&&lastClose<price[n-2]?-1:0):0,
+    institution:instReady?(instNet>0?1:instNet<0?-1:0):0,
+    margin:marginReady?(marginChange<0&&pct(lastClose,price[n-6])>=0?1:marginChange>0&&pct(lastClose,price[n-6])<0?-1:0):0};
+  const score=Object.values(scoreParts).reduce((a,b)=>a+b,0);
+  const strong60=lastClose>MA.ma60&&MA.ma20>MA.ma60;
+  const overheat=boll.percentB>1.08||rsi>=78;
+  const recentMode=strong60&&score>=9&&volatility<3&&pct(lastClose,price[n-21])>7?'長期':strong60&&score>=6?'長波':score>=4?'波段':score<=-3?'短期':(Math.abs(pct(lastClose,price[n-6]))>=6||volatility>=6)?'短波':'波段';
+  const indicator={ma5:rnd(MA.ma5),ma10:rnd(MA.ma10),ma20:rnd(MA.ma20),ma60:rnd(MA.ma60),
+    ret5Pct:rnd(pct(lastClose,price[n-6])),ret20Pct:rnd(pct(lastClose,price[n-21])),
+    volatilityPct:rnd(volatility),support:rnd(support),resistance:rnd(resistance),support20:rnd(support20),support60:rnd(support60),resistance20:rnd(resistance20),resistance60:rnd(resistance60),
+    bollinger:{upper:rnd(boll.upper),middle:rnd(boll.middle),lower:rnd(boll.lower),percentB:rnd(boll.percentB,3),bandwidthPct:rnd(boll.bandwidthPct)},
+    macd:{dif:rnd(macd.dif,4),signal:rnd(macd.signal,4),hist:rnd(macd.hist,4),prevHist:rnd(macd.prevHist,4)},
+    rsi14:rnd(rsi),kd:{k:rnd(k),d:rnd(d)},volume:{avg5:rnd(volume5),avg20:rnd(volume20),ratio:rnd(volumeRatio,3),advancing5:rnd(advancingVolume),declining5:rnd(decliningVolume)},
+    institutional:{net5:instNet,asOf:instReady?fiveDate:null},margin:{change5:marginChange,balance:marginBalance,asOf:marginReady?marginDate:null}};
+  const qualityComplete=missing.length===0;
+  const stopBuffer=Math.max(.004,Math.min(.02,volatility/100*.25));
+  const stopPrice=rnd(Math.min(support*(1-stopBuffer),lastClose*(1-.006)),2);
+  // 初始比例只是「可回測的研究假設」，沒有經樣本外證明；不具正式買賣指令效力。
+  let action=null,probePct=null;
+  if(qualityComplete){
+    if(score<=-3||rsi>=85||(lastClose<support20&&score<1)){action='觀望';probePct=0;}
+    else if(score>=7&&!overheat&&volumeRatio>=.85&&instNet>=0){action='不試單，直接評估進場';probePct=100;}
+    else{action='先試單';probePct=score>=4?50:score>=1?30:15;}
+  }
+  const gate=action==='觀望'?(rsi>=85||overheat?`短線過熱；等 RSI 回落並重新止跌、且價格守住研究支撐 ${rnd(support)}，隔日再評估`:`等待收盤重新站上 MA10 ${rnd(MA.ma10)}，MACD柱狀體回升後，次一交易日再評估`):
+    action==='先試單'?`收盤守住支撐 ${rnd(support)} 且 MA5 ${rnd(MA.ma5)} 止跌，下一交易日評估試單`:
+    action==='不試單，直接評估進場'?`下一交易日評估進場；不可在今日收盤價假設成交`:'法人／融資／成交量補齊後才提供進場時機';
+  const conditions={
+    ma10Reached:lastClose>=MA.ma10,
+    macdRising:macd.hist>macd.prevHist,
+    volumeRatioAtLeastOne:finite(volumeRatio)?volumeRatio>=1:null,
+    supportHeld:lastClose>=support,
+    ma5Stabilized:MA.ma5>=mean(price.slice(-6,-1))
+  };
+  return {valid:true,status:qualityComplete?'research-candidate':'partial',asOf:last.date,mode:recentMode,score,scoreParts,conditions,
+    inputWhitelist:['5MA','10MA','20MA','60MA','5日漲跌幅','20日漲跌幅','波動率','支撐壓力','布林通道','MACD','RSI/KD','量價','法人','融資'],
+    inputs:indicator,missing,studyOnly:true,tradeAuthority:false,changeFiveYearPlay:false,
+    trial:{action:action??'資料不足，暫不判定',shouldProbe:action==='先試單'?true:action?false:null,
+      probePct,entryTiming:gate,
+      replenishTiming:qualityComplete?`若收盤站回 MA10 ${rnd(MA.ma10)} 且 MACD柱上升、5日均量／20日均量≥1，再於下一交易日評估加碼；不改原交易玩法`:'資料補齊後再定義補倉條件',
+      stopTiming:qualityComplete?`若股價跌破研究防守位 ${stopPrice}（近20／60日支撐加波動緩衝），需重新評估停損；非自動掛單`:'價格防守位可研究，但法人／融資資料不足時不發布正式停損指令',
+      stopPrice},
+    reason:qualityComplete?'未經樣本外驗證的進場策略候選':'近期數據部分缺漏；僅顯示已驗證的價格指標，不猜測試單比例'};
+};
+if(root&&root.document&&typeof root.fetch==='function'){
+  const cache=new Map();
+  const codeNow=()=>String(root.document.getElementById('stockCodeLabel')?.textContent||'').match(/\b\d{4,6}\b/)?.[0]||'';
+  const done=(code,result)=>{if(codeNow()===code){api.liveRecentAnalysis={code,result};root.dispatchEvent?.(new root.Event('stockzone:recent-study'));}};
+  api.loadRecentForCode=function(code){
+    if(!/^\d{4,6}$/.test(String(code)))return Promise.resolve(null);
+    const old=cache.get(code),now=Date.now();
+    if(old&&now-old.time<15*60*1000){if(old.result)done(code,old.result);return old.promise||Promise.resolve(old.result)}
+    const search='q='+encodeURIComponent(code);
+    const promise=Promise.all([
+      root.fetch('/api/technical?mode=history&range=5y&'+search,{cache:'default'}).then(r=>{if(!r.ok)throw Error('歷史價量讀取失敗 '+r.status);return r.json()}),
+      root.fetch('/api/stock?action=institutional&'+search,{cache:'default'}).then(r=>{if(!r.ok)throw Error('法人融資讀取失敗 '+r.status);return r.json()})
+    ]).then(([p,i])=>{
+      if(!p?.ok||!Array.isArray(p?.history))throw Error('歷史資料來源沒有可用日K');
+      if(i?.code&&String(i.code)!==String(code))throw Error('法人資料與股票代號不符');
+      const result=api.recentPlayStudy({bars:p.history,institutional:i});
+      cache.set(code,{time:Date.now(),result});done(code,result);return result;
+    }).catch(err=>{const result={valid:false,status:'insufficient',reason:String(err.message||err),missing:['資料來源暫缺'],studyOnly:true};cache.set(code,{time:Date.now(),result});done(code,result);return result});
+    cache.set(code,{time:now,promise});return promise;
+  };
+}
+
+  // R1.4 第一階段：僅將現有三種研究「作出可追溯的研究判讀」。
+  // 原本五策略公式、抽樣、歷史回測函式與 V4.3.1 的輸出完全不修改。
+  if (root && root.document && typeof root.setTimeout === 'function') {
+    const doc = root.document;
+    const labels = {short:'短期',mixed:'短波',swing:'波段','long-swing':'長波',long:'長期'};
+    const order = ['short','mixed','swing','long-swing','long'];
+    const state = {report:null,bars:null,date:null,code:null,error:null,renderTimer:0};
+    const el = id => doc.getElementById(id);
+    const fmt = v => typeof v === 'number' && Number.isFinite(v) ? (v>0?'+':'')+v.toFixed(2)+'%' : '—';
+    const safe = v => String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const style = `
+      #szLabIntegrated{margin:12px 0 15px;padding:15px 14px;border:1px solid #cad8f6;
+        border-radius:17px;background:linear-gradient(145deg,#f7faff,#f5f3ff);color:#263856;
+        box-shadow:0 5px 17px rgba(69,100,170,.055);font-size:13px;line-height:1.65}
+      #szLabIntegrated .szli-title{display:flex;align-items:center;justify-content:space-between;
+        flex-wrap:wrap;gap:6px;margin-bottom:9px}
+      #szLabIntegrated .szli-title b{font-size:16px;color:#263c74}
+      #szLabIntegrated .szli-title small{font-size:11px;color:#64738c}
+      #szLabIntegrated .szli-main{padding:10px 11px;margin-bottom:11px;background:#eaf0ff;
+        border-left:3px solid #557dea;border-radius:9px;overflow-wrap:anywhere}
+      #szLabIntegrated .szli-main strong{font-size:15px;color:#244dba}
+      #szLabIntegrated .szli-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+      #szLabIntegrated .szli-tile{border:1px solid #e2e8f4;background:#fff;
+        border-radius:10px;padding:9px 8px;min-width:0;overflow-wrap:anywhere}
+      #szLabIntegrated .szli-tile small{display:block;color:#72819b;font-size:11px}
+      #szLabIntegrated .szli-tile b{display:block;color:#32476e;margin:2px 0 3px;font-size:14px}
+      #szLabIntegrated .szli-tile p{margin:0;color:#66738a;font-size:11.5px}
+      #szLabIntegrated .szli-note{margin-top:10px;color:#6d7890;font-size:11.5px}
+      @media(max-width:600px){#szLabIntegrated{padding:12px 10px}
+        #szLabIntegrated .szli-grid{grid-template-columns:1fr;gap:7px}
+        #szLabIntegrated .szli-tile{display:grid;grid-template-columns:70px 1fr;column-gap:5px;align-items:start}
+        #szLabIntegrated .szli-tile small{grid-column:1;grid-row:1/3}
+        #szLabIntegrated .szli-tile b{grid-column:2;grid-row:1;margin:0}
+        #szLabIntegrated .szli-tile p{grid-column:2;grid-row:2}}
+    `;
+    function init(){
+      const lab = doc.querySelector('.sz-reslab');
+      if (!lab) return null;
+      let panel = el('szLabIntegrated');
+      if(!panel){
+        panel=doc.createElement('section');panel.id='szLabIntegrated';
+        panel.setAttribute('aria-label','三軸玩法整合研究');
+        const anchor=el('szLabCandidate');
+        if(anchor) lab.insertBefore(panel,anchor);else lab.appendChild(panel);
+      }
+      if(!el('szLabIntegratedStyle')){
+        const node=doc.createElement('style');node.id='szLabIntegratedStyle';node.textContent=style;
+        (doc.head||doc.documentElement).appendChild(node);
+      }
+      return panel;
+    }
+    // The research panel and the official play UI use ONE selection function.
+    const selectBaseline=api.selectFiveYearPlay;
+    api.getCurrentFiveYearPlay=function(stockCode){
+      const code=String(stockCode||'');
+      return code&&api.fiveYearPlay?.code===code?{...api.fiveYearPlay}:null;
+    };
+    function recentInfo(){
+      const code=String(el('stockCodeLabel')?.textContent||'').match(/\b\d{4,6}\b/)?.[0]||'';
+      const live=api.liveRecentAnalysis;
+      if(live?.code!==code||!live.result?.valid)return null;
+      const r=live.result;
+      return {label:r.mode,key:Object.keys(labels).find(k=>labels[k]===r.mode),
+        note:r.status==='research-candidate'?'僅為近期研究候選；採用指定技術、量價、法人與融資，不用MA120。':`資料待補：${r.missing?.join('、')||'不明'}`};
+    }
+    function reachInfo(){
+      const code=String(el('stockCodeLabel')?.textContent||'').match(/\b\d{4,6}\b/)?.[0]||'';
+      const live=api.liveResonance;
+      return code&&live?.code===code?live.reachByType||{}:{};
+    }
+    function explain(baseline,recent,reach){
+      if(!baseline?.key)return baseline?.reason||'五年價格資料尚未完成自動回測。';
+      const base=labels[baseline.key],rt=recent?.label;
+      const main=reach?.主要,secondary=reach?.次要;
+      const horizon=api.STRATEGIES.find(x=>x.key===baseline.key)?.days||20;
+      const comparableH=horizon<=20?20:horizon<=40?40:null;
+      const more=(main&&secondary&&comparableH)?`；共振價格僅可參考歷史同幅度${comparableH}日觸及率（次要${secondary['h'+comparableH]}%、主要${main['h'+comparableH]}%），不可當作預測勝率。`:'';
+      if(!rt)return `五年股性初步傾向${base}；近期候選資料不足，先不判定本次是否適合進場${more}`;
+      let now;
+      if (rt===base) now=`近期亦偏${rt}，兩個角度一致；進出場仍以原買賣決策條件為準`;
+      else if(order.indexOf(recent.key)<order.indexOf(baseline.key)) now=`近期轉為${rt}，比五年${base}主軸短；不宜把長期優勢直接當成現在的追價依據`;
+      else now=`近期偏${rt}，比五年${base}主軸長；不因此自動拉長持有期`;
+      return `五年初步主軸：${base}。${now}${more}`;
+    }
+    function render(){
+      const panel=init();if(!panel)return;
+      const currentCode=String(el('stockCodeLabel')?.textContent||'').match(/\b\d{4,6}\b/)?.[0]||'';
+      const matches=state.code===currentCode;
+      const report=matches?state.report:null;
+      const baseline=selectBaseline(report),recent=recentInfo(),reach=reachInfo();
+      const errorText=matches?state.error||'':'';
+      const backtestRejected=Boolean(errorText);
+      const classification=matches?api.getCurrentFiveYearPlay?.(currentCode):null;
+      const baselineTag=classification?.displayLabel||(backtestRejected?'資料待校正':'讀取五年價格資料中');
+      const candidateTag=recent?.label||'資料不足';
+      const candidateNote=recent?recent.note:'待取得完整價格、量價、法人與融資資料';
+      const rMain=reach.主要,rSecondary=reach.次要;
+      const reachTag=rSecondary&&rMain?`次要 ${rSecondary.distance>0?'+':''}${rSecondary.distance}%｜主要 ${rMain.distance>0?'+':''}${rMain.distance}%`:'暫無完整目標資料';
+      const reachNote=rSecondary&&rMain?`歷史同幅度20日觸及：次要 ${rSecondary.h20}%／主要 ${rMain.h20}%；不是共振達標機率。`:'資料不足，不能據此推估期限';
+      const researchBaseline=baseline?.key?baseline:(classification?.status==='reference'?{key:classification.referenceKey}:baseline);
+      const summary=researchBaseline?.key?explain(researchBaseline,recent,reach):(classification?.reason||explain(researchBaseline,recent,reach));
+      const backtestDetail=classification?.status==='reference'&&classification.referenceStats
+        ? `${classification.referenceCount}筆｜勝率 ${classification.referenceStats.winPct}%・平均淨報酬 ${round(classification.referenceStats.avgPct)}%・中位數 ${round(classification.referenceStats.medianPct)}%`
+        :classification?.reason||(backtestRejected?errorText:'等待價格資料檢核完成後自動比較五種策略。');
+      const status=report?.valid?'五年策略研究｜依實際回測分類':backtestRejected?'五年回測未通過資料檢核':'等待自動五年價格回測';
+      panel.innerHTML=`<div class="szli-title"><b>三軸玩法整合 · 第一階段</b><small>${safe(status)}</small></div>
+        <div class="szli-main"><strong>${safe(classification?`研究結論：${baselineTag}`:'研究判讀待確認')}</strong><div>${safe(summary)}</div></div>
+        <div class="szli-grid">
+          <div class="szli-tile"><small>五年整體（${state.report?.coverage?.signals??'待回測'}筆）</small><b>${safe(baselineTag)}</b><p>${safe(backtestDetail)}</p></div>
+          <div class="szli-tile"><small>近期候選</small><b>${safe(candidateTag)}</b><p>${safe(candidateNote)}</p></div>
+          <div class="szli-tile"><small>到達時間參考</small><b>${safe(reachTag)}</b><p>${safe(reachNote)}</p></div>
+        </div>`;
+    }
+    function schedule(){root.clearTimeout(state.renderTimer);state.renderTimer=root.setTimeout(render,0);}
+    // 頁面首次渲染、股票更換、近期行情或共振數值更新皆同步刷新，防止前檔結果殘留。
+    function watch(){
+      if(!init())return;
+      const Observer=root.MutationObserver;
+      if(Observer){
+        for (const id of ['szLabBacktest','stockCodeLabel']){
+          const node=el(id);if(!node)continue;
+          new Observer(()=>schedule()).observe(node,{childList:true,characterData:true,subtree:true});
+        }
+      }
+      root.addEventListener?.('stockzone:recent-study',schedule);
+      root.addEventListener?.('stockzone:resonance-live',schedule);
+      schedule();
+    }
+    if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',watch,{once:true});else root.setTimeout(watch,0);
+    // R1 source remains a pure calculation. Only the stock's five-year-history load
+    // publishes results to the live interface; manual buttons and DOM observations
+    // are deliberately not part of the execution path.
+    const originalBacktest=api.backtestPriceBaselines;
+    api.getCurrentFiveYearReport=function(code){
+      return String(code||'')===state.code?state.report:null;
+    };
+    api.evaluateFiveYearForCode=function(code,input,options){
+      code=String(code||'').trim();
+      if(!/^\d{4,6}$/.test(code))throw new Error('五年回測須提供有效股票代號');
+      const sourceError=typeof options?.sourceError==='string'?options.sourceError:'';
+      const report=sourceError||!Array.isArray(input)
+        ?{valid:false,reason:sourceError||'五年歷史日K未取得',coverage:{days:0,errors:[],largeJumps:[]}}
+        :originalBacktest.call(api,input,{warmup:120,stride:60,costPct:.5});
+      // Avoid cross-stock publication if an old asynchronous request returns late.
+      const current=String(doc.getElementById('stockCodeLabel')?.textContent||'').match(/\b\d{4,6}\b/)?.[0]||'';
+      if(current!==code)return {report,published:false};
+      state.code=code;
+      state.report=report.valid?report:null;
+      state.error=report.valid?null:(report.reason||'五年回測資料檢核未通過');
+      state.date=report.coverage?.to||null;
+      api.fiveYearPlay={...api.classifyFiveYearPlay(report),code,asOf:state.date};
+      schedule();
+      root.setTimeout(()=>root.dispatchEvent?.(new root.Event('stockzone:five-year-play')),0);
+      return {report,published:true};
+    };
+  }
+  // R1.5 第二階段：獨立的核心/機動/現金倉位研究。
+  // 僅作研究建議，確認後才寫入「即時校正」；從未覆寫既有原始交易計畫。
+  if (root && root.document && typeof root.setTimeout === 'function') {
+    const doc = root.document;
+    const byId = id => doc.getElementById(id);
+    const codeNow = () => String(byId('stockCodeLabel')?.textContent||'').match(/\b\d{4,6}\b/)?.[0]||'';
+    const nameOf = {short:'短期',mixed:'短波',swing:'波段','long-swing':'長波',long:'長期'};
+    const st = {code:'',bars:[],barsCode:'',w3Label:'',w3Date:'',pending:null,timer:0};
+    const snapshotNow = code => {try {const db=JSON.parse(root.localStorage?.getItem('sz_resonance_lab_r1_plans')||'{}');const r=db?.[code];return (r?.plans||[]).find(p=>p.id===r.activeId)||null;}catch{return null;}};
+    // 僅取使用者確認過、且符合新版順序的研究配置；不視為真實成交。
+    api.approvedAllocationForCode=function(code){
+      if(!/^\d{4,6}$/.test(String(code||'')))return null;
+      const plan=snapshotNow(code),latest=(plan?.updates||[]).slice().reverse().find(u=>u.allocationStudy)?.allocationStudy;
+      if(!latest||(latest.priorityRule!=='tactical-first-v1'&&latest.w3State!=='off'))return null;
+      const core=Number(latest.corePct),tactical=Number(latest.tacticalPct),cash=Number(latest.cashPct);
+      if(![core,tactical,cash].every(x=>Number.isFinite(x)&&x>=0&&x<=100)||Math.abs(core+tactical+cash-100)>.11)return null;
+      return {corePct:core,tacticalPct:tactical,cashPct:cash,date:latest.date||null,planId:plan.id,
+        priorityRule:latest.priorityRule||'w3-off-unchanged',researchOnly:true};
+    };
+    const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const fmt = n => typeof n==='number' && Number.isFinite(n)?Number(n.toFixed(1)):'—';
+    const money = n => Number.isFinite(n)?Math.round(n).toLocaleString('zh-TW'):'—';
+    const HOLDINGS_KEY='stockzone_holdings_v2';
+    function holdingBasis(code){
+      const active=root.StockZoneHoldingPlans?.active?.(root.localStorage,code)||null;
+      if(!active){
+        try{
+          const holdings=JSON.parse(root.localStorage?.getItem(HOLDINGS_KEY)||'[]');
+          const holding=Array.isArray(holdings)?holdings.find(x=>String(x?.code||x?.symbol||'')===code):null;
+          if(!holding)return null;
+          const qty=Number(holding.shares),cost=Number(holding.avgCost),total=qty*cost;
+          if(!Number.isSafeInteger(qty)||qty<=0||!Number.isFinite(cost)||cost<=0||!Number.isFinite(total)||total<=0)return null;
+          return {qty,cost,total,core:null,currentCoreMoney:null,plan:null,referenceOnly:true};
+        }catch{return null;}
+      }
+      let qty=Number(active.position?.shares),cost=Number(active.position?.avgCost);
+      // Recorded transactions, where present, take precedence over the original opening position.
+      try{const m=root.StockZoneHoldingPlans?.metrics?.(active);if(m&&Number.isFinite(m.shares)&&m.shares>=0){qty=m.shares;cost=m.avgCost;}}catch(e){root.console?.warn?.('持股流水讀取失敗',e)}
+      const total=qty*cost;
+      if(!Number.isFinite(total)||total<0||!Number.isFinite(qty)||qty<0||!Number.isFinite(cost)||cost<0)return null;
+      const initCore=Number(active.initial?.allocation?.core);
+      const core=Number.isFinite(initCore)&&initCore>=0&&initCore<=100?initCore:null;
+      // When recorded trades already reduced the position, preserve the original core-cost
+      // bucket until tactical exposure is exhausted. No mark-to-market rebalancing.
+      const opening=active.ledger?.opening;
+      const openingTotal=Number(opening?.shares)*Number(opening?.avgCost);
+      const hasTrades=Array.isArray(active.ledger?.trades)&&active.ledger.trades.length>0;
+      const protectedCore=core===null?null:(hasTrades&&Number.isFinite(openingTotal)&&openingTotal>0?openingTotal:total)*core/100;
+      const currentCoreMoney=protectedCore===null?null:Math.min(total,protectedCore);
+      return {qty,cost,total,core,currentCoreMoney,plan:active};
+    }
+    function w3Source(lastDate) {
+      const raw=String(byId('marketW3Regime')?.textContent||'').trim();
+      const date=String(byId('marketW3TradeDate')?.textContent||'').trim().slice(0,10);
+      const value=raw==='多頭環境'?'on':raw==='風險升溫'?'warning':raw==='空頭環境'?'off':null;
+      const gap=/^\d{4}-\d{2}-\d{2}$/.test(date)&&/^\d{4}-\d{2}-\d{2}$/.test(lastDate)
+        ?Math.abs((Date.parse(date+'T00:00:00Z')-Date.parse(lastDate+'T00:00:00Z'))/86400000):Infinity;
+      const currentGap=/^\d{4}-\d{2}-\d{2}$/.test(date)?(Date.now()-Date.parse(date+'T00:00:00Z'))/86400000:Infinity;
+      if(value && gap<=7 && currentGap>=-1 && currentGap<=7)return {value,source:'W3動態',date};
+      return {value:'unknown',source:'W3未取得或日期不匹配',date:date||'--'};
+    }
+    function getMarket(lastDate) {
+      // Only the official W3 is accepted; missing or stale W3 fails closed.
+      return w3Source(lastDate);
+    }
+    const css = `
+      #szLabAllocation{margin:10px 0 14px;border:1px solid #dce5f2;border-radius:17px;background:#fff;max-width:100%;color:#263952}
+      #szLabAllocation .szla-heading{padding:15px 16px 11px;font-size:15px;line-height:1.4}
+      #szLabAllocation .szla-heading b{font-size:15px;color:#263e67}
+      #szLabAllocation .szla-body{padding:0 16px 15px;font-size:12px;line-height:1.65}
+      #szLabAllocation .szla-regime{background:#f2f5fa;border-radius:10px;padding:9px 11px;margin-bottom:13px;color:#68809a}
+      #szLabAllocation .szla-regime b{color:#28436d}
+      #szLabAllocation .szla-bars{display:flex;width:100%;height:13px;overflow:hidden;border-radius:8px;background:#d5dce8;margin:8px 0 10px}
+      #szLabAllocation .szla-bars>span{height:100%;transition:width .2s ease}
+      #szLabAllocation .szla-legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:13px;font-size:12px;font-weight:800;color:#243a5c}
+      #szLabAllocation .szla-legend>span:nth-child(2){text-align:center}
+      #szLabAllocation .szla-legend>span:nth-child(3){text-align:right}
+      #szLabAllocation .szla-info{display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px;padding:10px 0;border-top:1px solid #e7edf5}
+      #szLabAllocation .szla-info b{color:#30415f}
+      #szLabAllocation .szla-info span{color:#40536f}
+      #szLabAllocation .szla-basis{font-size:11.5px;color:#6e7e95;margin-bottom:11px;overflow-wrap:anywhere}
+      #szLabAllocation .szla-action{margin:8px 0 11px;padding:12px;background:#f3f6fb;border-radius:10px;color:#294365}
+      #szLabAllocation .szla-action b{display:block;margin-bottom:3px}
+      #szLabAllocation .szla-note{padding-top:10px;border-top:1px solid #e8edf5;color:#8090a4;font-size:11.5px}
+      @media(max-width:390px){#szLabAllocation .szla-body{padding:0 11px 12px}#szLabAllocation .szla-heading{padding:12px 11px}#szLabAllocation .szla-legend{font-size:11px}}
+    `;
+    function init() {
+      const lab=doc.querySelector('.sz-reslab');if(!lab)return null;
+      let box=byId('szLabAllocation');
+      if(!box){box=doc.createElement('section');box.id='szLabAllocation';box.setAttribute('aria-label','動態倉位配置');
+        const anchor=byId('szLabIntegrated');if(anchor)anchor.after(box);else lab.insertBefore(box,byId('szLabCandidate')||null);
+      }
+      if(!byId('szLabAllocationStyle')){const node=doc.createElement('style');node.id='szLabAllocationStyle';node.textContent=css;
+        (doc.head||doc.documentElement).appendChild(node)}
+      return box;
+    }
+    function selectedPlay(plan,code) {
+      // The current manual holding plan is authoritative. Never silently change its locked play.
+      const realPlan=root.StockZoneHoldingPlans?.active?.(root.localStorage,code);
+      if(realPlan?.initial?.playKey)return realPlan.initial.playKey;
+      if(plan?.initial?.play)return plan.initial.play;
+      const r1=api.getCurrentFiveYearPlay?.(code);
+      return r1?.status==='selected'&&r1?.key?r1.key:(r1?.status==='reference'&&r1?.referenceKey?r1.referenceKey:null);
+    }
+    function render(){
+      const box=init();if(!box)return;
+      const code=codeNow();
+      if(code!==st.code){st.code=code;st.pending=null;}
+      if(!code){box.innerHTML='<div class="szla-heading"><b>動態倉位配置</b></div>';return;}
+      const researchPlan=snapshotNow(code),fiveYear=api.getCurrentFiveYearPlay?.(code),play=selectedPlay(researchPlan,code);
+      const isReference=!!(fiveYear?.status==='reference'&&fiveYear?.referenceKey===play);
+      const ok=st.barsCode===code&&st.bars?.length>=120;
+      const ctx=ok?api.contextAt(st.bars,st.bars.length-1):{valid:false};
+      const market=getMarket(ctx?.date||'');
+      const allocationText=String(byId('szV4Candidate')?.textContent||'');
+      const m=allocationText.match(/核心\s*(\d+(?:\.\d+)?)%\s*[／\/]\s*機動\s*(\d+(?:\.\d+)?)%/);
+      const baseFromV4=m?Number(m[1]):null;
+      const holding=holdingBasis(code);
+      const originalCore=Number(researchPlan?.initial?.corePct);
+      const base=holding?.core??(researchPlan&&Number.isFinite(originalCore)?originalCore:baseFromV4);
+      const rawStudy=api.proposeAllocation({play,baseCorePct:base,context:ctx,market:market.value});
+      // The model's existing W3 OFF branch remains unmodified; tactical-first applies on other days.
+      const study=api.prioritizeTacticalAllocation(rawStudy);
+      const state=market.value==='on'?'多頭環境':market.value==='warning'?'風險升溫':market.value==='off'?'空頭環境':'W3尚未確認';
+      const status=market.date&&market.date!=='--'?market.date:market.source;
+      const percent=v=>Number.isFinite(v)?`${fmt(v)}%`:'—';
+      const bars=study.valid?`<div class="szla-bars" role="img" aria-label="核心${percent(study.corePct)}，機動${percent(study.tacticalPct)}，現金${percent(study.cashPct)}"><span style="width:${study.corePct}%;background:#4b7de5"></span><span style="width:${study.tacticalPct}%;background:#41b7a4"></span><span style="width:${study.cashPct}%;background:#d5dce8"></span></div><div class="szla-legend"><span>核心 ${percent(study.corePct)}</span><span>機動 ${percent(study.tacticalPct)}</span><span>現金 ${percent(study.cashPct)}</span></div>`:'';
+      const basis=holding
+        ? `總投入金額：${money(holding.qty)} 股 × ${money(holding.cost)} 元＝${money(holding.total)} 元（成本基準）`
+        : '未填持股成本與股數｜以預定投入資金100%試算研究比例';
+      const signal=study.valid?(study.reason||[]).map(x=>String(x).replace(/，核心保守下修5%|，核心再下修5%|，額外保留10%現金/g,'')).slice(0,5).join('；')
+        :(study.reason?.join('；')||'有效日K與W3資料待補');
+      let amount='',planActions=null;
+      if(holding&&study.valid&&market.value!=='unknown'){
+        const budget=holding.total,initCore=holding.core??base;
+        const priorCore=holding.currentCoreMoney??(Number.isFinite(initCore)?budget*initCore/100:null);
+        const priorTactical=priorCore===null?null:Math.max(0,budget-priorCore);
+        const targetCore=budget*study.corePct/100,targetTactical=budget*study.tacticalPct/100,targetCash=budget*study.cashPct/100;
+        const deltaCore=priorCore===null?null:targetCore-priorCore;
+        const deltaTactical=priorTactical===null?null:targetTactical-priorTactical;
+        if(holding.referenceOnly){
+          amount=`<div class="szla-action"><b>研究比例換算金額（僅供參考）</b>核心 ${money(targetCore)} 元｜機動 ${money(targetTactical)} 元｜現金 ${money(targetCash)} 元<small>未追蹤實際核心／機動倉分配，不推導加減碼指令；非成交建議。</small></div>`;
+        }else{
+          planActions={deltaCore,deltaTactical,coreAmount:targetCore,tacticalAmount:targetTactical,cashAmount:targetCash,budget};
+          const moneyAction=(delta,label)=>delta===null?`${label}：初始配置資料不足`:`${label}：${Math.abs(delta)<1?'不需調整':`${delta<0?'建議減碼':'建議加碼'} ${money(Math.abs(delta))} 元`}`;
+          amount=`<div class="szla-action"><b>建議倉位（金額）</b>核心 ${money(targetCore)} 元｜機動 ${money(targetTactical)} 元｜現金 ${money(targetCash)} 元<div>${esc(moneyAction(deltaTactical,'機動倉'))}</div><div>${esc(moneyAction(deltaCore,'核心倉'))}</div><small>按成本投入額換算；非自動交易，也不代替實際成交計算。</small></div>`;
+        }
+      }
+      const referenceReason=isReference?`標示參考：${fiveYear.referenceReason||fiveYear.reason}`:'';
+      const reason=[referenceReason,study.valid?signal:(!play?(fiveYear?.reason||'五年回測或價格資料待補'):signal)].filter(Boolean).join('；');
+      box.innerHTML=`<div class="szla-heading"><b>動態倉位配置</b></div><div class="szla-body">
+        <div class="szla-regime"><b>${esc(state)}</b>　<span>${esc(status)}</span></div>
+        ${bars}<div class="szla-basis">${esc(basis)}</div>
+        <div class="szla-info"><b>調整原因：</b><span>${esc(reason)}</span></div>
+        ${amount}
+      </div>`;
+      root.StockZoneDynamicAllocation=study.valid?{code,date:ctx.date,study,position:holding||null,actions:planActions,reference:isReference}:null;
+      root.dispatchEvent?.(new root.CustomEvent('stockzone:dynamic-allocation',{detail:{code}}));
+    }
+    function queue(){root.clearTimeout(st.timer);st.timer=root.setTimeout(render,30)}
+    function watch(){
+      if(!init())return;
+      const Obs=root.MutationObserver;
+      if(Obs) for(const id of ['szLabOriginal','szLabCandidate','marketW3Regime','marketW3TradeDate','stockCodeLabel']){
+        const node=byId(id);if(node)new Obs(()=>queue()).observe(node,{childList:true,characterData:true,subtree:true});
+      }
+      root.addEventListener?.('stockzone:five-year-play',queue);
+      byId('szLabLockPlan')?.addEventListener('click',()=>root.setTimeout(queue,30));
+      byId('szLabNewTrade')?.addEventListener('click',()=>root.setTimeout(queue,30));
+      byId('szLabSaveUpdate')?.addEventListener('click',()=>root.setTimeout(queue,30));
+      // Reuse the existing market-dynamic snapshot loader when visiting stock analysis directly.
+      root.setTimeout(()=>root.StockZoneEnsureW3?.(),0);
+      queue();
+    }
+    // app.js 既有流程會在分析時呼叫 lab.cleanBars；只記錄當檔已驗證的日K，無資料時不展示假比例。
+    const originalClean=api.cleanBars;
+    api.cleanBars=function(input){const res=originalClean.call(this,input);
+      const code=codeNow();if(code){st.barsCode=code;st.bars=res.valid?res.bars:[];}queue();return res;};
+    if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',watch,{once:true});else root.setTimeout(watch,0);
+  }
+  // v2.6.8.49 — 使用者介面整理（只改顯示與自動觸發，不改R1/V4/W3數學函式）。
+  if (root && root.document && typeof root.setTimeout === 'function') {
+    const d = root.document;
+    const node = id => d.getElementById(id);
+    const ui = {lastRunKey:'',pending:null,sourceText:'',simpleText:'',lastCode:'',lastBars:null};
+    const currentCode = () => String(node('stockCodeLabel')?.textContent||'').match(/\b\d{4,6}\b/)?.[0]||'';
+    const css = `
+      /* 法人／技術／估值共用藍色小卡標準：字體及間距一致，不動數據 */
+      #institutionalTrend .institutional-flow-card,
+      #technical .tech-tile,
+      #valuation .valuation-model-tiles .valuation-tech-tile {
+        background:#eef5ff!important;border:1px solid #dfe8f5!important;border-radius:16px!important;
+        padding:12px 11px!important;min-width:0!important;box-shadow:0 7px 18px rgba(17,34,61,.035)!important;
+      }
+      #institutionalTrend .institutional-flow-title,
+      #technical .tech-tile header b,
+      #valuation .valuation-model-tiles .valuation-tech-tile header b {
+        font-size:15px!important;line-height:1.3!important;font-weight:800!important;color:#21324b!important;
+        overflow-wrap:anywhere!important;
+      }
+      #institutionalTrend .institutional-flow-card .institutional-flow-head,
+      #technical .tech-tile header,
+      #valuation .valuation-model-tiles .valuation-tech-tile header {
+        display:flex!important;align-items:center!important;justify-content:space-between!important;gap:6px!important;
+        margin-bottom:8px!important;
+      }
+      #institutionalTrend .institutional-flow-head em,
+      #technical .tech-tile header em,
+      #valuation .valuation-model-tiles .valuation-tech-tile header em {
+        font-size:11px!important;line-height:1.4!important;white-space:nowrap!important;
+        padding:3px 7px!important;font-weight:750!important;
+      }
+      #institutionalTrend .institutional-flow-card p,
+      #technical .tech-tile p,
+      #valuation .valuation-model-tiles .valuation-tech-tile p {
+        font-size:12px!important;line-height:1.55!important;color:#64758e!important;
+        min-height:39px!important;margin:6px 0 9px!important;overflow-wrap:anywhere!important;
+      }
+      #institutionalTrend .institutional-flow-rows>div,
+      #technical .tech-tile small > div,
+      #valuation .valuation-model-tiles .valuation-tech-tile .valuation-rows>div{
+        font-size:12px!important;line-height:1.5!important;
+      }
+      #institutionalTrend .institutional-flow-rows>div span,
+      #technical .tech-tile small,
+      #valuation .valuation-model-tiles .valuation-tech-tile small {font-size:12px!important;line-height:1.55!important;}
+      #institutionalTrend .institutional-flow-rows>div b,
+      #technical .tech-tile small b,
+      #valuation .valuation-model-tiles .valuation-tech-tile small b,
+      #valuation .valuation-model-tiles .valuation-tech-tile .valuation-rows b {
+        font-size:14px!important;font-weight:800!important;line-height:1.45!important;
+      }
+      #institutionalTrend .institutional-flow-rows>div{gap:5px!important;min-width:0!important}
+      #institutionalTrend .institutional-flow-rows b{overflow-wrap:anywhere!important;text-align:right!important}
+      /* 舊版「建議玩法」重複大卡撤下；保留V4.3.1的真實計算節點供程式讀取 */
+      #playStyleCard>.playstyle-hero,
+      #playStyleCard>.playstyle-short-analysis,
+      #playStyleCard>.playstyle-swing-analysis,
+      #playStyleCard>.playstyle-long-analysis,
+      #playStyleCard>.playstyle-note {display:none!important}
+      #playStyleCard>.sz-v4-candidate{margin-top:8px!important;margin-bottom:0!important;
+        padding:13px 14px!important;background:#f3f7ff!important;border:1px solid #dce6f6!important}
+      #playStyleCard>.sz-v4-candidate .sz-v4-head em{display:none!important}
+      #playStyleCard>.sz-v4-candidate>b{font-size:21px!important;line-height:1.4!important;margin:8px 0 4px!important}
+      #playStyleCard>.sz-v4-candidate>small{font-size:12px!important;line-height:1.65!important;margin:6px 0 0!important}
+      /* 五年回測是自動分析，保留表格，不讓研究用提示擠滿手機 */
+      .sz-reslab .sz-reslab-method{display:none!important}
+      /* R1: all five columns fit the available width, with no horizontal scroll. */
+      #szLabBacktest{max-width:100%;min-width:0;overflow-x:hidden}
+      #szLabBacktest .sz49-table-wrap{width:100%;max-width:100%;min-width:0;overflow-x:hidden}
+      #szLabBacktest .sz49-table-wrap table{width:100%;max-width:100%;min-width:0;table-layout:fixed;border-collapse:collapse}
+      #szLabBacktest .sz49-table-wrap th,
+      #szLabBacktest .sz49-table-wrap td{font-size:clamp(10px,2.8vw,12px)!important;padding:9px 2px!important;min-width:0!important;box-sizing:border-box;
+        white-space:normal!important;overflow-wrap:anywhere;line-height:1.4;font-variant-numeric:tabular-nums;text-align:right!important}
+      #szLabBacktest .sz49-table-wrap th:first-child,
+      #szLabBacktest .sz49-table-wrap td:first-child{text-align:left!important;overflow-wrap:anywhere}
+      #szLabBacktest .sz49-table-wrap th:nth-child(1){width:28%}
+      #szLabBacktest .sz49-table-wrap th:nth-child(2){width:13%}
+      #szLabBacktest .sz49-table-wrap th:nth-child(3){width:20%}
+      #szLabBacktest .sz49-table-wrap th:nth-child(4){width:20%}
+      #szLabBacktest .sz49-table-wrap th:nth-child(5){width:19%}
+      @media(max-width:720px){
+        #institutionalTrend .institutional-flow-card,
+        #technical .tech-tile,
+        #valuation .valuation-model-tiles .valuation-tech-tile{padding:11px 10px!important;border-radius:16px!important}
+        #institutionalTrend .institutional-flow-title,
+        #technical .tech-tile header b,
+        #valuation .valuation-model-tiles .valuation-tech-tile header b{font-size:14px!important}
+        #institutionalTrend .institutional-flow-rows>div b{font-size:13px!important}
+        #technical .tech-tile small,
+        #valuation .valuation-model-tiles .valuation-tech-tile small{font-size:11px!important}
+        #institutionalTrend .institutional-flow-card p,
+        #technical .tech-tile p,
+        #valuation .valuation-model-tiles .valuation-tech-tile p{font-size:11px!important;min-height:35px!important}
+      }
+    `;
+    function preparePlayCard(){
+      const card=node('playStyleCard'),hero=card?.querySelector('.playstyle-hero');
+      const newCard=hero?.querySelector('.sz-v4-candidate');
+      if(newCard){hero.after(newCard);newCard.setAttribute('aria-label','V4.3.1 玩法建議');}
+      const heading=card?.querySelector('.card-title .theme-title-group>span');
+      if(heading && heading.textContent==='建議玩法') heading.textContent='玩法分析';
+    }
+    function readableV4(){
+      const detail=node('szV4CandidateDetail');if(!detail)return;
+      const raw=(detail.textContent||'').trim();
+      if(raw && raw!==ui.simpleText)ui.sourceText=raw;
+      const src=ui.sourceText||raw;
+      const tentative=/暫定|未驗證|待驗證|不足|0期|資料缺口/.test(src) || /暫定|待補/.test(node('szV4Candidate')?.textContent||'');
+      const evidence=/EPS.{0,20}(?:0期|不足)|長期資料待驗證|長期財報待驗證/.test(src);
+      const txt=tentative
+        ? `股價走勢與營運資料已納入參考；${evidence?'長期獲利資料尚待補足，':'部分條件尚待驗證，'}目前建議先作參考。`
+        : '綜合歷史股價走勢與長期營運資料，評估適合的持有方式。';
+      ui.simpleText=txt;
+      if(raw!==txt)detail.textContent=txt;
+    }
+    function formatBacktest(){
+      const panel=node('szLabBacktest');if(!panel)return;
+      const table=panel.querySelector('table');
+      if(!table)return;
+      if(table.dataset.sz49Ready==='1')return;
+      const clean=table.cloneNode(true);
+      for(const row of clean.querySelectorAll('tr')){
+        const cells=row.querySelectorAll(':scope > th, :scope > td');
+        // 原R1表格第二欄是「筆數」；只隱藏此欄，其餘績效數據照原版。
+        if(cells.length>=5)cells[1].remove();
+      }
+      clean.dataset.sz49Ready='1';
+      const wrap=d.createElement('div');wrap.className='sz49-table-wrap';wrap.appendChild(clean);
+      panel.replaceChildren(wrap);
+    }
+    function init(){
+      if(!node('sz49StandardStyle')){const n=d.createElement('style');n.id='sz49StandardStyle';n.textContent=css;(d.head||d.documentElement).appendChild(n)}
+      preparePlayCard();readableV4();formatBacktest();
+      if(!ui.lastCode)ui.lastCode=currentCode();
+      if(ui.lastCode!==currentCode())ui.lastCode=currentCode();
+    }
+    function watch(){
+      init();
+      const Observer=root.MutationObserver;if(!Observer)return;
+      const box=node('szLabBacktest');
+      if(box)new Observer(()=>formatBacktest()).observe(box,{childList:true,subtree:true});
+      const detail=node('szV4CandidateDetail');
+      if(detail)new Observer(()=>readableV4()).observe(detail,{childList:true,characterData:true,subtree:true});
+      const code=node('stockCodeLabel');
+      if(code)new Observer(()=>{
+        if(ui.lastCode!==currentCode())ui.lastCode=currentCode();
+      }).observe(code,{childList:true,characterData:true,subtree:true});
+    }
+    if(d.readyState==='loading')d.addEventListener('DOMContentLoaded',watch,{once:true});
+    else root.setTimeout(watch,0);
+  }
+
+  // v2.6.9.0 — 僅統一三區資料卡的字階；以「融資」小卡當前規格為唯一基準。
+  // 保留 v2.6.8.49 的原始回測與版面功能，不重寫任何分析數值或狀態顏色。
+  if (root && root.document) {
+    const document = root.document;
+    const FONT_STYLE_ID = 'stockzone-v2690-card-font-parity';
+    const STYLE = `
+      /* 對照融資卡：桌面 標題15／說明11／欄名11／數值12／狀態10px。 */
+      :root {
+        --sz-card-title-fs:15px;
+        --sz-card-caption-fs:11px;
+        --sz-card-label-fs:11px;
+        --sz-card-value-fs:12px;
+        --sz-card-status-fs:10px;
+      }
+      /* 三區的標題文字統一，保留原本的 icon 大小及顏色。 */
+      #institutionalTrend .institutional-flow-card .institutional-flow-title,
+      #technical .tech-tile header > b,
+      #valuation .valuation-model-tiles .valuation-tech-tile header > b {
+        font-size:var(--sz-card-title-fs)!important;
+        line-height:1.2!important;
+        font-weight:800!important;
+      }
+      /* 法人／技術／估值：狀態徽章統一（融資卡的標題附註層級）。 */
+      #institutionalTrend .institutional-flow-card .institutional-flow-head > em,
+      #technical .tech-tile header > em,
+      #valuation .valuation-model-tiles .valuation-tech-tile header > em {
+        font-size:var(--sz-card-status-fs)!important;
+        line-height:1.3!important;
+      }
+      /* 卡片說明：與融資卡「使用率」同級。 */
+      #institutionalTrend .institutional-flow-card > p,
+      #technical .tech-tile > p,
+      #valuation .valuation-model-tiles .valuation-tech-tile > p,
+      #valuation .valuation-model-tiles .valuation-tech-tile > .valuation-mini-subnote {
+        font-size:var(--sz-card-caption-fs)!important;
+        line-height:1.45!important;
+      }
+      /* 欄位名稱（當日 / 5日 / 10MA / 目前 / 季度日期）。 */
+      #institutionalTrend .institutional-flow-card .institutional-flow-rows > div > span,
+      #technical .tech-tile > small,
+      #technical .tech-tile .tech-metric > span,
+      #technical .tech-tile .tech-metric > small,
+      #valuation .valuation-model-tiles .valuation-tech-tile .valuation-data-row > span,
+      #valuation .valuation-model-tiles .valuation-tech-tile .valuation-quarter-chip > span,
+      #valuation .valuation-model-tiles .valuation-tech-tile .valuation-quarter-chip > small {
+        font-size:var(--sz-card-label-fs)!important;
+        line-height:1.45!important;
+      }
+      /* 數字（與融資卡的「-28.7萬股」同級）；包含估值 EPS 季度值。 */
+      #institutionalTrend .institutional-flow-card .institutional-flow-rows > div > b,
+      #technical .tech-tile .tech-metric > b,
+      #technical .tech-tile .tech-metric > strong,
+      #valuation .valuation-model-tiles .valuation-tech-tile .valuation-data-row > b,
+      #valuation .valuation-model-tiles .valuation-tech-tile .valuation-quarter-chip > b {
+        font-size:var(--sz-card-value-fs)!important;
+        line-height:1.4!important;
+        font-weight:800!important;
+      }
+      @media (max-width:760px) {
+        /* 真正取自既有融資卡 mobile CSS：標題13／說明10／欄名10.5／數值11／狀態9px。 */
+        :root {
+          --sz-card-title-fs:13px;
+          --sz-card-caption-fs:10px;
+          --sz-card-label-fs:10.5px;
+          --sz-card-value-fs:11px;
+          --sz-card-status-fs:9px;
+        }
+      }
+    `;
+    function applyTypography() {
+      let style = document.getElementById(FONT_STYLE_ID);
+      if (!style) {
+        style = document.createElement('style');style.id=FONT_STYLE_ID;
+        style.textContent=STYLE;(document.head||document.documentElement).appendChild(style);
+      }
+    }
+    // v49 樣式在 DOMContentLoaded 時才插入：本樣式在下一個排程覆蓋它。
+    if (document.readyState==='loading') {
+      document.addEventListener('DOMContentLoaded',()=>root.setTimeout(applyTypography,0),{once:true});
+    } else root.setTimeout(applyTypography,0);
+  }
+
+  // v2.6.9.1 | 畫面去重、研究室歸位、基本面資料缺漏自動補查。
+  // 不更動 EPS/估值/共振公式；缺少可靠來源時保留空值，不造同行倍數或 EPS。
+  if (root && root.document && typeof root.setTimeout === 'function') {
+    const doc=root.document;
+    const px=id=>doc.getElementById(id);
+    const completed=new Map();
+    const STALE=12*60*1000;
+    const patchStyle=`
+      /* EPS 卡片標題已標 EPS，移除重複的「近四季 EPS」行。 */
+      #valuationMiniEpsLead{display:none!important}
+      /* 研究說明移出主要閱覽；細節保留於必要的已存檔資料。 */
+      .sz-reslab>.sz-reslab-tip{display:none!important}
+      #szLabIntegrated>.szli-note{display:none!important}
+      /* 併到「玩法分析」主卡，避免重複的外層卡片容器佔掉大量空白。 */
+      #playStyleCard>.sz-reslab{margin:14px 0 0!important;max-width:100%!important;width:100%!important;min-width:0!important}
+      #playStyleCard>.sz-reslab .sz-reslab-header{font-size:15px}
+      #playStyleCard>.sz-reslab #szLabIntegrated{max-width:100%!important}
+    `;
+    function layout(){
+      if(!px('sz2691Style')){const n=doc.createElement('style');n.id='sz2691Style';n.textContent=patchStyle;(doc.head||doc.documentElement).appendChild(n)}
+      px('valuationMiniEpsLead')?.setAttribute('hidden','');
+      const card=px('playStyleCard'),lab=doc.querySelector('.sz-reslab');
+      if(card&&lab&&!card.contains(lab)){
+        // 搬移原有 DOM，沿用 app.js 事件監聽器與資料狀態，不複製卡片、不重啟公式。
+        card.appendChild(lab);
+      }
+      // 此段文字沒有額外的使用者決策資訊，從 DOM 移除而非更換公式。
+      lab?.querySelector('.sz-reslab-tip')?.remove();
+      px('szLabIntegrated')?.querySelector('.szli-note')?.remove();
+    }
+    // 版本可能先於 app.js 載入；DOM Ready 後註冊補查原函式的包裝。
+    function attachDataRepair(){
+      // 某來源同時提供 period=2026 Q2 與 year=1911：兩者衝突時，
+      // 只以該來源明確標示且合法的 period 修正「季度識別」，不修改 EPS 金額。
+      const oldQuarter=root.fundamentalQuarterInfo;
+      if(typeof oldQuarter==='function'&&!oldQuarter.__sz2691){
+        const fixed=function(row){
+          const period=String(row?.period??row?.yearQuarter??'').trim();
+          const m=period.match(/^(\d{3,4})\s*(?:[-/]?\s*)?[Qq季]\s*([1-4])\s*$/);
+          if(m){let year=+m[1];if(year<1911)year+=1911;const q=+m[2];
+            const ceiling=new Date().getFullYear()+1;
+            if(year>=2000&&year<=ceiling)return {year,quarter:q,key:`${year}Q${q}`,stamp:year*10+q};
+          }
+          return oldQuarter(row);
+        };fixed.__sz2691=true;root.fundamentalQuarterInfo=fixed;
+      }
+      const oldFund=root.fundamentals;
+      if(typeof oldFund==='function'&&!oldFund.__sz2691){
+        const supplemented=async function(code,market){
+          const primary=await oldFund(code,market);
+          const cov=root.fundamentalEpsPeriodCoverage?.(primary);
+          const need=!cov?.yoy || !cov?.qoq || (cov?.count||0)<5;
+          if(!need)return primary;
+          const key=`f:${code}:${market}`,last=completed.get(key)||0;
+          if(Date.now()-last<STALE)return primary;
+          completed.set(key,Date.now());
+          const merge=root.mergeFundamentalPayload;
+          if(typeof merge!=='function')return primary;
+          let out=primary;
+          // 來源本身季度缺口時，依序嘗試相同原始研究接口更早的頁面。
+          // 只補「有日期 + EPS」的季度；永不自行估計財報。
+          for(const offset of [0,4,8]){
+            const c=root.fundamentalEpsPeriodCoverage?.(out);
+            if(c?.yoy && c?.qoq && (c.count||0)>=5)break;
+            try{
+              const qs=new URLSearchParams({mode:'fundamentals',research:'long',offset:String(offset),q:String(code),market:String(market||'')});
+              const rsp=await root.fetch('/api/technical?'+qs,{cache:'no-store'});
+              if(!rsp.ok)continue;
+              const d=await rsp.json();if(!Array.isArray(d?.quarters))continue;
+              out=merge(out,d);
+            }catch(err){root.console?.warn?.('StockZone EPS 自動補查失敗',err)}
+          }
+          return out;
+        };supplemented.__sz2691=true;root.fundamentals=supplemented;
+      }
+      const oldVal=root.valuation;
+      if(typeof oldVal==='function'&&!oldVal.__sz2691){
+        const retried=async function(code,market,price){
+          const data=await oldVal(code,market,price);
+          const has=n=>n!==null&&n!==undefined&&n!==''&&Number.isFinite(+n)&&+n>0;
+          if(has(data?.peerPs)&&has(data?.peerPb))return data;
+          const key=`v:${code}:${market}`,last=completed.get(key)||0;
+          if(Date.now()-last<STALE)return data;
+          completed.set(key,Date.now());
+          try{
+            const qs=new URLSearchParams({action:'valuation',q:String(code),market:String(market||''),price:String(price??''),refresh:'1',_t:String(Date.now())});
+            const controller=new AbortController();const stop=root.setTimeout(()=>controller.abort(),6500);
+            let rsp;try{rsp=await root.fetch('/api/stock?'+qs,{cache:'no-store',signal:controller.signal})}finally{root.clearTimeout(stop)}
+            if(!rsp.ok)return data;
+            const fresh=await rsp.json();
+            if(String(fresh?.code||fresh?.symbol||'').replace(/\.(?:TW|TWO)$/i,'').trim()!==String(code).replace(/\.(?:TW|TWO)$/i,'').trim())return data;
+            const fields=['peerPs','peerPb','psPremiumPct','pbPremiumPct'];
+            const out={...data};
+            for(const f of fields){if((f==='peerPs'||f==='peerPb')?has(fresh[f]):Number.isFinite(+fresh[f])&&fresh[f]!==null){
+              if(out[f]===null||out[f]===undefined||out[f]==='')out[f]=fresh[f];
+            }}
+            return out;
+          }catch(err){root.console?.warn?.('StockZone PS/PB 同業資料自動補查失敗',err);return data}
+        };retried.__sz2691=true;root.valuation=retried;
+      }
+    }
+    function start(){layout();attachDataRepair();
+      // 個股頁 / 玩法分析區塊可能延遲出現，觀察節點變更後只搬原有節點。
+      let deadline=Date.now()+15000;
+      const timer=root.setInterval(()=>{if(Date.now()>deadline){root.clearInterval(timer);return;}layout();attachDataRepair()},650);
+    }
+    if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',start,{once:true});else root.setTimeout(start,0);
+  }
+
+  // v2.6.9.2 — 持股清單驅動的輕量操作介面。
+  // 僅接上前台顯示、清單與本機審計紀錄；不重新計算 R1/V4/W3 或修改下單/報價接口。
+  if (root && root.document && typeof root.setTimeout === 'function') {
+    const doc=root.document;
+    const $=id=>doc.getElementById(id);
+    const HOLDINGS_KEY='stockzone_holdings_v2';
+    const HISTORY_KEY='stockzone_auto_trade_plans_v2692';
+    const LEGACY_PLAN_KEY='sz_resonance_lab_r1_plans';
+    const PLAY_LABELS={short:'短期',mixed:'短波',swing:'波段','long-swing':'長波',long:'長期'};
+    const ui={timer:0,ready:false,code:'',lastSummary:'',initializing:false};
+    const esc=x=>String(x??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const txt=id=>String($(id)?.textContent||'').trim();
+    const getCode=()=>txt('stockCodeLabel').match(/\b\d{4,6}\b/)?.[0]||'';
+    const clean=x=>String(x??'').replace(/\s+/g,' ').trim();
+    const money=x=>{const num=Number(String(x||'').replace(/[,，]/g,''));return Number.isFinite(num)&&num>0?num:null};
+    const localDay=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
+    const numberLabel=n=>Number.isFinite(n)?n.toLocaleString('zh-TW',{maximumFractionDigits:2}):'—';
+    function loadJSON(key,fallback){try{const v=JSON.parse(root.localStorage.getItem(key)||'null');return v&&typeof v==='object'?v:fallback;}catch{return fallback;}}
+    function writeJSON(key,v){try{root.localStorage.setItem(key,JSON.stringify(v));return true;}catch(e){root.console?.warn?.('StockZone 無法儲存本機紀錄',e);return false;}}
+    function holdings(){const a=loadJSON(HOLDINGS_KEY,[]);return Array.isArray(a)?a:[];}
+    function holdingFor(code){return holdings().find(x=>String(x.code||x.symbol||'')===String(code))||null;}
+    function records(){return loadJSON(HISTORY_KEY,{});}
+    function fiveYearPlay(){return root.StockZoneResonanceLab?.getCurrentFiveYearPlay?.(getCode())||null;}
+    function playName(){const p=fiveYearPlay();return p?.displayLabel||'回測中';}
+    function allocation(){
+      const p=txt('szV4Candidate');
+      const m=p.match(/核心\s*(\d+(?:\.\d+)?)%\s*[／\/]\s*機動\s*(\d+(?:\.\d+)?)%/);
+      return m?{core:+m[1],tactical:+m[2]}:null;
+    }
+    function targets(){
+      // Single typed result from the model that renders 共振圖; never parse a hidden UI node.
+      const live=root.StockZoneResonanceLab?.liveResonance;
+      const v=live?.code===getCode()?live.values:null;
+      return {main:money(v?.main),secondary:money(v?.secondary),pullback:money(v?.pullback),defense:money(v?.defense)};
+    }
+    // v2.7.0.5：使用近期分析原始輸出，不再讀取已失效的 overviewFinalNext/Risk DOM 節點。
+    function getSignal(){
+      const t=currentRecent();
+      return t?.valid?t.trial?.action||'近期條件待確認':'等待近期分析';
+    }
+    function getRisk(){
+      const t=currentRecent();
+      if(!t?.valid)return t?.reason?`近期分析待補：${t.reason}`:'近期技術資料尚未完成，暫不判斷風險';
+      const i=t.inputs||{},parts=[];
+      if(Number.isFinite(i.rsi14)&&i.rsi14>=78)parts.push('RSI偏高，注意短期過熱');
+      if(Number.isFinite(i.bollinger?.percentB)&&i.bollinger.percentB>1.08)parts.push('股價超出布林上軌，注意追高風險');
+      if(Number.isFinite(i.macd?.hist)&&Number.isFinite(i.macd?.prevHist)&&i.macd.hist<0&&i.macd.hist<i.macd.prevHist)
+        parts.push('MACD空方動能擴大');
+      else if(Number.isFinite(i.macd?.hist)&&i.macd.hist<0)parts.push('MACD柱狀體仍偏弱');
+      if(Number.isFinite(i.volatilityPct)&&i.volatilityPct>=6)parts.push('近期波動偏大');
+      if(Number.isFinite(i.ret20Pct)&&i.ret20Pct<=-10)parts.push('近20日跌幅偏大，須觀察止跌');
+      const missing=Array.isArray(t.missing)?t.missing:[];
+      if(missing.length)parts.unshift(`近期資料未齊（${missing.slice(0,2).join('、')}），風險判讀有限`);
+      if(!parts.length){
+        const support=Number(i.support);
+        return `近期未觸發既有過熱／轉弱警訊${Number.isFinite(support)&&support>0?`；仍須留意研究支撐 ${numberLabel(support)}`:''}`;
+      }
+      return parts.slice(0,3).join('；');
+    }
+    function baseline(){return fiveYearPlay()?.label||null;}
+    function currentRecent(){
+      const code=getCode(),lab=root.StockZoneResonanceLab;
+      if(code && (!lab?.liveRecentAnalysis||lab.liveRecentAnalysis.code!==code))lab?.loadRecentForCode?.(code);
+      if(lab?.liveRecentAnalysis?.code!==code)return null;
+      return lab.liveRecentAnalysis.result||null;
+    }
+    function recent(){return currentRecent()?.valid?currentRecent().mode:null;}
+    function entryTiming(held=false,originalPlay=null){
+      const r=currentRecent();if(!r)return null;
+      const play=held?(originalPlay||baseline()):baseline();
+      // Recent analysis is independent even before the five-year result arrives.
+      if(held && r.valid){
+        return {...r,held:true,originalFiveYearPlay:play||null,
+          trial:{...r.trial,action:'持有中：不重新試單',shouldProbe:false,probePct:null,
+            entryTiming:'持有中：不重新試單',
+            // Holding-state tactical signals must never instruct selling the core bucket.
+            replenishTiming:r.trial?.replenishTiming?`機動倉：${r.trial.replenishTiming}`:null,
+            stopTiming:r.trial?.stopTiming?`機動倉：${r.trial.stopTiming}`:null}};
+      }
+      return {...r,held,originalFiveYearPlay:play||null};
+    }
+    function dataReady(){return !!getCode()&&money(txt('currentPrice'))!==null&&allocation()!==null;}
+    function analysis(){
+      const code=getCode(),pos=allocation(),t=targets(),h=holdingFor(code),confirmed=records()[code]?.active?.explicitPlan===true;
+      return {code,name:txt('stockName'),capturedAt:new Date().toISOString(),day:localDay(),
+        referencePrice:money(txt('currentPrice')),play:playName(),allocation:pos,targets:t,
+        signal:getSignal(),risk:getRisk(),baseline:baseline(),recent:recent(),
+        timing:entryTiming(confirmed,records()[code]?.active?.initial?.play),
+        holdingCost:money(h?.avgCost),holdingShares:money(h?.shares)};
+    }
+    function signature(x){return JSON.stringify([x.play,x.allocation,x.targets,x.signal,x.risk,x.baseline,x.recent,x.timing?.mode,x.timing?.status,x.timing?.trial?.action,x.timing?.trial?.probePct,x.timing?.asOf,x.referencePrice]);}
+    function bridgePlan(code,a){
+      const lab=root.StockZoneResonanceLab;
+      if(typeof lab?.createSnapshot!=='function')return null;
+      const all=loadJSON(LEGACY_PLAN_KEY,{}),current=all[code]||{plans:[],activeId:null};
+      // 使用者先前手動保存的原始計畫一律不碰。
+      if(current.activeId)return null;
+      const key=Object.keys(PLAY_LABELS).find(k=>PLAY_LABELS[k]===a.play);
+      if(!key||!a.referencePrice)return null;
+      try{
+        const plan=lab.createSnapshot({code,stockName:a.name,tradeDate:a.day,capturedAt:a.capturedAt,
+          price:a.referencePrice,play:key,corePct:a.allocation?.core??null,
+          main:a.targets.main,secondary:a.targets.secondary,pullback:a.targets.pullback,defense:a.targets.defense,
+          source:'v2.6.9.2 持股清單自動追蹤；價格為當時顯示的參考報價，非實際成交價'});
+        plan.id=`auto-${Date.now()}-${Math.floor(Math.random()*1e6)}`;
+        current.plans=Array.isArray(current.plans)?current.plans:[];
+        current.plans.push(plan);current.activeId=plan.id;all[code]=current;
+        return writeJSON(LEGACY_PLAN_KEY,all)?plan.id:null;
+      }catch(e){root.console?.warn?.('原始交易計畫自動建立失敗',e);return null;}
+    }
+    function bridgeUpdate(code,a,planId){
+      if(!planId)return;
+      const lab=root.StockZoneResonanceLab;if(typeof lab?.appendUpdate!=='function')return;
+      const all=loadJSON(LEGACY_PLAN_KEY,{}),row=all[code];
+      if(!row||row.activeId!==planId)return;
+      const idx=(row.plans||[]).findIndex(p=>p.id===planId);if(idx<0)return;
+      const prior=row.plans[idx],last=prior.updates?.at(-1);
+      if(last?.date===a.day)return; // 不頻繁新增同日的校正紀錄。
+      try{
+        row.plans[idx]=lab.appendUpdate(prior,{date:a.day,capturedAt:a.capturedAt,price:a.referencePrice,
+          main:a.targets.main,secondary:a.targets.secondary,pullback:a.targets.pullback,
+          play:prior.initial.play,corePct:a.allocation?.core??prior.initial.corePct});
+        writeJSON(LEGACY_PLAN_KEY,all);
+      }catch(e){root.console?.warn?.('自動保存校正失敗',e)}
+    }
+    function startTracking(code,kind){
+      if(!holdingFor(code)||!dataReady()||getCode()!==code)return false;
+      const all=records(),rec=all[code]||{archived:[]};
+      if(rec.active)return true;
+      const a=analysis();
+      // 當前報價為加入持股當下可見價格，不能當作真實成交價。
+      const planId=bridgePlan(code,a);
+      rec.active={id:`${Date.now()}-${Math.floor(Math.random()*1e6)}`,startDate:a.day,createdAt:a.capturedAt,
+        origin:kind,legacyPlanId:planId,initial:Object.freeze({...a}),last:a,updates:[],closedAt:null};
+      all[code]=rec;return writeJSON(HISTORY_KEY,all);
+    }
+    function archive(code){
+      const all=records(),rec=all[code];if(!rec?.active)return;
+      const pid=rec.active?.legacyPlanId;
+      rec.archived=Array.isArray(rec.archived)?rec.archived:[];
+      rec.archived.push({...rec.active,closedAt:new Date().toISOString()});
+      rec.active=null;
+      if(rec.archived.length>50)rec.archived=rec.archived.slice(-50);
+      // 對我們自己建立的自動計畫解除現行標記，歷史快照與校正照舊保留。
+      if(pid){const old=loadJSON(LEGACY_PLAN_KEY,{}),row=old[code];
+        if(row?.activeId===pid){row.activeId=null;writeJSON(LEGACY_PLAN_KEY,old);}}
+      writeJSON(HISTORY_KEY,all);
+    }
+    function syncRecord(){
+      // v2.6.9.10：加入清單與開啟股票不能建立交易；正式計畫改由「建立計畫」按鈕明確觸發。
+      // 舊自動追蹤只留作歷史，不再背景自動更動。共振建議由持股清單計畫層更新。
+      return;
+      /* legacy auto-tracking disabled
+      const code=getCode();if(!code||!dataReady())return;
+      const h=holdingFor(code);
+      if(!h)return;
+      let all=records(),rec=all[code];
+      if(!rec?.active){startTracking(code,'existing-holding-first-view');all=records();rec=all[code];}
+      if(!rec?.active)return;
+      const a=analysis(),prior=rec.active.last;
+      if(signature(a)===signature(prior)&&a.day===prior?.day)return;
+      // 一日一筆、日內以最新分析覆蓋「更新紀錄」，原始快照永不改動。
+      const updates=Array.isArray(rec.active.updates)?rec.active.updates:[];
+      if(updates.length&&updates[updates.length-1].day===a.day)updates[updates.length-1]=a;
+      else updates.push(a);
+      rec.active.updates=updates.slice(-120);
+      rec.active.last=a;writeJSON(HISTORY_KEY,all);
+      bridgeUpdate(code,a,rec.active.legacyPlanId);
+      */
+    }
+    function render(){
+      const card=$('playStyleCard'),code=getCode();if(!card)return;
+      const panel=ensurePanel(card);if(!panel)return;
+      // 持股狀態直接顯示在玩法分析主題卡右上角，取代原 V4.3.1 裝飾標籤。
+      const badge=$('szPlayHoldingBadge');
+      const setHoldingBadge=(label,held,listed)=>{
+        if(!badge)return;
+        if(badge.textContent!==label)badge.textContent=label;
+        badge.classList.toggle('szs-held',held);
+        badge.classList.toggle('szs-listed',!held&&listed);
+        badge.classList.toggle('szs-notheld',!held&&!listed);
+        badge.setAttribute('aria-label',`持股狀態：${label}`);
+      };
+      if(!code){setHoldingBadge('尚未持有',false,false);panel.innerHTML='<div class="szs-loading">搜尋股票後，自動顯示操作建議。</div>';panel.dataset.state='';return;}
+      const a=analysis(),h=holdingFor(code),listed=!!h,rec=records()[code]?.active,held=listed&&rec?.explicitPlan===true&&rec.status==='open';
+      const status=listed?'已在持股':'尚未持有';
+      setHoldingBadge(status,listed,listed);
+      const valid=dataReady();
+      // The current R1 recommendation is independent; existing plan snapshots stay untouched.
+      const five=fiveYearPlay();
+      const play=five?.displayLabel||'回測中';
+      // Five-year evidence remains in the underlying R1 comparison, not under the headline play.
+      const t=a.timing,trial=t?.trial;
+      const risk=getRisk();
+      const target=(label,value)=>`<div class="szs-target"><small>${label}</small><strong>${Number.isFinite(value)?numberLabel(value):'—'}</strong></div>`;
+      const targetPart=`<div class="szs-targets">${target('主要共振',a.targets?.main)}${target('次要共振',a.targets?.secondary)}${target('深跌參考',Number.isFinite(a.targets?.pullback)?Math.floor(a.targets.pullback):a.targets?.pullback)}</div>`;
+      const recentCondition=t?.valid?t.mode:'資料不足';
+      // Marks are observational (the same last daily candle as recentPlayStudy), never trading decisions.
+      // If the metric is unavailable, leave the condition unmarked rather than inventing a pass/fail.
+      const checkedTiming=(value,study)=>{
+        let html=esc(value??'資料不足');
+        if(!study?.valid||!study.inputs||study.asOf!==root.StockZoneResonanceLab?.liveRecentAnalysis?.result?.asOf)return html;
+        const flags=study.conditions||{},flag=k=>typeof flags[k]==='boolean'?flags[k]:null;
+        const mark=(match,met)=>met===null?match:`${match}<span class="szs-check" aria-label="${met?'已符合':'尚未符合'}">${met?'✅':'❎'}</span>`;
+        html=html.replace(/(?:重新站上|站回|站上) MA10 [\d,.]+/g,match=>mark(match,flag('ma10Reached')));
+        html=html.replace(/MACD柱(?:狀體)?(?:回升|上升)/g,match=>mark(match,flag('macdRising')));
+        html=html.replace(/5日均量／20日均量≥1/g,match=>mark(match,flag('volumeRatioAtLeastOne')));
+        html=html.replace(/(?:收盤守住支撐|價格守住研究支撐) [\d,.]+/g,match=>mark(match,flag('supportHeld')));
+        html=html.replace(/MA5 [\d,.]+ 止跌/g,match=>mark(match,flag('ma5Stabilized')));
+        return html;
+      };
+      const preview=(label,value,checks=false)=>`<div class="szs-recent-row"><span>${esc(label)}</span><b>${checks?checkedTiming(value,t):esc(value??'資料不足')}</b></div>`;
+      // 僅刪除冗餘提示字句；保留原引擎產生的時機和判斷條件。
+      const shorten=(value,tail)=>String(value||'—').replace(new RegExp('；?'+tail,'g'),'');
+      const timingLine=`<div class="szs-timing-study"><div class="szs-recent-grid">
+        ${preview('是否試單',t?(t.valid?trial?.action:'待補資料'):'資料讀取中')}
+        ${preview('試單時機',t?(t.valid?trial?.entryTiming:'—'):'資料讀取中',true)}
+        ${preview('補倉時機',t?(t.valid?shorten(trial?.replenishTiming,'不改原交易玩法'):'—'):'資料讀取中',true)}
+        ${preview('停損時機',t?(t.valid?shorten(trial?.stopTiming,'非自動掛單'):'—'):'資料讀取中')}
+      </div></div>`;
+      // Same unmodified reachabilityProfile results as the historical research display;
+      // no historical play label, core ratio or entry-candidate UI is produced.
+      const liveResonance=root.StockZoneResonanceLab?.liveResonance;
+      const reachByType=liveResonance?.code===code?liveResonance.reachByType||{}:{};
+      const reachItem=type=>`<div class="szs-reach-item"><b>${type==='主要'?'主要共振':type==='次要'?'次要共振':type==='回測'?'深跌參考':type}</b><span>20日 <strong>${esc(Number.isFinite(reachByType[type]?.h20)?reachByType[type].h20+'%':'—')}</strong></span><span>40日 <strong>${esc(Number.isFinite(reachByType[type]?.h40)?reachByType[type].h40+'%':'—')}</strong></span></div>`;
+      const reachPart=`<section class="szs-reach" aria-label="歷史價格觸及率"><div class="szs-reach-heading">歷史價格觸及率</div><div class="szs-reach-grid">${['主要','次要','回測'].map(reachItem).join('')}</div></section>`;
+      const baseAlloc=held&&rec?.explicitPlan&&rec?.initial?.allocation?rec.initial.allocation:a.allocation;
+      const hasAlloc=baseAlloc?.core!==null&&baseAlloc?.core!==undefined&&baseAlloc?.tactical!==null&&baseAlloc?.tactical!==undefined&&Number.isFinite(Number(baseAlloc.core))&&Number.isFinite(Number(baseAlloc.tactical));
+      const allocationDetail=''; // Base allocation remains an independent input; no dynamic allocation feedback into resonance.
+      const pos=hasAlloc
+        ?`<strong class="szs-allocation"><span>核心 <b>${esc(baseAlloc.core)}%</b></span><span class="szs-alloc-separator">／</span><span>機動 <b>${esc(baseAlloc.tactical)}%</b></span></strong>`
+        :'<strong class="szs-allocation szs-allocation-pending">部位比例待確認</strong>';
+      const dynamic=root.StockZoneDynamicAllocation;
+      const amountAdvice=held&&dynamic?.code===code&&dynamic.actions?(()=>{
+        const format=(x,verb)=>!Number.isFinite(x)?'資料不足':Math.abs(x)<1?'暫無調整':`${x<0?'建議賣出':'可投入'} ${Math.round(Math.abs(x)).toLocaleString('zh-TW')} 元`;
+        return `<div class="szs-money-advice"><b>機動倉：</b>${format(dynamic.actions.deltaTactical)}　<b>核心倉：</b>${format(dynamic.actions.deltaCore)}</div>`;
+      })():'';
+      const controls=listed?`<button type="button" class="szs-primary" id="szSimpleManage">查看持股清單</button>`:'';
+      const key=JSON.stringify([code,listed,held,status,play,risk,pos,allocationDetail,targetPart,recentCondition,timingLine,reachPart,amountAdvice,!!rec]);
+      if(panel.dataset.state===key)return;
+      panel.dataset.state=key;
+      panel.innerHTML=`<div class="szs-pair"><div><small>建議玩法</small><strong>${esc(play)}</strong></div><div><small>持倉建議</small>${pos}${allocationDetail}</div></div>
+        ${targetPart}
+        <p class="szs-risk"><b>風險提醒：</b><span>${esc(risk)}</span></p>
+        <div class="szs-context"><b>近期適合模式：</b>${esc(recentCondition)}</div>
+        ${timingLine}
+        ${reachPart}
+        ${amountAdvice}
+        ${controls?`<div class="szs-buttons">${controls}</div>`:''}`;
+      $('szSimpleManage')?.addEventListener('click',()=>doc.querySelector('[data-manage-jump="holdings"]')?.click());
+    }
+    function ensurePanel(card){
+      let p=$('szSimpleTrade');if(!p){p=doc.createElement('section');p.id='szSimpleTrade';p.setAttribute('aria-label','簡易持股操作建議');
+        const title=card.querySelector('.card-title');if(title)title.after(p);else card.prepend(p);}
+      // Research is displayed directly inside 玩法分析 with no accordion.
+      $('sz2692ResearchDetails')?.remove();
+      return p;
+    }
+    const css=`
+      #playStyleCard>.sz-v4-candidate{display:none!important}
+      #playStyleCard>.sz-reslab{display:block!important}
+      /* Keep only the actual research details; the legacy integrated duplicate stays hidden. */
+      #szSimpleTrade .szs-money-advice{font-size:12px;line-height:1.65;margin:10px 0;color:#3a5275;background:#eef4fc;border-radius:9px;padding:8px 10px;overflow-wrap:anywhere}
+      #playStyleCard #szLabIntegrated{display:none!important}
+      #playStyleCard .sz-reslab-actions,#playStyleCard .sz-reslab-controls,
+      #playStyleCard .sz-reslab-dual,#playStyleCard #szLabEvaluation,
+      #playStyleCard #szLabExport,#playStyleCard #szLabNewTrade{display:none!important}
+      /* v2.7.0.5：持股狀態與技術分析日期標籤同一套中性 pill 規格。 */
+      #playStyleCard .szs-status-badge,#playStyleCard .szs-status-badge.szs-held,
+      #playStyleCard .szs-status-badge.szs-listed,#playStyleCard .szs-status-badge.szs-notheld{
+        display:inline-flex!important;flex:0 0 auto!important;align-items:center!important;justify-content:center!important;
+        width:auto!important;min-width:0!important;height:auto!important;max-width:60%!important;
+        padding:4px 8px!important;border:1px solid #e6dbff!important;border-radius:20px!important;
+        background:#f4f1ff!important;box-shadow:none!important;
+        color:#7d57d8!important;font:400 10px/1.2 Arial,'Microsoft JhengHei',sans-serif!important;
+        letter-spacing:0!important;text-align:center;white-space:nowrap!important;
+      }
+      #szSimpleTrade{border:1px solid #dce6f4;background:linear-gradient(150deg,#f8fbff,#f2f6fe);border-radius:17px;
+        padding:18px 20px;margin:11px 0 12px;color:#273d5d;line-height:1.55;min-width:0;overflow-wrap:anywhere}
+      #szSimpleTrade .szs-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:0;border-bottom:1px solid #dbe5f3;padding:1px 0 15px}
+      #szSimpleTrade .szs-pair>div{min-width:0;padding:0 14px}
+      #szSimpleTrade .szs-pair>div:first-child{padding-left:0;border-right:1px solid #dbe5f3}
+      #szSimpleTrade .szs-pair>div:last-child{padding-right:0;padding-left:18px}
+      #szSimpleTrade .szs-pair small{display:block;color:#6680a4;font-size:13px;font-weight:550;margin-bottom:5px}
+      #szSimpleTrade .szs-pair strong{display:block;font-size:21px;line-height:1.35;font-weight:800;color:#1673e4;overflow-wrap:anywhere}
+      #szSimpleTrade .szs-pair .szs-signal{font-size:16px;color:#263e66;font-weight:750}
+      #szSimpleTrade .szs-pair .szs-advice-detail{display:block;margin:6px 0 0;font-size:11px;line-height:1.5;font-weight:500;color:#6680a4}
+      #szSimpleTrade .szs-allocation{display:flex;align-items:baseline;flex-wrap:wrap;gap:5px;margin:0;
+        padding:15px 0 13px;border-bottom:1px solid #dbe5f3;font-size:16px;font-weight:760;color:#273d5d}
+      #szSimpleTrade .szs-allocation b{color:#1376e9;font-size:19px;font-weight:850}
+      #szSimpleTrade .szs-allocation small{width:100%;color:#778da9;font-size:11px;font-weight:600}
+      #szSimpleTrade .szs-allocation-pending{color:#788ba5;font-size:13px}
+      /* v2.7.0.6 — existing allocation figures live under 持倉建議; no duplicate full-width row */
+      /* v2.7.0.7: peer headings and peer values share exact element hierarchy and CSS. */
+      #szSimpleTrade .szs-pair>div>strong{display:block;margin:0;font-size:21px;line-height:1.35;font-weight:800;color:#1673e4}
+      #szSimpleTrade .szs-pair .szs-allocation{display:flex;align-items:baseline;flex-wrap:nowrap;
+        width:100%;gap:0;padding:0;border:0;margin:0}
+      #szSimpleTrade .szs-pair .szs-allocation span{white-space:nowrap;font-size:inherit;line-height:inherit;font-weight:inherit}
+      #szSimpleTrade .szs-pair .szs-allocation b{font-size:inherit;line-height:inherit;font-weight:inherit;color:inherit}
+      #szSimpleTrade .szs-pair .szs-allocation-pending{font-size:inherit}
+      #szSimpleTrade .szs-pair small.szs-approved-note{font-size:10px;line-height:1.45;margin:5px 0 0;color:#68809c}
+      #szSimpleTrade .szs-targets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;
+        border-bottom:1px solid #dbe5f3;padding:15px 0 14px}
+      /* v2.7.0.7: labels and figures are horizontally centered in all three equal-width cells. */
+      #szSimpleTrade .szs-target{min-width:0;padding:0 7px;text-align:center}
+      #szSimpleTrade .szs-target:first-child{padding-left:7px}
+      #szSimpleTrade .szs-target+ .szs-target{border-left:1px solid #dbe5f3}
+      #szSimpleTrade .szs-target small{display:block;text-align:center;font-size:12px;font-weight:550;color:#6680a4;line-height:1.5;margin-bottom:7px}
+      #szSimpleTrade .szs-target strong{display:block;text-align:center;color:#233a61;font-size:20px;font-weight:800;
+        line-height:1.4;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+      #szSimpleTrade .szs-risk{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px;padding:12px 0;margin:0;border-bottom:1px solid #dbe5f3;color:#536d90;font-size:14px;line-height:1.7}
+      #szSimpleTrade .szs-risk b{color:#263e63;font-weight:850} #szSimpleTrade .szs-risk span{min-width:0;overflow-wrap:anywhere} #szSimpleTrade .szs-check{display:inline;background:none;padding:0;margin:0;border:0;box-shadow:none;white-space:nowrap;font-size:inherit;line-height:inherit;font-weight:inherit}
+      #szSimpleTrade .szs-context{padding:13px 0;margin:0;color:#536b8d;font-size:14px;line-height:1.65}
+      #szSimpleTrade .szs-context b{color:#293f60;font-weight:850;margin-right:5px}
+      #szSimpleTrade .szs-timing-study{margin:0;line-height:1.55}
+      #szSimpleTrade .szs-recent-grid{display:grid;gap:0;margin:0;border:1px solid #e0e7f2;border-radius:10px;overflow:hidden}
+      #szSimpleTrade .szs-recent-row{display:grid;grid-template-columns:minmax(90px,24%) minmax(0,1fr);
+        align-items:stretch;min-width:0;font-size:13px;line-height:1.55}
+      #szSimpleTrade .szs-recent-row+.szs-recent-row{border-top:1px solid #e2eaf5}
+      #szSimpleTrade .szs-recent-row > span{background:rgba(225,234,248,.48);color:#647c9c;
+        padding:10px 12px;font-weight:560;min-width:0}
+      #szSimpleTrade .szs-recent-row b{background:rgba(255,255,255,.46);color:#2c4264;
+        padding:10px 13px;font-size:13px;font-weight:560;min-width:0;white-space:normal}
+      #szSimpleTrade .szs-reach{border-top:1px solid #dbe5f3;margin-top:14px;padding-top:14px;color:#48617f}
+      #szSimpleTrade .szs-reach-heading{color:#293f60;font-weight:800;font-size:13px;margin-bottom:10px}
+      #szSimpleTrade .szs-reach-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
+      #szSimpleTrade .szs-reach-item{min-width:0;display:flex;flex-direction:column;gap:5px;text-align:center;padding:0 5px}
+      #szSimpleTrade .szs-reach-item+.szs-reach-item{border-left:1px solid #dbe5f3}
+      #szSimpleTrade .szs-reach-item>b{font-size:12px;color:#293f60}
+      #szSimpleTrade .szs-reach-item>span{font-size:11px;white-space:nowrap;color:#7185a0}
+      #szSimpleTrade .szs-reach-item>span strong{font-weight:750;color:#2e4569}
+      #szSimpleTrade .szs-reach>small{display:block;color:#8595a8;font-size:10.5px;margin-top:10px;line-height:1.55}
+      body.dark #szSimpleTrade .szs-reach,body.dark-mode #szSimpleTrade .szs-reach,
+      body.dark #szSimpleTrade .szs-reach-item+.szs-reach-item,body.dark-mode #szSimpleTrade .szs-reach-item+.szs-reach-item{border-color:#3c4c64}
+      body.dark #szSimpleTrade .szs-reach-heading,body.dark-mode #szSimpleTrade .szs-reach-heading,
+      body.dark #szSimpleTrade .szs-reach-item>b,body.dark-mode #szSimpleTrade .szs-reach-item>b,
+      body.dark #szSimpleTrade .szs-reach-item strong,body.dark-mode #szSimpleTrade .szs-reach-item strong{color:#e1eafa}
+      #szSimpleTrade .szs-buttons{display:flex;gap:9px;margin-top:13px}
+      #szSimpleTrade .szs-primary{border:0;border-radius:11px;background:#347ffc;color:#fff;min-height:42px;
+        padding:9px 18px;font-size:13px;font-weight:800;cursor:pointer;flex:1}
+      #szSimpleTrade .szs-primary:disabled{background:#c5d2e2;cursor:default}
+      @media(max-width:720px){
+        #szSimpleTrade{padding:14px 13px;margin:8px 0 12px}
+        #szSimpleTrade .szs-pair>div{padding-right:10px}
+        #szSimpleTrade .szs-pair>div:last-child{padding-left:12px}
+        #szSimpleTrade .szs-pair small{font-size:12px}
+        #szSimpleTrade .szs-pair>div>strong{font-size:19px}
+        #szSimpleTrade .szs-pair .szs-signal{font-size:14px}
+        /* Allocation inherits the same value size from both peer strong nodes. */
+        #szSimpleTrade .szs-target{padding:0 5px}
+        #szSimpleTrade .szs-target:first-child{padding-left:5px}
+        #szSimpleTrade .szs-target small{font-size:11px}
+        #szSimpleTrade .szs-target strong{font-size:clamp(12px,3.25vw,17px)}
+        #szSimpleTrade .szs-risk,#szSimpleTrade .szs-context{font-size:12px}
+        #szSimpleTrade .szs-recent-row{grid-template-columns:minmax(82px,27%) minmax(0,1fr);font-size:12px}
+        #szSimpleTrade .szs-recent-row > span,#szSimpleTrade .szs-recent-row > b{font-size:12px;padding:9px 8px}
+      }
+      body.dark #szSimpleTrade,body.dark-mode #szSimpleTrade{background:linear-gradient(150deg,#202e45,#1b273a);border-color:#344866;color:#e1eafa}
+      body.dark #szSimpleTrade .szs-pair,body.dark-mode #szSimpleTrade .szs-pair,
+      body.dark #szSimpleTrade .szs-targets,body.dark-mode #szSimpleTrade .szs-targets,
+      body.dark #szSimpleTrade .szs-allocation,body.dark-mode #szSimpleTrade .szs-allocation,
+      body.dark #szSimpleTrade .szs-risk,body.dark-mode #szSimpleTrade .szs-risk,
+      body.dark #szSimpleTrade .szs-recent-row,body.dark-mode #szSimpleTrade .szs-recent-row{border-color:#3c4c64}
+      body.dark #szSimpleTrade .szs-pair>div:first-child,body.dark-mode #szSimpleTrade .szs-pair>div:first-child,
+      body.dark #szSimpleTrade .szs-target+.szs-target,body.dark-mode #szSimpleTrade .szs-target+.szs-target{border-color:#3c4c64}
+      body.dark #szSimpleTrade .szs-pair strong,body.dark-mode #szSimpleTrade .szs-pair strong,
+      body.dark #szSimpleTrade .szs-allocation b,body.dark-mode #szSimpleTrade .szs-allocation b{color:#72a9ff}
+      body.dark #szSimpleTrade .szs-signal,body.dark-mode #szSimpleTrade .szs-signal,
+      body.dark #szSimpleTrade .szs-target strong,body.dark-mode #szSimpleTrade .szs-target strong,
+      body.dark #szSimpleTrade .szs-risk b,body.dark-mode #szSimpleTrade .szs-risk b,
+      body.dark #szSimpleTrade .szs-context b,body.dark-mode #szSimpleTrade .szs-context b{color:#e2ecff}
+      body.dark #szSimpleTrade .szs-recent-row > span,body.dark-mode #szSimpleTrade .szs-recent-row > span{background:#263852;color:#c1cfe5}
+      body.dark #szSimpleTrade .szs-recent-row b,body.dark-mode #szSimpleTrade .szs-recent-row b{background:#1c2b40;color:#e1eafa}
+      body.dark #szSimpleTrade .szs-recent-grid,body.dark-mode #szSimpleTrade .szs-recent-grid{border-color:#3c4c64}
+      @media(max-width:720px){#szSimpleTrade{padding:13px 12px;margin:8px 0}
+        #szSimpleTrade .szs-pair>div>strong{font-size:18px}
+        #szSimpleTrade .szs-pair strong.szs-signal{font-size:13px}}
+      /* On narrow handsets, both peer values shrink together so allocations fit. */
+      @media(max-width:390px){
+        #szSimpleTrade .szs-pair>div>strong{font-size:clamp(15px,4.6vw,18px)}
+      }
+    `;
+    function addDeveloperTools(){
+      const body=doc.querySelector('#szDeveloperMode > .sz-fold-body');if(!body||$('sz2692DevExports'))return;
+      const section=doc.createElement('section');section.id='sz2692DevExports';
+      section.style.cssText='padding:12px 0;margin-top:15px;border-top:1px solid #dfe6f0;color:#405776;font-size:13px';
+      section.innerHTML='<b>個股分析研究資料</b><div style="margin:9px 0;display:flex;gap:8px;flex-wrap:wrap">'
+        +'<button type="button" id="sz2692ExportStudy">匯出共振研究</button>'
+        +'<button type="button" id="sz2692ExportRecords">匯出持股追蹤紀錄</button></div>'
+        +'<small style="color:#7989a0">匯出的僅是此瀏覽器內可取得的紀錄。</small>';
+      body.appendChild(section);
+      $('sz2692ExportStudy')?.addEventListener('click',()=>$('szLabExport')?.click());
+      $('sz2692ExportRecords')?.addEventListener('click',()=>{
+        const blob=new Blob([JSON.stringify({version:'2.6.9.2',exportedAt:new Date().toISOString(),
+          autoTracking:records()},null,2)],{type:'application/json;charset=utf-8'});
+        const url=URL.createObjectURL(blob),a=doc.createElement('a');a.href=url;
+        a.download=`StockZone_持股追蹤_${localDay()}.json`;doc.body.appendChild(a);a.click();a.remove();
+        root.setTimeout(()=>URL.revokeObjectURL(url),1200);
+      });
+    }
+    function sync(){
+      const code=getCode();if(!code)return;
+      if(ui.code!==code){ui.code=code;ui.lastSummary='';}
+      syncRecord();render();
+    }
+    function queue(){root.clearTimeout(ui.timer);ui.timer=root.setTimeout(sync,75)}
+    function onNativeHolding(){root.setTimeout(queue,120);}
+    function onNativeDelete(){root.setTimeout(queue,120);}
+    function init(){
+      if(ui.ready)return;
+      const card=$('playStyleCard');if(!card)return;
+      ui.ready=true;
+      const style=doc.createElement('style');style.id='sz2692CompactStyle';style.textContent=css;(doc.head||doc.documentElement).appendChild(style);
+      ensurePanel(card);addDeveloperTools();
+      $('addHoldingBtn')?.addEventListener('click',onNativeHolding,{capture:true});
+      $('holdingsCards')?.addEventListener('click',onNativeDelete,{capture:true});
+      const obs=root.MutationObserver;
+      if(obs){
+        for(const id of ['szV4Candidate','stockCodeLabel','currentPrice','addHoldingBtn']){
+          const el=$(id);if(el)new obs(queue).observe(el,{subtree:true,childList:true,characterData:true});
+        }
+        const list=$('holdingsCards');if(list)new obs(queue).observe(list,{childList:true});
+      }
+      root.addEventListener('stockzone:five-year-play',queue);
+      root.addEventListener('stockzone:resonance-live',queue);
+      root.addEventListener('stockzone:recent-study',queue);
+      root.addEventListener('stockzone:allocation-study-approved',queue);
+      root.addEventListener('stockzone:dynamic-allocation',queue);
+      doc.addEventListener('visibilitychange',()=>{if(!doc.hidden)queue()});
+      root.addEventListener('storage',e=>{if([HOLDINGS_KEY,HISTORY_KEY].includes(e.key))queue()});
+      // 保險輪詢僅確認原頁非同步初次載入；後續以 MutationObserver 更新。
+      let n=0;const id=root.setInterval(()=>{queue();if(++n>=20)root.clearInterval(id)},850);
+      queue();
+    }
+    if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',init,{once:true});else root.setTimeout(init,0);
+  }
+
+  // R1 backtest heading is kept in place. Historical price touch rates are rendered
+  // by the single #szSimpleTrade renderer above, not a separate card/observer.
+  if (root && root.document && typeof root.setTimeout === 'function') {
+    const doc=root.document,$=id=>doc.getElementById(id);
+    const css=`
+      #playStyleCard #szLabBacktest{border:1px solid #dce5f2;border-radius:17px;padding:14px 12px;background:#fff;margin:12px 0;max-width:100%;overflow:hidden}
+      #playStyleCard .szla-table-heading{font-size:15px;color:#263e65;font-weight:800;margin-bottom:10px}
+      #playStyleCard #szLabBacktest table{width:100%;min-width:0!important;table-layout:fixed}
+    `;
+    function renderTableHeading(){
+      const el=$('szLabBacktest');if(!el)return;
+      let head=$('szlaTableHeading');
+      if(!head){head=doc.createElement('div');head.id='szlaTableHeading';head.className='szla-table-heading';el.prepend(head);}
+      if(head.textContent!=='五年回測績效')head.textContent='五年回測績效';
+    }
+    function init(){
+      if(!$('szBacktestHeadingStyle')){const st=doc.createElement('style');st.id='szBacktestHeadingStyle';st.textContent=css;doc.head.append(st);}
+      renderTableHeading();
+      const Obs=root.MutationObserver;
+      const backtest=$('szLabBacktest');
+      if(Obs&&backtest)new Obs(()=>root.setTimeout(renderTableHeading,0)).observe(backtest,{childList:true});
+    }
+    if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',()=>root.setTimeout(init,0),{once:true});else root.setTimeout(init,0);
+  }
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.StockZoneResonanceLab = api;
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null), function () {
+  'use strict';
+  const VERSION = 'resonance-lab-r1.0';
+  const HORIZONS = [3, 5, 10, 20, 40, 60];
+  const STRATEGIES = Object.freeze([
+    {key:'short',label:'短期',days:5,targetPct:5,stopPct:3.5},
+    {key:'mixed',label:'短波',days:15,targetPct:10,stopPct:7},
+    {key:'swing',label:'波段',days:20,targetPct:15,stopPct:9},
+    {key:'long-swing',label:'長波',days:40,targetPct:23,stopPct:14},
+    {key:'long',label:'長期',days:60,targetPct:30,stopPct:18}
+  ]);
+  const num = v => v === null || v === undefined || v === '' ? null : (Number.isFinite(+v) ? +v : null);
+  const valid = v => num(v) !== null && +v > 0;
+  const round = (v,d=2) => Number.isFinite(v) ? +v.toFixed(d) : null;
+  const pct = (a,b) => valid(a)&&valid(b) ? (a/b-1)*100 : null;
+  function dateKey(raw){
+    if (raw === null || raw === undefined) return '';
+    if (typeof raw === 'number') return new Date(raw).toISOString().slice(0,10);
+    const str = String(raw).trim();
+    const m = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+    const d = new Date(str);return Number.isFinite(d.getTime()) ? d.toISOString().slice(0,10):'';
+  }
+  function cleanBars(raw){
+    const errors=[],out=[],duplicates=new Set();
+    for(const row of Array.isArray(raw)?raw:[]){
+      const date=dateKey(row?.date ?? row?.tradeDate ?? row?.trade_date),close=num(row?.close),high=num(row?.high),low=num(row?.low),open=num(row?.open);
+      if(!date||!valid(open)||!valid(close)||!valid(high)||!valid(low)||high<low||close>high*1.0001||close<low*.9999||open>high*1.0001||open<low*.9999){errors.push(`異常OHLC：${date||'無日期'}`);continue}
+      const normalized={date,open,high,low,close};
+      if(duplicates.has(date)){errors.push(`重複日期：${date}`);continue}
+      duplicates.add(date);out.push(normalized);
+    }
+    out.sort((a,b)=>a.date.localeCompare(b.date));
+    // 極端跳空可能是未校正股票分割、減資或其他公司行動：先停止績效報表，不能直接當成報酬。
+    const jumps=[];
+    for(let i=1;i<out.length;i++){
+      const change=pct(out[i].close,out[i-1].close);
+      if(Math.abs(change)>35)jumps.push({date:out[i].date,changePct:round(change)});
+    }
+    return {bars:out,errors,largeJumps:jumps,valid:out.length>=150 && !jumps.length && !errors.length};
+  }
+  function avg(values){return values.length?values.reduce((s,v)=>s+v,0)/values.length:null}
+  function median(arr){if(!arr.length)return null;const s=[...arr].sort((a,b)=>a-b),i=Math.floor(s.length/2);return s.length%2?s[i]:(s[i-1]+s[i])/2}
+  function pastAvg(bars,i,n){if(i+1<n)return null;let total=0;for(let j=i-n+1;j<=i;j++)total+=bars[j].close;return total/n}
+  function contextAt(bars,i){
+    // 只讀取 <= i 的已公開日線；不允許讀取 i+1 的任何價量來推導訊號。
+    if(i<119||i>=bars.length)return {valid:false,reason:'需要至少120根進場前日K'};
+    const b=bars[i],ma20=pastAvg(bars,i,20),ma60=pastAvg(bars,i,60),ma120=pastAvg(bars,i,120);
+    const near=bars.slice(i-19,i+1),range60=bars.slice(i-59,i+1);
+    const max20=Math.max(...near.map(x=>x.high)),min20=Math.min(...near.map(x=>x.low));
+    const high60=Math.max(...range60.map(x=>x.high)),low60=Math.min(...range60.map(x=>x.low));
+    const vol=avg(near.map(x=>100*(x.high-x.low)/x.close));
+    return {valid:true,date:b.date,price:b.close,ma20:round(ma20),ma60:round(ma60),ma120:round(ma120),volatilityPct:round(vol),
+      high20:round(max20),low20:round(min20),high60:round(high60),low60:round(low60),
+      ret5Pct:round(pct(b.close,bars[i-5].close)),ret20Pct:round(pct(b.close,bars[i-20].close)),
+      above20:b.close>ma20,above60:b.close>ma60,above120:b.close>ma120,
+      fromHigh20Pct:round(pct(b.close,max20)),fromLow60Pct:round(pct(b.close,low60))};
+  }
+  function entryCandidate(bars,index){
+    const c=contextAt(bars,index);if(!c.valid)return {...c,key:null};
+    // V1 研究性進場視角：偏好波段。長期必須有當時已公布的基本面，因此此價格版不自動推長期。
+    const reasons=[];let key='swing';
+    if(c.above20&&c.above60&&c.above120&&c.ret20Pct>=7&&c.volatilityPct<4&&c.fromHigh20Pct>=-5){
+      key='long-swing';reasons.push('多週期上升趨勢、波動相對平穩');
+    }else if(c.volatilityPct>=6 || (c.ret5Pct>=9&&c.fromHigh20Pct>=-3)){
+      key='short';reasons.push('高波動或急漲接近短期高點');
+    }else if((c.ret5Pct>=4 && c.fromHigh20Pct>=-6) || (c.above20&&!c.above60)){
+      key='mixed';reasons.push('短線動能明顯，但中期結構尚未完全跟上');
+    }else{reasons.push(c.above60?'中期結構仍支持波段管理':'尚無足夠證據偏離預設波段');}
+    const profile={short:20,mixed:35,swing:55,'long-swing':70,long:85};
+    return {...c,key,label:STRATEGIES.find(x=>x.key===key)?.label||'波段',corePct:profile[key],
+      reason:reasons.join('；'),method:'僅價格研究候選（未使用歷史基本面、財報或W3）'};
+  }
+  function simulateTrade(bars,index,strategy,costPct=.5){
+    // i 日產生研究候選，i+1 日開盤執行；不能使用 i 日收盤成交。
+    const entry=bars[index+1];
+    if(!entry||!valid(entry.open)||index+strategy.days>=bars.length)return null;
+    const entryPrice=entry.open,top=entryPrice*(1+strategy.targetPct/100),floor=entryPrice*(1-strategy.stopPct/100);
+    let exitIndex=null,exitPrice=null,why='期限到期',mae=0,mfe=0;
+    for(let day=index+1;day<=index+strategy.days;day++){
+      const bar=bars[day];
+      mae=Math.min(mae,pct(bar.low,entryPrice));mfe=Math.max(mfe,pct(bar.high,entryPrice));
+      // 同一日上下目標都觸及：保守採止損先達。缺任何日K便拒絕評估。
+      if(bar.open<=floor){exitIndex=day;exitPrice=bar.open;why='跳空止損';break}
+      if(bar.open>=top){exitIndex=day;exitPrice=bar.open;why='跳空達標';break}
+      if(bar.low<=floor){exitIndex=day;exitPrice=floor;why=bar.high>=top?'同日雙觸及→保守止損':'止損';break}
+      if(bar.high>=top){exitIndex=day;exitPrice=top;why='達標';break}
+    }
+    if(exitIndex===null){exitIndex=index+strategy.days;exitPrice=bars[exitIndex].close}
+    return {signalDate:bars[index].date,entryDate:entry.date,entryPrice,exitDate:bars[exitIndex].date,exitPrice,
+      holdingBars:exitIndex-index,reason:why,netPct:round(pct(exitPrice,entryPrice)-costPct),maePct:round(mae),mfePct:round(mfe)};
+  }
+  function summarise(trades){
+    const rs=trades.map(t=>t.netPct),negative=trades.map(t=>t.maePct);return {count:trades.length,
+      winPct:round(100*trades.filter(x=>x.netPct>0).length/Math.max(1,trades.length),1),
+      avgPct:round(avg(rs)),medianPct:round(median(rs)),avgMaePct:round(avg(negative)),
+      worstMaePct:round(trades.length?Math.min(...negative):null),
+      avgHoldDays:round(avg(trades.map(x=>x.holdingBars)),1)};
+  }
+  function backtestPriceBaselines(input,{warmup=120,stride=60,costPct=.5}={}){
+    const normalized=cleanBars(input),bars=normalized.bars;
+    if(!normalized.valid)return {valid:false,reason:normalized.largeJumps.length?'偵測到超過35%的收盤跳變，請先查核分割／減資／增資與還原價格。':`有效日K不足150根或包含異常欄位`,coverage:{days:bars.length,from:bars[0]?.date,to:bars.at(-1)?.date,errors:normalized.errors.slice(0,5),largeJumps:normalized.largeJumps}};
+    const results=STRATEGIES.map(s=>({strategy:s,rows:[]}));const candidates=[];
+    const start=Math.max(119,warmup-1),end=bars.length-1-Math.max(...STRATEGIES.map(s=>s.days));
+    for(let i=start;i<=end;i+=Math.max(1,stride)){
+      const candidate=entryCandidate(bars,i);candidates.push({date:bars[i].date,key:candidate.key,label:candidate.label,reason:candidate.reason});
+      for(const result of results){const trade=simulateTrade(bars,i,result.strategy,costPct);if(trade)result.rows.push(trade)}
+    }
+    // 使用同一批進場日比較「依當時價格選玩法」與「永遠波段」。
+    // 研究候選只看決策日以前的120根K；前70%與後30%獨立列示，避免把全樣本好壞冒充樣本外成效。
+    const byStrategy=new Map(results.map(r=>[r.strategy.key,r]));
+    const candidateTrades=[],swingTrades=[];
+    for(let j=0;j<candidates.length;j++){
+      const selected=byStrategy.get(candidates[j].key)?.rows[j],swing=byStrategy.get('swing')?.rows[j];
+      if(selected&&swing){candidateTrades.push(selected);swingTrades.push(swing)}
+    }
+    const cutoff=Math.max(1,Math.floor(candidateTrades.length*.7));
+    const pair=(start,end)=>{
+      const chosen=summarise(candidateTrades.slice(start,end)),always=summarise(swingTrades.slice(start,end));
+      return {candidate:chosen,alwaysSwing:always,meanNetLiftPct:round(chosen.avgPct-always.avgPct)};
+    };
+    const policyComparison={whole:pair(0,candidateTrades.length),earlier:pair(0,cutoff),later:pair(cutoff,candidateTrades.length),
+      splitDate:candidates[cutoff]?.date||null,
+      byStyle:Object.fromEntries(STRATEGIES.map(s=>[s.key,candidates.filter(c=>c.key===s.key).length]))};
+    return {valid:true,version:VERSION,method:'價格基準策略對照，非 V4.3.1／共振歷史重算',
+      assumptions:{signal:'前一日收盤資訊',entry:'次日開盤',fill:'同日雙觸及以先停損保守處理；跳空以開盤價',costPct,stride},
+      coverage:{days:bars.length,from:bars[0].date,to:bars.at(-1).date,signals:candidates.length,warnings:normalized.errors.slice(0,5)},
+      candidates,policyComparison,results:results.map(x=>({strategy:x.strategy,stats:summarise(x.rows),trades:x.rows}))};
+  }
+  function selectFiveYearPlay(report){
+    if(!report?.valid || !Array.isArray(report.results))return null;
+    const eligible=report.results.filter(x=>x.stats?.avgPct>0 && x.stats?.medianPct>0 && x.stats?.winPct>=50 && x.stats?.count>=10);
+    if(!eligible.length)return {key:null,reason:'沒有同時符合平均淨報酬>0、中位數>0、勝率≥50%、至少10筆的玩法；不強選第一名。'};
+    const best=eligible.map(x=>({...x,eff:x.stats.avgPct/Math.max(.01,Math.abs(x.stats.avgMaePct))}))
+      .sort((a,b)=>b.eff-a.eff || a.strategy.days-b.strategy.days)[0];
+    return {key:best.strategy.key,stats:best.stats,eff:best.eff,
+      reason:`${best.strategy.days}日｜${best.stats.count}筆勝率 ${best.stats.winPct}%・平均淨報酬 ${round(best.stats.avgPct)}%・中位數 ${round(best.stats.medianPct)}%；平均不利幅度 ${round(best.stats.avgMaePct)}%。`};
+  }
+  function reachabilityProfile(input,currentPrice,targetPrice,{stride=60}={}){
+    const normalized=cleanBars(input),bars=normalized.bars;
+    if(!normalized.valid)return {valid:false,reason:'日K有效性或公司行動檢查未通過'};
+    if(!valid(currentPrice)||!valid(targetPrice))return {valid:false,reason:'目前價格或目標價缺失'};
+    const distancePct=pct(targetPrice,currentPrice),direction=distancePct>=0?'up':'down';
+    if(Math.abs(distancePct)<.2)return {valid:false,reason:'與現價距離過小，沒有辨識度'};
+    const periods=[],maxH=Math.max(...HORIZONS);
+    for(let i=119;i+maxH<bars.length;i+=Math.max(1,stride)){
+      const start=bars[i].close,level=start*(1+distancePct/100);
+      let first=null;
+      for(let j=1;j<=maxH;j++){
+        const b=bars[i+j];
+        if(direction==='up'?b.high>=level:b.low<=level){first=j;break}
+      }
+      periods.push({signalDate:bars[i].date,firstTouchDay:first});
+    }
+    if(!periods.length)return {valid:false,reason:'觀察區間不足'};
+    const reached=periods.filter(x=>x.firstTouchDay!==null).map(x=>x.firstTouchDay);
+    return {valid:true,version:VERSION,method:'歷史同距離幅度到達率（非共振公式歷史預測）',direction,
+      distancePct:round(distancePct),sample:periods.length,stride,medianFirstTouchDay:round(median(reached),1),
+      horizons:HORIZONS.map(days=>({days,hit:periods.filter(x=>x.firstTouchDay!==null&&x.firstTouchDay<=days).length,
+        hitPct:round(100*periods.filter(x=>x.firstTouchDay!==null&&x.firstTouchDay<=days).length/periods.length,1)}))};
+  }
+  function classifyFiveYearPlay(report){
+    if(!report?.valid||!Array.isArray(report.results))return {
+      status:'invalid',key:null,label:null,displayLabel:'資料待校正',count:0,
+      reason:report?.reason||'五年行情尚未通過完整性驗證'};
+    const selected=selectFiveYearPlay(report);
+    const rows=report.results.filter(r=>r?.strategy?.key&&r?.stats&&Number.isFinite(r.stats.count));
+    const count=Math.max(0,...rows.map(r=>r.stats.count));
+    if(selected?.key){
+      const strategy=STRATEGIES.find(x=>x.key===selected.key);
+      return {status:'selected',key:selected.key,label:strategy?.label||null,
+        displayLabel:strategy?.label||'正式玩法',stats:selected.stats,
+        days:strategy?.days||null,winPct:selected.stats?.winPct??null,count:selected.stats?.count??0,
+        reason:selected.reason,coreExitPolicy:strategy?{
+          maxTradingDays:strategy.days,takeProfitPct:strategy.targetPct,stopLossPct:strategy.stopPct,
+          rule:'先觸及停利或停損即退出；否則期限到期',sameDayBoth:'保守先停損',entry:'次一交易日開盤'}:null};
+    }
+    // Formal eligibility still comes ONLY from selectFiveYearPlay. When not eligible,
+    // rank the *same measured R1 strategies* as a visibly marked reference;
+    // invalid price data or zero completed trials must not create a fictional play.
+    const candidates=rows.filter(r=>r.stats.count>0&&
+      [r.stats.avgPct,r.stats.medianPct,r.stats.winPct,r.stats.avgMaePct].every(Number.isFinite));
+    if(!candidates.length)return {status:'insufficient-history',key:null,label:null,
+      displayLabel:`歷史資料不足（${count}筆）`,count,
+      reason:'目前沒有可比較的完整五年 R1 回測樣本，無法決定參考玩法或計算倉位。'};
+    const rank=candidates.filter(r=>r.stats.avgPct>0);
+    const reference=(rank.length?rank:candidates).map(r=>({...r,
+      eff:r.stats.avgPct/Math.max(.01,Math.abs(r.stats.avgMaePct))}))
+      .sort((a,b)=>rank.length?(b.eff-a.eff||a.strategy.days-b.strategy.days):
+        (b.stats.avgPct-a.stats.avgPct||b.eff-a.eff||a.strategy.days-b.strategy.days))[0];
+    const stats=reference.stats,missing=[];
+    if(stats.count<10)missing.push(`有效樣本 ${stats.count} 筆（正式需至少10筆）`);
+    if(stats.avgPct<=0)missing.push(`平均淨報酬 ${round(stats.avgPct)}%（正式需>0%）`);
+    if(stats.medianPct<=0)missing.push(`中位數 ${round(stats.medianPct)}%（正式需>0%）`);
+    if(stats.winPct<50)missing.push(`勝率 ${round(stats.winPct)}%（正式需≥50%）`);
+    const referenceReason=missing.join('、');
+    const strategy=STRATEGIES.find(x=>x.key===reference.strategy.key);
+    return {status:'reference',key:null,label:null,
+      displayLabel:`${strategy.label}（參考）`,count:stats.count,
+      referenceKey:strategy.key,referenceLabel:strategy.label,referenceCount:stats.count,
+      referenceStats:stats,days:strategy.days,winPct:stats.winPct,
+      referenceReason,reason:`${strategy.label}未達正式推薦門檻：${referenceReason}。`,
+      coreExitPolicy:{maxTradingDays:strategy.days,takeProfitPct:strategy.targetPct,
+        stopLossPct:strategy.stopPct,rule:'先觸及停利或停損即退出；否則期限到期',
+        sameDayBoth:'保守先停損',entry:'次一交易日開盤'}};
+  }
+  function createSnapshot({code,stockName,tradeDate,capturedAt,price,play,corePct,main,secondary,pullback,defense,source='V4.3.1'}={}){
+    const asof=dateKey(tradeDate),p=num(price),core=num(corePct);
+    if(!code||!asof||!valid(p)||!play)throw new Error('建立計畫需要代號、資料日期、現價與玩法');
+    const priceOrNull=v=>valid(v)?round(+v,4):null;
+    return {schema:1,modelVersion:VERSION,source,code:String(code),stockName:String(stockName||''),tradeDate:asof,
+      capturedAt:String(capturedAt||new Date().toISOString()),initial:{price:priceOrNull(p),play:String(play),corePct:core,
+        tacticalPct:core===null?null:100-core,main:priceOrNull(main),secondary:priceOrNull(secondary),pullback:priceOrNull(pullback),defense:priceOrNull(defense)},
+      updates:[]};
+  }
+  function appendUpdate(snapshot,now){
+    if(!snapshot?.initial)throw new Error('缺少原始計畫');
+    const value={date:dateKey(now.date),capturedAt:String(now.capturedAt||new Date().toISOString()),
+      price:valid(now.price)?round(+now.price,4):null,main:valid(now.main)?round(+now.main,4):null,
+      secondary:valid(now.secondary)?round(+now.secondary,4):null,pullback:valid(now.pullback)?round(+now.pullback,4):null,
+      corePct:Number.isFinite(+now.corePct)?+now.corePct:null,play:String(now.play||'')};
+    if(!value.date)throw new Error('缺少本次更新日期');
+    return {...snapshot,updates:[...(snapshot.updates||[]),value]};
+  }
+  function evaluateSnapshot(snapshot,raw){
+    const normalized=cleanBars(raw),bars=normalized.bars,initial=snapshot?.initial;
+    if(!snapshot?.tradeDate||!initial||normalized.largeJumps.length)return {valid:false,reason:'原始快照或股價資料不可驗證（含未校正跳變）'};
+    // 僅以建立計畫之後的K線評估；同日出現的價格不能視為事前已知。
+    const forward=bars.filter(b=>b.date>snapshot.tradeDate);
+    const levels=[['main',initial.main,'up'],['secondary',initial.secondary,'up'],['pullback',initial.pullback,'down'],['defense',initial.defense,'down']];
+    const results=levels.map(([key,target,direction])=>{
+      if(!valid(target))return {key,status:'no-target',horizons:[]};
+      const first=forward.findIndex(b=>direction==='up'?b.high>=target:b.low<=target);
+      const horizons=HORIZONS.map(h=>({days:h,status:first>=0&&first<h?'hit':forward.length>=h?'miss':'pending'}));
+      return {key,target,direction,firstTouchDay:first<0?null:first+1,firstTouchDate:first<0?null:forward[first].date,horizons};
+    });
+    return {valid:true,tradeDate:snapshot.tradeDate,observedDays:forward.length,results,
+      caveat:'只驗證價格是否在期限內觸及；不宣稱逐日路徑、盤中觸及先後或真實可成交價格。'};
+  }
+  // v2.7.0.10 — 排序轉換層；不修改 R1.5 研究的原始比例與 W3 OFF 分支。
+  // 規則：在減少總持倉時，先賣現有機動倉；機動歸零之後才能減核心倉。
+  // 原研究配置負責總風險曝險（核心+機動），此層僅改變調整先後順序。
+  function prioritizeTacticalAllocation(study,currentAllocation=null){
+    if(!study?.valid||study.market==='off')return study; // W3 空頭保持原版完全不變。
+    const clamp=(x,lo,hi)=>Math.min(hi,Math.max(lo,x));
+    const roundOne=x=>Math.round(x*10)/10;
+    const good=x=>x!==null&&x!==undefined&&x!==''&&Number.isFinite(Number(x));
+    const oldCore=good(currentAllocation?.corePct)?Number(currentAllocation.corePct):Number(study.baseCorePct);
+    const oldTactical=good(currentAllocation?.tacticalPct)?Number(currentAllocation.tacticalPct):100-oldCore;
+    if(!Number.isFinite(oldCore)||!Number.isFinite(oldTactical)||oldCore<0||oldTactical<0||oldCore+oldTactical>100.01)
+      return {...study,valid:false,reason:['目前核心／機動狀態不完整，無法確認減倉先後順序']};
+    const previousCore=roundOne(clamp(oldCore,0,100));
+    const previousTactical=roundOne(clamp(oldTactical,0,100-previousCore));
+    const oldExposure=roundOne(previousCore+previousTactical);
+    const targetExposure=roundOne(clamp(study.corePct+study.tacticalPct,0,100));
+    let core=previousCore,tactical=previousTactical;
+    if(targetExposure<oldExposure){
+      const sell=roundOne(oldExposure-targetExposure);
+      const tacticalSell=Math.min(tactical,sell);
+      tactical=roundOne(tactical-tacticalSell);
+      // 在機動持有量尚未歸零前，絕不減碼核心倉。
+      core=roundOne(core-(sell-tacticalSell));
+    }else if(targetExposure>oldExposure){
+      if(previousTactical===0){
+        // 機動已清空時允許重新配置核心；絕不在回補時強制減少核心。
+        core=roundOne(Math.max(previousCore,Math.min(study.corePct,targetExposure)));
+      }
+      tactical=roundOne(targetExposure-core);
+    }
+    core=roundOne(clamp(core,0,100));
+    tactical=roundOne(clamp(tactical,0,100-core));
+    const cash=roundOne(100-core-tactical);
+    const adjusted=Math.abs(core-study.corePct)>.01||Math.abs(tactical-study.tacticalPct)>.01;
+    const reason=[...(study.reason||[])];
+    if(adjusted)reason.push('依機動倉優先原則重新分配研究配置的持倉總額；機動賣完才能減核心');
+    return {...study,corePct:core,tacticalPct:tactical,cashPct:cash,
+      researchTarget:{corePct:study.corePct,tacticalPct:study.tacticalPct,cashPct:study.cashPct},
+      fromAllocation:{corePct:previousCore,tacticalPct:previousTactical,cashPct:roundOne(100-oldExposure)},
+      priorityRule:'tactical-first-v1',priorityAdjusted:adjusted,reason};
+  }
+  // 第二階段獨立的「研究性持倉配置」；與原R1、V4.3、W3三套既有公式分離。
+  // 百分比代表預定投入資金額；三者合計100。只使用截至當天已知的價格脈絡。
+  function proposeAllocation({play='swing',baseCorePct=null,context=null,market='unknown'}={}){
+    // Play determines the unchanged W3 risk response ONLY, never a core allocation band.
+    const riskStyles=['short','mixed','swing','long-swing','long'];
+    const c=context;
+    if(!riskStyles.includes(play))return {valid:false,reason:['風控玩法未確認，停止配置建議']};
+    if(baseCorePct===null||baseCorePct===undefined||!Number.isFinite(Number(baseCorePct)))
+      return {valid:false,reason:['獨立核心配置比例尚未取得']};
+    if(!c?.valid||!valid(c.price)||!valid(c.ma20)||!valid(c.ma60)||!valid(c.ma120))
+      return {valid:false,reason:['需要至少120日且通過資料檢核的日K']};
+    const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+    const roundOne=v=>Math.round(v*10)/10;
+    const base=clamp(Number(baseCorePct),0,100);
+    let delta=0;const reason=[];
+    if(c.price<c.ma20){delta-=5;reason.push('跌破MA20，核心保守下修5%');}
+    if(c.price<c.ma60){delta-=5;reason.push('跌破MA60，核心再下修5%');}
+    if(c.volatilityPct>=6){delta-=5;reason.push('近期日內波動偏高，核心再下修5%');}
+    if(c.price>=c.ma20&&c.price>=c.ma60&&c.ret20Pct>0&&c.volatilityPct<5){
+      delta+=5;reason.push('中短期趨勢一致，核心上修5%');}
+    const coreBeforeW3=clamp(base+clamp(delta,-15,5),0,100);
+    // 減少核心後移到現金，不能機械地把風險轉成更大的機動倉。
+    let core=coreBeforeW3,tactical=Math.min(100-core,100-base);
+    if(c.volatilityPct>=6){tactical=Math.max(0,tactical-10);reason.push('高波動，額外保留10%現金');}
+    if(c.price<c.ma20&&c.price<c.ma60){tactical*=.8;reason.push('雙均線弱勢，縮小機動倉');}
+    if(market==='warning'){
+      core*=['short','mixed'].includes(play)?.75:play==='swing'?.85:1;
+      tactical*=.5;reason.push('W3預警：壓縮機動；長波/長期保留核心');
+    }else if(market==='off'){
+      if(['short','mixed'].includes(play)){core=0;tactical=0;reason.push('W3 OFF：短期／短波全數退出');}
+      else if(play==='swing'){core*=.5;tactical=0;reason.push('W3 OFF：波段清機動並保留一半研究核心（待回測）');}
+      else{core*=.85;tactical=0;reason.push('W3 OFF：長波／長期清機動、保留85%研究核心（待回測）');}
+    }else if(market==='on'){reason.push('W3多頭：依價格結構分配核心與機動');}
+    else{reason.push('W3尚未確認：以上僅是價格研究配置，不可視為完整風控建議');}
+    core=roundOne(clamp(core,0,100));tactical=roundOne(clamp(tactical,0,100-core));
+    const cash=roundOne(Math.max(0,100-core-tactical));
+    return {valid:true,modelVersion:'allocation-study-r1.5',play,baseCorePct:base,
+      corePct:core,tacticalPct:tactical,cashPct:cash,market,
+      requiresW3:market==='unknown',reason};
+  }
+  return {VERSION,HORIZONS,STRATEGIES,cleanBars,contextAt,entryCandidate,simulateTrade,backtestPriceBaselines,selectFiveYearPlay,classifyFiveYearPlay,reachabilityProfile,createSnapshot,appendUpdate,evaluateSnapshot,proposeAllocation,prioritizeTacticalAllocation};
+});
