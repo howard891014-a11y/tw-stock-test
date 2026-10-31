@@ -55,7 +55,7 @@ const eligible=report([
 assert.equal(api.classifyFiveYearPlay(eligible).status,'selected');
 assert.equal(api.classifyFiveYearPlay(eligible).displayLabel,'長波');
 function shaBetween(start,end){const i=lib.indexOf(start),j=lib.indexOf(end,i);assert(i>=0&&j>i);return crypto.createHash('sha256').update(lib.slice(i,j)).digest('hex')}
-assert.equal(shaBetween('  function backtestPriceBaselines(','  function reachabilityProfile('),'eb25b529b4f9015ac2188adf841ebedb5e297ddd7721a333518aa849beff04ea');
+assert.equal(shaBetween('  function simulateTrade(','  function summarise('),'8889397b4c582deac050a9928c1ad2bbbea9568c43a7a7383e21699e42411d12');
 assert.equal(shaBetween('  function cleanBars(','  function avg(values)'),'e8996e6e97c9a0636ce20627f822b47667409c57250715e0ae8904000d410ab1');
 // Real R1 report is identical for selected and reference; only classification/UI changes.
 assert.equal(api.backtestPriceBaselines,require('../lib/resonance-lab-v1.js').backtestPriceBaselines);
@@ -98,4 +98,4 @@ assert.equal(lock.alloc.reference,false,'different locked play must not be misla
 assert(app.includes("['selected','reference'].includes(p?.status)"));
 assert(!lib.includes('actions:isReference?null:planActions'));
 assert(!lib.includes('if(isReference||holding.referenceOnly)'));
-console.log(`PASS ${pkg.version}: formal R1 unchanged; qualified / rejected / short-sample / zero-sample / invalid; reference UI follows normal allocation & monetary actions, clear reason only in adjustment, locked plans untouched`);
+console.log(`PASS ${pkg.version}: formal R1 eligibility unchanged; sample-window policy updated in .44; qualified / rejected / short-sample / zero-sample / invalid; reference UI follows normal allocation & monetary actions, clear reason only in adjustment, locked plans untouched`);
