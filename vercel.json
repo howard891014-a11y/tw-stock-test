@@ -36,6 +36,12 @@
         "sin1"
       ],
       "maxDuration": 60
+    },
+    "api/access.js": {
+      "regions": [
+        "sin1"
+      ],
+      "maxDuration": 15
     }
   },
   "crons": [
@@ -145,5 +151,8 @@
       "source": "/api/w3-d112-shadow",
       "destination": "/api/market-dynamic?sz_shadow=d112"
     }
-  ]
+  ],
+  "proxy": {
+    "entrypoint": "proxy.mjs"
+  }
 }

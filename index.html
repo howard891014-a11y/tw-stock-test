@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.39">
+  <meta name="stockzone-version" content="2.7.0.41">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -3059,7 +3059,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.39</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.41</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3149,8 +3149,8 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
             <div class="sz-reslab-tip">價格目標目前<strong>沒有已驗證的到達期限</strong>。以下 3／5／10／20／40／60 交易日是驗證視窗，不是承諾到達日期。</div>
             <div class="sz-reslab-candidate" id="szLabCandidate" hidden aria-hidden="true">讀取歷史資料後產生進場視角研究候選…</div>
             <div class="sz-reslab-reach" id="szLabReach" hidden aria-hidden="true">歷史同幅度觸及率：等待有效日K與目標價。它不是共振目標達標率。</div>
-            <div class="sz-reslab-actions"><button type="button" id="szSaveResearchSnapshot">儲存研究快照</button><button type="button" id="szLabRunBacktest">執行五年價格基準回測</button></div>
-            <div id="szLabBacktest" class="sz-reslab-backtest">回測基準：固定 5 種出場策略、T+1 開盤成交，結果供比較，不是正式共振價位的歷史回測。按上方按鈕後執行。</div>
+            <div class="sz-reslab-actions"><button type="button" id="szSaveResearchSnapshot">儲存研究快照</button></div>
+            <div id="szLabBacktest" class="sz-reslab-backtest">讀取五年日K後自動回測；尚未取得回測資料。</div>
             <div class="sz-reslab-method"><p>按「儲存研究快照」可保留此刻的玩法、核心／機動比例與共振價位；不建立交易計畫或模擬成交。五年價格基準回測與共振歷史回放是不同研究。</p></div>
           </section>
         </article>
@@ -3973,7 +3973,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 #overviewResonanceCard .sz-reslab-controls label{display:flex;flex-direction:column;gap:4px;color:#586c85;font-size:11px;flex:1;min-width:120px}
 #overviewResonanceCard .sz-reslab select{min-height:35px;max-width:100%;padding:6px 8px;border:1px solid #cfdaeb;border-radius:10px;background:white;color:#243753}
 #overviewResonanceCard .sz-reslab button{padding:9px 10px;min-height:35px;border:1px solid #c9d8f0;background:white;color:#2b5f9c;font-size:12px;border-radius:10px;cursor:pointer;font-weight:700}
-#overviewResonanceCard #szLabLockPlan,#overviewResonanceCard #szLabRunBacktest{background:#347efa;color:white;border-color:#347efa}
+#overviewResonanceCard #szLabLockPlan{background:#347efa;color:white;border-color:#347efa}
 #overviewResonanceCard .sz-reslab button:disabled{opacity:.45;cursor:not-allowed}
 #overviewResonanceCard .sz-reslab-dual{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 #overviewResonanceCard .sz-reslab-dual>div{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;border:1px solid #e0e7f1;background:white}
@@ -3990,15 +3990,15 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 @media(max-width:570px){#overviewResonanceCard .sz-reslab{padding:11px}#overviewResonanceCard .sz-reslab-controls{gap:6px}#overviewResonanceCard .sz-reslab-dual b{font-size:11px}#overviewResonanceCard .sz-reslab-actions button{flex:1}}
 </style>
 
-  <script src="./capital-flow.js?v=2.7.0.39"></script>
+  <script src="./capital-flow.js?v=2.7.0.41"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.39"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.39"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.41"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.41"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.39"></script>
+  <script src="./app.js?v=2.7.0.41"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4484,7 +4484,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.7.0.39"></script>
+<script defer src="./featured-picks-ui.js?v=2.7.0.41"></script>
 
 <style id="stockzone-v26811-ui">
 /* v2.6.8.15 | Monetary TOP10 only; legacy industry capital intensity/X20 are unchanged. */

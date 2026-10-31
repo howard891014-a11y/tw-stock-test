@@ -3362,13 +3362,45 @@ function technicalSystemJudgement(direction,personality,seasonality){
   return parts.join('');
 }
 
+// Single automatic R1 entrypoint. It never retries a manual UI action, never
+// changes the five-year formulas, and reports why source history cannot be used.
+function updateFiveYearBacktest(code,history,sourceError=null){
+  if(currentStockCode()!==String(code))return;
+  const lab=window.StockZoneResonanceLab;
+  if(!lab?.evaluateFiveYearForCode)throw new Error('五年R1模組未載入');
+  const {report,published}=lab.evaluateFiveYearForCode(String(code),history,{
+    sourceError:sourceError?`五年歷史資料讀取失敗：${String(sourceError.message||sourceError)}`:''});
+  if(!published)return;
+  const el=$('szLabBacktest');if(!el)return;
+  if(!report.valid){
+    const c=report.coverage||{},dates=(c.largeJumps||[]).map(x=>`${x.date} ${x.changePct}%`).join('、');
+    el.textContent=`五年R1未完成：${report.reason}｜有效日K ${c.days||0}根${dates?`｜待核對公司行動：${dates}`:''}${c.errors?.length?`｜異常欄位：${c.errors.slice(0,3).join('、')}`:''}`;
+    return;
+  }
+  const htmlEscape=x=>String(x??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines=report.results.map(r=>`<tr><td>${htmlEscape(r.strategy.label)}（${r.strategy.days}日）</td><td>${r.stats.count}</td><td>${r.stats.winPct}%</td><td>${r.stats.avgPct}%</td><td>${r.stats.medianPct}%</td><td>${r.stats.worstMaePct}%</td></tr>`);
+  const cmp=report.policyComparison||{},later=cmp.later||{},whole=cmp.whole||{};
+  const lift=v=>Number.isFinite(v)?`${v>0?'+':''}${v}%`:'—';
+  el.innerHTML=`<b>五年R1自動回測｜${htmlEscape(report.coverage.from)}～${htmlEscape(report.coverage.to)}</b><div>每60個交易日取一筆（${report.coverage.signals}筆）｜T+1開盤｜成本0.5%｜同日雙觸及保守先停損。</div><div>近期候選與固定波段平均淨報酬差：全樣本 ${lift(whole.meanNetLiftPct)}｜後30% ${lift(later.meanNetLiftPct)}（${later.candidate?.count??0}筆）</div><table><thead><tr><th>策略／期限</th><th>筆數</th><th>勝率</th><th>平均淨報酬</th><th>淨報酬中位</th><th>最大浮虧</th></tr></thead><tbody>${lines.join('')}</tbody></table><small>僅五年價格基準研究，不是 V4／共振目標價的歷史回放；遇未校正公司行動暫停計算。</small>`;
+}
 async function loadTechnical(data){
   const code=data?.code||data?.symbol||"",market=data?.market||data?.marketLabel||"";
   resetFiveStage("讀取技術資料中…");setText("technicalJudgement","讀取整體技術判讀中…");
   try{
-    const [t,hraw]=await Promise.all([technical(code,market),history5Y(code,market).catch(e=>{console.warn("五年歷史資料更新失敗",e);return null})]);
+    let technicalError=null,historyError=null;
+    // The five-year R1 backtest must not wait on, or fail because of, the
+    // independent short-term technical-analysis endpoint.
+    const [t,hraw]=await Promise.all([
+      technical(code,market).catch(e=>{technicalError=e;return null}),
+      history5Y(code,market).catch(e=>{historyError=e;console.warn("五年歷史資料更新失敗",e);return null})
+    ]);
     const curCode=String(currentStock?.code||String(currentStock?.symbol||"").split(".")[0]||"");if(curCode&&String(code)!==curCode)return;
-    latestHistory5Y=hraw?markSystemStress(hraw):null;const a=t.analysis||{},price=Number(data?.last??data?.price??data?.regularMarketPrice),historyRows=(latestHistory5Y?.history?.length?latestHistory5Y.history:stageHistory(t));
+    latestHistory5Y=hraw?markSystemStress(hraw):null;
+    // Own the R1 lifecycle at the successful five-year request boundary. Do not
+    // substitute short technical history; never rely on render timing or a DOM click.
+    updateFiveYearBacktest(code,latestHistory5Y?.history||null,historyError);
+    if(technicalError)throw technicalError;
+    const a=t.analysis||{},price=Number(data?.last??data?.price??data?.regularMarketPrice),historyRows=(latestHistory5Y?.history?.length?latestHistory5Y.history:stageHistory(t));
     latestTechnicalPersonality=calculateStockPersonality(historyRows);latestTechnicalSeasonality=seasonality5Y(historyRows);latestTechnicalDirection=calculateTechnicalDirection(t,price,latestTechnicalPersonality,latestTechnicalSeasonality);
     setText("technicalSource",t.updatedAt||"--");
     techSet("techState",latestTechnicalDirection?.direction||"--",latestTechnicalDirection?.tone);updateTechnicalOverview(latestTechnicalDirection,null);
@@ -3881,6 +3913,7 @@ function patchCurrentQuote(x){
 }
 function renderStock(x){
   currentStock=x;latestHistory5Y=null;latestFundamentalData=null;latestInstitutionalData=null;resetFundamentalOverview("讀取中");resetInstitutional("讀取中");resetPlayStyle("讀取分析資料中…");
+  setText('szLabBacktest','五年日K讀取中，將自動執行R1回測。');
   setText("stockName",shortStockName(x.name||x.shortName)||"—");
   setText("stockCodeLabel",stockHeaderMeta(x));
   setText("marketLabel","");
@@ -4473,7 +4506,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.39（僅研究資料）',
+    modelVersion:'v2.7.0.41（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -4595,7 +4628,7 @@ function holdingTradeLedgerDetail(code,plan){
       </div>
       <p class="holding-ledger-warning">所有成交會保留原始玩法及當時分析快照。出清後計畫自動封存；不會替你對券商下單。成交日期不可早於建檔或晚於今天，且必須依日期順序新增。</p>
       ${hasTx?`<div class="holding-ledger-table-wrap"><table><thead><tr><th>日期</th><th>動作</th><th>股數</th><th>倉別</th><th>價格</th><th>費稅</th></tr></thead><tbody>${history}</tbody></table></div>`:''}
-      <div class="holding-ledger-review-actions"><button type="button" data-trade-verify="${holdingPlanEscape(code)}">用實際日K驗證原始共振／成交時機</button><button type="button" data-trade-baseline="${holdingPlanEscape(code)}">五年價格基準回測</button><button type="button" data-trade-export="${holdingPlanEscape(code)}">匯出單筆JSON（不供一鍵還原）</button></div>
+      <div class="holding-ledger-review-actions"><button type="button" data-trade-verify="${holdingPlanEscape(code)}">用實際日K驗證原始共振／成交時機</button><button type="button" data-trade-export="${holdingPlanEscape(code)}">匯出單筆JSON（不供一鍵還原）</button></div>
       <div class="holding-ledger-review" data-trade-review-result="${holdingPlanEscape(code)}">待驗證：需要建立後的日K，尚無未來交易日只能標示觀察中。現有五年價格基準回測不是歷史共振回放。</div>
     </div>
   </details>`;
@@ -6115,7 +6148,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 const SZ_LAB_STORE_KEY='sz_resonance_lab_r1_plans';
 const SZ_LAB_LABELS={short:'短期',mixed:'短波',swing:'波段','long-swing':'長波',long:'長期'};
 const SZ_LAB_CORE={short:20,mixed:35,swing:55,'long-swing':70,long:85};
-let szLabRecent=null,szLabLastStock='',szLabLastBacktest=null,szLabReportCode='';
+let szLabRecent=null,szLabLastStock='';
 function szLabRead(){try{const v=JSON.parse(localStorage.getItem(SZ_LAB_STORE_KEY)||'{}');return v&&typeof v==='object'?v:{}}catch{return{}}}
 function szLabWrite(data){localStorage.setItem(SZ_LAB_STORE_KEY,JSON.stringify(data))}
 function szLabCurrentDate(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
@@ -6135,7 +6168,7 @@ function renderResonanceLab(play,expected,risk,decision){
  const lab=window.StockZoneResonanceLab,code=currentStockCode();if(!lab||!code)return;
  szLabCachedExpected=expected;szLabCachedRisk=risk;szLabCachedDecision=null;
  const v=szLabValues(play,expected,risk,decision);szLabRecent={code,v};
- const select=$('szLabPlaySelect');if(szLabLastStock!==code){if(select)select.value=play?.key||'swing';szLabLastStock=code;szLabLastBacktest=null;szLabReportCode='';setText('szLabBacktest','按「執行五年價格基準回測」開始；它不是原版 V4／共振的歷史重播。')}
+ const select=$('szLabPlaySelect');if(szLabLastStock!==code){if(select)select.value=play?.key||'swing';szLabLastStock=code}
  const normalized=lab.cleanBars(szLabBars());const bars=normalized.bars;
  const candidate=normalized.valid?lab.entryCandidate(bars,bars.length-1):{valid:false};
  const reason=normalized.largeJumps?.length?'偵測到未確認的大幅跳變，須先查核公司行動':normalized.errors?.length?'有不完整的 OHLC 日K，基準回測將檢查有效性':'需要至少120根合法日K';
@@ -6213,24 +6246,10 @@ $('szLabNewTrade')?.addEventListener('click',()=>{
  const select=$('szLabPlaySelect');if(select){select.disabled=false;delete select.dataset.szlTouched}
  renderResonanceLab(latestPlayStyleResult,szLabCachedExpected,szLabCachedRisk,szLabCachedDecision);
 });
-$('szLabRunBacktest')?.addEventListener('click',()=>{
- const lab=window.StockZoneResonanceLab,code=currentStockCode();if(!lab||!code)return;
- try{
-  const report=lab.backtestPriceBaselines(szLabBars(),{warmup:120,stride:60,costPct:.5});
-  szLabLastBacktest=report;szLabReportCode=code;
-  const el=$('szLabBacktest');if(!el)return;
-  if(!report.valid){el.textContent=`無法進行價格回測：${report.reason}｜有效K線 ${report.coverage?.days||0}｜${JSON.stringify(report.coverage?.largeJumps||[])}`;return}
-  const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const rows=report.results.map((r)=>`<tr><td>${esc(r.strategy.label)}（${r.strategy.days}日）</td><td>${r.stats.count}</td><td>${r.stats.winPct}%</td><td>${r.stats.avgPct}%</td><td>${r.stats.medianPct}%</td><td>${r.stats.worstMaePct}%</td></tr>`);
-  const cmp=report.policyComparison||{},later=cmp.later||{},whole=cmp.whole||{};
-  const lift=v=>Number.isFinite(v)?`${v>0?'+':''}${v}%`:'--';
-  el.innerHTML=`<b>真實歷史價格基準｜${esc(report.coverage.from)}～${esc(report.coverage.to)}</b><br>同一批 ${report.coverage.signals} 個入場訊號（每60交易日一筆）；T+1開盤、成本0.5%、同日雙觸及先停損。<br>研究候選對比固定波段：全樣本平均淨報酬差 ${lift(whole.meanNetLiftPct)}；後30%時序保留區差 ${lift(later.meanNetLiftPct)}（${later.candidate?.count??0}筆；樣本小，不可視為驗證成功）。<table><thead><tr><th>策略／期限</th><th>筆數</th><th>勝率</th><th>平均淨報酬</th><th>淨報酬中位</th><th>最大浮虧</th></tr></thead><tbody>${rows.join('')}</tbody></table><small>此為預先固定停利／止損的價格基準，不使用現行共振預測，因此<strong>不可拿來宣稱 V4.3.1 已通過歷史回測</strong>。資料來源 Yahoo 五年日K；跳變超過35%會暫停並要求校正。</small>`;
- }catch(e){szLabSetMessage('價格基準回測失敗：'+e.message,true)}
-});
 $('szLabExport')?.addEventListener('click',()=>{
  const code=currentStockCode();if(!code)return;
  const data={exportedAt:new Date().toISOString(),code,plans:szLabRead()[code]?.plans||[],
-  priceBacktest:szLabReportCode===code?szLabLastBacktest:null,
+  priceBacktest:window.StockZoneResonanceLab?.getCurrentFiveYearReport?.(code)||null,
   source:'StockZone v2.6.8.41 research lab R1',disclaimer:'研究候選與價格基準不等於歷史時點完整公式重現'};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=`sz-resonance-lab-${code}-${szLabCurrentDate()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);

@@ -1,10 +1,11 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.39",
+  "version": "2.7.0.41",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
-    "@vercel/blob": "^2.3.0"
+    "@vercel/blob": "^2.3.0",
+    "@vercel/functions": "3.9.11"
   },
   "scripts": {
     "validate:market-official": "node scripts/validate-v2698-official-institutional.js",
@@ -116,6 +117,7 @@
     "validate:v27014": "node scripts/validate-v27014-recovery.js",
     "validate:v27019": "node scripts/validate-v27019-official-action-sources.js",
     "validate:v27018": "node scripts/validate-v27018-industry-resume.js",
-    "validate:v27015": "node scripts/validate-v27015-integration.js"
+    "validate:v27015": "node scripts/validate-v27015-integration.js",
+    "validate:v27040": "node scripts/validate-v27040-access.js"
   }
 }

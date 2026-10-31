@@ -1,0 +1,17 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>StockZone | 裝置授權</title><style>*,*:before,*:after{box-sizing:border-box}body{margin:0;background:#0e1420;color:#edf4ff;font-family:system-ui,-apple-system,"Microsoft JhengHei",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}.panel{width:min(100%,520px);background:#192437;border:1px solid #33455b;border-radius:18px;padding:28px;box-shadow:0 14px 44px #0006}h1{margin:0 0 8px;letter-spacing:.4px;font-size:25px}p{line-height:1.8;color:#aebed3;font-size:14px;margin:8px 0 16px}button{padding:12px 15px;border-radius:9px;border:0;background:#75b6ed;color:#0c2036;font-size:14px;font-weight:700;cursor:pointer}button.secondary{background:#344760;color:#fff}button.danger{background:#d06672;color:white}button:disabled{opacity:.5;cursor:wait}input{width:100%;background:#101a2b;border:1px solid #3b516d;color:#eef5ff;border-radius:8px;padding:11px;font-size:14px;margin:7px 0 14px}small{color:#a1b0c5;display:block;font-size:12px;line-height:1.7}.error{color:#ffa4ac}.success{color:#8bd1b9}.line{border-top:1px solid #33455b;padding-top:15px;margin-top:18px}.actions{display:flex;gap:10px;flex-wrap:wrap}.item{padding:12px 0;border-top:1px solid #344760;display:flex;align-items:center;justify-content:space-between;gap:10px}.item .muted{font-size:12px;color:#91a7c4}.item button{padding:8px 10px}.hidden{display:none}</style></head><body><main class="panel"><h1>StockZone</h1><p>私人研究平台｜此裝置需要使用授權。</p><p id="message">正在確認授權狀態…</p><div id="actions" class="actions hidden"><button id="activate" class="hidden">啟用這台裝置</button><button id="home" class="secondary hidden">開啟 StockZone</button></div><div class="line"><small>首次授權請使用管理員傳送的專屬連結。連結僅能啟用一次；之後此瀏覽器會記住授權。清除瀏覽器資料或更換手機需要重新授權。</small></div></main><script>
+const $=id=>document.getElementById(id),message=$('message'),activate=$('activate'),home=$('home'),actions=$('actions');
+async function call(body){const r=await fetch('/api/access',{method:'POST',headers:{'Content-Type':'application/json','X-StockZone-Access':'1'},credentials:'same-origin',cache:'no-store',body:JSON.stringify(body)});return {http:r.status,...await r.json()}}
+function show(msg,{error=false}={}){message.textContent=msg;message.className=error?'error':''}
+(async()=>{
+ const hash=new URLSearchParams(location.hash.slice(1));const invite=hash.get('invite');
+ // Remove the secret from browser address and history before making any requests.
+ if(invite)history.replaceState(null,'',location.pathname);
+ let status=null;try{const r=await fetch('/api/access?action=status',{cache:'no-store'});status=await r.json()}catch{}
+ actions.classList.remove('hidden');
+ if(status?.authorized){show('這台裝置已取得使用授權。');home.classList.remove('hidden');home.onclick=()=>location.replace('/');return}
+ if(!invite){show('此裝置尚未取得授權，請向管理員索取專屬連結。');return}
+ if(!/^[A-Za-z0-9_-]{40,100}$/.test(invite)){show('授權連結格式無效。',{error:true});return}
+ show('已收到專屬連結。點擊下方按鈕啟用這台裝置。');activate.classList.remove('hidden');
+ activate.onclick=async()=>{activate.disabled=true;show('正在驗證連結…');try{const data=await call({action:'redeem',code:invite});if(!data.ok)throw new Error(data.error==='LINK_INVALID_OR_USED'?'此連結已使用、撤銷或過期。':'暫時無法啟用授權。');location.replace('/')}catch(e){show(e.message,{error:true});activate.disabled=false}}
+})();
+</script></body></html>
