@@ -22,3 +22,6 @@ module.exports=async function handler(req,res){
     return res.status(500).json({ok:false,error:String(e?.message||e)});
   }
 };
+
+// v2.7.0.40: shared server-side access guard; pre-existing handler is unchanged.
+module.exports=require('../lib/access-server').protectApi(module.exports);

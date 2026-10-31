@@ -1096,3 +1096,6 @@ module.exports=async function handler(req,res){
 };
 
 module.exports._test={requestedAction,CRON_ACTIONS,misNumber,misTradeDate,marketDateAlignment};
+
+// v2.7.0.40: shared server-side access guard; pre-existing handler is unchanged.
+module.exports=require('../lib/access-server').protectApi(module.exports);
