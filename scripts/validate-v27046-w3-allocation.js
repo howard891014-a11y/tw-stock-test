@@ -7,7 +7,8 @@ const engine=require('../lib/resonance-lab-v1.js');
 const app=fs.readFileSync('app.js','utf8');
 const lab=fs.readFileSync('lib/resonance-lab-v1.js','utf8');
 const version=require('../package.json').version;
-assert.equal(version,'2.7.0.48');
+assert.match(version,/^2\.7\.0\.\d+$/);
+assert(Number(version.split('.').at(-1))>=46);
 function slice(source,start,end){const a=source.indexOf(start),b=source.indexOf(end,a+start.length);assert(a>=0&&b>a,`source anchor missing ${start}`);return source.slice(a,b)}
 function sha(body){return crypto.createHash('sha256').update(body).digest('hex')}
 // Protected math and source normalization are byte-identical to v2.7.0.45.

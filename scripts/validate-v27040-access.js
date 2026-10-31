@@ -64,7 +64,7 @@ const a=require('../lib/access-core');
  res=makeRes();await handler({method:'GET',url:'/api/sync-status',headers:withCron.headers},res);assert.equal(res.statusCode,200,'authenticated cron without browser cookie');
  process.env.SZ_ACCESS_ENFORCED='0';
  res=makeRes();await handler({method:'GET',url:'/api/quote',headers:{}},res);assert.equal(res.statusCode,200,'bootstrap stage does not lock production');
- const pkg=require('../package.json');assert.equal(pkg.version,'2.7.0.48');
+ const pkg=require('../package.json');assert.match(pkg.version,/^2\.7\.0\.\d+$/);assert(Number(pkg.version.split('.').at(-1))>=48);
  const settings=require('../vercel.json');assert.equal(settings.crons.length,23);assert.equal(settings.rewrites.length,3);assert.equal(settings.proxy.entrypoint,'proxy.js');
  const allApis=fs.readdirSync(path.join(root,'api')).filter(x=>x.endsWith('.js')&&x!=='access.js');
  for(const file of allApis)assert.match(fs.readFileSync(path.join(root,'api',file),'utf8'),/access-server'\)\.protectApi\(module\.exports\)/,`${file}: no guard`);
