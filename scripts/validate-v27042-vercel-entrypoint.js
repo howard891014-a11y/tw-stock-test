@@ -23,5 +23,5 @@ assert.match(proxy,/rewrite\(page\)/);
 assert(pkg.dependencies?.['@vercel/functions'],'@vercel/functions must be declared');
 assert.equal(settings.crons.length,23,'all original 23 crons kept');
 assert.equal(settings.rewrites.length,3,'all original rewrites kept');
-assert.equal(pkg.version,'2.7.0.45');
-console.log('v2.7.0.45 Vercel proxy entrypoint/schema/legacy cleanup + 23 cron/3 rewrites PASS');
+assert.equal(pkg.version,'2.7.0.46');
+console.log('v2.7.0.46 Vercel proxy entrypoint/schema/legacy cleanup + 23 cron/3 rewrites PASS');

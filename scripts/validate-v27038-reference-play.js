@@ -69,7 +69,7 @@ function dynamicCase(p,locked=false,holding=true){
   CustomEvent:class {constructor(type,data){this.type=type;this.data=data}},dispatchEvent(){},StockZoneDynamicAllocation:null};
  const ctx={valid:true,price:100,ma20:105,ma60:108,ma120:115,ret20Pct:-4,volatilityPct:3,date:'2026-10-30'};
  const scope={root,api:{...api,getCurrentFiveYearPlay:()=>p,contextAt:()=>ctx},
-  init:()=>output,codeNow:()=> '4919',st:{code:'4919',barsCode:'4919',bars:Array(130).fill({})},
+  init:()=>output,codeNow:()=> '4919',st:{code:'4919',barsCode:'4919',recentContext:ctx},
   snapshotNow:()=>null,byId:id=>({szV4Candidate:{textContent:'核心 65%／機動 35%'}}[id]||{}),
   holdingBasis:()=>holding?{qty:1000,cost:100,total:100000,core:65,currentCoreMoney:65000}:null,
   getMarket:()=>({value:'on',date:'2026-10-30'}),fmt:x=>String(x),money:x=>Math.round(x).toString(),
