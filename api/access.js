@@ -34,7 +34,7 @@ module.exports=async function handler(req,res){
    const issued=await a.redeem(String(body.code||''));
    if(!issued)return send(res,410,{ok:false,error:'LINK_INVALID_OR_USED'});
    res.setHeader('Set-Cookie',a.cookie(issued.token,issued.ageSeconds));
-   return send(res,200,{ok:true,role:'viewer',label:issued.label});
+   return send(res,200,{ok:true,role:issued.role,label:issued.label});
   }
   if(action==='signout'){
    const value=a.parseCookie(req.headers?.cookie);
