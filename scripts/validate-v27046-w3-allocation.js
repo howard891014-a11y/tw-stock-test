@@ -7,7 +7,7 @@ const engine=require('../lib/resonance-lab-v1.js');
 const app=fs.readFileSync('app.js','utf8');
 const lab=fs.readFileSync('lib/resonance-lab-v1.js','utf8');
 const version=require('../package.json').version;
-assert.equal(version,'2.7.0.46');
+assert.equal(version,'2.7.0.48');
 function slice(source,start,end){const a=source.indexOf(start),b=source.indexOf(end,a+start.length);assert(a>=0&&b>a,`source anchor missing ${start}`);return source.slice(a,b)}
 function sha(body){return crypto.createHash('sha256').update(body).digest('hex')}
 // Protected math and source normalization are byte-identical to v2.7.0.45.
@@ -104,4 +104,4 @@ assert(app.includes("window.dispatchEvent(new Event('stockzone:w3-current'))"));
 assert(lab.includes("root.addEventListener?.('stockzone:w3-current',queue)"));
 assert(!lab.includes("st.bars=res.valid?res.bars:[]"));
 assert(!lab.includes("getMarket(ctx?.date||'')"));
-console.log('PASS v2.7.0.46: historical jumps excluded only from five-year R1; current 120K context independently valid, stale/unknown W3 fail closed, current official W3 remains visible, OFF actions intact');
+console.log('PASS v2.7.0.48: historical jumps excluded only from five-year R1; current 120K context independently valid, stale/unknown W3 fail closed, current official W3 remains visible, OFF actions intact');

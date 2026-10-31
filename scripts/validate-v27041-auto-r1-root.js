@@ -9,8 +9,8 @@ const read=file=>fs.readFileSync(path.join(dir,file),'utf8');
 const app=read('app.js'),html=read('index.html'),labText=read('lib/resonance-lab-v1.js');
 const pure=require('../lib/resonance-lab-v1.js');
 const pkg=require('../package.json');
-assert.equal(pkg.version,'2.7.0.46');
-for(const s of ['content="2.7.0.46"','v2.7.0.46</span>','app.js?v=2.7.0.46','resonance-lab-v1.js?v=2.7.0.46'])assert(html.includes(s),s);
+assert.equal(pkg.version,'2.7.0.48');
+for(const s of ['content="2.7.0.48"','v2.7.0.48</span>','app.js?v=2.7.0.48','resonance-lab-v1.js?v=2.7.0.48'])assert(html.includes(s),s);
 for(const text of [html,labText,app]){
   assert(!text.includes('szLabRunBacktest'),'no old manual backtest DOM element, event or synthetic click');
   assert(!text.includes('按「執行五年價格基準回測」開始'),'no manual prompt');
@@ -78,4 +78,4 @@ const next=stub.api.evaluateFiveYearForCode('2330',good);
 assert(next.published);
 assert.equal(stub.api.fiveYearPlay.code,'2330');
 assert.equal(stub.api.getCurrentFiveYearReport('2603'),null);
-console.log('v2.7.0.46 PASS — original R1 simulator and OHLC hashes, healthy 20-sample baseline, interrupted-window exclusion, cross-stock isolation, no DOM/manual run');
+console.log('v2.7.0.48 PASS — original R1 simulator and OHLC hashes, healthy 20-sample baseline, interrupted-window exclusion, cross-stock isolation, no DOM/manual run');
