@@ -3363,7 +3363,7 @@ function technicalSystemJudgement(direction,personality,seasonality){
 }
 
 // Single automatic R1 entrypoint. It never retries a manual UI action, never
-// changes the five-year formulas, and reports why source history cannot be used.
+// changes the R1 trade payoff formulas, and reports why source history cannot be used.
 function updateFiveYearBacktest(code,history,sourceError=null){
   if(currentStockCode()!==String(code))return;
   const lab=window.StockZoneResonanceLab;
@@ -3381,7 +3381,9 @@ function updateFiveYearBacktest(code,history,sourceError=null){
   const lines=report.results.map(r=>`<tr><td>${htmlEscape(r.strategy.label)}（${r.strategy.days}日）</td><td>${r.stats.count}</td><td>${r.stats.winPct}%</td><td>${r.stats.avgPct}%</td><td>${r.stats.medianPct}%</td><td>${r.stats.worstMaePct}%</td></tr>`);
   const cmp=report.policyComparison||{},later=cmp.later||{},whole=cmp.whole||{};
   const lift=v=>Number.isFinite(v)?`${v>0?'+':''}${v}%`:'—';
-  el.innerHTML=`<b>五年R1自動回測｜${htmlEscape(report.coverage.from)}～${htmlEscape(report.coverage.to)}</b><div>每60個交易日取一筆（${report.coverage.signals}筆）｜T+1開盤｜成本0.5%｜同日雙觸及保守先停損。</div><div>近期候選與固定波段平均淨報酬差：全樣本 ${lift(whole.meanNetLiftPct)}｜後30% ${lift(later.meanNetLiftPct)}（${later.candidate?.count??0}筆）</div><table><thead><tr><th>策略／期限</th><th>筆數</th><th>勝率</th><th>平均淨報酬</th><th>淨報酬中位</th><th>最大浮虧</th></tr></thead><tbody>${lines.join('')}</tbody></table><small>僅五年價格基準研究，不是 V4／共振目標價的歷史回放；遇未校正公司行動暫停計算。</small>`;
+  const partial=report.coverage?.quality==='partial';
+  const eventSummary=partial?`<div>資料斷層 ${report.coverage.excludedEvents.length} 處（${report.coverage.excludedEvents.slice(0,4).map(e=>htmlEscape(`${e.date}${e.changePct===undefined?'':` ${e.changePct}%`}`)).join('、')}）｜已排除受影響樣本並重新取樣；此績效為部分歷史參考，不代表完整五年。</div>`:'';
+  el.innerHTML=`<b>五年R1自動回測｜${htmlEscape(report.coverage.from)}～${htmlEscape(report.coverage.to)}</b><div>每60個交易日取一筆（有效 ${report.coverage.signals}筆）｜T+1開盤｜成本0.5%｜同日雙觸及保守先停損。</div>${eventSummary}<div>近期候選與固定波段平均淨報酬差：全樣本 ${lift(whole.meanNetLiftPct)}｜後30% ${lift(later.meanNetLiftPct)}（${later.candidate?.count??0}筆）</div><table><thead><tr><th>策略／期限</th><th>筆數</th><th>勝率</th><th>平均淨報酬</th><th>淨報酬中位</th><th>最大浮虧</th></tr></thead><tbody>${lines.join('')}</tbody></table><small>僅五年價格基準研究，不是 V4／共振目標價的歷史回放；有資料斷層時僅採用未跨斷層的完整觀察區間。</small>`;
 }
 async function loadTechnical(data){
   const code=data?.code||data?.symbol||"",market=data?.market||data?.marketLabel||"";
@@ -4506,7 +4508,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.43（僅研究資料）',
+    modelVersion:'v2.7.0.45（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},

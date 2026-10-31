@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.43",
+  "version": "2.7.0.45",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -123,6 +123,10 @@
     "validate:v27041": "node scripts/validate-v27041-auto-r1-root.js",
     "validate:release42": "npm run validate:v27042 && npm run validate:v27041 && npm run validate:v27040 && npm run validate:v27039 && npm run validate:v27038 && npm run validate:app-version && npm run validate:layout",
     "validate:v27043": "node scripts/validate-v27043-proxy-js.js",
-    "validate:release43": "npm run validate:v27043 && npm run validate:v27042 && npm run validate:v27041 && npm run validate:v27040 && npm run validate:v27039 && npm run validate:v27038 && npm run validate:app-version && npm run validate:layout"
+    "validate:release43": "npm run validate:v27043 && npm run validate:v27042 && npm run validate:v27041 && npm run validate:v27040 && npm run validate:v27039 && npm run validate:v27038 && npm run validate:app-version && npm run validate:layout",
+    "validate:v27044": "node scripts/validate-v27044-skip-interrupted-windows.js",
+    "validate:release44": "npm run validate:v27044 && npm run validate:v27043 && npm run validate:v27042 && npm run validate:v27041 && npm run validate:v27040 && npm run validate:v27039 && npm run validate:v27038 && npm run validate:app-version && npm run validate:layout",
+    "validate:v27045": "node scripts/validate-v27045-restart-max20.js",
+    "validate:release45": "npm run validate:v27045 && npm run validate:v27044 && npm run validate:v27043 && npm run validate:v27042 && npm run validate:v27041 && npm run validate:v27040 && npm run validate:v27039 && npm run validate:v27038 && npm run validate:app-version && npm run validate:layout"
   }
 }
