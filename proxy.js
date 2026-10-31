@@ -12,7 +12,17 @@ export default async function proxy(request){
    const headers=Object.fromEntries(request.headers);
    if(url.pathname.startsWith('/api/')&&access.verifiedCron({headers,method:request.method,url:url.pathname+url.search}))return next();
    const session=await access.sessionFromCookie(request.headers.get('cookie'));
-   if(session)return next();
+   if(session){
+     // Browser lifetimes are finite; refresh a valid, revocable device cookie
+     // when returning to the home page, without generating a new session.
+     const response=next();
+     if(request.method==='GET'&&(url.pathname==='/'||url.pathname==='/index.html')){
+       const raw=access.parseCookie(request.headers.get('cookie'));
+       response.headers.append('Set-Cookie',access.cookie(raw,access.COOKIE_AGE_SECONDS));
+       response.headers.set('Cache-Control','private, no-store');
+     }
+     return response;
+   }
    if(url.pathname.startsWith('/api/'))return new Response(JSON.stringify({ok:false,error:'DEVICE_NOT_AUTHORIZED'}),{
       status:401,headers:{'Content-Type':'application/json','Cache-Control':'private, no-store'}});
    if(url.pathname==='/'){

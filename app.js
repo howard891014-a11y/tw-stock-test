@@ -4508,7 +4508,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.48（僅研究資料）',
+    modelVersion:'v2.7.0.50（僅研究資料）',
     play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5895,8 +5895,31 @@ async function runManualStorageMaintenance(){
   finally{storageMaintenanceLoading=false;if(btn){btn.disabled=false;btn.textContent="執行安全整理"}}
 }
 $("manualStorageMaintenance")?.addEventListener("click",runManualStorageMaintenance);
+// v2.7.0.49: settings entry follows the existing server-verified device role.
+// A hidden link is UI convenience only; api/access independently enforces admin permission.
+let settingsAccessRequestSeq=0;
+async function refreshSettingsAccessEntry(){
+  const entry=$("szAccessAdminEntry");
+  if(!entry)return;
+  const requestSeq=++settingsAccessRequestSeq;
+  entry.hidden=true; // Fail closed, including when a previous admin session is revoked.
+  try{
+    const response=await fetch('/api/access?action=status',{
+      method:'GET',credentials:'same-origin',cache:'no-store'
+    });
+    if(!response.ok)return;
+    const status=await response.json();
+    if(requestSeq!==settingsAccessRequestSeq)return;
+    if($("settingsModal")?.classList.contains("hidden"))return;
+    entry.hidden=!(status?.authorized===true&&status?.role==='admin');
+  }catch(e){
+    // Network/authorization errors must never expose the admin entry.
+    if(requestSeq===settingsAccessRequestSeq)entry.hidden=true;
+  }
+}
 document.querySelectorAll(".settings-open").forEach(btn=>btn.addEventListener("click",()=>{
   $("settingsModal")?.classList.remove("hidden");
+  void refreshSettingsAccessEntry();
   $("sidebar")?.classList.remove("open"); $("overlay")?.classList.remove("show");
   restoreFundflowValidation();
   loadHistoryProgress(false);

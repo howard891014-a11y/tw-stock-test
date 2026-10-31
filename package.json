@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.48",
+  "version": "2.7.0.50",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -133,6 +133,10 @@
     "validate:v27047": "node scripts/validate-v27047-viewer-policy.js",
     "validate:release47": "npm run validate:v27047 && npm run validate:release46",
     "validate:v27048": "node scripts/validate-v27048-final-access.js",
-    "validate:release48": "node scripts/validate-v27048-admin-claim.js && npm run validate:v27048 && npm run validate:release47"
+    "validate:release48": "node scripts/validate-v27048-admin-claim.js && npm run validate:v27048 && npm run validate:release47",
+    "validate:v27049": "node scripts/validate-v27049-settings-access.js",
+    "validate:release49": "npm run validate:v27049 && npm run validate:release48",
+    "validate:v27050": "node scripts/validate-v27050-permanent-access.js",
+    "validate:release50": "npm run validate:v27050 && npm run validate:release49"
   }
 }
