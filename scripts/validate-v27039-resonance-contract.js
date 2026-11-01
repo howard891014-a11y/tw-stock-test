@@ -19,7 +19,10 @@ assert(!/String\(\$\('szLabReach'\)\?\.textContent/.test(lab),'no hidden DOM par
 assert(lab.includes("root.addEventListener('stockzone:resonance-live',queue)"));
 assert(lab.includes("root.addEventListener?.('stockzone:resonance-live',schedule)"));
 const section=(s,start,end)=>{const i=s.indexOf(start),j=s.indexOf(end,i+start.length);assert(i>=0&&j>i,`${start} missing`);return s.slice(i,j)};
+const canonicalFn=vm.runInNewContext(section(app,'function resonanceDisplayPrices(','function drawOverviewResonance(')+'\nresonanceDisplayPrices',{
+  positionNumber:v=>Number.isFinite(Number(v))&&Number(v)>0?Number(v):null});
 const valuesFn=vm.runInNewContext(section(app,'function szLabValues(','function szLabFmt(')+'\nszLabValues',{
+  resonanceDisplayPrices:canonicalFn,
   positionNumber:v=>Number.isFinite(Number(v))&&Number(v)>0?Number(v):null,
   szLabCurrentDate:()=> '2026-10-30'});
 const root={StockZoneResonanceLab:{liveResonance:null}};
@@ -30,9 +33,9 @@ const targetFn=vm.runInNewContext(section(lab,'    function targets(){','    // 
 const reachFn=vm.runInNewContext(section(lab,'    function reachInfo(){','    function explain(')+'\nreachInfo',{
   el:()=>({textContent:currentCode.value}),api:root.StockZoneResonanceLab,
 });
-const numbers={price:132,main:164,secondary:205,pullback:109,defense:106};
+const numbers={price:132,main:164,secondary:205,pullback:116,defense:109};
 // Real computation model surfaces targets to chart + UI, not a handwritten UI fallback.
-const expected={price:132,plan:{resonance:{main:{center:164},secondary:{center:205}},levels:[{value:164},{value:205}]},downside:{levels:[{value:109},{value:106}]}};
+const expected={price:132,plan:{resonance:{main:{center:164},secondary:{center:205}},levels:[{value:164},{value:205}]},mainPullback:{valid:true,price:116},downside:{levels:[{value:109},{value:106}]}};
 const v=valuesFn({key:'swing',operationProfile:{basePct:40}},expected,null,null);
 for(const key of Object.keys(numbers))assert.equal(v[key],numbers[key]);
 const emitted=[];
@@ -66,7 +69,7 @@ assert.equal(root.StockZoneResonanceLab.liveResonance.reachByType.次要.h20,0);
 assert.equal(root.StockZoneResonanceLab.liveResonance.reachByType.回測.h20,33.3);
 assert(emitted.includes('stockzone:resonance-live'));
 Object.assign(root.StockZoneResonanceLab,labApi);
-assert.deepEqual(JSON.parse(JSON.stringify(targetFn())),{main:164,secondary:205,pullback:109,defense:106});
+assert.deepEqual(JSON.parse(JSON.stringify(targetFn())),{main:164,secondary:205,pullback:116,defense:109});
 const rates=reachFn();assert.equal(rates.主要.h20,5.6);assert.equal(rates.次要.h40,5.6);
 // A different stock must never inherit 4919's values before its own model output arrives.
 currentCode.value='2382';
