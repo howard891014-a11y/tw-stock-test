@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.50">
+  <meta name="stockzone-version" content="2.7.0.51">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -3059,7 +3059,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.50</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.51</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3786,10 +3786,6 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 </style>
 <div class="modal-backdrop hidden" id="settingsModal"><div class="modal-card settings-card">
 <div class="modal-head"><strong>設定</strong><button id="closeSettings" type="button">×</button></div>
-<a id="szAccessAdminEntry" class="sz-access-settings-entry" href="/access-admin.html" hidden aria-label="授權管理，管理員專用">
-  <span class="sz-access-settings-copy"><strong>授權管理</strong><small>發送專屬連結、查看與撤銷使用權</small></span>
-  <span class="sz-access-settings-arrow" aria-hidden="true">›</span>
-</a>
 <details class="sz-settings-fold" id="szDataSources"><summary>資料來源</summary><div class="sz-fold-body"><div class="settings-row"><span>市場資料</span><strong>盤中 TWSE／TPEx 官方 MIS<br>盤後 Neon DB-first</strong></div><div class="settings-row"><span>基本面來源</span><strong>TWSE／TPEx 官方 OpenAPI<br>MOPS 備援</strong></div></div></details>
 <details class="sz-settings-fold" id="szMarketDailySchedule"><summary>資料更新排程</summary><div class="sz-fold-body sz-schedule-body">
   <table class="sz-settings-schedule-table" aria-label="資料更新排程（台灣時間）">
@@ -3813,6 +3809,10 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
   </table>
 </div></details>
 <details class="sz-settings-fold" id="szDeveloperMode"><summary>開發者模式</summary><div class="sz-fold-body">
+<a id="szAccessAdminEntry" class="sz-access-settings-entry" href="/access-admin.html" hidden aria-label="授權管理，管理員專用">
+  <span class="sz-access-settings-copy"><strong>授權管理</strong><small>發送專屬連結、查看與撤銷使用權</small></span>
+  <span class="sz-access-settings-arrow" aria-hidden="true">›</span>
+</a>
 <section class="settings-history" aria-label="歷史資料進度">
   <div class="settings-history-head"><span>歷史資料進度</span><small id="historyProgressUpdated">讀取中</small></div>
   <div class="settings-history-row"><span>股價</span><div class="settings-progress-track"><i id="historyPriceBar"></i></div><strong id="historyPriceValue">-- / 120D</strong><small id="historyPriceDetail">上市 --｜上櫃 --</small></div>
@@ -4003,15 +4003,15 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 @media(max-width:570px){#overviewResonanceCard .sz-reslab{padding:11px}#overviewResonanceCard .sz-reslab-controls{gap:6px}#overviewResonanceCard .sz-reslab-dual b{font-size:11px}#overviewResonanceCard .sz-reslab-actions button{flex:1}}
 </style>
 
-  <script src="./capital-flow.js?v=2.7.0.50"></script>
+  <script src="./capital-flow.js?v=2.7.0.51"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.50"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.50"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.51"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.51"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.50"></script>
+  <script src="./app.js?v=2.7.0.51"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4497,7 +4497,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.7.0.50"></script>
+<script defer src="./featured-picks-ui.js?v=2.7.0.51"></script>
 
 <style id="stockzone-v26811-ui">
 /* v2.6.8.15 | Monetary TOP10 only; legacy industry capital intensity/X20 are unchanged. */
@@ -6312,7 +6312,7 @@ body.mode-screening .dashboard-grid>[data-view-panel="simulation"]>.card-title .
 #valuation .valuation-summary-modern .valuation-summary-price{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;min-width:0;padding-right:22px;border-right:1px solid #dce5f1}
 #valuation .valuation-summary-modern .valuation-summary-label{display:flex!important;align-items:center!important;gap:7px!important;color:#64778f!important;font-size:15px!important;font-weight:700!important}
 #valuation .valuation-summary-modern .valuation-summary-price>strong{display:block!important;margin:17px 0 13px!important;color:#13233a!important;font-size:48px!important;line-height:1!important;font-weight:900!important;letter-spacing:-.025em}
-#valuation .valuation-summary-modern .valuation-summary-price>small{display:block!important;margin:0!important;color:#72859e!important;font-size:15px!important;line-height:1.5!important}
+#valuation .valuation-summary-modern .valuation-summary-price>small{display:block!important;margin:0!important;padding:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#72859e!important;font-size:15px!important;line-height:1.5!important}
 #valuation .valuation-summary-modern .valuation-summary-facts{display:flex;flex-direction:column;justify-content:space-evenly;min-width:0;padding-left:22px;gap:8px}
 #valuation .valuation-summary-modern .valuation-summary-facts .valuation-data-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:10px!important;border:0!important;padding:5px 0!important}
 #valuation .valuation-summary-modern .valuation-summary-facts .valuation-data-row span{color:#697c95!important;font-size:13px!important;line-height:1.35!important}

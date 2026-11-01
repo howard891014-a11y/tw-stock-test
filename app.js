@@ -256,6 +256,28 @@ async function writeLocalCloseQuote(code,market,data){
   return stockzoneIdbPut("quoteCache",quoteCacheKey(code,market),{savedAt:Date.now(),tradeDate:dayKey(data.tradeDate)||dayKey(data.quoteTime),data});
 }
 function isTodayCloseCached(q){const c=taiwanMarketPhase();return c.phase==="post"&&validPositivePrice(q?.last??q?.price??q?.regularMarketPrice)&&dayKey(q?.tradeDate)===c.date}
+// A saved browser close is not proof of the latest exchange trading date.  Compare
+// independently dated sources before showing a non-trading-day or pre-open close.
+function freshestDatedClose(...quotes){
+  return quotes.filter(q=>q&&validPositivePrice(q.last??q.price??q.regularMarketPrice)&&dayKey(q.tradeDate))
+    .sort((a,b)=>dayKey(b.tradeDate).localeCompare(dayKey(a.tradeDate))||
+      Number(Boolean(b.officialClose))-Number(Boolean(a.officialClose)))[0]||null;
+}
+async function verifiedNonTradingClose(query,market,code){
+  const cached=/^\d{4,6}$/.test(code)?await readLocalCloseQuote(code,market):null;
+  // A new stock search verifies its last close against the authoritative
+  // Neon snapshot; Yahoo is an independent source if an official row is late.
+  const [dbResult,yahooResult]=await Promise.allSettled([
+    dbCloseQuote(query,market),yahooQuote(query,market,{live:false})
+  ]);
+  const db=dbResult.status==='fulfilled'?dbResult.value:null;
+  const yahoo=yahooResult.status==='fulfilled'?yahooResult.value:null;
+  const best=freshestDatedClose(db,yahoo,cached);
+  if(!best)throw new Error('無法確認最近交易日的有效收盤價');
+  const resolved=String(best.code||code||'');
+  if(/^\d{4,6}$/.test(resolved))void writeLocalCloseQuote(resolved,best.market||market,best);
+  return best;
+}
 const MIS_CLOSE_VERIFY_KEY="stockzone_mis_close_verify_v26211";
 function taipeiCloseVerifyCycle(now=new Date()){
   let date="",weekday="",minutes=0;
@@ -343,13 +365,14 @@ async function quote(query,market="",options={}){
   }
 
   const codeHint=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim();
+  // Pre-open and non-trading days must verify the persisted trade date; never
+  // return a cached quote merely because the exchange is currently closed.
+  if(phase.weekend||phase.phase==="pre"||marketSessionForToday()?.status==="holiday"){
+    return verifiedNonTradingClose(query,market,codeHint);
+  }
   if(/^\d{4,6}$/.test(codeHint)){
     const cached=await readLocalCloseQuote(codeHint,market);
-    if(cached){
-      if(phase.weekend||marketSessionForToday()?.status==="holiday")return cached;
-      if(phase.phase==="pre")return cached;
-      if(isTodayCloseCached(cached))return cached;
-    }
+    if(cached&&isTodayCloseCached(cached))return cached;
   }
 
   let yahoo=null;
@@ -362,7 +385,7 @@ async function quote(query,market="",options={}){
   const marketResolved=market||yahoo?.market||yahoo?.marketLabel||"";
   if(/^\d{4,6}$/.test(code))void writeLocalCloseQuote(code,marketResolved,yahoo);
   const state=rememberMarketSessionFromQuote(yahoo,{allowHolidayMark:phase.phase!=="pre"});
-  if(state==="holiday")return yahoo;
+  if(state==="holiday")return verifiedNonTradingClose(code,marketResolved,code);
 
   // Yahoo is the normal close source. Neon price_snapshot is fallback only when Yahoo is older/unavailable.
   if(phase.phase==="post"&&dayKey(yahoo?.tradeDate)!==phase.date){
@@ -374,9 +397,6 @@ async function quote(query,market="",options={}){
   return yahoo;
 }
 async function autoListQuote(code,market=""){
-  const phase=taiwanMarketPhase();
-  if(phase.weekend||marketSessionForToday()?.status==="holiday")return await readLocalCloseQuote(code,market);
-  if(phase.phase==="pre")return await readLocalCloseQuote(code,market);
   return quote(code,market,{verifyClose:false});
 }
 
@@ -2971,21 +2991,33 @@ function overviewWaveDrawBubble(svg,node){
     style:`fill:${node.side==='right'?(textColor||color):'#142843'}!important`
   },value));
 }
+function resonanceDisplayPrices(expected){
+  // Immutable scalar view of the SAME resonance result used for the chart and
+  // original research snapshot; no re-running a valuation/price engine here.
+  const price=positionNumber(expected?.price);
+  const res=expected?.plan?.resonance||{};
+  const main=positionNumber(res?.main?.center??expected?.plan?.levels?.[0]?.value);
+  const secondary=positionNumber(res?.secondary?.center??expected?.plan?.levels?.[1]?.value);
+  const rawPullback=positionNumber(expected?.mainPullback?.valid?expected.mainPullback.price:null);
+  return {price,
+    main:main!==null&&price>0&&main>price*1.002?main:null,
+    secondary:secondary!==null&&price>0&&secondary>price*1.002?secondary:null,
+    pullback:rawPullback!==null&&price>0&&rawPullback>0&&rawPullback<price*.998?rawPullback:null,
+    defense:positionNumber(expected?.downside?.levels?.[0]?.value)};
+}
 function drawOverviewResonance(play,expected){
   const svg=$("overviewResonanceSvg");if(!svg)return;
   svg.replaceChildren();svg.setAttribute('viewBox','0 0 760 486');
-  const price=positionNumber(expected?.price);
+  const chartPrices=resonanceDisplayPrices(expected),price=chartPrices.price;
   if(!(price>0))return;
   const history=overviewHistorySeries(120);
   if(history.length<2)return;
   // 即時現價只能替換最後一點，絕不修改過去120日的歷史價格。
   history[history.length-1].value=price;
-  const res=expected?.plan?.resonance||{};
-  const main=positionNumber(res?.main?.center??expected?.plan?.levels?.[0]?.value);
-  // 沒有第二個更高的獨立峰值時，不再以估值價冒充延伸目標。
-  const alt=positionNumber(res?.secondary?.center??expected?.plan?.levels?.[1]?.value);
-  const pullback=positionNumber(expected?.downside?.levels?.[0]?.value); // Original deep reference, unchanged historical touch input.
-  const mainPullback=positionNumber(expected?.mainPullback?.valid?expected.mainPullback.price:null);
+  const main=chartPrices.main;
+  const alt=chartPrices.secondary;
+  const pullback=chartPrices.defense;
+  const mainPullback=chartPrices.pullback;
   const mainTitle='主要共振';
   const altTitle='次要共振';
 
@@ -4503,13 +4535,15 @@ function holdingPlanZone(a){
 function holdingPlanTime(value){const d=new Date(value||'');return Number.isNaN(d.getTime())?'—':d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})}
 function holdingPlanSnapshot(code){
   const key=String(code),play=latestPlayStyleResult,v=szLabRecent?.code===key?szLabRecent.v:null;
-  if(currentStockCode()!==key||szResonanceIsLoading()||!v||!play?.key)return null;
+  const officialPlay=fiveYearRecommendation(),playKey=officialPlay?.key||officialPlay?.referenceKey;
+  if(currentStockCode()!==key||szResonanceIsLoading()||!v||!(v.price>0)||!play?.key||
+     !['selected','reference'].includes(officialPlay?.status)||!playKey)return null;
   const risk=szLabCachedRisk||{},profile=play.operationProfile||{};
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
-    capturedAt:new Date().toISOString(),source:'V4.3.1／共振歷史研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.50（僅研究資料）',
-    play:SZ_LAB_LABELS[play.key]||play.period||play.key,playKey:play.key,
+    capturedAt:new Date().toISOString(),source:'五年R1玩法＋共振模型同次研究快照（無買賣建議）',
+    modelVersion:'v2.7.0.51（僅研究資料）',
+    play:officialPlay.displayLabel,playKey,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
     targets:{main:positionNumber(v.main),secondary:positionNumber(v.secondary),pullback:positionNumber(v.pullback),defense:positionNumber(v.defense)},
@@ -6192,11 +6226,10 @@ function szLabCurrentDate(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'As
 function szLabBars(){return (latestHistory5Y?.history?.length?latestHistory5Y.history:latestFiveStageResult?.path?.rows)||[]}
 function szLabActive(code){const data=szLabRead()[code]||{};return (data.plans||[]).find(x=>x.id===data.activeId)||null}
 function szLabValues(play,expected,risk,decision){
- const res=expected?.plan?.resonance||{},levels=expected?.plan?.levels||[],down=expected?.downside?.levels||[];
- return {price:positionNumber(expected?.price),main:positionNumber(res?.main?.center??levels[0]?.value),secondary:positionNumber(res?.secondary?.center??levels[1]?.value),pullback:positionNumber(down[0]?.value),
-   // 建立新交易時由使用者明確確認本日候選防守；舊交易不以本日候選覆寫 initial。
-   defense:positionNumber(down[1]?.value??down[0]?.value),
-   play:play?.key||'swing',corePct:play?.operationProfile?.basePct??50,date:szLabCurrentDate(),capturedAt:new Date().toISOString()};
+ const prices=resonanceDisplayPrices(expected);
+ return {...prices,
+   // Old locked plans are immutable; only a NEW capture freezes this model view.
+   play:play?.key||null,corePct:play?.operationProfile?.basePct??50,date:szLabCurrentDate(),capturedAt:new Date().toISOString()};
 }
 function szLabFmt(v){return Number.isFinite(v)&&v>0?technicalFmt(v):'--'}
 function szLabPlanText(v){if(!v)return '尚未建立';return `玩法 ${SZ_LAB_LABELS[v.play]||v.play}｜核心 ${Number.isFinite(v.corePct)?v.corePct:'--'}%\n主要 ${szLabFmt(v.main)}｜次要 ${szLabFmt(v.secondary)}\n回測 ${szLabFmt(v.pullback)}｜防守 ${szLabFmt(v.defense)}`}
