@@ -930,8 +930,12 @@ function fundamentalHistoricalCumulativeMargin(rows, year, quarter, kind) {
 function fundamentalMarginYearComparison(data, kind) {
   const rows=fundamentalSortedRows(data),off=data?.officialStatement||null;
   const officialMargin=data?.marginStatement||null;
-  const ratioOff=(fundamentalMarginValue(officialMargin,kind)!==null?officialMargin:off);
-  const officialInfo=fundamentalQuarterInfo(ratioOff),officialHasValue=fundamentalMarginValue(ratioOff,kind)!==null;
+  // Each statement carries its own period. Prefer the newest *valid* value,
+  // rather than preferring the older margin feed merely because it exists.
+  const choices=[off,officialMargin].filter(r=>r&&fundamentalMarginValue(r,kind)!==null);
+  choices.sort((a,b)=>(fundamentalQuarterInfo(b)?.stamp??-Infinity)-(fundamentalQuarterInfo(a)?.stamp??-Infinity));
+  const ratioOff=choices[0]||null;
+  const officialInfo=fundamentalQuarterInfo(ratioOff),officialHasValue=!!ratioOff;
   const latestWithMargin=rows.find(r=>fundamentalMarginValue(r,kind)!==null);
   const latestInfo=fundamentalQuarterInfo(latestWithMargin);
   const useOfficial=officialHasValue&&(!latestInfo||!officialInfo||officialInfo.stamp>=latestInfo.stamp);
@@ -4574,7 +4578,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'五年R1玩法＋共振模型同次研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.52（僅研究資料）',
+    modelVersion:'v2.7.0.53（僅研究資料）',
     play:officialPlay.displayLabel,playKey,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5463,8 +5467,9 @@ let marketDynamicData=null,marketDynamicLoading=false,marketDynamicFetchedAt=0,m
 let stockzoneMacroData=null,stockzoneMacroFetchAt=0,stockzoneMacroPending=null;
 function renderStockzoneMacro(){
  const fx=stockzoneMacroData?.usdTwd||{},m=stockzoneMacroData?.marketMargin||{};
+ const fxNode=$('marketUsdTwd');if(fxNode)fxNode.title=fx.rate!==null&&fx.rate!==undefined?`來源：${fx.source||'官方匯率'}｜${fx.sourceUrl||''}`:`資料源暫缺：${fx.error||'等待官方資料'}`;
  setText('marketUsdTwd',Number.isFinite(Number(fx.rate))&&fx.rate!==null?Number(fx.rate).toFixed(3):'--');
- setText('marketUsdTwdDetail',fx.date?`${fx.date} 收盤｜5日 ${Number.isFinite(Number(fx.change5Pct))&&fx.change5Pct!==null?(fx.change5Pct>0?'+':'')+fx.change5Pct+'%':'--'}${fx.stale?'｜舊值':''}`:'央行匯率暫缺');
+ setText('marketUsdTwdDetail',fx.date?`${fx.date} ${fx.referenceRate?'期交所參考':'央行收盤'}｜5日 ${Number.isFinite(Number(fx.change5Pct))&&fx.change5Pct!==null?(fx.change5Pct>0?'+':'')+fx.change5Pct+'%':'--'}${fx.stale?'｜舊值':''}`:'央行匯率暫缺');
  const ok=m.pct!==null&&m.pct!==undefined&&Number.isFinite(Number(m.pct));
  setText('marketMarginEstimate',ok?Number(m.pct).toFixed(1)+'%':'--');
  setText('marketMarginDetail',m.date?`${m.date}｜融資成本推估${m.coverage!==null?'｜股數覆蓋 '+Number(m.coverage).toFixed(1)+'%':''}${m.stale?'｜舊值':''}`:'普通股融資資料不足');
