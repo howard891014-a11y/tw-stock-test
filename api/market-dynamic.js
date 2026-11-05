@@ -6,7 +6,7 @@ module.exports=async function handler(req,res){
   if(String(req.query?.sz_shadow||'')==='d112')return require('../lib/api-routes/w3-shadow').d112(req,res);
   try{
     if(req.method&&req.method!=='GET')return res.status(405).json({ok:false,error:'GET only'});
-    // v2.7.0.52: independent macro cards. No W3 formula recomputation and no
+    // v2.7.0.53: independent macro cards. No W3 formula recomputation and no
     // external scraper for whole-account official credit maintenance.
     if(String(req.query?.view||'')==='macro'){
       const {getFx}=require('../lib/cbc-usdtwd');
@@ -16,7 +16,7 @@ module.exports=async function handler(req,res){
       return res.status(200).json({ok:true,
         usdTwd:fxResult.status==='fulfilled'?fxResult.value:{rate:null,error:String(fxResult.reason)},
         marketMargin:marginResult.status==='fulfilled'?marginResult.value:null,
-        basis:'estimated-stock-margin-only',version:'v2.7.0.52'});
+        basis:'estimated-stock-margin-only',version:'v2.7.0.53'});
     }
     // Fast index endpoint is independent of heavy W3 snapshot refresh.
     if(String(req.query?.view||'')==='index'){
