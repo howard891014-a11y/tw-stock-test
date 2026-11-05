@@ -573,14 +573,16 @@ function mergeFundamentalObject(primary,fallback){
 function fundamentalRowsHaveMargins(data){
   const rows=fundamentalSortedRows(data),off=data?.officialStatement||null;
   const valid=n=>n!==null&&Number.isFinite(n);
-  const hasGross=valid(fundamentalMarginValue(off,"gross"))||rows.some(x=>valid(fundamentalMarginValue(x,"gross")));
-  const hasOperating=valid(fundamentalMarginValue(off,"operating"))||rows.some(x=>valid(fundamentalMarginValue(x,"operating")));
+  const hasGross=valid(fundamentalMarginValue(off,"gross"))||valid(fundamentalMarginValue(data?.marginStatement,"gross"))||rows.some(x=>valid(fundamentalMarginValue(x,"gross")));
+  const hasOperating=valid(fundamentalMarginValue(off,"operating"))||valid(fundamentalMarginValue(data?.marginStatement,"operating"))||rows.some(x=>valid(fundamentalMarginValue(x,"operating")));
   return hasGross&&hasOperating;
 }
 function fundamentalEpsPeriodCoverage(data){
   const rows=fundamentalSortedRows(data),off=fundamentalQuarterInfo(data?.officialStatement);
-  const latest=off||fundamentalQuarterInfo(rows[0]),byQuarter=new Map();
+  const byQuarter=new Map();
   for(const row of rows){const p=fundamentalQuarterInfo(row),eps=valuationNum(row?.eps);if(p&&eps!==null)byQuarter.set(p.key,eps)}
+  const newestEps=rows.find(r=>valuationNum(r?.eps)!==null);
+  const latest=fundamentalQuarterInfo(newestEps)||off;
   if(!latest)return {yoy:false,qoq:false,latest:null,reference:null};
   const cur=byQuarter.get(latest.key),prior=latest.quarter===1?{year:latest.year-1,quarter:4}:{year:latest.year,quarter:latest.quarter-1};
   return {yoy:cur!==undefined&&byQuarter.has(`${latest.year-1}Q${latest.quarter}`),
@@ -606,18 +608,27 @@ function mergeFundamentalPayload(primary,fallback){
   const seen=new Set(aq.map((x,i)=>rowKey(x,i)));
   bq.forEach((x,i)=>{if(!seen.has(rowKey(x,i)))mergedQ.push(x)});
   const source=[a.source,b.source].filter(Boolean).filter((x,i,arr)=>arr.indexOf(x)===i).join("＋");
-  return {...b,...a,quarters:fundamentalSortedRows({quarters:mergedQ.length?mergedQ:(aq.length?aq:bq)}),officialStatement:mergeFundamentalObject(a.officialStatement,b.officialStatement),monthlyRevenue:mergeFundamentalObject(a.monthlyRevenue,b.monthlyRevenue),company:mergeFundamentalObject(a.company,b.company),profile:mergeFundamentalObject(a.profile,b.profile),financialData:mergeFundamentalObject(a.financialData,b.financialData),source:source||a.source||b.source};
+  return {...b,...a,quarters:fundamentalSortedRows({quarters:mergedQ.length?mergedQ:(aq.length?aq:bq)}),officialStatement:(fundamentalQuarterInfo(a.officialStatement)?.key&&fundamentalQuarterInfo(a.officialStatement)?.key===fundamentalQuarterInfo(b.officialStatement)?.key)
+    ?mergeFundamentalObject(a.officialStatement,b.officialStatement)
+    :(a.officialStatement||b.officialStatement),
+    marginStatement:(fundamentalQuarterInfo(a.marginStatement)?.key&&fundamentalQuarterInfo(a.marginStatement)?.key===fundamentalQuarterInfo(b.marginStatement)?.key)
+      ?mergeFundamentalObject(a.marginStatement,b.marginStatement)
+      :((fundamentalMarginValue(a.marginStatement,'gross')!==null||fundamentalMarginValue(a.marginStatement,'operating')!==null)?a.marginStatement:b.marginStatement||a.marginStatement),monthlyRevenue:mergeFundamentalObject(a.monthlyRevenue,b.monthlyRevenue),company:mergeFundamentalObject(a.company,b.company),profile:mergeFundamentalObject(a.profile,b.profile),financialData:mergeFundamentalObject(a.financialData,b.financialData),source:source||a.source||b.source};
 }
 async function fundamentals(query,market){
   const code=String(query||"").replace(/\.(?:TW|TWO)$/i,"").trim(),legacyKey=`${code}|${String(market||"")}`;
   // New namespace invalidates old incomplete 6-hour snapshots, without touching other caches.
-  const key=`fundamentals:v27030:${legacyKey}`;
+  const key=`fundamentals:v27052:${legacyKey}`;
   const cached=await stockzoneIdbGet("marketCache",key);
+  // One-time migration: retain only previously fetched REAL report data; a
+  // 2026Q2 report is never recast as Q3 after a source goes temporarily blank.
+  const older=cached?null:await stockzoneIdbGet("marketCache",`fundamentals:v27030:${legacyKey}`);
+  const retained=cached?.data||older?.data||null;
   const age=Date.now()-Number(cached?.savedAt||0);
   const good=cached?.data&&!fundamentalPayloadNeedsSupplement(cached.data);
   if(cached?.data&&Array.isArray(cached.data?.quarters)&&
     (good?age<FUNDAMENTALS_CACHE_MS:age<FUNDAMENTALS_RETRY_MS))return cached.data;
-  const params=new URLSearchParams({q:code,market:String(market||""),v:"27030"});
+  const params=new URLSearchParams({q:code,market:String(market||""),v:"27052"});
   const fallbackParams=new URLSearchParams({mode:"fundamentals",q:code,market:String(market||"")});
   let data=null;
   try{
@@ -632,9 +643,15 @@ async function fundamentals(query,market){
     }
   }catch(primaryError){
     console.warn("官方基本面獨立路由失敗，改用 Yahoo／MOPS fallback",primaryError);
-    data=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"長期基本面 fallback");
+    try{data=await readJson(await fetch(`/api/technical?${fallbackParams.toString()}`,{cache:"no-store"}),"長期基本面 fallback");}
+    catch(fallbackError){
+      if(!retained)throw fallbackError;
+      console.warn("官方及歷史財報服務暫缺，保留已驗證的上次報告日期",fallbackError);
+      data={...retained,staleFromCache:true};
+    }
   }
-  // Incomplete snapshots get only a short retry cooldown, not the ordinary 6-hour cache.
+  // Keep only already-reported historical quarters and period-labeled ratios.
+  if(retained)data=mergeFundamentalPayload(data,retained);
   await stockzoneIdbPut("marketCache",key,{savedAt:Date.now(),complete:!fundamentalPayloadNeedsSupplement(data),data});
   return data;
 }
@@ -912,20 +929,28 @@ function fundamentalHistoricalCumulativeMargin(rows, year, quarter, kind) {
 }
 function fundamentalMarginYearComparison(data, kind) {
   const rows=fundamentalSortedRows(data),off=data?.officialStatement||null;
-  const info=fundamentalQuarterInfo(off)||fundamentalQuarterInfo(rows[0]);
+  const officialMargin=data?.marginStatement||null;
+  const ratioOff=(fundamentalMarginValue(officialMargin,kind)!==null?officialMargin:off);
+  const officialInfo=fundamentalQuarterInfo(ratioOff),officialHasValue=fundamentalMarginValue(ratioOff,kind)!==null;
+  const latestWithMargin=rows.find(r=>fundamentalMarginValue(r,kind)!==null);
+  const latestInfo=fundamentalQuarterInfo(latestWithMargin);
+  const useOfficial=officialHasValue&&(!latestInfo||!officialInfo||officialInfo.stamp>=latestInfo.stamp);
+  const info=useOfficial?officialInfo:(latestInfo||officialInfo);
   const matched=info?rows.find(r=>fundamentalQuarterInfo(r)?.key===info.key):null;
   // Official quarter 2-4 profit ratios represent cumulative YTD results.
   // Do not silently substitute an individual Yahoo quarter for a missing cumulative value.
-  const now=off&&info?.quarter>1
-    ?fundamentalMarginValue(off,kind)??fundamentalHistoricalCumulativeMargin(rows,info.year,info.quarter,kind)
-    :fundamentalMarginFromSources(kind,off,matched,data?.financialData);
+  const now=useOfficial
+    ?fundamentalMarginValue(ratioOff,kind)
+    :info?.quarter>1
+      ?fundamentalHistoricalCumulativeMargin(rows,info.year,info.quarter,kind)??fundamentalMarginValue(matched,kind)
+      :fundamentalMarginFromSources(kind,matched);
   if(!info||now===null)return {now,prior:null,delta:null,period:info?.key||null};
   const priorKey=`${info.year-1}Q${info.quarter}`;
   const officialPrior=data?.previousYearStatement||null;
   let prior=officialPrior&&fundamentalQuarterInfo(officialPrior)?.key===priorKey
     ?fundamentalMarginValue(officialPrior,kind):null;
   if(prior===null){
-    if(off&&info.quarter>1){
+    if(info.quarter>1){
       prior=fundamentalHistoricalCumulativeMargin(rows,info.year-1,info.quarter,kind);
     }else{
       const last=rows.find(r=>fundamentalQuarterInfo(r)?.key===priorKey);
@@ -973,9 +998,9 @@ function renderFundamentalOverview(){
     const gross=fundamentalMarginYearComparison(data,"gross"),operating=fundamentalMarginYearComparison(data,"operating");
     const grossNow=gross.now,opNow=operating.now,grossDelta=gross.delta,opDelta=operating.delta;
     setText("fundamentalGrossMargin", fundamentalMainMargin(grossNow));
-    setText("fundamentalGrossDetail", grossNow===null ? "毛利率資料不足" : `${ppChangeText(grossDelta)}${off?.period ? `｜${off.period}` : (latest?.period ? `｜${latest.period}` : "")}`);
+    setText("fundamentalGrossDetail", grossNow===null ? "毛利率資料不足" : `${ppChangeText(grossDelta)}${gross.period?`｜${gross.period}`:""}`);
     setText("fundamentalOperatingMargin", fundamentalMainMargin(opNow));
-    setText("fundamentalOperatingDetail", opNow===null ? "營益率資料不足" : `${ppChangeText(opDelta)}${off?.period ? `｜${off.period}` : (latest?.period ? `｜${latest.period}` : "")}`);
+    setText("fundamentalOperatingDetail", opNow===null ? "營益率資料不足" : `${ppChangeText(opDelta)}${operating.period?`｜${operating.period}`:""}`);
   }
   const signalTone=(id,tone)=>{const el=$(id)?.closest?.(".fundamental-signal");if(el)el.dataset.tone=tone||""};
   const cardTone=(id,tone)=>{const el=$(id);if(el)el.dataset.tone=tone||""};
@@ -991,7 +1016,7 @@ function renderFundamentalOverview(){
   setText("fundamentalValuationPressure",`${assessment.valuation.pressureLabel}壓力`);setText("fundamentalValuationPressureNote",assessment.valuation.state||"估值資料不足");cardTone("valuationPressureCard",assessment.valuation.pressureLabel==="低"?"good":assessment.valuation.pressureLabel==="中"?"watch":"bad");
   setText("fundamentalPriceAttractiveness",`${assessment.priceAttractiveness} / 100`);setText("fundamentalPriceAttractivenessNote",assessment.priceAttractiveness>=70?"目前價格具吸引力":assessment.priceAttractiveness>=50?"目前價格吸引力普通":"目前價格吸引力偏低");cardTone("valuationAttractivenessCard",scoreTone(assessment.priceAttractiveness));
   setText("fundamentalStability",fundamentalComment(assessment));
-  setText("fundamentalSource", fund?.sourceText || "基本面來源待補");
+  setText("fundamentalSource", `${fund?.sourceText || "基本面來源待補"}${data.staleFromCache?"｜前次有效資料（來源暫缺）":""}`);
 }
 
 function stageNum(v){const n=Number(v);return Number.isFinite(n)?n:null}
@@ -1989,8 +2014,10 @@ function fundamentalPctSignal(pct,kind="revenue"){
 function longQuantitativeFundamentals(v){
   const data=latestFundamentalData||{},rows=fundamentalSortedRows(data),off=data?.officialStatement||null,monthly=data?.monthlyRevenue||null;
   const eps=rows.map(x=>valuationNum(x.eps)),rev=rows.map(fundamentalRevenueValue),gm=rows.map(x=>fundamentalMarginValue(x,"gross")),om=rows.map(x=>fundamentalMarginValue(x,"operating"));
-  const epsRef=fundamentalQuarterInfo(off)||fundamentalQuarterInfo(rows[0]),epsByPeriod=new Map();
+  const epsByPeriod=new Map();
   for(const row of rows){const p=fundamentalQuarterInfo(row),v=valuationNum(row?.eps);if(p&&v!==null)epsByPeriod.set(p.key,v)}
+  const newestReportedEps=rows.find(r=>valuationNum(r?.eps)!==null);
+  const epsRef=fundamentalQuarterInfo(newestReportedEps)||fundamentalQuarterInfo(off);
   const getEps=(year,quarter)=>epsByPeriod.get(`${year}Q${quarter}`)??null;
   const epsNow=epsRef?getEps(epsRef.year,epsRef.quarter):null;
   const epsPrev=epsRef?getEps(epsRef.year-1,epsRef.quarter):null;
@@ -2011,7 +2038,7 @@ function longQuantitativeFundamentals(v){
   const officialRevSignals=[[monthYoy,.7],[cumYoy,.3]].filter(x=>x[0].available),officialRevW=officialRevSignals.reduce((a,x)=>a+x[1],0),officialRevenueScore=officialRevW?Math.round(officialRevSignals.reduce((a,x)=>a+x[0].score*x[1],0)/officialRevW):null;
   let revenueScore=officialRevenueScore!==null?(quarterlyRevenueScore!==null?Math.round(officialRevenueScore*.75+quarterlyRevenueScore*.25):officialRevenueScore):quarterlyRevenueScore;
 
-  const marginApplicable=off?.marginApplicable!==false,officialGm=fundamentalMarginValue(off,"gross"),officialOm=fundamentalMarginValue(off,"operating");
+  const marginApplicable=off?.marginApplicable!==false,officialGm=fundamentalMarginFromSources("gross",off,data?.marginStatement),officialOm=fundamentalMarginFromSources("operating",off,data?.marginStatement);
   const grossYear=fundamentalMarginYearComparison(data,"gross"),operatingYear=fundamentalMarginYearComparison(data,"operating");
   const seriesGross=marginSignal(grossYear.now,grossYear.prior),seriesOperating=marginSignal(operatingYear.now,operatingYear.prior);
   let gross={available:false,score:50,delta:null},operating={available:false,score:50,delta:null};
@@ -3813,7 +3840,7 @@ function setCreditFlow(id,v){const el=$(id);if(!el)return;el.textContent=creditT
 function resetCreditTrading(note="等待資料"){
   setText("creditTradingAsOf",note);const chip=$("creditTradingSignal");if(chip){chip.textContent=note;chip.className="tone-neutral"}
   for(const key of ["Margin1","MarginBalance","Margin5","Margin10","Margin20","Short1","ShortBalance","Short5","Short10","Short20","SblSell","SblBalance","Sbl5","Sbl10","Sbl20"])setCreditFlow(`credit${key}`,null);
-  setText("creditMarginUsage","使用率 --");setText("creditShortRatio","券資比 --");setText("creditSblReturn","今日還券 --");
+  setText("creditMarginUsage","使用率 --");setText("creditMarginEstimate","估算維持率 --");setText("creditShortRatio","券資比 --");setText("creditSblReturn","今日還券 --");
   return note==="讀取中"?"信用籌碼正在讀取中。":`信用籌碼：${note||"資料暫缺"}。`;
 }
 function renderCreditTrading(c){
@@ -3824,6 +3851,11 @@ function renderCreditTrading(c){
   setCreditFlow("creditShort1",p(1).shortChange);setCreditFlow("creditShortBalance",latest.short_balance);setCreditFlow("creditShort5",p(5).complete?p(5).shortChange:null);setCreditFlow("creditShort10",p(10).complete?p(10).shortChange:null);setCreditFlow("creditShort20",p(20).complete?p(20).shortChange:null);
   setCreditFlow("creditSblSell",latest.sbl_sell);setCreditFlow("creditSblBalance",latest.sbl_balance);setCreditFlow("creditSbl5",p(5).complete?p(5).sblChange:null);setCreditFlow("creditSbl10",p(10).complete?p(10).sblChange:null);setCreditFlow("creditSbl20",p(20).complete?p(20).sblChange:null);
   setText("creditMarginUsage",Number.isFinite(Number(latest.margin_usage_pct))?`使用率 ${Number(latest.margin_usage_pct).toFixed(1)}%`:"使用率 --");
+  const me=c.marginEstimate,maint=me&&me.pct!==null&&Number.isFinite(Number(me.pct));
+  setText("creditMarginEstimate",maint?`估算維持率 ${Number(me.pct).toFixed(1)}%`:'估算維持率 --');
+  const maintNode=$("creditMarginEstimate");if(maintNode)maintNode.title=maint?
+    `融資成本 ${me.cost} 元｜假設融資成數 ${Math.round(me.rate*100)}%｜初始未知持倉 ${me.unknownSharePct}%｜${me.confidence}｜資料 ${me.date}。非真實整戶擔保維持率。`:
+    `融資估算資料不足；${me?.reason||'信用交易／股價歷史未完整'}。`;
   setText("creditShortRatio",Number.isFinite(Number(latest.short_margin_ratio))?`券資比 ${Number(latest.short_margin_ratio).toFixed(1)}%`:"券資比 --");
   setText("creditSblReturn",latest.sbl_return===null||latest.sbl_return===undefined?"今日還券 --":`今日還券 ${institutionalFmtShares(latest.sbl_return)}`);
   const sig=c.signal||{},chip=$("creditTradingSignal");if(chip){chip.textContent=sig.label||"中性";chip.className=sig.tone==="good"?"tone-good":sig.tone==="bad"?"tone-bad":sig.tone==="watch"?"tone-watch":"tone-neutral"}
@@ -4542,7 +4574,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'五年R1玩法＋共振模型同次研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.51（僅研究資料）',
+    modelVersion:'v2.7.0.52（僅研究資料）',
     play:officialPlay.displayLabel,playKey,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5428,6 +5460,28 @@ $("fundflowDetailClose")?.addEventListener("click",fundflowClearSelection);
 
 
 let marketDynamicData=null,marketDynamicLoading=false,marketDynamicFetchedAt=0,marketDistributionMode="listed";
+let stockzoneMacroData=null,stockzoneMacroFetchAt=0,stockzoneMacroPending=null;
+function renderStockzoneMacro(){
+ const fx=stockzoneMacroData?.usdTwd||{},m=stockzoneMacroData?.marketMargin||{};
+ setText('marketUsdTwd',Number.isFinite(Number(fx.rate))&&fx.rate!==null?Number(fx.rate).toFixed(3):'--');
+ setText('marketUsdTwdDetail',fx.date?`${fx.date} 收盤｜5日 ${Number.isFinite(Number(fx.change5Pct))&&fx.change5Pct!==null?(fx.change5Pct>0?'+':'')+fx.change5Pct+'%':'--'}${fx.stale?'｜舊值':''}`:'央行匯率暫缺');
+ const ok=m.pct!==null&&m.pct!==undefined&&Number.isFinite(Number(m.pct));
+ setText('marketMarginEstimate',ok?Number(m.pct).toFixed(1)+'%':'--');
+ setText('marketMarginDetail',m.date?`${m.date}｜融資成本推估${m.coverage!==null?'｜股數覆蓋 '+Number(m.coverage).toFixed(1)+'%':''}${m.stale?'｜舊值':''}`:'普通股融資資料不足');
+ const node=$('marketMarginEstimate');if(node)node.title=m.date?`使用上市櫃普通股融資餘額及股價，預設 60% 融資成數，未知初始持倉比例 ${m.unknownSharePct??'--'}%；不等於券商真實整戶維持率。`:'未取得足夠融資資料';
+}
+async function loadStockzoneMacro(force=false){
+ if(stockzoneMacroPending)return stockzoneMacroPending;
+ if(!force&&stockzoneMacroData&&Date.now()-stockzoneMacroFetchAt<10*60*1000)return renderStockzoneMacro();
+ stockzoneMacroPending=(async()=>{
+  try{const data=await readJson(await fetch('/api/market-dynamic?view=macro',{cache:'no-store'}),'大盤宏觀資料');
+   if(data?.ok){stockzoneMacroData=data;stockzoneMacroFetchAt=Date.now();renderStockzoneMacro();}}
+  catch(e){console.warn('匯率／融資維持率暫缺',e?.message||e);renderStockzoneMacro();}
+  finally{stockzoneMacroPending=null;}
+ })();
+ return stockzoneMacroPending;
+}
+
 let marketIndexQuote=null,marketIndexLoading=false,marketIndexFetchedAt=0,marketIndexFetchedSlot="";
 const MARKET_DYNAMIC_LOCAL_CACHE_KEY="v2698:market-dynamic:60d";
 function marketNum(v){if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null}
@@ -5577,6 +5631,7 @@ function renderMarketDynamic(){
   const set=(id,t)=>{const e=$(id);if(e)e.textContent=t};
   const stableTradeDate=marketStableTradeDate()||d.date||"--";
   set("marketDynamicDateBadge",stableTradeDate);
+  if(stockzoneMacroData)renderStockzoneMacro();
   // Banner date follows the latest independent official index snapshot, not W3 readiness.
   const w3=stockzoneW3Regime(),model=marketDynamicData?.w3||{};
   // OFF always wins; a visible warning is only possible while ON.
@@ -5621,8 +5676,9 @@ function renderMarketDynamic(){
 }
 async function loadMarketDynamic(force=false){
   if(marketDynamicLoading)return;
-  if(!force&&marketDynamicData&&Date.now()-marketDynamicFetchedAt<120000){renderMarketDynamic();return}
+  if(!force&&marketDynamicData&&Date.now()-marketDynamicFetchedAt<120000){renderMarketDynamic();void loadStockzoneMacro();return}
   marketDynamicLoading=true;
+  void loadStockzoneMacro(force);
   try{
     // Cross-reopen cache: display the last completed snapshot immediately, then quietly refresh.
     if(!marketDynamicData){
@@ -5633,7 +5689,7 @@ async function loadMarketDynamic(force=false){
     const payload=await readJson(res,"大盤動態");
     if(!payload?.ok||!payload.latest)throw new Error(payload?.error||"大盤快照尚未完成");
     marketDynamicData=payload;marketDynamicFetchedAt=Date.now();
-    renderMarketDynamic();
+    renderMarketDynamic();void loadStockzoneMacro(force);
     void stockzoneIdbPut("marketCache",MARKET_DYNAMIC_LOCAL_CACHE_KEY,{savedAt:Date.now(),data:payload});
   }catch(e){
     console.warn("大盤動態讀取失敗",e);
