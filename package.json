@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.53",
+  "version": "2.7.0.54",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -141,6 +141,7 @@
     "validate:v27051": "node scripts/validate-v27051-consistency.js",
     "validate:release51": "npm run validate:v27051 && npm run validate:release50",
     "validate:v27053": "node scripts/validate-v27053-fixes.js",
-    "validate:release53": "npm run validate:v27053 && npm run validate:market-official && npm run validate:official-archive && npm run validate:app-version && npm run validate:layout"
+    "validate:release53": "npm run validate:v27053 && npm run validate:market-official && npm run validate:official-archive && npm run validate:app-version && npm run validate:layout",
+    "validate:v27054-official-archive": "node scripts/validate-v27054-official-archive.js"
   }
 }

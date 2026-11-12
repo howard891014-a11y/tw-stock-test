@@ -4578,7 +4578,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'五年R1玩法＋共振模型同次研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.53（僅研究資料）',
+    modelVersion:'v2.7.0.54（僅研究資料）',
     play:officialPlay.displayLabel,playKey,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
