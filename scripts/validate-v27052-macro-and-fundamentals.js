@@ -17,7 +17,7 @@ assert.equal(market.pct,138.89);assert.equal(market.coverage,100);assert.equal(m
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8'),index=fs.readFileSync(path.join(root,'index.html'),'utf8'),quote=fs.readFileSync(path.join(root,'lib/api-routes/fundamentals.js'),'utf8');
 for(const id of ['marketUsdTwd','marketMarginEstimate','creditMarginEstimate'])assert.match(index,new RegExp(`id="${id}"`));
 assert.match(app,/loadStockzoneMacro/);assert.match(quote,/Never gate access to income statements/);
-assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.7.0.53');
+assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'2.7.0.54');
 (async()=>{
  const oldFetch=global.fetch;
  global.fetch=async(url,options={})=>{
@@ -39,6 +39,6 @@ assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).
   assert.equal(payload.officialStatement.operatingMargin,30,'Q3 ratio must use Q3 revenue and Q3 operating income');
   assert.equal(payload.marginStatement.period,'2026 Q2');
   assert.equal(payload.marginStatement.grossMargin,45);
-  console.log('v2.7.0.53 macro+fundamental validation PASS');
+  console.log('v2.7.0.54 macro+fundamental validation PASS');
  }finally{global.fetch=oldFetch}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
 const load=f=>fs.readFileSync(path.join(root,f),'utf8');
 const index=load('index.html'),app=load('app.js'),lab=load('lib/resonance-lab-v1.js'),market=load('lib/market-dynamic.js');
-assert.equal(require('../package.json').version,'2.7.0.53');
+assert.equal(require('../package.json').version,'2.7.0.54');
 // 1: chart and play-style panel use identical deep-defense target, never pullback.
 assert.match(lab,/target\('深跌參考',a\.targets\?\.defense\)/);
 assert.doesNotMatch(lab,/target\('深跌參考',Number\.isFinite\(a\.targets\?\.pullback/);
@@ -91,5 +91,5 @@ assert.match(load('lib/market-institutional-official.js'),/i===0\|\|!old\.has\(d
   assert.equal(queryCount,1);
   await archive.restoreOfficialHistory({ok:true,history:[{date:'2026-11-03'}]},sql);
   assert.equal(queryCount,1,'Reuse 5-min validated archive cache, no extra Neon read');
-  console.log('v2.7.0.53 fixes PASS: defense target, ratio quarter, CSS, CBC fallback, verified archive recovery');
+  console.log('v2.7.0.54 fixes PASS: defense target, ratio quarter, CSS, CBC fallback, verified archive recovery');
 })().catch(err=>{console.error(err);process.exitCode=1});
