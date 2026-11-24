@@ -1,6 +1,6 @@
 {
   "name": "tw-stock-test",
-  "version": "2.7.0.54",
+  "version": "2.7.0.55",
   "private": true,
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -8,6 +8,7 @@
     "@vercel/functions": "3.9.11"
   },
   "scripts": {
+    "validate:v27055": "node scripts/validate-v27055-turn-conditions.js",
     "validate:market-official": "node scripts/validate-v2698-official-institutional.js",
     "validate:fundamental-eps": "node scripts/validate-v26824-fundamental-eps.js",
     "validate:business-tags": "node scripts/validate-business-tags.js",

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f5f7fb">
-  <meta name="stockzone-version" content="2.7.0.54">
+  <meta name="stockzone-version" content="2.7.0.55">
   <title>股域 StockZone</title>
   
 <style id="stockzone-inline-style">
@@ -3059,7 +3059,7 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
         <button data-manage-jump="watchlist">觀察清單</button>
       </div>
     </nav>
-    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.54</span></button>
+    <button class="sidebar-foot settings-open" type="button">⚙ 設定 <span>v2.7.0.55</span></button>
   </aside>
 
   <div class="main-shell">
@@ -3460,7 +3460,13 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
             <div class="md-stat md-tile md-tile-margin"><span class="market-dynamic-kicker"><i class="md-tile-icon md-tile-icon-margin" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 19h18M6 16l4-4 4 2 4-8"></path><path d="M14 6h4v4"></path><path d="M6 9v4"></path></svg></i>大盤估算融資維持率</span><strong id="marketMarginEstimate">--</strong><small id="marketMarginDetail">普通股成本模型｜讀取中</small></div>
           </div>
           <div class="md-footer-notes">
-            <div class="md-coverage-note"><span>資料完整性</span><strong id="marketCoverage">--</strong></div>
+            <details class="md-turn-details" id="marketTurnDetails">
+              <summary><span>大盤轉折條件</span><strong id="marketTurnOverview">查看三條轉 ON 路徑</strong></summary>
+              <div class="md-turn-body">
+                <p id="marketTurnAsOf">等待正式 W3 運算結果</p>
+                <div id="marketTurnRoutes" class="md-turn-routes" aria-live="polite"></div>
+              </div>
+            </details>
           </div>
         </div>
       </section>
@@ -4005,15 +4011,15 @@ body.mode-analysis .sz-entry-verdict{margin:12px 0 15px}
 @media(max-width:570px){#overviewResonanceCard .sz-reslab{padding:11px}#overviewResonanceCard .sz-reslab-controls{gap:6px}#overviewResonanceCard .sz-reslab-dual b{font-size:11px}#overviewResonanceCard .sz-reslab-actions button{flex:1}}
 </style>
 
-  <script src="./capital-flow.js?v=2.7.0.54"></script>
+  <script src="./capital-flow.js?v=2.7.0.55"></script>
   <script src="./lib/position-play-v4.js?v=2.6.8.35"></script>
-  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.54"></script>
-  <script src="./lib/resonance-lab-v1.js?v=2.7.0.54"></script>
+  <script src="./lib/trade-orchestrator-v4.js?v=2.7.0.55"></script>
+  <script src="./lib/resonance-lab-v1.js?v=2.7.0.55"></script>
   <script src="./lib/stockzone-sr82-browser.js?v=2.6.9.9"></script>
   <script src="./lib/holding-trade-plans.js?v=2.6.9.19"></script>
 <script src="./lib/trade-backup.js?v=2.6.9.19"></script>
   <script src="./lib/holding-trade-review.js?v=2.6.9.19"></script>
-  <script src="./app.js?v=2.7.0.54"></script>
+  <script src="./app.js?v=2.7.0.55"></script>
 
 <style id="v2522-technical">
 #technical.technical-card{padding:16px!important;background:#081827!important;border:1px solid #18344b!important;border-radius:16px!important}
@@ -4499,7 +4505,7 @@ body.mode-screening .fundflow-master-card .fundflow-master-hero{min-height:175px
   #disposal .disposal-price-line small,#disposal .disposal-rule-note{font-size:10.5px!important;}
 }
 </style>
-<script defer src="./featured-picks-ui.js?v=2.7.0.54"></script>
+<script defer src="./featured-picks-ui.js?v=2.7.0.55"></script>
 
 <style id="stockzone-v26811-ui">
 /* v2.6.8.15 | Monetary TOP10 only; legacy industry capital intensity/X20 are unchanged. */
@@ -6973,11 +6979,29 @@ body.mode-analysis #technical>.card-title.theme-white-card-title{
   align-items:baseline!important;
   font-size:10px!important;line-height:1.55!important;color:#8694a6!important;
 }
-.market-dynamic-page .md-footer-notes .md-coverage-note{
-  display:inline-flex!important;flex-direction:row!important;align-items:baseline!important;
-  gap:5px!important;flex-wrap:wrap!important;min-width:0!important;
-  padding:0!important;margin:0!important;border:0!important;background:none!important;
+.market-dynamic-page .md-footer-notes .md-turn-details{
+  width:100%;min-width:0;margin:0;padding:0;color:#657991;
 }
+.market-dynamic-page .md-turn-details>summary{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  cursor:pointer;list-style:none;outline-offset:3px;
+}
+.market-dynamic-page .md-turn-details>summary::-webkit-details-marker{display:none;}
+.market-dynamic-page .md-turn-details>summary::after{content:'⌄';font-size:15px;line-height:1;color:#8292a7;}
+.market-dynamic-page .md-turn-details[open]>summary::after{content:'⌃';}
+.market-dynamic-page .md-turn-details>summary strong{text-align:right;flex:1;}
+.market-dynamic-page .md-turn-body{padding:10px 0 2px;color:#66768b;}
+.market-dynamic-page .md-turn-body>p{margin:0 0 8px;font-size:11px;line-height:1.5;}
+.market-dynamic-page .md-turn-routes{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;}
+.market-dynamic-page .md-turn-route{padding:9px 10px;border:1px solid #e1e9f5;border-radius:10px;background:#f7f9fd;}
+.market-dynamic-page .md-turn-route-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:750;font-size:12px;}
+.market-dynamic-page .md-turn-route-state{font-size:11px;color:#64748b;white-space:nowrap;}
+.market-dynamic-page .md-turn-route.is-met{border-color:#c9e9d9;background:#f3fcf7;}
+.market-dynamic-page .md-turn-route.is-met .md-turn-route-state{color:#187846;}
+.market-dynamic-page .md-turn-check{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:11px;line-height:1.5;}
+.market-dynamic-page .md-turn-check .md-turn-check-state{flex-shrink:0;font-weight:700;color:#bb5260;text-align:right;}
+.market-dynamic-page .md-turn-check.is-met .md-turn-check-state{color:#188753;}
+
 .market-dynamic-page .md-footer-notes span{
   font-size:10px!important;line-height:1.55!important;font-weight:500!important;
   margin:0!important;color:#8897a8!important;

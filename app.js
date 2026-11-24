@@ -4578,7 +4578,7 @@ function holdingPlanSnapshot(code){
   return {
     code:key,name:shortStockName(currentStock?.name||currentStock?.shortName)||key,
     capturedAt:new Date().toISOString(),source:'五年R1玩法＋共振模型同次研究快照（無買賣建議）',
-    modelVersion:'v2.7.0.54（僅研究資料）',
+    modelVersion:'v2.7.0.55（僅研究資料）',
     play:officialPlay.displayLabel,playKey,
     referencePrice:positionNumber(v.price),
     allocation:{core:Number.isFinite(profile.basePct)?profile.basePct:null,tactical:Number.isFinite(profile.tacticalPct)?profile.tacticalPct:null},
@@ -5631,6 +5631,50 @@ async function loadMarketIndexQuick(force=false){
   }catch(e){console.warn('加權指數盤後快照暫不可用',e?.message||e)}
   finally{marketIndexLoading=false;}
 }
+function renderMarketTurnConditions(){
+  const model=marketDynamicData?.w3||{},turn=model.turnConditions;
+  const overview=$("marketTurnOverview"),asOf=$("marketTurnAsOf"),root=$("marketTurnRoutes");
+  if(!overview||!asOf||!root)return;
+  root.replaceChildren();
+  if(!turn?.date||!Array.isArray(turn.routes)||!turn.routes.length){
+    overview.textContent='三條轉 ON 路徑';
+    asOf.textContent='正式條件數值將在下一次 W3 運算後更新；目前僅顯示條件說明，不推估達標結果。';
+    const explanations=[
+      ['強力反攻','法人 Z ≥2.0；當日上漲家數比 ≥80%'],
+      ['綜合復甦','資金、當日與五日廣度、MA20、三日動能及風險分數共同確認'],
+      ['多頭結構修復','連續兩日均線與斜率轉強、維持 OFF 期間、風險分數共同確認']
+    ];
+    for(const [label,description] of explanations){
+      const card=document.createElement('section');card.className='md-turn-route';
+      const title=document.createElement('div');title.className='md-turn-route-heading';title.textContent=label;
+      const line=document.createElement('div');line.className='md-turn-check';line.textContent=description;
+      card.append(title,line);root.appendChild(card);
+    }
+    return;
+  }
+  const allMet=turn.routes.filter(r=>r.matched);
+  overview.textContent=allMet.length?`${allMet.map(x=>x.label).join('、')}已達標`:turn.routes.map(r=>`${r.label==='強力反攻'?'強攻':r.label==='綜合復甦'?'復甦':'結構'} ${r.passed||0}/${r.total||0}`).join(' · ');
+  const stale=model.stale||!model.isLiveModel||turn.date!==model.sourceDate;
+  asOf.textContent=`判定日 ${turn.date}｜${stale?'歷史判讀，非當日正式訊號':turn.regimeBefore==='RiskOff'?'當日為空頭轉折判定':'當日已處於多頭環境，條件供參考'}`;
+  for(const route of turn.routes){
+    const card=document.createElement('section');card.className='md-turn-route'+(route.matched?' is-met':'');
+    const title=document.createElement('div');title.className='md-turn-route-heading';
+    const name=document.createElement('span');name.textContent=route.label||'轉折路徑';
+    const stat=document.createElement('span');stat.className='md-turn-route-state';
+    stat.textContent=route.matched?'條件全數達標':`${route.passed||0}/${route.total||0} 項達標`;
+    title.append(name,stat);card.appendChild(title);
+    for(const check of Array.isArray(route.conditions)?route.conditions:[]){
+      const row=document.createElement('div');row.className='md-turn-check'+(check.passed?' is-met':'');
+      const label=document.createElement('span');label.textContent=check.label||'條件';
+      const value=document.createElement('span');value.className='md-turn-check-state';
+      const numeric=marketNum(check.value);
+      const shown=numeric===null?'':`（${numeric.toFixed(2)}${check.label?.includes('廣度')||check.label?.includes('上漲家數')||check.label?.includes('報酬')?'%':''}）`;
+      value.textContent=(check.passed?'✓ ':'✕ ')+(check.target||(check.passed?'已符合':'未符合'))+shown;
+      row.append(label,value);card.appendChild(row);
+    }
+    root.appendChild(card);
+  }
+}
 function renderMarketDynamic(){
   const d=marketDynamicData?.latest;if(!d)return;
   const set=(id,t)=>{const e=$(id);if(e)e.textContent=t};
@@ -5674,7 +5718,7 @@ function renderMarketDynamic(){
   const officialTile=$("marketForeign")?.closest(".md-stat");
   if(officialTile)officialTile.title=officialReady?`上市：外資 ${marketFmtMoney(official.listed.foreign)}、投信 ${marketFmtMoney(official.listed.trust)}、自營 ${marketFmtMoney(official.listed.dealer)}；上櫃：外資 ${marketFmtMoney(official.otc.foreign)}、投信 ${marketFmtMoney(official.otc.trust)}、自營 ${marketFmtMoney(official.otc.dealer)}。資料來源：TWSE BFI82U／TPEx。`:'上市或上櫃官方法人金額尚未完成，絕不以估算金額充當官方數字。';
   marketTone(officialTile,officialReady?official.foreign:null);
-  set("marketCoverage",marketNum(d.coverage)===null?"--":marketNum(d.coverage).toFixed(1)+"%");
+  renderMarketTurnConditions();
   renderMarketDistribution();
   const body=$("marketDynamicHistory");
   if(body)body.innerHTML=(marketDynamicData?.history||[]).slice(0,20).map(r=>`<tr><td>${(r.date||"--")}</td><td>${marketFmtIndex(r.taiexClose)}</td><td class="${marketNum(r.changePct)>0?"is-up":marketNum(r.changePct)<0?"is-down":""}">${marketFmtPct(r.changePct)}</td><td>${marketNum(r.advanceRatio)===null?"--":marketNum(r.advanceRatio).toFixed(1)+"%"}</td><td class="${marketNum(r.officialInstitutional?.foreign)>0?"is-up":marketNum(r.officialInstitutional?.foreign)<0?"is-down":""}">${r.officialInstitutional?.complete?marketFmtMoney(r.officialInstitutional.foreign):"待更新"}</td></tr>`).join("")||'<tr><td colspan="5">暫無資料</td></tr>';
@@ -5698,7 +5742,7 @@ async function loadMarketDynamic(force=false){
     void stockzoneIdbPut("marketCache",MARKET_DYNAMIC_LOCAL_CACHE_KEY,{savedAt:Date.now(),data:payload});
   }catch(e){
     console.warn("大盤動態讀取失敗",e);
-    if(!marketDynamicData){const b=$("marketCoverage");if(b){b.textContent="讀取失敗";b.title=String(e?.message||e)}}
+    if(!marketDynamicData){const b=$("marketTurnOverview");if(b){b.textContent="讀取失敗";b.title=String(e?.message||e)}}
   }finally{marketDynamicLoading=false}
 }
 // v2.7.0.12: stock analysis reuses the SAME cached official W3 snapshot loader.
