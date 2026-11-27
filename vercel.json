@@ -74,6 +74,18 @@
       "schedule": "45 13 * * 1-5"
     },
     {
+      "path": "/api/sync-status",
+      "schedule": "0 12 * * 1-5"
+    },
+    {
+      "path": "/api/sync-status",
+      "schedule": "50 13 * * 1-5"
+    },
+    {
+      "path": "/api/market-dynamic-refresh?margin=1",
+      "schedule": "50 15 * * 1-5"
+    },
+    {
       "path": "/api/market-dynamic-refresh",
       "schedule": "0 14 * * 1-5"
     },
