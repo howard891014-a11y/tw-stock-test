@@ -9,6 +9,20 @@ const {taipeiDateParts}=require('../lib/sync-common');
 module.exports=async function handler(req,res){
   const schedule=String(req.headers?.['x-vercel-cron-schedule']||'');
   if(req.method&&req.method!=='GET')return res.status(405).json({ok:false,error:'GET only'});
+  // 23:50 Taipei: independently persist the market-wide credit-cost estimate.
+  // A page view is no longer required; W3 rules and W3 scheduling are untouched.
+  if(String(req.query?.margin||'')==='1'){
+    if(schedule!=='50 15 * * 1-5'||!isCronAuthorized(req)||
+       !String(req.headers?.['user-agent']||'').includes('vercel-cron/1.0'))
+      return res.status(401).json({ok:false,error:'Cron only'});
+    try{
+      const estimated=await require('../lib/margin-maintenance').marketEstimate(getSql());
+      res.setHeader('Cache-Control','no-store');
+      return res.status(200).json({ok:Boolean(estimated),job:'daily-margin-estimate',
+        dataDate:estimated?.date||null,stale:Boolean(estimated?.stale),
+        calculated:estimated?.pct!=null,formulaUnchanged:true});
+    }catch(e){return res.status(503).json({ok:false,error:String(e?.message||e)})}
+  }
   // Paper stage3 is an explicitly gated research-only branch. It never writes
   // Neon, places orders, or changes this endpoint's existing W3 cron behavior.
   if(String(req.query?.paper||'')==='stage3'){
@@ -67,6 +81,15 @@ module.exports=async function handler(req,res){
         latestByMarket:gate.latestByMarket,countsByMarket:gate.countsByMarket,
         officialArchive:independentArchive?.ok?{ok:true,stored:independentArchive.recorded}:null,
         preservedLastGood:true,refreshedAt:new Date().toISOString()});
+    }
+    // A newer closing date must not conceal a missing official trading day:
+    // the 5-day breadth and W3 input sequence would otherwise silently skip it.
+    const continuity=await require('../lib/market-auto-recovery').inspectPriceGaps({sql,limit:7});
+    if(continuity.missing.length){
+      res.setHeader('Cache-Control','no-store');
+      return res.status(202).json({ok:false,code:'RECENT_OFFICIAL_SESSION_MISSING',
+        missing:continuity.missing,checkedDates:continuity.dates,
+        reason:'等待獨立缺日修復排程完成；拒絕使用跳日資料發布 W3',preservedLastGood:true});
     }
     // 23:35: recover only still-missing official chip sources before recomputing.
     let chipRepair=null;

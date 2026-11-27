@@ -83,7 +83,9 @@ const CRON_ACTIONS = {
   '0 13 * * 1-5': 'chip-institutional', // 21:00
   '15 13 * * 1-5': 'chip-credit',      // 21:15
   '30 13 * * 1-5': 'disposal-twse',    // 21:30
-  '45 13 * * 1-5': 'disposal-tpex'     // 21:45
+  '45 13 * * 1-5': 'disposal-tpex',    // 21:45
+  '0 12 * * 1-5': 'recover-price-history', // 20:00, official missing-session recovery
+  '50 13 * * 1-5': 'recover-chip-history'  // 21:50, verified chip recovery
 };
 const schedulePlan=require('../lib/market-daily-schedule');
 
@@ -760,6 +762,19 @@ module.exports=async function handler(req,res){
     if(schedule && !action)return res.status(400).json({ok:false,error:`未知 Cron schedule：${schedule}`});
     // Unified EOD timeline: never enter legacy 120D raw backfill / research rebuild
     // for a price retry. All schedule status uses only existing sync_status rows.
+    // Automatic missing-date recovery is independent of page traffic. A 11/26
+    // session absent from both exchanges must be repaired even when 11/27
+    // prices are already current. No full-history overwrite or W3 replay here.
+    if(schedule && ['recover-price-history','recover-chip-history'].includes(action)){
+      if(!isCronAuthorized(req)||!String(req.headers?.['user-agent']||'').includes('vercel-cron/1.0'))
+        return res.status(401).json({ok:false,error:'Cron only'});
+      const recovery=require('../lib/market-auto-recovery');
+      const result=action==='recover-price-history'
+        ?await recovery.recoverPriceGaps({sql:getSql(),maxDates:1})
+        :await recovery.recoverChipGaps({sql:getSql(),maxDates:2});
+      res.setHeader('Cache-Control','no-store');
+      return res.status(result.ok?200:503).json({...result,job:action,formulaUnchanged:true});
+    }
     if(schedule && action==='price-window'){
       if(!isCronAuthorized(req)||!String(req.headers?.['user-agent']||'').includes('vercel-cron/1.0'))
         return res.status(401).json({ok:false,error:'Cron only'});
